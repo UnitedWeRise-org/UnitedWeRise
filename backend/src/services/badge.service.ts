@@ -1,6 +1,7 @@
 import { Badge, UserBadge, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
+import { logger } from './logger';
 
 interface BadgeQualificationCriteria {
   type: 'QUEST_COMPLETION' | 'USER_ACTIVITY' | 'CIVIC_ACTION' | 'SOCIAL_METRIC' | 'CUSTOM_ENDPOINT';
@@ -402,7 +403,7 @@ class BadgeService {
 
       // Validate property is in whitelist
       if (!allowedProperties.includes(requirements.userProperty)) {
-        console.error(`Invalid user property in badge criteria: ${requirements.userProperty}`);
+        logger.error({ userProperty: requirements.userProperty }, 'Invalid user property in badge criteria');
         return false;
       }
 
@@ -417,7 +418,7 @@ class BadgeService {
         const actualValue = (user as any)[requirements.userProperty];
         return actualValue === requirements.expectedValue;
       } catch (error) {
-        console.error(`Error checking user property ${requirements.userProperty}:`, error);
+        logger.error({ error, userProperty: requirements.userProperty }, 'Error checking user property');
         return false;
       }
     }
@@ -483,7 +484,7 @@ class BadgeService {
             await this.awardBadge(user.id, badge.id, undefined, 'Automatically awarded for meeting criteria');
             badgesAwarded++;
           } catch (error) {
-            console.error(`Error awarding badge ${badge.id} to user ${user.id}:`, error);
+            logger.error({ error, badgeId: badge.id, userId: user.id }, 'Error awarding badge to user');
           }
         }
       }

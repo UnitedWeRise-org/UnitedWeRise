@@ -16,6 +16,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
+import { logger } from './logger';
 
 const prisma = new PrismaClient();
 
@@ -306,7 +307,7 @@ class VisitorAnalyticsService {
       },
     });
 
-    console.log('[VisitorAnalytics] Daily salt rotated at', new Date().toISOString());
+    logger.info({ rotatedAt: new Date().toISOString() }, 'Daily salt rotated');
     return config;
   }
 
@@ -400,14 +401,12 @@ class VisitorAnalyticsService {
       },
     });
 
-    console.log(
-      `[VisitorAnalytics] Aggregated stats for ${startOfDay.toDateString()}:`,
-      {
-        uniqueVisitors,
-        totalPageviews,
-        signupsCount,
-      }
-    );
+    logger.info({
+      date: startOfDay.toDateString(),
+      uniqueVisitors,
+      totalPageviews,
+      signupsCount
+    }, 'Daily stats aggregated');
 
     return stats;
   }
@@ -426,9 +425,10 @@ class VisitorAnalyticsService {
       },
     });
 
-    console.log(
-      `[VisitorAnalytics] Deleted ${deleted.count} PageView records older than ${cutoffDate.toDateString()}`
-    );
+    logger.info({
+      deletedCount: deleted.count,
+      cutoffDate: cutoffDate.toDateString()
+    }, 'Deleted old PageView records');
 
     // Also clean up expired IPRateLimit blocks
     const expiredBlocks = await prisma.iPRateLimit.deleteMany({
@@ -438,9 +438,9 @@ class VisitorAnalyticsService {
       },
     });
 
-    console.log(
-      `[VisitorAnalytics] Deleted ${expiredBlocks.count} expired IPRateLimit records`
-    );
+    logger.info({
+      deletedCount: expiredBlocks.count
+    }, 'Deleted expired IPRateLimit records');
 
     return {
       pageViewsDeleted: deleted.count,

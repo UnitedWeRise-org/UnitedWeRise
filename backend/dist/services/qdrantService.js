@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QdrantService = void 0;
 const js_client_rest_1 = require("@qdrant/js-client-rest");
+const logger_1 = require("./logger");
 class QdrantService {
     /**
      * Initialize Qdrant client
@@ -24,12 +25,12 @@ class QdrantService {
             // Check if collection exists
             try {
                 await client.getCollection(this.COLLECTION_NAME);
-                console.log(`Collection ${this.COLLECTION_NAME} already exists`);
+                logger_1.logger.info({ collection: this.COLLECTION_NAME }, 'Collection already exists');
                 return;
             }
             catch (error) {
                 // Collection doesn't exist, create it
-                console.log(`Creating collection ${this.COLLECTION_NAME}...`);
+                logger_1.logger.info({ collection: this.COLLECTION_NAME }, 'Creating collection');
             }
             await client.createCollection(this.COLLECTION_NAME, {
                 vectors: {
@@ -50,10 +51,10 @@ class QdrantService {
                 field_name: 'createdAt',
                 field_schema: 'datetime',
             });
-            console.log(`✓ Collection ${this.COLLECTION_NAME} created successfully`);
+            logger_1.logger.info({ collection: this.COLLECTION_NAME }, 'Collection created successfully');
         }
         catch (error) {
-            console.error('Failed to initialize Qdrant collection:', error);
+            logger_1.logger.error({ error }, 'Failed to initialize Qdrant collection');
             throw error;
         }
     }
@@ -73,10 +74,10 @@ class QdrantService {
                     },
                 ],
             });
-            console.log(`✓ Upserted vector for post ${point.payload.postId}`);
+            logger_1.logger.info({ postId: point.payload.postId }, 'Upserted vector for post');
         }
         catch (error) {
-            console.error(`Failed to upsert vector ${point.id}:`, error);
+            logger_1.logger.error({ error, pointId: point.id }, 'Failed to upsert vector');
             throw error;
         }
     }
@@ -97,11 +98,11 @@ class QdrantService {
                         payload: point.payload,
                     })),
                 });
-                console.log(`✓ Upserted batch ${i + 1}-${Math.min(i + batchSize, points.length)} of ${points.length}`);
+                logger_1.logger.info({ batchStart: i + 1, batchEnd: Math.min(i + batchSize, points.length), total: points.length }, 'Upserted batch');
             }
         }
         catch (error) {
-            console.error('Failed to batch upsert vectors:', error);
+            logger_1.logger.error({ error }, 'Failed to batch upsert vectors');
             throw error;
         }
     }
@@ -158,7 +159,7 @@ class QdrantService {
             }));
         }
         catch (error) {
-            console.error('Failed to search similar vectors:', error);
+            logger_1.logger.error({ error }, 'Failed to search similar vectors');
             throw error;
         }
     }
@@ -172,10 +173,10 @@ class QdrantService {
                 wait: true,
                 points: [id],
             });
-            console.log(`✓ Deleted vector ${id}`);
+            logger_1.logger.info({ vectorId: id }, 'Deleted vector');
         }
         catch (error) {
-            console.error(`Failed to delete vector ${id}:`, error);
+            logger_1.logger.error({ error, vectorId: id }, 'Failed to delete vector');
             throw error;
         }
     }
@@ -188,7 +189,7 @@ class QdrantService {
             return await client.getCollection(this.COLLECTION_NAME);
         }
         catch (error) {
-            console.error('Failed to get collection info:', error);
+            logger_1.logger.error({ error }, 'Failed to get collection info');
             throw error;
         }
     }
@@ -233,7 +234,7 @@ class QdrantService {
             return result.count;
         }
         catch (error) {
-            console.error('Failed to count vectors:', error);
+            logger_1.logger.error({ error }, 'Failed to count vectors');
             throw error;
         }
     }
@@ -247,10 +248,10 @@ class QdrantService {
                 wait: true,
                 filter: {}, // Delete all points
             });
-            console.log('✓ Cleared all vectors from collection');
+            logger_1.logger.info('Cleared all vectors from collection');
         }
         catch (error) {
-            console.error('Failed to clear collection:', error);
+            logger_1.logger.error({ error }, 'Failed to clear collection');
             throw error;
         }
     }

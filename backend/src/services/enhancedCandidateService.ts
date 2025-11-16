@@ -1,6 +1,7 @@
 import { Candidate } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { azureOpenAI } from './azureOpenAIService';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -80,7 +81,7 @@ export class EnhancedCandidateService {
    */
   static async getCandidateProfile(candidateId: string): Promise<CandidateProfile | null> {
     try {
-      console.log(`👤 Loading enhanced profile for candidate ${candidateId}`);
+      logger.info({ candidateId }, 'Loading enhanced profile for candidate');
 
       const candidate = await prisma.candidate.findUnique({
         where: { id: candidateId },
@@ -130,11 +131,11 @@ export class EnhancedCandidateService {
       // Get AI-analyzed policy positions
       let policyPositions = [];
       try {
-        console.log('🤖 Analyzing candidate policy positions...');
+        logger.debug('Analyzing candidate policy positions');
         // AI policy analysis now handled by individual policy creation process
         policyPositions = [];
       } catch (error) {
-        console.warn('Policy position analysis failed, continuing without AI analysis:', error);
+        logger.warn({ error }, 'Policy position analysis failed, continuing without AI analysis');
       }
 
       const profile: CandidateProfile = {
@@ -163,11 +164,11 @@ export class EnhancedCandidateService {
         }
       };
 
-      console.log(`✅ Enhanced profile loaded for ${candidate.name}`);
+      logger.info({ candidateId, candidateName: candidate.name }, 'Enhanced profile loaded for candidate');
       return profile;
 
     } catch (error) {
-      console.error(`Failed to load candidate profile ${candidateId}:`, error);
+      logger.error({ error, candidateId }, 'Failed to load candidate profile');
       return null;
     }
   }
@@ -180,7 +181,7 @@ export class EnhancedCandidateService {
     officeId?: string
   ): Promise<CandidateComparisonResult | null> {
     try {
-      console.log(`🔄 Creating AI-powered comparison of ${candidateIds.length} candidates`);
+      logger.info({ candidateCount: candidateIds.length, officeId }, 'Creating AI-powered comparison of candidates');
 
       if (candidateIds.length < 2) {
         throw new Error('At least 2 candidates required for comparison');
@@ -200,7 +201,7 @@ export class EnhancedCandidateService {
       // Use Qwen3 for intelligent comparison
       let comparison;
       try {
-        console.log('🤖 Generating AI-powered candidate comparison...');
+        logger.debug('Generating AI-powered candidate comparison');
         // TODO: Implement candidate comparison using Azure OpenAI
         comparison = {
           candidates: validCandidates.map(c => ({ id: c.id, name: c.name, party: c.party })),
@@ -209,7 +210,7 @@ export class EnhancedCandidateService {
           overallSummary: 'Candidate comparison temporarily disabled - migrating from Qwen to Azure OpenAI'
         };
       } catch (error) {
-        console.warn('AI comparison failed, generating fallback comparison:', error);
+        logger.warn({ error }, 'AI comparison failed, generating fallback comparison');
         comparison = this.generateFallbackComparison(validCandidates);
       }
 
@@ -244,11 +245,11 @@ export class EnhancedCandidateService {
         }
       };
 
-      console.log(`✅ Comparison complete for ${validCandidates.length} candidates`);
+      logger.info({ candidateCount: validCandidates.length }, 'Comparison complete for candidates');
       return result;
 
     } catch (error) {
-      console.error('Candidate comparison failed:', error);
+      logger.error({ error }, 'Candidate comparison failed');
       return null;
     }
   }
@@ -293,7 +294,7 @@ export class EnhancedCandidateService {
       return profiles.filter(p => p !== null) as CandidateProfile[];
 
     } catch (error) {
-      console.error(`Failed to get candidates for office ${officeId}:`, error);
+      logger.error({ error, officeId }, 'Failed to get candidates for office');
       return [];
     }
   }
@@ -362,7 +363,7 @@ export class EnhancedCandidateService {
       return profiles.filter(p => p !== null) as CandidateProfile[];
 
     } catch (error) {
-      console.error('Candidate search failed:', error);
+      logger.error({ error, params }, 'Candidate search failed');
       return [];
     }
   }
@@ -388,21 +389,21 @@ export class EnhancedCandidateService {
         }
       });
 
-      console.log(`✅ Updated platform for candidate ${candidateId}`);
-      
+      logger.info({ candidateId }, 'Updated platform for candidate');
+
       // Trigger re-analysis of policy positions
       try {
         // Policy analysis now handled during individual policy creation
-        console.log('Policy positions will be analyzed when created/updated');
-        console.log('🤖 Policy positions re-analyzed');
+        logger.debug('Policy positions will be analyzed when created/updated');
+        logger.debug('Policy positions re-analyzed');
       } catch (error) {
-        console.warn('Policy re-analysis failed:', error);
+        logger.warn({ error }, 'Policy re-analysis failed');
       }
 
       return true;
 
     } catch (error) {
-      console.error(`Failed to update candidate platform ${candidateId}:`, error);
+      logger.error({ error, candidateId }, 'Failed to update candidate platform');
       return false;
     }
   }

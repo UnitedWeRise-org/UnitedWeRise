@@ -20,6 +20,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
 const crypto_1 = __importDefault(require("crypto"));
+const logger_1 = require("./logger");
 const prisma = new client_1.PrismaClient();
 class VisitorAnalyticsService {
     /**
@@ -270,7 +271,7 @@ class VisitorAnalyticsService {
                 lastSaltRotation: new Date(),
             },
         });
-        console.log('[VisitorAnalytics] Daily salt rotated at', new Date().toISOString());
+        logger_1.logger.info({ rotatedAt: new Date().toISOString() }, 'Daily salt rotated');
         return config;
     }
     /**
@@ -353,11 +354,12 @@ class VisitorAnalyticsService {
                 updatedAt: new Date(),
             },
         });
-        console.log(`[VisitorAnalytics] Aggregated stats for ${startOfDay.toDateString()}:`, {
+        logger_1.logger.info({
+            date: startOfDay.toDateString(),
             uniqueVisitors,
             totalPageviews,
-            signupsCount,
-        });
+            signupsCount
+        }, 'Daily stats aggregated');
         return stats;
     }
     /**
@@ -372,7 +374,10 @@ class VisitorAnalyticsService {
                 createdAt: { lt: cutoffDate },
             },
         });
-        console.log(`[VisitorAnalytics] Deleted ${deleted.count} PageView records older than ${cutoffDate.toDateString()}`);
+        logger_1.logger.info({
+            deletedCount: deleted.count,
+            cutoffDate: cutoffDate.toDateString()
+        }, 'Deleted old PageView records');
         // Also clean up expired IPRateLimit blocks
         const expiredBlocks = await prisma.iPRateLimit.deleteMany({
             where: {
@@ -380,7 +385,9 @@ class VisitorAnalyticsService {
                 lastRequest: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // >24 hours old
             },
         });
-        console.log(`[VisitorAnalytics] Deleted ${expiredBlocks.count} expired IPRateLimit records`);
+        logger_1.logger.info({
+            deletedCount: expiredBlocks.count
+        }, 'Deleted expired IPRateLimit records');
         return {
             pageViewsDeleted: deleted.count,
             rateLimitsDeleted: expiredBlocks.count,

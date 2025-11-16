@@ -8,6 +8,7 @@ const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const embeddingService_1 = require("../services/embeddingService");
 const azureOpenAIService_1 = require("../services/azureOpenAIService");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 // Check if current user is a verified candidate
@@ -47,7 +48,7 @@ router.get('/candidate/status', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error checking candidate status:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Error checking candidate status');
         res.status(500).json({
             success: false,
             error: 'Failed to check candidate status',
@@ -94,7 +95,7 @@ router.get('/candidate/my-positions', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching candidate positions:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Error fetching candidate positions');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch policy positions',
@@ -120,7 +121,7 @@ router.get('/categories', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching policy categories:', error);
+        logger_1.logger.error({ error }, 'Error fetching policy categories');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch policy categories',
@@ -155,7 +156,7 @@ router.get('/candidate/:candidateId/positions', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching candidate policy positions:', error);
+        logger_1.logger.error({ error, candidateId: req.params.candidateId }, 'Error fetching candidate policy positions');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch policy positions',
@@ -219,7 +220,7 @@ router.get('/race/:officeId/comparison', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching race comparison data:', error);
+        logger_1.logger.error({ error, officeId: req.params.officeId }, 'Error fetching race comparison data');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch race comparison data',
@@ -327,10 +328,10 @@ router.post('/positions', auth_1.requireAuth, async (req, res) => {
                         aiProcessedAt: new Date()
                     },
                 });
-                console.log(`Generated AI analysis for policy position: ${newPosition.id}`);
+                logger_1.logger.info({ positionId: newPosition.id }, 'Generated AI analysis for policy position');
             }
             catch (embeddingError) {
-                console.error('Failed to generate AI analysis:', embeddingError);
+                logger_1.logger.error({ error: embeddingError, positionId: newPosition.id }, 'Failed to generate AI analysis');
                 // Don't fail the request if AI processing fails
             }
         }
@@ -340,7 +341,7 @@ router.post('/positions', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error creating policy position:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Error creating policy position');
         res.status(500).json({
             success: false,
             error: 'Failed to create policy position',
@@ -386,7 +387,7 @@ router.get('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching policy position:', error);
+        logger_1.logger.error({ error, positionId: req.params.positionId, userId: req.user?.id }, 'Error fetching policy position');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch policy position',
@@ -471,10 +472,10 @@ router.put('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
                         aiProcessedAt: new Date()
                     },
                 });
-                console.log(`Generated AI analysis for updated policy position: ${newVersion.id}`);
+                logger_1.logger.info({ positionId: newVersion.id }, 'Generated AI analysis for updated policy position');
             }
             catch (embeddingError) {
-                console.error('Failed to generate AI analysis:', embeddingError);
+                logger_1.logger.error({ error: embeddingError, positionId: newVersion.id }, 'Failed to generate AI analysis');
                 // Don't fail the request if AI processing fails
             }
         }
@@ -484,7 +485,7 @@ router.put('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error updating policy position:', error);
+        logger_1.logger.error({ error, positionId: req.params.positionId, userId: req.user?.id }, 'Error updating policy position');
         res.status(500).json({
             success: false,
             error: 'Failed to update policy position',
@@ -529,7 +530,7 @@ router.patch('/positions/:positionId/publish', auth_1.requireAuth, async (req, r
                 });
             }
             catch (embeddingError) {
-                console.error('Failed to generate embedding:', embeddingError);
+                logger_1.logger.error({ error: embeddingError, positionId }, 'Failed to generate embedding');
             }
         }
         res.json({
@@ -538,7 +539,7 @@ router.patch('/positions/:positionId/publish', auth_1.requireAuth, async (req, r
         });
     }
     catch (error) {
-        console.error('Error updating policy position:', error);
+        logger_1.logger.error({ error, positionId: req.params.positionId, userId: req.user?.id }, 'Error updating policy position publish status');
         res.status(500).json({
             success: false,
             error: 'Failed to update policy position',
@@ -577,7 +578,7 @@ router.delete('/positions/:positionId', auth_1.requireAuth, async (req, res) => 
         });
     }
     catch (error) {
-        console.error('Error deleting policy position:', error);
+        logger_1.logger.error({ error, positionId: req.params.positionId, userId: req.user?.id }, 'Error deleting policy position');
         res.status(500).json({
             success: false,
             error: 'Failed to delete policy position',
@@ -631,7 +632,7 @@ INSTRUCTIONS:
         };
     }
     catch (error) {
-        console.error('AI policy analysis failed:', error);
+        logger_1.logger.error({ error, title }, 'AI policy analysis failed');
         // Fallback analysis
         return {
             keywords: [],

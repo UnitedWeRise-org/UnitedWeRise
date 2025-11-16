@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 ;
 import { emailService } from './emailService';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
 

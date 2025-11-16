@@ -70,6 +70,7 @@ dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Configure trust proxy for Azure Container Apps (1 proxy layer)
 app.set('trust proxy', 1);
+logger_2.logger.info('Configured trust proxy for Azure Container Apps');
 const httpServer = http_1.default.createServer(app);
 // Configure HTTP keep-alive timeouts to work with Azure Container Apps 30-minute timeout
 // Azure Container Apps has a hard-coded 30-minute timeout for HTTP connections
@@ -112,17 +113,17 @@ app.use(rateLimiting_1.apiLimiter);
 // CORS Configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
 if ((0, environment_1.enableRequestLogging)()) {
-    console.log('🔒 CORS - Allowed Origins:', allowedOrigins);
+    logger_2.logger.info({ allowedOrigins }, 'CORS configuration loaded');
 }
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
         if ((0, environment_1.enableRequestLogging)()) {
-            console.log('🔍 CORS - Request from origin:', origin);
+            logger_2.logger.debug({ origin }, 'CORS request received');
         }
         // In development, be more permissive
         if ((0, environment_1.getEnvironment)() === 'development') {
             if ((0, environment_1.enableRequestLogging)()) {
-                console.log('✅ CORS - Development mode, allowing all origins');
+                logger_2.logger.debug({ origin }, 'CORS allowing all origins in development');
             }
             callback(null, true);
             return;
@@ -137,13 +138,13 @@ app.use((0, cors_1.default)({
             isAzureStaticApp ||
             isUnitedWeRiseOrigin) {
             if ((0, environment_1.enableRequestLogging)()) {
-                console.log('✅ CORS - Origin allowed');
+                logger_2.logger.debug({ origin }, 'CORS origin allowed');
             }
             callback(null, true);
         }
         else {
             // SECURITY EVENT: Always log blocked origins (potential attack/misconfiguration)
-            console.log('❌ CORS - Origin blocked:', origin);
+            logger_2.logger.warn({ origin }, 'CORS origin blocked - potential security event');
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -156,7 +157,7 @@ app.use((req, res, next) => {
     const contentType = req.headers['content-type'] || '';
     // CRITICAL FIX: Explicitly skip multipart/form-data to prevent stream interference
     if (contentType.includes('multipart/form-data')) {
-        console.log('🔧 MULTIPART REQUEST - Skipping body parsing, letting multer handle it');
+        logger_2.logger.debug({ contentType }, 'Skipping body parsing for multipart request');
         return next();
     }
     // Only parse as JSON if content-type indicates JSON
@@ -199,7 +200,7 @@ app.use((req, res, next) => {
 });
 // 🚨 DEBUGGING ROUTE: Test if our backend is being hit
 app.get('/api/debug-test', (req, res) => {
-    console.log('🎯🎯🎯 DEBUG TEST ENDPOINT HIT!');
+    logger_2.logger.info({ path: req.path, ip: req.ip }, 'Debug test endpoint accessed');
     res.json({
         message: 'Debug test successful',
         timestamp: new Date().toISOString(),
@@ -376,20 +377,20 @@ app.use(errorHandler_1.notFoundHandler);
 app.use(errorHandler_1.errorHandler);
 // Graceful shutdown handler for proper database connection cleanup
 const gracefulShutdown = async () => {
-    console.log('Received shutdown signal, closing server gracefully...');
+    logger_2.logger.info('Received shutdown signal, closing server gracefully');
     // Stop cron jobs
     analyticsCleanup_1.default.stop();
     // Close HTTP server
     httpServer.close(() => {
-        console.log('HTTP server closed');
+        logger_2.logger.info('HTTP server closed');
     });
     // Close database connections
     try {
         await prisma_1.prisma.$disconnect();
-        console.log('Database connections closed');
+        logger_2.logger.info('Database connections closed');
     }
     catch (error) {
-        console.error('Error closing database connections:', error);
+        logger_2.logger.error({ error }, 'Error closing database connections');
     }
     process.exit(0);
 };
@@ -440,21 +441,21 @@ function validateEnvironmentConsistency() {
 // Initialize services and start server
 async function startServer() {
     try {
-        console.log('🚀 Initializing services...');
+        logger_2.logger.info('Initializing services');
         // Validate environment consistency BEFORE starting services
         validateEnvironmentConsistency();
         // Start cron jobs
         analyticsCleanup_1.default.start();
         // Start server only after all services are ready
         httpServer.listen(PORT, () => {
-            logger_2.logger.info(`Server running on port ${PORT}`);
-            logger_2.logger.info(`WebSocket server active`);
-            logger_2.logger.info(`Health check: http://localhost:${PORT}/health`);
-            logger_2.logger.info(`Database connection pool: 10 connections max, 20s timeout`);
+            logger_2.logger.info({ port: PORT }, 'Server running');
+            logger_2.logger.info('WebSocket server active');
+            logger_2.logger.info({ url: `http://localhost:${PORT}/health` }, 'Health check available');
+            logger_2.logger.info({ maxConnections: 10, timeout: '20s' }, 'Database connection pool configured');
         });
     }
     catch (error) {
-        console.error('❌ Failed to start server:', error);
+        logger_2.logger.fatal({ error }, 'Failed to start server');
         process.exit(1);
     }
 }

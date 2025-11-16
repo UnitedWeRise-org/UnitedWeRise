@@ -4,6 +4,7 @@ exports.LegislativeDataService = void 0;
 const prisma_1 = require("../lib/prisma");
 ;
 const apiCache_1 = require("./apiCache");
+const logger_1 = require("./logger");
 // Using singleton prisma from lib/prisma.ts
 // API Configuration
 const CONGRESS_API_KEY = process.env.CONGRESS_API_KEY;
@@ -15,7 +16,7 @@ class LegislativeDataService {
      */
     static async syncFederalLegislators(forceRefresh = false) {
         if (!CONGRESS_API_KEY) {
-            console.warn('Congress.gov API key not configured');
+            logger_1.logger.warn('Congress.gov API key not configured');
             return;
         }
         const cacheKey = 'federal_legislators_118th';
@@ -23,7 +24,7 @@ class LegislativeDataService {
         if (!forceRefresh) {
             const cached = await apiCache_1.ApiCacheService.get('legislative_data', cacheKey);
             if (cached) {
-                console.log('Using cached federal legislators data');
+                logger_1.logger.info('Using cached federal legislators data');
                 return;
             }
         }
@@ -63,10 +64,10 @@ class LegislativeDataService {
             }
             // Cache the result for 24 hours
             await apiCache_1.ApiCacheService.set('legislative_data', cacheKey, { synced: true }, 24 * 60);
-            console.log(`Synced ${apiData.members?.length || 0} federal legislators`);
+            logger_1.logger.info({ count: apiData.members?.length || 0 }, 'Synced federal legislators');
         }
         catch (error) {
-            console.error('Failed to sync federal legislators:', error);
+            logger_1.logger.error({ error }, 'Failed to sync federal legislators');
         }
     }
     /**
@@ -74,7 +75,7 @@ class LegislativeDataService {
      */
     static async syncStateLegislators(state, forceRefresh = false) {
         if (!OPEN_STATES_API_KEY) {
-            console.warn('Open States API key not configured');
+            logger_1.logger.warn('Open States API key not configured');
             return;
         }
         const cacheKey = `state_legislators_${state}_2025`;
@@ -82,7 +83,7 @@ class LegislativeDataService {
         if (!forceRefresh) {
             const cached = await apiCache_1.ApiCacheService.get('legislative_data', cacheKey);
             if (cached) {
-                console.log(`Using cached ${state} legislators data`);
+                logger_1.logger.info({ state }, 'Using cached state legislators data');
                 return;
             }
         }
@@ -126,10 +127,10 @@ class LegislativeDataService {
             }
             // Cache the result for 24 hours
             await apiCache_1.ApiCacheService.set('legislative_data', cacheKey, { synced: true }, 24 * 60);
-            console.log(`Synced ${stateData.results?.length || 0} ${state} legislators`);
+            logger_1.logger.info({ state, count: stateData.results?.length || 0 }, 'Synced state legislators');
         }
         catch (error) {
-            console.error(`Failed to sync ${state} legislators:`, error);
+            logger_1.logger.error({ state, error }, 'Failed to sync state legislators');
         }
     }
     /**
@@ -172,7 +173,7 @@ class LegislativeDataService {
             return votingRecords;
         }
         catch (error) {
-            console.error('Failed to get voting records:', error);
+            logger_1.logger.error({ error, bioguideId }, 'Failed to get voting records');
             return [];
         }
     }
@@ -181,7 +182,7 @@ class LegislativeDataService {
      */
     static async syncVotingRecords(chamber) {
         if (!CONGRESS_API_KEY) {
-            console.warn('Congress.gov API key not configured');
+            logger_1.logger.warn('Congress.gov API key not configured');
             return;
         }
         try {
@@ -200,10 +201,10 @@ class LegislativeDataService {
             for (const vote of syncVotesData.votes || []) {
                 await this.processVote(vote);
             }
-            console.log(`Synced ${syncVotesData.votes?.length || 0} voting records`);
+            logger_1.logger.info({ count: syncVotesData.votes?.length || 0, chamber }, 'Synced voting records');
         }
         catch (error) {
-            console.error('Failed to sync voting records:', error);
+            logger_1.logger.error({ error, chamber }, 'Failed to sync voting records');
         }
     }
     /**
@@ -211,7 +212,7 @@ class LegislativeDataService {
      */
     static async syncBills(congress = '118', limit = 100) {
         if (!CONGRESS_API_KEY) {
-            console.warn('Congress.gov API key not configured');
+            logger_1.logger.warn('Congress.gov API key not configured');
             return;
         }
         const cacheKey = `bills_${congress}_recent`;
@@ -229,17 +230,17 @@ class LegislativeDataService {
                 }
             });
             if (!legislature) {
-                console.warn(`Legislature record not found for ${congress}th Congress`);
+                logger_1.logger.warn({ congress }, 'Legislature record not found for Congress');
                 return;
             }
             const billsData = data;
             for (const bill of billsData.bills || []) {
                 await this.processBill(bill, legislature.id);
             }
-            console.log(`Synced ${billsData.bills?.length || 0} bills`);
+            logger_1.logger.info({ count: billsData.bills?.length || 0, congress }, 'Synced bills');
         }
         catch (error) {
-            console.error('Failed to sync bills:', error);
+            logger_1.logger.error({ error, congress }, 'Failed to sync bills');
         }
     }
     /**
@@ -252,7 +253,7 @@ class LegislativeDataService {
                 include: { votes: true }
             });
             if (!membership) {
-                console.warn(`Membership ${membershipId} not found`);
+                logger_1.logger.warn({ membershipId }, 'Membership not found');
                 return;
             }
             const votes = membership.votes;
@@ -293,10 +294,10 @@ class LegislativeDataService {
                     lastCalculated: new Date()
                 }
             });
-            console.log(`Updated voting statistics for membership ${membershipId}`);
+            logger_1.logger.info({ membershipId }, 'Updated voting statistics for membership');
         }
         catch (error) {
-            console.error('Failed to calculate voting statistics:', error);
+            logger_1.logger.error({ error, membershipId }, 'Failed to calculate voting statistics');
         }
     }
     // Private helper methods
@@ -332,7 +333,7 @@ class LegislativeDataService {
             });
         }
         catch (error) {
-            console.error(`Failed to process federal legislator ${member.bioguideId}:`, error);
+            logger_1.logger.error({ error, bioguideId: member.bioguideId }, 'Failed to process federal legislator');
         }
     }
     static async processStateLegislator(person, legislatureId, state) {
@@ -364,7 +365,7 @@ class LegislativeDataService {
             });
         }
         catch (error) {
-            console.error(`Failed to process state legislator ${person.id}:`, error);
+            logger_1.logger.error({ error, personId: person.id }, 'Failed to process state legislator');
         }
     }
     static async processVote(voteData) {
@@ -379,7 +380,7 @@ class LegislativeDataService {
                 }
             });
             if (!legislature) {
-                console.warn(`Legislature not found for congress ${voteData.congress}`);
+                logger_1.logger.warn({ congress: voteData.congress }, 'Legislature not found for congress');
                 return;
             }
             // Create or update vote record
@@ -417,10 +418,10 @@ class LegislativeDataService {
                     lastSynced: new Date()
                 }
             });
-            console.log(`Processed vote ${voteId}`);
+            logger_1.logger.debug({ voteId }, 'Processed vote');
         }
         catch (error) {
-            console.error(`Failed to process vote:`, error);
+            logger_1.logger.error({ error }, 'Failed to process vote');
         }
     }
     static async processBill(billData, legislatureId) {
@@ -460,10 +461,10 @@ class LegislativeDataService {
                     lastSynced: new Date()
                 }
             });
-            console.log(`Processed bill ${billId}`);
+            logger_1.logger.debug({ billId }, 'Processed bill');
         }
         catch (error) {
-            console.error(`Failed to process bill:`, error);
+            logger_1.logger.error({ error }, 'Failed to process bill');
         }
     }
     static mapVotePosition(position) {

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProbabilityFeedService = void 0;
 const prisma_1 = require("../lib/prisma");
 const engagementScoringService_1 = require("./engagementScoringService");
+const logger_1 = require("./logger");
 class ProbabilityFeedService {
     /**
      * Generate personalized feed using probability cloud sampling algorithm
@@ -63,7 +64,7 @@ class ProbabilityFeedService {
             };
         }
         catch (error) {
-            console.error('ProbabilityFeedService error:', error);
+            logger_1.logger.error({ error, userId }, 'ProbabilityFeedService error');
             throw error;
         }
     }
@@ -256,7 +257,7 @@ class ProbabilityFeedService {
                 similarityScore = Math.max(0, Math.min(1, similarityScore)); // Clamp 0-1
             }
             catch (error) {
-                console.warn('Similarity calculation error:', error);
+                logger_1.logger.warn({ error }, 'Similarity calculation error');
             }
         }
         // 5. Reputation Score (author's reputation affects content quality)
@@ -281,7 +282,7 @@ class ProbabilityFeedService {
             }
         }
         catch (error) {
-            console.warn('Reputation calculation error:', error);
+            logger_1.logger.warn({ error }, 'Reputation calculation error');
         }
         // Calculate final weighted score
         const baseScore = (recencyScore * weights.recency) +

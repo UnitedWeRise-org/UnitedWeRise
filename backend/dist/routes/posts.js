@@ -18,6 +18,7 @@ const activityTracker_1 = require("../services/activityTracker");
 const postGeographicService_1 = require("../services/postGeographicService");
 const postManagementService_1 = require("../services/postManagementService");
 const engagementScoringService_1 = require("../services/engagementScoringService");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -80,9 +81,7 @@ router.get('/map-data', auth_1.requireAuth, async (req, res) => {
             select: { h3Index: true }
         });
         const posts = await postGeographicService_1.PostGeographicService.getPostsForMap(scope, user?.h3Index || undefined, parseInt(count));
-        if (typeof console !== 'undefined') {
-            console.log(`Map data request: ${posts.length} posts found for ${scope} scope`);
-        }
+        logger_1.logger.info({ postCount: posts.length, scope, userId }, 'Map data request');
         res.json({
             success: true,
             data: posts,
@@ -92,7 +91,7 @@ router.get('/map-data', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching map data:', error);
+        logger_1.logger.error({ err: error, scope: req.query.scope, userId: req.user.id }, 'Error fetching map data');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch map data',
@@ -218,7 +217,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
             embedding = embeddingResult.embedding;
         }
         catch (error) {
-            console.warn('Failed to generate embedding for post:', error);
+            logger_1.logger.warn({ err: error }, 'Failed to generate embedding for post');
             // Continue without embedding rather than failing the post creation
         }
         // Reputation-based content analysis
@@ -229,7 +228,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
             );
         }
         catch (error) {
-            console.warn('Failed to analyze post for reputation impact:', error);
+            logger_1.logger.warn({ err: error, userId }, 'Failed to analyze post for reputation impact');
         }
         // Quick synchronous feedback check (instant, non-blocking)
         const quickCheck = feedbackAnalysisService_1.feedbackAnalysisService.performQuickKeywordCheck(content.trim());
@@ -354,7 +353,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 });
             }
             catch (error) {
-                console.warn('Failed to update reputation event with post ID:', error);
+                logger_1.logger.warn({ err: error, postId: post.id }, 'Failed to update reputation event with post ID');
             }
         }
         // Track post creation activity
@@ -362,7 +361,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
             await activityTracker_1.ActivityTracker.trackPostCreated(userId, post.id, content.trim());
         }
         catch (error) {
-            console.error('Failed to track post creation activity:', error);
+            logger_1.logger.error({ err: error, postId: post.id, userId: req.user.id }, 'Failed to track post creation activity');
             // Don't fail the post creation if activity tracking fails
         }
         // Async feedback analysis - runs in background without blocking response
@@ -370,10 +369,10 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
             // Fire and forget - don't await
             feedbackAnalysisService_1.feedbackAnalysisService.analyzePostAsync(post.id, content.trim(), userId)
                 .then(() => {
-                console.log(`Async feedback analysis completed for post ${post.id}`);
+                logger_1.logger.info({ postId: post.id }, 'Async feedback analysis completed');
             })
                 .catch(error => {
-                console.error(`Async feedback analysis failed for post ${post.id}:`, error);
+                logger_1.logger.error({ err: error, postId: post.id }, 'Async feedback analysis failed');
             });
         }
         res.status(201).json({
@@ -400,7 +399,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
         });
     }
     catch (error) {
-        console.error('Create post error:', error);
+        logger_1.logger.error({ err: error, userId: req.user.id }, 'Create post error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -528,7 +527,7 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get personal posts error:', error);
+        logger_1.logger.error({ err: error, userId: req.user.id }, 'Get personal posts error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -629,7 +628,7 @@ router.get('/:postId', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get post error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.postId }, 'Get post error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -715,7 +714,7 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
                 await activityTracker_1.ActivityTracker.trackLikeRemoved(userId, postId, post.content);
             }
             catch (error) {
-                console.error('Failed to track unlike activity:', error);
+                logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Failed to track unlike activity');
                 // Don't fail the unlike action if activity tracking fails
             }
             res.json({ message: 'Post unliked successfully', liked: false });
@@ -748,7 +747,7 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
                     await reputationService_1.reputationService.awardReputation(post.authorId, 'quality_post', postId);
                 }
                 catch (error) {
-                    console.warn('Failed to award reputation for quality post:', error);
+                    logger_1.logger.warn({ err: error, postId: req.params.id, authorId: post.authorId }, 'Failed to award reputation for quality post');
                 }
             }
             // Track like activity
@@ -756,14 +755,14 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
                 await activityTracker_1.ActivityTracker.trackLikeAdded(userId, postId, post.content);
             }
             catch (error) {
-                console.error('Failed to track like activity:', error);
+                logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Failed to track like activity');
                 // Don't fail the like action if activity tracking fails
             }
             res.json({ message: 'Post liked successfully', liked: true });
         }
     }
     catch (error) {
-        console.error('Like/unlike post error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Like/unlike post error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -891,7 +890,7 @@ router.post('/:postId/reaction', auth_1.requireAuth, async (req, res) => {
                     await activityTracker_1.ActivityTracker.trackReactionChanged(userId, postId, post.content, reactionType, existingReaction[reactionType] || '', null);
                 }
                 catch (error) {
-                    console.error('Failed to track reaction removal:', error);
+                    logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Failed to track reaction removal');
                 }
             }
             res.json({ message: 'Reaction removed successfully' });
@@ -939,7 +938,7 @@ router.post('/:postId/reaction', auth_1.requireAuth, async (req, res) => {
                     await activityTracker_1.ActivityTracker.trackReactionChanged(userId, postId, post.content, reactionType, oldValue, reactionValue);
                 }
                 catch (error) {
-                    console.error('Failed to track reaction change:', error);
+                    logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id, reactionType: req.body.reactionType }, 'Failed to track reaction change');
                 }
             }
             else {
@@ -965,7 +964,7 @@ router.post('/:postId/reaction', auth_1.requireAuth, async (req, res) => {
                         await (0, notifications_1.createNotification)('REACTION', userId, post.authorId, `${req.user.username} reacted to your post`, postId);
                     }
                     catch (error) {
-                        console.warn('Failed to create reaction notification:', error);
+                        logger_1.logger.warn({ err: error, postId: req.params.id, userId: req.user.id, reactionType: req.body.reactionType }, 'Failed to create reaction notification');
                     }
                 }
                 // Track new reaction
@@ -973,14 +972,14 @@ router.post('/:postId/reaction', auth_1.requireAuth, async (req, res) => {
                     await activityTracker_1.ActivityTracker.trackReactionChanged(userId, postId, post.content, reactionType, null, reactionValue);
                 }
                 catch (error) {
-                    console.error('Failed to track new reaction:', error);
+                    logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id, reactionType: req.body.reactionType }, 'Failed to track new reaction');
                 }
             }
             res.json({ message: 'Reaction updated successfully', reactionType, reactionValue });
         }
     }
     catch (error) {
-        console.error('Enhanced reaction error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Enhanced reaction error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1110,7 +1109,7 @@ router.post('/:postId/share', auth_1.requireAuth, async (req, res) => {
                     : `${req.user.username} shared your post`, postId);
             }
             catch (error) {
-                console.warn('Failed to create share notification:', error);
+                logger_1.logger.warn({ err: error, postId: req.params.id, userId: req.user.id }, 'Failed to create share notification');
             }
         }
         // Track share activity
@@ -1118,7 +1117,7 @@ router.post('/:postId/share', auth_1.requireAuth, async (req, res) => {
             await activityTracker_1.ActivityTracker.trackShareAdded(userId, postId, post.content.substring(0, 100), shareType, content?.substring(0, 100));
         }
         catch (error) {
-            console.error('Failed to track share activity:', error);
+            logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Failed to track share activity');
         }
         res.json({
             message: shareType === 'QUOTE' ? 'Post shared with quote successfully' : 'Post shared successfully',
@@ -1127,7 +1126,7 @@ router.post('/:postId/share', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Share post error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Share post error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1254,7 +1253,7 @@ router.post('/comments/:commentId/reaction', auth_1.requireAuth, async (req, res
                     await activityTracker_1.ActivityTracker.trackReactionChanged(userId, comment.postId, comment.content, reactionType, existingReaction[reactionType] || '', null);
                 }
                 catch (error) {
-                    console.error('Failed to track comment reaction removal:', error);
+                    logger_1.logger.error({ err: error, commentId: req.params.commentId, userId: req.user.id }, 'Failed to track comment reaction removal');
                 }
             }
             res.json({ message: 'Comment reaction removed successfully' });
@@ -1302,7 +1301,7 @@ router.post('/comments/:commentId/reaction', auth_1.requireAuth, async (req, res
                     await activityTracker_1.ActivityTracker.trackReactionChanged(userId, comment.postId, comment.content, reactionType, oldValue, reactionValue);
                 }
                 catch (error) {
-                    console.error('Failed to track comment reaction change:', error);
+                    logger_1.logger.error({ err: error, commentId: req.params.commentId, userId: req.user.id, reactionType: req.body.reactionType }, 'Failed to track comment reaction change');
                 }
             }
             else {
@@ -1328,7 +1327,7 @@ router.post('/comments/:commentId/reaction', auth_1.requireAuth, async (req, res
                         await (0, notifications_1.createNotification)('REACTION', userId, comment.userId, `${req.user.username} reacted to your comment`, comment.postId, commentId);
                     }
                     catch (error) {
-                        console.warn('Failed to create comment reaction notification:', error);
+                        logger_1.logger.warn({ err: error, commentId: req.params.commentId, userId: req.user.id, reactionType: req.body.reactionType }, 'Failed to create comment reaction notification');
                     }
                 }
                 // Track new reaction
@@ -1336,14 +1335,14 @@ router.post('/comments/:commentId/reaction', auth_1.requireAuth, async (req, res
                     await activityTracker_1.ActivityTracker.trackReactionChanged(userId, comment.postId, comment.content, reactionType, null, reactionValue);
                 }
                 catch (error) {
-                    console.error('Failed to track new comment reaction:', error);
+                    logger_1.logger.error({ err: error, commentId: req.params.commentId, userId: req.user.id, reactionType: req.body.reactionType }, 'Failed to track new comment reaction');
                 }
             }
             res.json({ message: 'Comment reaction updated successfully', reactionType, reactionValue });
         }
     }
     catch (error) {
-        console.error('Comment reaction error:', error);
+        logger_1.logger.error({ err: error, commentId: req.params.commentId, userId: req.user.id }, 'Comment reaction error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1448,7 +1447,7 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
             const isParentAuthorContinuation = parentComment.userId === post.authorId &&
                 parentComment.parentId === null &&
                 parentComment.depth === 0;
-            console.log('🔍 Threading Debug:', {
+            logger_1.logger.debug({
                 parentComment: {
                     userId: parentComment.userId,
                     parentId: parentComment.parentId,
@@ -1503,13 +1502,13 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
             });
             return newComment;
         });
-        console.log(`✅ Comment created successfully: ID=${comment.id}, depth=${comment.depth}, parentId=${comment.parentId}`);
+        logger_1.logger.debug({ commentId: comment.id, depth: comment.depth, parentId: comment.parentId }, '✅ Comment created successfully');
         // Track comment creation activity
         try {
             await activityTracker_1.ActivityTracker.trackCommentCreated(userId, comment.id, content.trim(), postId, post.content);
         }
         catch (error) {
-            console.error('Failed to track comment creation activity:', error);
+            logger_1.logger.error({ err: error, commentId: comment.id, postId: req.params.id, userId: req.user.id }, 'Failed to track comment creation activity');
             // Don't fail the comment creation if activity tracking fails
         }
         // Create notification if not commenting on own post
@@ -1522,7 +1521,7 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
         });
     }
     catch (error) {
-        console.error('Add comment error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Add comment error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1668,7 +1667,7 @@ router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res
         });
     }
     catch (error) {
-        console.error('Get comments error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id }, 'Get comments error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1803,7 +1802,7 @@ router.get('/user/:userId', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get user posts error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId }, 'Get user posts error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1899,7 +1898,7 @@ router.post('/:postId/comments/summarize', auth_1.requireAuth, async (req, res) 
             });
         }
         catch (aiError) {
-            console.error('AI summarization failed:', aiError);
+            logger_1.logger.error({ err: aiError, postId: req.params.id }, 'AI summarization failed');
             res.json({
                 summary: null,
                 totalCharacters,
@@ -1909,7 +1908,7 @@ router.post('/:postId/comments/summarize', auth_1.requireAuth, async (req, res) 
         }
     }
     catch (error) {
-        console.error('Comment summarization error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id }, 'Comment summarization error');
         res.status(500).json({ error: 'Failed to summarize comments' });
     }
 });
@@ -1999,13 +1998,13 @@ router.delete('/:postId/comments/:commentId/permanent', auth_1.requireAuth, auth
         const deletedComment = await prisma_1.prisma.comment.delete({
             where: { id: commentId }
         });
-        console.log(`[ADMIN] Comment permanently deleted by ${req.user.username}:`, {
+        logger_1.logger.info({
+            adminUser: req.user.username,
             commentId,
             postId,
-            originalAuthor: comment.userId,
-            adminUser: userId,
-            timestamp: new Date().toISOString()
-        });
+            userId: comment.userId,
+            content: comment.content
+        }, '[ADMIN] Comment permanently deleted');
         res.json({
             message: 'Comment permanently deleted successfully',
             deletedComment: {
@@ -2017,7 +2016,7 @@ router.delete('/:postId/comments/:commentId/permanent', auth_1.requireAuth, auth
         });
     }
     catch (error) {
-        console.error('Permanent comment deletion error:', error);
+        logger_1.logger.error({ err: error, commentId: req.params.commentId, postId: req.params.id }, 'Permanent comment deletion error');
         res.status(500).json({ error: 'Failed to permanently delete comment' });
     }
 });
@@ -2139,7 +2138,7 @@ router.put('/:postId', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Post edit error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Post edit error');
         if (error instanceof Error) {
             if (error.message.includes('not found')) {
                 return res.status(404).json({
@@ -2243,7 +2242,7 @@ router.delete('/:postId', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Post delete error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Post delete error');
         if (error instanceof Error) {
             if (error.message.includes('not found')) {
                 return res.status(404).json({
@@ -2315,7 +2314,7 @@ router.get('/:postId/history', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Post history error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id }, 'Post history error');
         if (error instanceof Error) {
             if (error.message.includes('not found')) {
                 return res.status(404).json({
@@ -2387,7 +2386,7 @@ router.get('/:postId/archive', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Post archive error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Post archive error');
         if (error instanceof Error) {
             if (error.message.includes('not found')) {
                 return res.status(404).json({
@@ -2491,7 +2490,7 @@ router.put('/config/management', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Config update error:', error);
+        logger_1.logger.error({ err: error, userId: req.user.id }, 'Config update error');
         res.status(500).json({
             success: false,
             error: 'Failed to update configuration'
@@ -2546,7 +2545,7 @@ router.get('/config/management', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Config retrieval error:', error);
+        logger_1.logger.error({ err: error, userId: req.user.id }, 'Config retrieval error');
         res.status(500).json({
             success: false,
             error: 'Failed to retrieve configuration'
@@ -2706,7 +2705,7 @@ router.get('/:postId/trending-comments', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Trending comments error:', error);
+        logger_1.logger.error({ err: error }, 'Trending comments error');
         res.status(500).json({
             success: false,
             error: 'Failed to retrieve trending comments'
@@ -2794,7 +2793,7 @@ router.post('/:postId/save', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Save post error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Save post error');
         res.status(500).json({
             success: false,
             error: 'Failed to save post'
@@ -2857,7 +2856,7 @@ router.delete('/:postId/save', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Unsave post error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Unsave post error');
         res.status(500).json({
             success: false,
             error: 'Failed to unsave post'
@@ -2982,7 +2981,7 @@ router.get('/saved', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get saved posts error:', error);
+        logger_1.logger.error({ err: error, userId: req.user.id }, 'Get saved posts error');
         res.status(500).json({
             success: false,
             error: 'Failed to retrieve saved posts'
@@ -3072,7 +3071,7 @@ router.post('/saved/check', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Check saved status error:', error);
+        logger_1.logger.error({ err: error, postId: req.params.id, userId: req.user.id }, 'Check saved status error');
         res.status(500).json({
             success: false,
             error: 'Failed to check saved status'

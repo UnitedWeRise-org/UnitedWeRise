@@ -2,13 +2,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EnhancedCandidateService = void 0;
 const prisma_1 = require("../lib/prisma");
+const logger_1 = require("./logger");
 class EnhancedCandidateService {
     /**
      * Get enhanced candidate profile with photos and AI-analyzed positions
      */
     static async getCandidateProfile(candidateId) {
         try {
-            console.log(`👤 Loading enhanced profile for candidate ${candidateId}`);
+            logger_1.logger.info({ candidateId }, 'Loading enhanced profile for candidate');
             const candidate = await prisma_1.prisma.candidate.findUnique({
                 where: { id: candidateId },
                 include: {
@@ -54,12 +55,12 @@ class EnhancedCandidateService {
             // Get AI-analyzed policy positions
             let policyPositions = [];
             try {
-                console.log('🤖 Analyzing candidate policy positions...');
+                logger_1.logger.debug('Analyzing candidate policy positions');
                 // AI policy analysis now handled by individual policy creation process
                 policyPositions = [];
             }
             catch (error) {
-                console.warn('Policy position analysis failed, continuing without AI analysis:', error);
+                logger_1.logger.warn({ error }, 'Policy position analysis failed, continuing without AI analysis');
             }
             const profile = {
                 id: candidate.id,
@@ -86,11 +87,11 @@ class EnhancedCandidateService {
                     type: candidate.office.election.type
                 }
             };
-            console.log(`✅ Enhanced profile loaded for ${candidate.name}`);
+            logger_1.logger.info({ candidateId, candidateName: candidate.name }, 'Enhanced profile loaded for candidate');
             return profile;
         }
         catch (error) {
-            console.error(`Failed to load candidate profile ${candidateId}:`, error);
+            logger_1.logger.error({ error, candidateId }, 'Failed to load candidate profile');
             return null;
         }
     }
@@ -99,7 +100,7 @@ class EnhancedCandidateService {
      */
     static async compareCandidates(candidateIds, officeId) {
         try {
-            console.log(`🔄 Creating AI-powered comparison of ${candidateIds.length} candidates`);
+            logger_1.logger.info({ candidateCount: candidateIds.length, officeId }, 'Creating AI-powered comparison of candidates');
             if (candidateIds.length < 2) {
                 throw new Error('At least 2 candidates required for comparison');
             }
@@ -112,7 +113,7 @@ class EnhancedCandidateService {
             // Use Qwen3 for intelligent comparison
             let comparison;
             try {
-                console.log('🤖 Generating AI-powered candidate comparison...');
+                logger_1.logger.debug('Generating AI-powered candidate comparison');
                 // TODO: Implement candidate comparison using Azure OpenAI
                 comparison = {
                     candidates: validCandidates.map(c => ({ id: c.id, name: c.name, party: c.party })),
@@ -122,7 +123,7 @@ class EnhancedCandidateService {
                 };
             }
             catch (error) {
-                console.warn('AI comparison failed, generating fallback comparison:', error);
+                logger_1.logger.warn({ error }, 'AI comparison failed, generating fallback comparison');
                 comparison = this.generateFallbackComparison(validCandidates);
             }
             const result = {
@@ -155,11 +156,11 @@ class EnhancedCandidateService {
                     generatedAt: new Date()
                 }
             };
-            console.log(`✅ Comparison complete for ${validCandidates.length} candidates`);
+            logger_1.logger.info({ candidateCount: validCandidates.length }, 'Comparison complete for candidates');
             return result;
         }
         catch (error) {
-            console.error('Candidate comparison failed:', error);
+            logger_1.logger.error({ error }, 'Candidate comparison failed');
             return null;
         }
     }
@@ -197,7 +198,7 @@ class EnhancedCandidateService {
             return profiles.filter(p => p !== null);
         }
         catch (error) {
-            console.error(`Failed to get candidates for office ${officeId}:`, error);
+            logger_1.logger.error({ error, officeId }, 'Failed to get candidates for office');
             return [];
         }
     }
@@ -250,7 +251,7 @@ class EnhancedCandidateService {
             return profiles.filter(p => p !== null);
         }
         catch (error) {
-            console.error('Candidate search failed:', error);
+            logger_1.logger.error({ error, params }, 'Candidate search failed');
             return [];
         }
     }
@@ -266,20 +267,20 @@ class EnhancedCandidateService {
                     updatedAt: new Date()
                 }
             });
-            console.log(`✅ Updated platform for candidate ${candidateId}`);
+            logger_1.logger.info({ candidateId }, 'Updated platform for candidate');
             // Trigger re-analysis of policy positions
             try {
                 // Policy analysis now handled during individual policy creation
-                console.log('Policy positions will be analyzed when created/updated');
-                console.log('🤖 Policy positions re-analyzed');
+                logger_1.logger.debug('Policy positions will be analyzed when created/updated');
+                logger_1.logger.debug('Policy positions re-analyzed');
             }
             catch (error) {
-                console.warn('Policy re-analysis failed:', error);
+                logger_1.logger.warn({ error }, 'Policy re-analysis failed');
             }
             return true;
         }
         catch (error) {
-            console.error(`Failed to update candidate platform ${candidateId}:`, error);
+            logger_1.logger.error({ error, candidateId }, 'Failed to update candidate platform');
             return false;
         }
     }

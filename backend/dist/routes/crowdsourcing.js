@@ -8,6 +8,7 @@ const express_1 = __importDefault(require("express"));
 ;
 const auth_1 = require("../middleware/auth");
 const districtIdentificationService_1 = require("../services/districtIdentificationService");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Rate limiting for crowdsourcing submissions
@@ -49,7 +50,7 @@ router.get('/districts/lookup', async (req, res) => {
         res.json(result);
     }
     catch (error) {
-        console.error('District lookup error:', error);
+        logger_1.logger.error({ error }, 'District lookup error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -75,7 +76,7 @@ router.post('/districts/missing-offices', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Missing offices lookup error:', error);
+        logger_1.logger.error({ error }, 'Missing offices lookup error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -138,7 +139,7 @@ router.post('/districts', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('District submission error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'District submission error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -203,7 +204,7 @@ router.post('/districts/:districtId/offices', auth_1.requireAuth, async (req, re
         });
     }
     catch (error) {
-        console.error('Office submission error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, districtId: req.params.districtId }, 'Office submission error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -268,7 +269,7 @@ router.post('/offices/:officeId/officials', auth_1.requireAuth, async (req, res)
         });
     }
     catch (error) {
-        console.error('Official submission error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, officeId: req.params.officeId }, 'Official submission error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -353,7 +354,7 @@ router.post('/officials/:officialId/vote', auth_1.requireAuth, async (req, res) 
         });
     }
     catch (error) {
-        console.error('Voting error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, officialId: req.params.officialId }, 'Voting error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -417,7 +418,7 @@ router.post('/districts/:districtId/conflicts', auth_1.requireAuth, async (req, 
         });
     }
     catch (error) {
-        console.error('Conflict reporting error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, districtId: req.params.districtId }, 'Conflict reporting error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -517,7 +518,7 @@ router.get('/my-contributions', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Contributions lookup error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Contributions lookup error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -597,7 +598,7 @@ router.get('/leaderboard', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Leaderboard error:', error);
+        logger_1.logger.error({ error }, 'Leaderboard error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });

@@ -10,6 +10,7 @@ const auth_1 = require("../middleware/auth");
 const electionService_1 = require("../services/electionService");
 const enhancedElectionService_1 = require("../services/enhancedElectionService");
 const metricsService_1 = require("../services/metricsService");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -69,7 +70,7 @@ router.get('/', async (req, res) => {
                 message: 'State must be a two-letter code (e.g., CA, NY)'
             });
         }
-        console.log(`🗳️  Election request: ${state.toUpperCase()}${zipCode ? ` (${zipCode})` : ''}`);
+        logger_1.logger.info({ state, zipCode }, 'Election request');
         // Use enhanced multi-tier election service
         const electionData = await enhancedElectionService_1.EnhancedElectionService.getElectionData(state, zipCode);
         // Filter by level if specified
@@ -88,7 +89,7 @@ router.get('/', async (req, res) => {
             level: level || 'all',
             source: electionData.source
         });
-        console.log(`✅ Returning ${filteredElections.length} elections (${electionData.source})`);
+        logger_1.logger.info({ count: filteredElections.length, source: electionData.source }, 'Returning elections');
         res.json({
             elections: filteredElections,
             count: filteredElections.length,
@@ -98,7 +99,7 @@ router.get('/', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Election search error:', error);
+        logger_1.logger.error({ error }, 'Election search error');
         res.status(500).json({ error: 'Failed to retrieve elections' });
     }
 });
@@ -137,7 +138,7 @@ router.get('/:id', async (req, res) => {
         res.json(election);
     }
     catch (error) {
-        console.error('Election retrieval error:', error);
+        logger_1.logger.error({ error, electionId: req.params.id }, 'Election retrieval error');
         res.status(500).json({ error: 'Failed to retrieve election details' });
     }
 });
@@ -209,7 +210,7 @@ router.get('/:id/candidates', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Candidate retrieval error:', error);
+        logger_1.logger.error({ error, electionId: req.params.id }, 'Candidate retrieval error');
         res.status(500).json({ error: 'Failed to retrieve candidates' });
     }
 });
@@ -315,7 +316,7 @@ router.post('/:id/register-candidate', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Candidate registration error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Candidate registration error');
         if (error.message.includes('already registered') ||
             error.message.includes('not found') ||
             error.message.includes('not active') ||
@@ -396,7 +397,7 @@ router.post('/candidates/compare', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Candidate comparison error:', error);
+        logger_1.logger.error({ error }, 'Candidate comparison error');
         res.status(500).json({ error: 'Failed to compare candidates' });
     }
 });
@@ -438,7 +439,7 @@ router.post('/cache/refresh', auth_1.requireAuth, async (req, res) => {
             });
         }
         const { state } = req.body;
-        console.log(`🗑️  Admin ${user.username} refreshing election cache${state ? ` for ${state}` : ''}`);
+        logger_1.logger.info({ admin: user.username, state }, 'Admin refreshing election cache');
         await enhancedElectionService_1.EnhancedElectionService.refreshCache(state);
         res.json({
             message: `Election cache refreshed successfully${state ? ` for ${state}` : ''}`,
@@ -446,7 +447,7 @@ router.post('/cache/refresh', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Cache refresh error:', error);
+        logger_1.logger.error({ error }, 'Cache refresh error');
         res.status(500).json({ error: 'Failed to refresh cache' });
     }
 });

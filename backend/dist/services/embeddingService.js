@@ -7,6 +7,7 @@ const sentenceTransformersService_1 = require("./sentenceTransformersService");
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const azureConfig_1 = require("../config/azureConfig");
 const environment_1 = require("../utils/environment");
+const logger_1 = require("./logger");
 class EmbeddingService {
     /**
      * Generate embedding using best available service (Azure OpenAI > Local)
@@ -21,11 +22,11 @@ class EmbeddingService {
             if (config.provider === 'azure' || ((0, environment_1.isProduction)() && process.env.AZURE_OPENAI_ENDPOINT)) {
                 try {
                     const result = await azureOpenAIService_1.azureOpenAI.generateEmbedding(text);
-                    console.log(`✓ Generated Azure OpenAI embedding (${result.processingTime}ms)`);
+                    logger_1.logger.info({ processingTime: result.processingTime }, 'Generated Azure OpenAI embedding');
                     return result.embedding;
                 }
                 catch (azureError) {
-                    console.warn('Azure OpenAI failed, falling back to local:', azureError);
+                    logger_1.logger.warn({ error: azureError }, 'Azure OpenAI failed, falling back to local');
                 }
             }
             // Fallback to local Sentence Transformers
@@ -33,7 +34,7 @@ class EmbeddingService {
             return result.embedding;
         }
         catch (error) {
-            console.error('All embedding methods failed:', error);
+            logger_1.logger.error({ error }, 'All embedding methods failed');
             // Return zero vector as fallback to prevent system failure
             return new Array(this.EMBEDDING_DIMENSION).fill(0);
         }
@@ -61,7 +62,7 @@ class EmbeddingService {
             return result;
         }
         catch (error) {
-            console.error('Text analysis failed:', error);
+            logger_1.logger.error({ error }, 'Text analysis failed');
             // Return minimal result with zero embedding
             return {
                 embedding: new Array(this.EMBEDDING_DIMENSION).fill(0),
@@ -108,11 +109,11 @@ class EmbeddingService {
               AND 1 - (p.embedding <=> ${embeddingString}::vector) >= ${minSimilarity}
             ORDER BY p.embedding <=> ${embeddingString}::vector
             LIMIT ${limit}`;
-                    console.log(`✓ Found ${similarPosts.length} similar posts using PostgreSQL vector search`);
+                    logger_1.logger.info({ count: similarPosts.length }, 'Found similar posts using PostgreSQL vector search');
                     return similarPosts;
                 }
                 catch (vectorError) {
-                    console.warn('PostgreSQL vector search failed, falling back to in-memory:', vectorError);
+                    logger_1.logger.warn({ error: vectorError }, 'PostgreSQL vector search failed, falling back to in-memory');
                 }
             }
             // Fallback to in-memory similarity calculation
@@ -146,11 +147,11 @@ class EmbeddingService {
                 .filter(post => post.similarity >= minSimilarity)
                 .sort((a, b) => b.similarity - a.similarity)
                 .slice(0, limit);
-            console.log(`✓ Found ${similarPosts.length} similar posts using in-memory search`);
+            logger_1.logger.info({ count: similarPosts.length }, 'Found similar posts using in-memory search');
             return similarPosts;
         }
         catch (error) {
-            console.error('Similar post search failed:', error);
+            logger_1.logger.error({ error }, 'Similar post search failed');
             return [];
         }
     }
@@ -186,13 +187,13 @@ class EmbeddingService {
             // Update Qdrant if available (temporarily disabled)
             if (this.USE_QDRANT && false) {
                 // QdrantService temporarily unavailable
-                console.log('Qdrant update skipped - service not available yet');
+                logger_1.logger.debug('Qdrant update skipped - service not available yet');
             }
-            console.log(`✓ Updated embeddings for post ${postId}`);
+            logger_1.logger.info({ postId }, 'Updated embeddings for post');
             return analysis;
         }
         catch (error) {
-            console.error(`Failed to update post embedding for ${postId}:`, error);
+            logger_1.logger.error({ error, postId }, 'Failed to update post embedding');
             throw error;
         }
     }
@@ -201,7 +202,7 @@ class EmbeddingService {
      */
     static async batchProcessEmbeddings(batchSize = 50) {
         try {
-            console.log('Starting batch embedding processing...');
+            logger_1.logger.info({ batchSize }, 'Starting batch embedding processing');
             const postsWithoutEmbeddings = await prisma_1.prisma.post.findMany({
                 where: {
                     embedding: {
@@ -214,23 +215,23 @@ class EmbeddingService {
                 },
                 take: batchSize
             });
-            console.log(`Processing ${postsWithoutEmbeddings.length} posts...`);
+            logger_1.logger.info({ postCount: postsWithoutEmbeddings.length }, 'Processing posts for embedding');
             for (const post of postsWithoutEmbeddings) {
                 try {
                     await this.updatePostEmbedding(post.id, post.content);
-                    console.log(`✓ Processed post ${post.id}`);
+                    logger_1.logger.debug({ postId: post.id }, 'Processed post embedding');
                     // Small delay to avoid overwhelming the API
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
                 catch (error) {
-                    console.error(`✗ Failed to process post ${post.id}:`, error);
+                    logger_1.logger.error({ error, postId: post.id }, 'Failed to process post embedding');
                 }
             }
-            console.log('Batch processing completed');
+            logger_1.logger.info({ processedCount: postsWithoutEmbeddings.length }, 'Batch processing completed');
             return postsWithoutEmbeddings.length;
         }
         catch (error) {
-            console.error('Batch processing failed:', error);
+            logger_1.logger.error({ error }, 'Batch processing failed');
             throw error;
         }
     }

@@ -14,6 +14,7 @@ const express_validator_1 = require("express-validator");
 const civicOrganizingService_1 = __importDefault(require("../services/civicOrganizingService"));
 const auth_1 = require("../middleware/auth");
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Rate limiting for civic actions
 const civicActionLimit = (0, express_rate_limit_1.default)({
@@ -158,7 +159,7 @@ router.post('/petitions', auth_1.requireAuth, civicActionLimit, [
         });
     }
     catch (error) {
-        console.error('Create petition error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Create petition error');
         res.status(500).json({
             error: error.message || 'Failed to create petition'
         });
@@ -294,7 +295,7 @@ router.get('/petitions', civicBrowseLimit, [
         });
     }
     catch (error) {
-        console.error('Get petitions error:', error);
+        logger_1.logger.error({ error }, 'Get petitions error');
         res.status(500).json({
             error: error.message || 'Failed to fetch petitions'
         });
@@ -355,7 +356,7 @@ router.get('/petitions/:id', civicBrowseLimit, [
         });
     }
     catch (error) {
-        console.error('Get petition error:', error);
+        logger_1.logger.error({ error, petitionId: req.params.id }, 'Get petition error');
         res.status(500).json({
             error: error.message || 'Failed to fetch petition'
         });
@@ -422,7 +423,7 @@ router.post('/petitions/:id/sign', auth_1.requireAuth, civicActionLimit, [
         });
     }
     catch (error) {
-        console.error('Sign petition error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, petitionId: req.params.id }, 'Sign petition error');
         res.status(400).json({
             error: error.message || 'Failed to sign petition'
         });
@@ -598,7 +599,7 @@ router.post('/events', auth_1.requireAuth, civicActionLimit, [
         });
     }
     catch (error) {
-        console.error('Create event error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Create event error');
         res.status(500).json({
             error: error.message || 'Failed to create event'
         });
@@ -743,7 +744,7 @@ router.get('/events', civicBrowseLimit, [
         });
     }
     catch (error) {
-        console.error('Get events error:', error);
+        logger_1.logger.error({ error }, 'Get events error');
         res.status(500).json({
             error: error.message || 'Failed to fetch events'
         });
@@ -804,7 +805,7 @@ router.get('/events/:id', civicBrowseLimit, [
         });
     }
     catch (error) {
-        console.error('Get event error:', error);
+        logger_1.logger.error({ error, eventId: req.params.id }, 'Get event error');
         res.status(500).json({
             error: error.message || 'Failed to fetch event'
         });
@@ -883,7 +884,7 @@ router.post('/events/:id/rsvp', auth_1.requireAuth, civicActionLimit, [
         });
     }
     catch (error) {
-        console.error('RSVP event error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, eventId: req.params.id }, 'RSVP event error');
         res.status(400).json({
             error: error.message || 'Failed to RSVP to event'
         });
@@ -996,7 +997,7 @@ router.get('/search', civicBrowseLimit, [
         });
     }
     catch (error) {
-        console.error('Search civic error:', error);
+        logger_1.logger.error({ error, query: req.query.q }, 'Search civic error');
         res.status(500).json({
             error: error.message || 'Failed to search civic content'
         });
@@ -1045,7 +1046,7 @@ router.get('/user/petitions', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get user petitions error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get user petitions error');
         res.status(500).json({
             error: error.message || 'Failed to fetch user petitions'
         });
@@ -1091,7 +1092,7 @@ router.get('/user/events', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get user events error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get user events error');
         res.status(500).json({
             error: error.message || 'Failed to fetch user events'
         });
@@ -1137,7 +1138,7 @@ router.get('/user/signatures', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get user signatures error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get user signatures error');
         res.status(500).json({
             error: error.message || 'Failed to fetch user signatures'
         });
@@ -1183,7 +1184,7 @@ router.get('/user/rsvps', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get user RSVPs error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get user RSVPs error');
         res.status(500).json({
             error: error.message || 'Failed to fetch user RSVPs'
         });

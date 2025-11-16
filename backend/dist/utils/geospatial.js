@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getVotingDistrict = exports.formatFullAddress = exports.generatePrivacyDisplacedCoordinates = exports.addressToH3 = exports.getNearbyH3Indexes = exports.h3ToCoordinates = exports.coordinatesToH3 = exports.geocodeAddress = void 0;
 const h3_js_1 = require("h3-js");
+const logger_1 = require("../services/logger");
 // H3 resolution levels:
 // 7 = ~5km hexagons (good for voting districts)
 // 8 = ~1km hexagons (neighborhood level)
@@ -35,7 +36,7 @@ const geocodeAddress = async (address) => {
         return stateCoordinates[address.state] || null;
     }
     catch (error) {
-        console.error('Geocoding error:', error);
+        logger_1.logger.error({ error, state: address.state }, 'Geocoding error');
         return null;
     }
 };
@@ -109,7 +110,7 @@ const getVotingDistrict = async (coords) => {
         };
     }
     catch (error) {
-        console.error('Voting district lookup error:', error);
+        logger_1.logger.error({ error, coords }, 'Voting district lookup error');
         return null;
     }
 };

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const prisma_1 = require("../lib/prisma");
 const storage_blob_1 = require("@azure/storage-blob");
+const logger_1 = require("./logger");
 class BadgeService {
     constructor() {
         this.containerName = 'photos'; // Using existing photos container
@@ -311,7 +312,7 @@ class BadgeService {
             ];
             // Validate property is in whitelist
             if (!allowedProperties.includes(requirements.userProperty)) {
-                console.error(`Invalid user property in badge criteria: ${requirements.userProperty}`);
+                logger_1.logger.error({ userProperty: requirements.userProperty }, 'Invalid user property in badge criteria');
                 return false;
             }
             try {
@@ -325,7 +326,7 @@ class BadgeService {
                 return actualValue === requirements.expectedValue;
             }
             catch (error) {
-                console.error(`Error checking user property ${requirements.userProperty}:`, error);
+                logger_1.logger.error({ error, userProperty: requirements.userProperty }, 'Error checking user property');
                 return false;
             }
         }
@@ -384,7 +385,7 @@ class BadgeService {
                         badgesAwarded++;
                     }
                     catch (error) {
-                        console.error(`Error awarding badge ${badge.id} to user ${user.id}:`, error);
+                        logger_1.logger.error({ error, badgeId: badge.id, userId: user.id }, 'Error awarding badge to user');
                     }
                 }
             }

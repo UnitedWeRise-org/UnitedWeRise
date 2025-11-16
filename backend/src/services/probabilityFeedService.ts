@@ -9,6 +9,7 @@ import { prisma } from '../lib/prisma';
 import { azureOpenAI } from './azureOpenAIService';
 import { reputationService } from './reputationService';
 import { EngagementScoringService } from './engagementScoringService';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -112,7 +113,7 @@ export class ProbabilityFeedService {
                 }
             };
         } catch (error) {
-            console.error('ProbabilityFeedService error:', error);
+            logger.error({ error, userId }, 'ProbabilityFeedService error');
             throw error;
         }
     }
@@ -323,7 +324,7 @@ export class ProbabilityFeedService {
                 similarityScore = similarities.reduce((a, b) => a + b, 0) / similarities.length;
                 similarityScore = Math.max(0, Math.min(1, similarityScore)); // Clamp 0-1
             } catch (error) {
-                console.warn('Similarity calculation error:', error);
+                logger.warn({ error }, 'Similarity calculation error');
             }
         }
 
@@ -347,7 +348,7 @@ export class ProbabilityFeedService {
                 visibilityMultiplier = 0.8; // -20% suppression
             }
         } catch (error) {
-            console.warn('Reputation calculation error:', error);
+            logger.warn({ error }, 'Reputation calculation error');
         }
 
         // Calculate final weighted score

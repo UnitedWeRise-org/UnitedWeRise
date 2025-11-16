@@ -13,6 +13,7 @@ const validation_1 = require("../middleware/validation");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const metricsService_1 = require("../services/metricsService");
 const candidateReportService_1 = require("../services/candidateReportService");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 const requireModerator = async (req, res, next) => {
@@ -151,7 +152,7 @@ router.post('/reports', auth_1.requireAuth, rateLimiting_1.apiLimiter, validatio
         });
     }
     catch (error) {
-        console.error('Submit report error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Submit report error');
         res.status(500).json({ error: 'Failed to submit report' });
     }
 });
@@ -244,7 +245,7 @@ router.get('/reports/my', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get user reports error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get user reports error');
         res.status(500).json({ error: 'Failed to retrieve reports' });
     }
 });
@@ -398,7 +399,7 @@ router.get('/reports', auth_1.requireAuth, requireModerator, async (req, res) =>
                 }
             }
             catch (error) {
-                console.error(`Failed to fetch ${report.targetType} ${report.targetId}:`, error);
+                logger_1.logger.error({ error, targetType: report.targetType, targetId: report.targetId }, 'Failed to fetch moderation target');
             }
             return {
                 ...report,
@@ -416,7 +417,7 @@ router.get('/reports', auth_1.requireAuth, requireModerator, async (req, res) =>
         });
     }
     catch (error) {
-        console.error('Get reports queue error:', error);
+        logger_1.logger.error({ error }, 'Get reports queue error');
         res.status(500).json({ error: 'Failed to retrieve reports' });
     }
 });
@@ -530,7 +531,7 @@ router.post('/reports/:reportId/action', auth_1.requireAuth, requireModerator, v
             }
         }
         catch (error) {
-            console.error('Failed to send report update email:', error);
+            logger_1.logger.error({ error, reportId }, 'Failed to send report update email');
             // Don't fail the request if email fails
         }
         res.json({
@@ -540,7 +541,7 @@ router.post('/reports/:reportId/action', auth_1.requireAuth, requireModerator, v
         });
     }
     catch (error) {
-        console.error('Report action error:', error);
+        logger_1.logger.error({ error, reportId: req.params.reportId }, 'Report action error');
         res.status(500).json({ error: 'Failed to process report action' });
     }
 });
@@ -685,7 +686,7 @@ router.get('/stats', auth_1.requireAuth, requireModerator, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get moderation stats error:', error);
+        logger_1.logger.error({ error }, 'Get moderation stats error');
         res.status(500).json({ error: 'Failed to retrieve statistics' });
     }
 });
@@ -749,7 +750,7 @@ router.post('/users/:userId/promote', auth_1.requireStagingAuth, requireAdmin, a
         });
     }
     catch (error) {
-        console.error('Promote user error:', error);
+        logger_1.logger.error({ error, targetUserId: req.params.userId }, 'Promote user error');
         res.status(500).json({ error: 'Failed to promote user' });
     }
 });
@@ -802,7 +803,7 @@ router.get('/health', auth_1.requireAuth, requireModerator, async (req, res) => 
         res.json(health);
     }
     catch (error) {
-        console.error('Moderation health check error:', error);
+        logger_1.logger.error({ error }, 'Moderation health check error');
         res.status(500).json({
             status: 'unhealthy',
             error: 'System check failed'

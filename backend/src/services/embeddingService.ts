@@ -5,6 +5,7 @@ import { SentenceTransformersService } from './sentenceTransformersService';
 import { azureOpenAI } from './azureOpenAIService';
 import { getSemanticConfig } from '../config/azureConfig';
 import { isProduction } from '../utils/environment';
+import { logger } from './logger';
 // import { QdrantService } from './qdrantService';  // Enable when Qdrant is available
 
 // Using singleton prisma from lib/prisma.ts
@@ -52,20 +53,20 @@ export class EmbeddingService {
       if (config.provider === 'azure' || (isProduction() && process.env.AZURE_OPENAI_ENDPOINT)) {
         try {
           const result = await azureOpenAI.generateEmbedding(text);
-          console.log(`✓ Generated Azure OpenAI embedding (${result.processingTime}ms)`);
+          logger.info({ processingTime: result.processingTime }, 'Generated Azure OpenAI embedding');
           return result.embedding;
         } catch (azureError) {
-          console.warn('Azure OpenAI failed, falling back to local:', azureError);
+          logger.warn({ error: azureError }, 'Azure OpenAI failed, falling back to local');
         }
       }
 
       // Fallback to local Sentence Transformers
       const result = await SentenceTransformersService.generateEmbedding(text);
       return result.embedding;
-      
+
     } catch (error) {
-      console.error('All embedding methods failed:', error);
-      
+      logger.error({ error }, 'All embedding methods failed');
+
       // Return zero vector as fallback to prevent system failure
       return new Array(this.EMBEDDING_DIMENSION).fill(0);
     }
@@ -96,8 +97,8 @@ export class EmbeddingService {
 
       return result;
     } catch (error) {
-      console.error('Text analysis failed:', error);
-      
+      logger.error({ error }, 'Text analysis failed');
+
       // Return minimal result with zero embedding
       return {
         embedding: new Array(this.EMBEDDING_DIMENSION).fill(0),
@@ -154,11 +155,11 @@ export class EmbeddingService {
             ORDER BY p.embedding <=> ${embeddingString}::vector
             LIMIT ${limit}`;
           
-          console.log(`✓ Found ${similarPosts.length} similar posts using PostgreSQL vector search`);
+          logger.info({ count: similarPosts.length }, 'Found similar posts using PostgreSQL vector search');
           return similarPosts;
-          
+
         } catch (vectorError) {
-          console.warn('PostgreSQL vector search failed, falling back to in-memory:', vectorError);
+          logger.warn({ error: vectorError }, 'PostgreSQL vector search failed, falling back to in-memory');
         }
       }
 
@@ -195,11 +196,11 @@ export class EmbeddingService {
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, limit);
 
-      console.log(`✓ Found ${similarPosts.length} similar posts using in-memory search`);
+      logger.info({ count: similarPosts.length }, 'Found similar posts using in-memory search');
       return similarPosts;
-      
+
     } catch (error) {
-      console.error('Similar post search failed:', error);
+      logger.error({ error }, 'Similar post search failed');
       return [];
     }
   }
@@ -240,13 +241,13 @@ export class EmbeddingService {
       // Update Qdrant if available (temporarily disabled)
       if (this.USE_QDRANT && false) {
         // QdrantService temporarily unavailable
-        console.log('Qdrant update skipped - service not available yet');
+        logger.debug('Qdrant update skipped - service not available yet');
       }
 
-      console.log(`✓ Updated embeddings for post ${postId}`);
+      logger.info({ postId }, 'Updated embeddings for post');
       return analysis;
     } catch (error) {
-      console.error(`Failed to update post embedding for ${postId}:`, error);
+      logger.error({ error, postId }, 'Failed to update post embedding');
       throw error;
     }
   }
@@ -256,8 +257,8 @@ export class EmbeddingService {
    */
   static async batchProcessEmbeddings(batchSize: number = 50) {
     try {
-      console.log('Starting batch embedding processing...');
-      
+      logger.info({ batchSize }, 'Starting batch embedding processing');
+
       const postsWithoutEmbeddings = await prisma.post.findMany({
         where: {
           embedding: {
@@ -271,24 +272,24 @@ export class EmbeddingService {
         take: batchSize
       });
 
-      console.log(`Processing ${postsWithoutEmbeddings.length} posts...`);
+      logger.info({ postCount: postsWithoutEmbeddings.length }, 'Processing posts for embedding');
 
       for (const post of postsWithoutEmbeddings) {
         try {
           await this.updatePostEmbedding(post.id, post.content);
-          console.log(`✓ Processed post ${post.id}`);
-          
+          logger.debug({ postId: post.id }, 'Processed post embedding');
+
           // Small delay to avoid overwhelming the API
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
-          console.error(`✗ Failed to process post ${post.id}:`, error);
+          logger.error({ error, postId: post.id }, 'Failed to process post embedding');
         }
       }
 
-      console.log('Batch processing completed');
+      logger.info({ processedCount: postsWithoutEmbeddings.length }, 'Batch processing completed');
       return postsWithoutEmbeddings.length;
     } catch (error) {
-      console.error('Batch processing failed:', error);
+      logger.error({ error }, 'Batch processing failed');
       throw error;
     }
   }

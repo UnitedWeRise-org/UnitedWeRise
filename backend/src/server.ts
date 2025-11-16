@@ -67,6 +67,7 @@ const app = express();
 
 // Configure trust proxy for Azure Container Apps (1 proxy layer)
 app.set('trust proxy', 1);
+pinoLogger.info('Configured trust proxy for Azure Container Apps');
 
 const httpServer = http.createServer(app);
 
@@ -121,19 +122,19 @@ app.use(apiLimiter);
 // CORS Configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
 if (enableRequestLogging()) {
-  console.log('🔒 CORS - Allowed Origins:', allowedOrigins);
+  pinoLogger.info({ allowedOrigins }, 'CORS configuration loaded');
 }
 
 app.use(cors({
   origin: (origin, callback) => {
     if (enableRequestLogging()) {
-      console.log('🔍 CORS - Request from origin:', origin);
+      pinoLogger.debug({ origin }, 'CORS request received');
     }
 
     // In development, be more permissive
     if (getEnvironment() === 'development') {
       if (enableRequestLogging()) {
-        console.log('✅ CORS - Development mode, allowing all origins');
+        pinoLogger.debug({ origin }, 'CORS allowing all origins in development');
       }
       callback(null, true);
       return;
@@ -150,12 +151,12 @@ app.use(cors({
         isAzureStaticApp ||
         isUnitedWeRiseOrigin) {
       if (enableRequestLogging()) {
-        console.log('✅ CORS - Origin allowed');
+        pinoLogger.debug({ origin }, 'CORS origin allowed');
       }
       callback(null, true);
     } else {
       // SECURITY EVENT: Always log blocked origins (potential attack/misconfiguration)
-      console.log('❌ CORS - Origin blocked:', origin);
+      pinoLogger.warn({ origin }, 'CORS origin blocked - potential security event');
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -170,7 +171,7 @@ app.use((req, res, next) => {
 
   // CRITICAL FIX: Explicitly skip multipart/form-data to prevent stream interference
   if (contentType.includes('multipart/form-data')) {
-    console.log('🔧 MULTIPART REQUEST - Skipping body parsing, letting multer handle it');
+    pinoLogger.debug({ contentType }, 'Skipping body parsing for multipart request');
     return next();
   }
 
@@ -223,7 +224,7 @@ app.use((req, res, next) => {
 
 // 🚨 DEBUGGING ROUTE: Test if our backend is being hit
 app.get('/api/debug-test', (req, res) => {
-  console.log('🎯🎯🎯 DEBUG TEST ENDPOINT HIT!');
+  pinoLogger.info({ path: req.path, ip: req.ip }, 'Debug test endpoint accessed');
   res.json({
     message: 'Debug test successful',
     timestamp: new Date().toISOString(),
@@ -414,22 +415,22 @@ app.use(errorHandler);
 
 // Graceful shutdown handler for proper database connection cleanup
 const gracefulShutdown = async () => {
-  console.log('Received shutdown signal, closing server gracefully...');
+  pinoLogger.info('Received shutdown signal, closing server gracefully');
 
   // Stop cron jobs
   analyticsCleanupJob.stop();
 
   // Close HTTP server
   httpServer.close(() => {
-    console.log('HTTP server closed');
+    pinoLogger.info('HTTP server closed');
   });
 
   // Close database connections
   try {
     await prisma.$disconnect();
-    console.log('Database connections closed');
+    pinoLogger.info('Database connections closed');
   } catch (error) {
-    console.error('Error closing database connections:', error);
+    pinoLogger.error({ error }, 'Error closing database connections');
   }
 
   process.exit(0);
@@ -488,7 +489,7 @@ function validateEnvironmentConsistency(): void {
 // Initialize services and start server
 async function startServer() {
   try {
-    console.log('🚀 Initializing services...');
+    pinoLogger.info('Initializing services');
 
     // Validate environment consistency BEFORE starting services
     validateEnvironmentConsistency();
@@ -498,13 +499,13 @@ async function startServer() {
 
     // Start server only after all services are ready
     httpServer.listen(PORT, () => {
-      pinoLogger.info(`Server running on port ${PORT}`);
-      pinoLogger.info(`WebSocket server active`);
-      pinoLogger.info(`Health check: http://localhost:${PORT}/health`);
-      pinoLogger.info(`Database connection pool: 10 connections max, 20s timeout`);
+      pinoLogger.info({ port: PORT }, 'Server running');
+      pinoLogger.info('WebSocket server active');
+      pinoLogger.info({ url: `http://localhost:${PORT}/health` }, 'Health check available');
+      pinoLogger.info({ maxConnections: 10, timeout: '20s' }, 'Database connection pool configured');
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    pinoLogger.fatal({ error }, 'Failed to start server');
     process.exit(1);
   }
 }

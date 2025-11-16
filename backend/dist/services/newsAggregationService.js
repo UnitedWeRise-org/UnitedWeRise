@@ -231,6 +231,7 @@ Summary:`;
                 maxTokens: 150,
                 temperature: 0.5
             });
+            logger_1.logger.debug({ titlePreview: title.substring(0, 50) }, 'AI summary generated successfully');
             return summary.trim();
         }
         catch (error) {

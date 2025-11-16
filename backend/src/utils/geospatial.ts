@@ -1,4 +1,5 @@
 import { latLngToCell, cellToLatLng, gridRingUnsafe } from 'h3-js';
+import { logger } from '../services/logger';
 
 // H3 resolution levels:
 // 7 = ~5km hexagons (good for voting districts)
@@ -51,7 +52,7 @@ export const geocodeAddress = async (address: AddressComponents): Promise<Coordi
 
     return stateCoordinates[address.state] || null;
   } catch (error) {
-    console.error('Geocoding error:', error);
+    logger.error({ error, state: address.state }, 'Geocoding error');
     return null;
   }
 };
@@ -138,7 +139,7 @@ export const getVotingDistrict = async (coords: Coordinates): Promise<{
       local: "Springfield Ward 3"
     };
   } catch (error) {
-    console.error('Voting district lookup error:', error);
+    logger.error({ error, coords }, 'Voting district lookup error');
     return null;
   }
 };

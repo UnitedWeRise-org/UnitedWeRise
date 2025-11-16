@@ -51,7 +51,7 @@ const getWebSocketService = async () => {
             webSocketService = serverModule.webSocketService;
         }
         catch (error) {
-            console.warn('WebSocket service not available:', error);
+            logger_1.logger.warn({ error }, 'WebSocket service not available');
         }
     }
     return webSocketService;

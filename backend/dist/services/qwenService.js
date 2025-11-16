@@ -9,13 +9,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.QwenService = void 0;
 const axios_1 = __importDefault(require("axios"));
 const prisma_1 = require("../lib/prisma");
+const logger_1 = require("./logger");
 class QwenService {
     /**
      * Test Qwen3 API connection
      */
     static async healthCheck() {
         try {
-            console.log('🤖 Testing Qwen3 API connection...');
+            logger_1.logger.info('Testing Qwen3 API connection');
             const testPrompt = "Hello! Please respond with a brief confirmation that you're working correctly.";
             const response = await this.makeAPIRequest({
                 prompt: testPrompt,
@@ -32,7 +33,7 @@ class QwenService {
             };
         }
         catch (error) {
-            console.error('Qwen3 health check failed:', error);
+            logger_1.logger.error({ error }, 'Qwen3 health check failed');
             return {
                 status: 'unhealthy',
                 details: error instanceof Error ? error.message : 'Unknown error'
@@ -56,7 +57,7 @@ class QwenService {
                 candidate.keyIssues.join('. ')
             ].filter(Boolean).join('\n\n');
             if (!analysisContent.trim()) {
-                console.log(`⚠️  No content available for candidate ${candidate.name}`);
+                logger_1.logger.warn({ candidateName: candidate.name }, 'No content available for candidate');
                 return [];
             }
             const prompt = this.buildPositionAnalysisPrompt(candidate.name, analysisContent);
@@ -69,7 +70,7 @@ class QwenService {
             return this.parsePositionAnalysis(analysisText);
         }
         catch (error) {
-            console.error(`Failed to analyze positions for candidate ${candidateId}:`, error);
+            logger_1.logger.error({ error, candidateId }, 'Failed to analyze positions for candidate');
             return [];
         }
     }
@@ -78,7 +79,7 @@ class QwenService {
      */
     static async compareCandidates(candidateIds, officeId) {
         try {
-            console.log(`🔄 Comparing ${candidateIds.length} candidates...`);
+            logger_1.logger.info({ candidateCount: candidateIds.length, officeId }, 'Comparing candidates');
             // Get candidate data
             const candidates = await prisma_1.prisma.candidate.findMany({
                 where: {
@@ -108,7 +109,7 @@ class QwenService {
             return this.parseComparison(candidates, candidatePositions, comparisonText);
         }
         catch (error) {
-            console.error('Candidate comparison failed:', error);
+            logger_1.logger.error({ error }, 'Candidate comparison failed');
             throw error;
         }
     }
@@ -141,7 +142,7 @@ Provide a balanced summary:`;
                 `Multiple perspectives exist on ${issue}. Candidates offer different approaches to this issue.`;
         }
         catch (error) {
-            console.error('Failed to generate neutral summary:', error);
+            logger_1.logger.error({ error, issue }, 'Failed to generate neutral summary');
             return `Various candidates have different positions on ${issue}.`;
         }
     }
@@ -158,7 +159,7 @@ Provide a balanced summary:`;
             return response.choices[0]?.message?.content || '';
         }
         catch (error) {
-            console.error('QwenService generateResponse error:', error);
+            logger_1.logger.error({ error }, 'QwenService generateResponse error');
             throw error;
         }
     }
@@ -197,7 +198,7 @@ Provide a balanced summary:`;
                 top_p: request.topP || 0.9,
                 stream: false
             };
-            console.log(`🤖 Making Qwen3 API request (${request.maxTokens || 500} max tokens)...`);
+            logger_1.logger.info({ maxTokens: request.maxTokens || 500 }, 'Making Qwen3 API request');
             const response = await axios_1.default.post(`${this.API_URL}/v1/chat/completions`, requestData, {
                 headers,
                 timeout: this.TIMEOUT_MS
@@ -205,7 +206,7 @@ Provide a balanced summary:`;
             if (!response.data || !response.data.choices || response.data.choices.length === 0) {
                 throw new Error('Invalid response from Qwen3 API');
             }
-            console.log(`✅ Qwen3 response received (${response.data.usage?.total_tokens || 0} tokens)`);
+            logger_1.logger.info({ totalTokens: response.data.usage?.total_tokens || 0 }, 'Qwen3 response received');
             return response.data;
         }
         catch (error) {
@@ -298,8 +299,7 @@ Respond with valid JSON only:`;
             return parsed.positions || [];
         }
         catch (error) {
-            console.error('Failed to parse position analysis:', error);
-            console.log('Raw analysis text:', analysisText);
+            logger_1.logger.error({ error, analysisText }, 'Failed to parse position analysis');
             return [];
         }
     }
@@ -336,8 +336,7 @@ Respond with valid JSON only:`;
             return comparison;
         }
         catch (error) {
-            console.error('Failed to parse comparison:', error);
-            console.log('Raw comparison text:', comparisonText);
+            logger_1.logger.error({ error, comparisonText }, 'Failed to parse comparison');
             // Return fallback comparison
             return {
                 candidates: candidates.map(c => ({ id: c.id, name: c.name, party: c.party })),

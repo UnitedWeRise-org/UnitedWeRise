@@ -10,6 +10,7 @@ const prisma_1 = require("../lib/prisma");
  */
 ;
 const notifications_1 = require("../routes/notifications");
+const logger_1 = require("./logger");
 // Using singleton prisma from lib/prisma.ts
 var RelationshipType;
 (function (RelationshipType) {
@@ -73,7 +74,7 @@ class FollowService {
                 select: { username: true }
             });
             if (follower) {
-                (0, notifications_1.createNotification)('FOLLOW', followerId, followingId, `${follower.username} started following you`).catch(console.error);
+                (0, notifications_1.createNotification)('FOLLOW', followerId, followingId, `${follower.username} started following you`).catch(error => logger_1.logger.error({ error }, 'Failed to create follow notification'));
             }
             return {
                 success: true,
@@ -82,7 +83,7 @@ class FollowService {
             };
         }
         catch (error) {
-            console.error('Follow user error:', error);
+            logger_1.logger.error({ error, followerId, followingId }, 'Follow user error');
             return { success: false, message: 'Failed to follow user', error: error.message };
         }
     }
@@ -129,7 +130,7 @@ class FollowService {
             };
         }
         catch (error) {
-            console.error('Unfollow user error:', error);
+            logger_1.logger.error({ error, followerId, followingId }, 'Unfollow user error');
             return { success: false, message: 'Failed to unfollow user', error: error.message };
         }
     }
@@ -153,7 +154,7 @@ class FollowService {
             };
         }
         catch (error) {
-            console.error('Get follow status error:', error);
+            logger_1.logger.error({ error, followerId, followingId }, 'Get follow status error');
             return { isFollowing: false };
         }
     }
@@ -193,7 +194,7 @@ class FollowService {
             };
         }
         catch (error) {
-            console.error('Get followers error:', error);
+            logger_1.logger.error({ error, userId }, 'Get followers error');
             return { success: false, message: 'Failed to get followers', error: error.message };
         }
     }
@@ -233,7 +234,7 @@ class FollowService {
             };
         }
         catch (error) {
-            console.error('Get following error:', error);
+            logger_1.logger.error({ error, userId }, 'Get following error');
             return { success: false, message: 'Failed to get following', error: error.message };
         }
     }
@@ -255,7 +256,7 @@ class FollowService {
             return followMap;
         }
         catch (error) {
-            console.error('Bulk follow status error:', error);
+            logger_1.logger.error({ error, currentUserId }, 'Bulk follow status error');
             return new Map();
         }
     }
@@ -300,7 +301,7 @@ class SubscriptionService {
                 select: { username: true }
             });
             if (subscriber) {
-                (0, notifications_1.createNotification)('FOLLOW', subscriberId, subscribedId, `${subscriber.username} subscribed to your posts`).catch(console.error);
+                (0, notifications_1.createNotification)('FOLLOW', subscriberId, subscribedId, `${subscriber.username} subscribed to your posts`).catch(error => logger_1.logger.error({ error }, 'Failed to create subscription notification'));
             }
             return {
                 success: true,
@@ -309,7 +310,7 @@ class SubscriptionService {
             };
         }
         catch (error) {
-            console.error('Subscribe to user error:', error);
+            logger_1.logger.error({ error, subscriberId, subscribedId }, 'Subscribe to user error');
             return { success: false, message: 'Failed to subscribe to user', error: error.message };
         }
     }
@@ -346,7 +347,7 @@ class SubscriptionService {
             };
         }
         catch (error) {
-            console.error('Unsubscribe from user error:', error);
+            logger_1.logger.error({ error, subscriberId, subscribedId }, 'Unsubscribe from user error');
             return { success: false, message: 'Failed to unsubscribe from user', error: error.message };
         }
     }
@@ -370,7 +371,7 @@ class SubscriptionService {
             };
         }
         catch (error) {
-            console.error('Get subscription status error:', error);
+            logger_1.logger.error({ error, subscriberId, subscribedId }, 'Get subscription status error');
             return { isSubscribed: false };
         }
     }
@@ -410,7 +411,7 @@ class SubscriptionService {
             };
         }
         catch (error) {
-            console.error('Get subscribers error:', error);
+            logger_1.logger.error({ error, userId }, 'Get subscribers error');
             return { success: false, message: 'Failed to get subscribers', error: error.message };
         }
     }
@@ -450,7 +451,7 @@ class SubscriptionService {
             };
         }
         catch (error) {
-            console.error('Get subscriptions error:', error);
+            logger_1.logger.error({ error, userId }, 'Get subscriptions error');
             return { success: false, message: 'Failed to get subscriptions', error: error.message };
         }
     }
@@ -472,7 +473,7 @@ class SubscriptionService {
             return subscriptionMap;
         }
         catch (error) {
-            console.error('Bulk subscription status error:', error);
+            logger_1.logger.error({ error, currentUserId }, 'Bulk subscription status error');
             return new Map();
         }
     }
@@ -527,7 +528,7 @@ class FriendService {
                 select: { username: true }
             });
             if (requester) {
-                (0, notifications_1.createNotification)('FRIEND_REQUEST', requesterId, recipientId, `${requester.username} sent you a friend request`).catch(console.error);
+                (0, notifications_1.createNotification)('FRIEND_REQUEST', requesterId, recipientId, `${requester.username} sent you a friend request`).catch(error => logger_1.logger.error({ error }, 'Failed to create friend request notification'));
             }
             return {
                 success: true,
@@ -536,7 +537,7 @@ class FriendService {
             };
         }
         catch (error) {
-            console.error('Send friend request error:', error);
+            logger_1.logger.error({ error, requesterId, recipientId }, 'Send friend request error');
             return { success: false, message: 'Failed to send friend request', error: error.message };
         }
     }
@@ -571,7 +572,7 @@ class FriendService {
                 select: { username: true }
             });
             if (accepter) {
-                (0, notifications_1.createNotification)('FRIEND_ACCEPTED', userId, friendId, `${accepter.username} accepted your friend request`).catch(console.error);
+                (0, notifications_1.createNotification)('FRIEND_ACCEPTED', userId, friendId, `${accepter.username} accepted your friend request`).catch(error => logger_1.logger.error({ error }, 'Failed to create friend accepted notification'));
             }
             return {
                 success: true,
@@ -580,7 +581,7 @@ class FriendService {
             };
         }
         catch (error) {
-            console.error('Accept friend request error:', error);
+            logger_1.logger.error({ error, userId, friendId }, 'Accept friend request error');
             return { success: false, message: 'Failed to accept friend request', error: error.message };
         }
     }
@@ -612,7 +613,7 @@ class FriendService {
             };
         }
         catch (error) {
-            console.error('Reject friend request error:', error);
+            logger_1.logger.error({ error, userId, friendId }, 'Reject friend request error');
             return { success: false, message: 'Failed to reject friend request', error: error.message };
         }
     }
@@ -643,7 +644,7 @@ class FriendService {
             };
         }
         catch (error) {
-            console.error('Remove friend error:', error);
+            logger_1.logger.error({ error, userId, friendId }, 'Remove friend error');
             return { success: false, message: 'Failed to remove friend', error: error.message };
         }
     }
@@ -676,7 +677,7 @@ class FriendService {
             };
         }
         catch (error) {
-            console.error('Get friend status error:', error);
+            logger_1.logger.error({ error, userId, otherUserId }, 'Get friend status error');
             return { isFriend: false };
         }
     }
@@ -741,7 +742,7 @@ class FriendService {
             };
         }
         catch (error) {
-            console.error('Get friends error:', error);
+            logger_1.logger.error({ error, userId }, 'Get friends error');
             return { success: false, message: 'Failed to get friends', error: error.message };
         }
     }
@@ -779,7 +780,7 @@ class FriendService {
             };
         }
         catch (error) {
-            console.error('Get pending requests error:', error);
+            logger_1.logger.error({ error, userId }, 'Get pending requests error');
             return { success: false, message: 'Failed to get pending requests', error: error.message };
         }
     }
@@ -820,7 +821,7 @@ class FriendService {
             return friendMap;
         }
         catch (error) {
-            console.error('Bulk friend status error:', error);
+            logger_1.logger.error({ error, currentUserId }, 'Bulk friend status error');
             return new Map();
         }
     }
@@ -900,7 +901,7 @@ class RelationshipUtils {
             };
         }
         catch (error) {
-            console.error('Get suggestions error:', error);
+            logger_1.logger.error({ error, userId, type }, 'Get suggestions error');
             return { success: false, message: 'Failed to get suggestions', error: error.message };
         }
     }

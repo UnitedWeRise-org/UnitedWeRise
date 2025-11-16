@@ -11,6 +11,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const relationshipService_1 = require("../services/relationshipService");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 /**
  * FOLLOW ENDPOINTS
@@ -64,7 +65,7 @@ router.post('/follow/:userId', auth_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Follow user route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Follow user route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -115,7 +116,7 @@ router.delete('/follow/:userId', auth_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Unfollow user route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Unfollow user route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -157,7 +158,7 @@ router.get('/follow-status/:userId', auth_1.requireAuth, async (req, res) => {
         res.json(status);
     }
     catch (error) {
-        console.error('Get follow status route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Get follow status route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -212,7 +213,7 @@ router.get('/:userId/followers', async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Get followers route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId }, 'Get followers route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -258,7 +259,7 @@ router.get('/:userId/following', async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Get following route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId }, 'Get following route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -303,7 +304,7 @@ router.post('/subscribe/:userId', auth_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Subscribe to user route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Subscribe to user route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -321,7 +322,7 @@ router.delete('/subscribe/:userId', auth_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Unsubscribe from user route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Unsubscribe from user route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -334,7 +335,7 @@ router.get('/subscription-status/:userId', auth_1.requireAuth, async (req, res) 
         res.json(status);
     }
     catch (error) {
-        console.error('Get subscription status route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Get subscription status route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -352,7 +353,7 @@ router.get('/:userId/subscribers', async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Get subscribers route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId }, 'Get subscribers route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -370,7 +371,7 @@ router.get('/:userId/subscriptions', async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Get subscriptions route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId }, 'Get subscriptions route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -415,7 +416,7 @@ router.post('/friend-request/:userId', auth_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Send friend request route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Send friend request route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -457,7 +458,7 @@ router.post('/friend-request/:userId/accept', auth_1.requireAuth, async (req, re
         }
     }
     catch (error) {
-        console.error('Accept friend request route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Accept friend request route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -498,7 +499,7 @@ router.post('/friend-request/:userId/reject', auth_1.requireAuth, async (req, re
         }
     }
     catch (error) {
-        console.error('Reject friend request route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Reject friend request route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -539,7 +540,7 @@ router.delete('/friend/:userId', auth_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Remove friend route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Remove friend route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -573,7 +574,7 @@ router.get('/friend-status/:userId', auth_1.requireAuth, async (req, res) => {
         res.json(status);
     }
     catch (error) {
-        console.error('Get friend status route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Get friend status route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -618,7 +619,7 @@ router.get('/:userId/friends', async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Get friends route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId }, 'Get friends route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -651,7 +652,7 @@ router.get('/friend-requests/pending', auth_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Get pending requests route error:', error);
+        logger_1.logger.error({ err: error, currentUserId: req.user.id }, 'Get pending requests route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -689,7 +690,7 @@ router.get('/status/:userId', auth_1.requireAuth, async (req, res) => {
         res.json(status);
     }
     catch (error) {
-        console.error('Get combined status route error:', error);
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Get combined status route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -741,7 +742,7 @@ router.get('/suggestions/:type', auth_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Get suggestions route error:', error);
+        logger_1.logger.error({ err: error, type: req.params.type, currentUserId: req.user.id }, 'Get suggestions route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -797,7 +798,7 @@ router.post('/bulk/follow-status', auth_1.requireAuth, async (req, res) => {
         res.json(statusObject);
     }
     catch (error) {
-        console.error('Bulk follow status route error:', error);
+        logger_1.logger.error({ err: error, userCount: req.body.userIds?.length, currentUserId: req.user.id }, 'Bulk follow status route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -818,7 +819,7 @@ router.post('/bulk/friend-status', auth_1.requireAuth, async (req, res) => {
         res.json(statusObject);
     }
     catch (error) {
-        console.error('Bulk friend status route error:', error);
+        logger_1.logger.error({ err: error, userCount: req.body.userIds?.length, currentUserId: req.user.id }, 'Bulk friend status route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -839,7 +840,7 @@ router.post('/bulk/subscription-status', auth_1.requireAuth, async (req, res) =>
         res.json(statusObject);
     }
     catch (error) {
-        console.error('Bulk subscription status route error:', error);
+        logger_1.logger.error({ err: error, userCount: req.body.userIds?.length, currentUserId: req.user.id }, 'Bulk subscription status route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });

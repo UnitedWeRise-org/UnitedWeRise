@@ -8,6 +8,7 @@ import { MessageType, WebSocketMessagePayload, UnifiedMessage } from '../types/m
 import { sessionManager } from './sessionManager';
 import { verifyToken } from '../utils/auth';
 import { COOKIE_NAMES } from '../utils/cookies';
+import { logger } from './logger';
 
 const prisma = new PrismaClient();
 
@@ -30,8 +31,7 @@ export class WebSocketService {
     ];
 
     if (enableRequestLogging()) {
-      console.log('🔌 WebSocket CORS - Allowed Origins:', allowedOrigins);
-      console.log('🌍 WebSocket CORS - NODE_ENV:', process.env.NODE_ENV);
+      logger.info({ allowedOrigins, nodeEnv: process.env.NODE_ENV }, 'WebSocket CORS configuration');
     }
 
     this.io = new Server(httpServer, {
@@ -51,7 +51,7 @@ export class WebSocketService {
 
     this.io.on('connection', async (socket) => {
       const userId = socket.data.userId;
-      console.log(`User ${userId} connected via WebSocket`);
+      logger.info({ userId }, 'User connected via WebSocket');
 
       // Track user's active sockets
       if (!this.userSockets.has(userId)) {
@@ -88,7 +88,7 @@ export class WebSocketService {
 
       // Handle disconnection
       socket.on('disconnect', async () => {
-        console.log(`User ${userId} disconnected`);
+        logger.info({ userId }, 'User disconnected');
         const userSocketSet = this.userSockets.get(userId);
         if (userSocketSet) {
           userSocketSet.delete(socket.id);
@@ -111,7 +111,7 @@ export class WebSocketService {
 
   private async authenticateSocket(socket: any, next: any) {
     try {
-      console.log('🔌 WebSocket connection attempt from:', socket.handshake.address);
+      logger.info({ address: socket.handshake.address }, 'WebSocket connection attempt');
 
       let userId: string | undefined;
       let authMethod: string = 'none';
@@ -122,9 +122,11 @@ export class WebSocketService {
       let cookies: any = {};
       if (cookieHeader) {
         if (enableRequestLogging()) {
-          console.log('🍪 Cookie header present:', !!cookieHeader);
-          console.log('🍪 Cookie header length:', cookieHeader.length);
-          console.log('🍪 All cookies:', cookieHeader.split(';').map((c: string) => c.trim().split('=')[0]));
+          logger.debug({
+            hasCookie: !!cookieHeader,
+            cookieLength: cookieHeader.length,
+            cookieNames: cookieHeader.split(';').map((c: string) => c.trim().split('=')[0])
+          }, 'Cookie header present');
         }
 
         // Parse cookie header to extract tokens
@@ -142,11 +144,11 @@ export class WebSocketService {
       if (!accessToken) {
         accessToken = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
         if (enableRequestLogging()) {
-          console.log('🔑 Token from auth.token or Bearer header:', accessToken ? '[REDACTED]' : 'not found');
+          logger.debug({ hasToken: !!accessToken }, 'Token from auth.token or Bearer header');
         }
       } else {
         if (enableRequestLogging()) {
-          console.log('🔑 authToken from cookie:', accessToken ? '[REDACTED]' : 'not found');
+          logger.debug({ hasToken: !!accessToken }, 'authToken from cookie');
         }
       }
 
@@ -158,18 +160,18 @@ export class WebSocketService {
           const tokenId = crypto.createHash('sha256').update(accessToken).digest('hex');
           if (await sessionManager.isTokenBlacklisted(tokenId)) {
             if (enableRequestLogging()) {
-              console.log('⚠️ Access token blacklisted, will try refresh token');
+              logger.warn('Access token blacklisted, will try refresh token');
             }
           } else {
             userId = decoded.userId;
             authMethod = 'access_token';
             if (enableRequestLogging()) {
-              console.log('✅ Access token valid, userId:', userId);
+              logger.debug({ userId }, 'Access token valid');
             }
           }
         } else {
           if (enableRequestLogging()) {
-            console.log('⚠️ Access token invalid or expired, will try refresh token');
+            logger.warn('Access token invalid or expired, will try refresh token');
           }
         }
       }
@@ -178,7 +180,7 @@ export class WebSocketService {
       if (!userId) {
         const refreshToken = cookies[COOKIE_NAMES.REFRESH_TOKEN];
         if (enableRequestLogging()) {
-          console.log('🔑 refreshToken from cookie:', refreshToken ? '[REDACTED]' : 'not found');
+          logger.debug({ hasRefreshToken: !!refreshToken }, 'refreshToken from cookie');
         }
 
         if (refreshToken) {
@@ -187,11 +189,11 @@ export class WebSocketService {
             userId = tokenData.userId;
             authMethod = 'refresh_token';
             if (enableRequestLogging()) {
-              console.log('✅ Refresh token valid, userId:', userId);
+              logger.debug({ userId }, 'Refresh token valid');
             }
           } else {
             if (enableRequestLogging()) {
-              console.log('❌ Refresh token invalid or expired');
+              logger.error('Refresh token invalid or expired');
             }
           }
         }
@@ -199,7 +201,7 @@ export class WebSocketService {
 
       // If no valid token found, reject connection
       if (!userId) {
-        console.error('❌ WebSocket auth failed: No valid access or refresh token provided');
+        logger.error('WebSocket auth failed: No valid access or refresh token provided');
         return next(new Error('Authentication error: No valid token provided'));
       }
 
@@ -210,12 +212,12 @@ export class WebSocketService {
       });
 
       if (!user) {
-        console.error('❌ WebSocket auth failed: User not found for userId:', userId);
+        logger.error({ userId }, 'WebSocket auth failed: User not found');
         return next(new Error('Authentication error: User not found'));
       }
 
       if (user.isSuspended) {
-        console.error('❌ WebSocket auth failed: User is suspended:', userId);
+        logger.error({ userId }, 'WebSocket auth failed: User is suspended');
         return next(new Error('Authentication error: User account is suspended'));
       }
 
@@ -223,10 +225,10 @@ export class WebSocketService {
       socket.data.username = user.username;
       socket.data.isAdmin = user.isAdmin;
 
-      console.log('✅ WebSocket authentication successful for user:', user.username, 'via', authMethod);
+      logger.info({ username: user.username, authMethod }, 'WebSocket authentication successful');
       next();
     } catch (error) {
-      console.error('❌ WebSocket authentication error:', error instanceof Error ? error.message : error);
+      logger.error({ error: error instanceof Error ? error.message : error }, 'WebSocket authentication error');
       next(new Error('Authentication error: Invalid token'));
     }
   }
@@ -289,7 +291,7 @@ export class WebSocketService {
         if (senderId === recipientId) {
           // Admin messaging their own candidate profile - include sender
           this.io.to(`user:${recipientId}`).emit('new_message', payload);
-          console.log(`Admin self-message: ${senderId} messaging own candidate profile`);
+          logger.debug({ senderId }, 'Admin self-message: messaging own candidate profile');
         } else {
           // Normal case: exclude sender to prevent duplicates
           socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
@@ -305,9 +307,9 @@ export class WebSocketService {
         socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
       }
 
-      console.log(`Message sent: ${type} from ${senderId} to ${recipientId}`);
+      logger.info({ type, senderId, recipientId }, 'Message sent');
     } catch (error) {
-      console.error('Error handling send_message:', error);
+      logger.error({ error }, 'Error handling send_message');
       socket.emit('message_error', { error: 'Failed to send message' });
     }
   }
@@ -377,7 +379,7 @@ export class WebSocketService {
 
       socket.emit('messages_marked_read', { messageIds, conversationId });
     } catch (error) {
-      console.error('Error marking messages as read:', error);
+      logger.error({ error }, 'Error marking messages as read');
       socket.emit('mark_read_error', { error: 'Failed to mark messages as read' });
     }
   }
@@ -508,9 +510,9 @@ export class WebSocketService {
   public emitNotification(receiverId: string, notification: any): void {
     try {
       this.io.to(`user:${receiverId}`).emit('new_notification', notification);
-      console.log(`Notification emitted to user ${receiverId}:`, notification.type);
+      logger.info({ receiverId, notificationType: notification.type }, 'Notification emitted');
     } catch (error) {
-      console.error('Error emitting notification:', error);
+      logger.error({ error }, 'Error emitting notification');
     }
   }
 }
