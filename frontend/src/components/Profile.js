@@ -154,6 +154,26 @@ class Profile {
         adminDebugLog('✅ Message added to display as', isFromAdmin ? 'from-admin' : 'from-candidate');
     }
 
+
+    /**
+     * Attach event listeners for tab navigation using event delegation
+     * This replaces inline onclick handlers for CSP compliance
+     */
+    attachEventListeners() {
+        // Event delegation for tab navigation
+        const tabContainer = document.querySelector('.profile-tabs');
+        if (tabContainer) {
+            tabContainer.addEventListener('click', (e) => {
+                const tabButton = e.target.closest('.tab-button');
+                if (tabButton) {
+                    const tabName = tabButton.dataset.tab;
+                    if (tabName) {
+                        this.switchTab(tabName);
+                    }
+                }
+            });
+        }
+    }
     async render(containerId, targetUserId = null) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -317,28 +337,28 @@ class Profile {
 
                 <!-- Tab Navigation -->
                 <div class="profile-tabs">
-                    <button class="tab-button ${this.currentTab === 'activity' ? 'active' : ''}" onclick="window.profile.switchTab('activity')">
+                    <button class="tab-button ${this.currentTab === 'activity' ? 'active' : ''}" data-tab='activity'>
                         ${this.isOwnProfile ? 'My Activity' : 'Activity'}
                     </button>
-                    <button class="tab-button ${this.currentTab === 'photos' ? 'active' : ''}" onclick="window.profile.switchTab('photos')">
+                    <button class="tab-button ${this.currentTab === 'photos' ? 'active' : ''}" data-tab='photos'>
                         Photos
                     </button>
-                    <button class="tab-button ${this.currentTab === 'demographics' ? 'active' : ''}" onclick="window.profile.switchTab('demographics')">
+                    <button class="tab-button ${this.currentTab === 'demographics' ? 'active' : ''}" data-tab='demographics'>
                         Demographics
                     </button>
                     <!-- Temporarily hidden - Political Profile tab -->
-                    <!-- <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" onclick="window.profile.switchTab('political')">
+                    <!-- <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" data-tab='political'>
                         Political Profile
                     </button> -->
                     ${this.isOwnProfile && user.candidateProfile ? `
                         <!-- Policy Platform moved to Candidate Dashboard -->
-                        <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" onclick="window.profile.switchTab('messages')" id="messagesTab">
+                        <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" data-tab='messages' id="messagesTab">
                             💬 Admin Messages
                             <span id="unreadBadge" style="display: none; background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; margin-left: 0.5rem;">0</span>
                         </button>
                     ` : ''}
                     ${this.isOwnProfile ? `
-                        <button class="tab-button ${this.currentTab === 'settings' ? 'active' : ''}" onclick="window.profile.switchTab('settings')">
+                        <button class="tab-button ${this.currentTab === 'settings' ? 'active' : ''}" data-tab='settings'>
                             Settings
                         </button>
                     ` : ''}
@@ -352,6 +372,7 @@ class Profile {
         `;
 
         this.addStyles();
+        this.attachEventListeners();
 
 
         // Load data for the initial tab if needed
@@ -3957,7 +3978,7 @@ class Profile {
             button.classList.remove('active');
         });
         
-        const activeButton = document.querySelector(`[onclick*="'${tabName}'"]`);
+        const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
         if (activeButton) {
             activeButton.classList.add('active');
         }
