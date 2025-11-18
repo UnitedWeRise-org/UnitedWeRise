@@ -566,6 +566,136 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
 
 /**
  * @swagger
+ * /api/posts/saved:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get user's saved posts
+ *     description: Retrieve all posts saved by the authenticated user with pagination and sorting options
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of posts to skip for pagination
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [recent, oldest, popular]
+ *           default: recent
+ *         description: Sort order (recent=most recently saved, oldest=first saved, popular=most likes)
+ *     responses:
+ *       200:
+ *         description: Saved posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     posts:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     total:
+ *                       type: integer
+ *                     hasMore:
+ *                       type: boolean
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/saved', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const userId = req.user!.id;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const offset = parseInt(req.query.offset as string) || 0;
+        const sort = (req.query.sort as string) || 'recent';
+
+        // Build orderBy based on sort parameter
+        let orderBy: any = { savedAt: 'desc' }; // Default: most recent
+        if (sort === 'oldest') {
+            orderBy = { savedAt: 'asc' };
+        } else if (sort === 'popular') {
+            orderBy = { post: { likesCount: 'desc' } };
+        }
+
+        // Get saved posts with full post data
+        const savedPosts = await prisma.savedPost.findMany({
+            where: {
+                userId
+            },
+            include: {
+                post: {
+                    include: {
+                        author: {
+                            select: {
+                                id: true,
+                                username: true,
+                                displayName: true,
+                                avatar: true,
+                                verified: true,
+                                politicalProfileType: true
+                            }
+                        },
+                        photos: {
+                            where: { isActive: true },
+                            select: {
+                                id: true,
+                                url: true,
+                                thumbnailUrl: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy,
+            take: limit,
+            skip: offset
+        });
+
+        // Get total count
+        const total = await prisma.savedPost.count({
+            where: { userId }
+        });
+
+        // Extract posts from saved posts
+        const posts = savedPosts.map(sp => sp.post);
+
+        res.json({
+            success: true,
+            data: {
+                posts,
+                total,
+                hasMore: (offset + limit) < total
+            }
+        });
+
+    } catch (error) {
+        logger.error({ err: error, userId: req.user!.id }, 'Get saved posts error');
+        res.status(500).json({
+            success: false,
+            error: 'Failed to retrieve saved posts'
+        });
+    }
+});
+
+/**
+ * @swagger
  * /api/posts/{postId}:
  *   get:
  *     tags: [Post]
@@ -3127,136 +3257,6 @@ router.delete('/:postId/save', requireAuth, async (req: AuthRequest, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to unsave post'
-        });
-    }
-});
-
-/**
- * @swagger
- * /api/posts/saved:
- *   get:
- *     tags: [Post]
- *     summary: Get user's saved posts
- *     description: Retrieve all posts saved by the authenticated user with pagination and sorting options
- *     security:
- *       - cookieAuth: []
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 20
- *         description: Maximum number of posts to return
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *           default: 0
- *         description: Number of posts to skip for pagination
- *       - in: query
- *         name: sort
- *         schema:
- *           type: string
- *           enum: [recent, oldest, popular]
- *           default: recent
- *         description: Sort order (recent=most recently saved, oldest=first saved, popular=most likes)
- *     responses:
- *       200:
- *         description: Saved posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
- *                       type: array
- *                       items:
- *                         type: object
- *                     total:
- *                       type: integer
- *                     hasMore:
- *                       type: boolean
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
-router.get('/saved', requireAuth, async (req: AuthRequest, res) => {
-    try {
-        const userId = req.user!.id;
-        const limit = parseInt(req.query.limit as string) || 20;
-        const offset = parseInt(req.query.offset as string) || 0;
-        const sort = (req.query.sort as string) || 'recent';
-
-        // Build orderBy based on sort parameter
-        let orderBy: any = { savedAt: 'desc' }; // Default: most recent
-        if (sort === 'oldest') {
-            orderBy = { savedAt: 'asc' };
-        } else if (sort === 'popular') {
-            orderBy = { post: { likesCount: 'desc' } };
-        }
-
-        // Get saved posts with full post data
-        const savedPosts = await prisma.savedPost.findMany({
-            where: {
-                userId
-            },
-            include: {
-                post: {
-                    include: {
-                        author: {
-                            select: {
-                                id: true,
-                                username: true,
-                                displayName: true,
-                                avatar: true,
-                                verified: true,
-                                politicalProfileType: true
-                            }
-                        },
-                        photos: {
-                            where: { isActive: true },
-                            select: {
-                                id: true,
-                                url: true,
-                                thumbnailUrl: true
-                            }
-                        }
-                    }
-                }
-            },
-            orderBy,
-            take: limit,
-            skip: offset
-        });
-
-        // Get total count
-        const total = await prisma.savedPost.count({
-            where: { userId }
-        });
-
-        // Extract posts from saved posts
-        const posts = savedPosts.map(sp => sp.post);
-
-        res.json({
-            success: true,
-            data: {
-                posts,
-                total,
-                hasMore: (offset + limit) < total
-            }
-        });
-
-    } catch (error) {
-        logger.error({ err: error, userId: req.user!.id }, 'Get saved posts error');
-        res.status(500).json({
-            success: false,
-            error: 'Failed to retrieve saved posts'
         });
     }
 });
