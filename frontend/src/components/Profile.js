@@ -3699,7 +3699,7 @@ class Profile {
 
     async updateNotificationPreference(key, value) {
         try {
-            const response = await apiCall('/user/notification-preferences', {
+            const response = await apiCall('/users/notification-preferences', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -3916,7 +3916,8 @@ class Profile {
         // Load data for specific tabs
         if (tabName === 'settings') {
             setTimeout(() => {
-                this.updatePendingTagsCount();
+                // Photo tagging feature removed (Oct 2025)
+                // this.updatePendingTagsCount();
                 this.checkCandidateNotificationSettings();
             }, 100);
         } else if (tabName === 'photos') {

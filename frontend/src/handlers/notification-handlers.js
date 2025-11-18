@@ -494,7 +494,7 @@ function getCachedRelationshipStatus(userId) {
  */
 async function refreshFriendStatus(userId) {
     try {
-        const response = await apiCall(`/friends/status/${userId}`, {
+        const response = await apiCall(`/relationships/friend-status/${userId}`, {
             method: 'GET'
         });
 

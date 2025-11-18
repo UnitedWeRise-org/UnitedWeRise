@@ -752,9 +752,8 @@ class SearchHandlers {
         } else {
             // Fallback implementation
             try {
-                const response = await apiCall('/friends/request', {
-                    method: 'POST',
-                    body: JSON.stringify({ targetUserId: userId })
+                const response = await apiCall(`/relationships/friend-request/${userId}`, {
+                    method: 'POST'
                 });
 
                 if (response.ok) {

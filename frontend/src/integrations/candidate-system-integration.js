@@ -3613,7 +3613,7 @@ class CandidateSystemIntegration {
     async showInboxNotification(title, content) {
         // Check user preferences before showing notifications
         try {
-            const response = await apiCall('/user/notification-preferences', {
+            const response = await apiCall('/users/notification-preferences', {
                 credentials: 'include'
             });
 
