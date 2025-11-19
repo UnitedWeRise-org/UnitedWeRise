@@ -71,7 +71,7 @@
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
     "speakeasy": "^2.0.0",
-    "stripe": "^18.4.0",
+    "stripe": "^20.0.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^4.6.3",
     "twilio": "^4.19.3",
