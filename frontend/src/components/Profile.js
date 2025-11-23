@@ -156,23 +156,127 @@ class Profile {
 
 
     /**
-     * Attach event listeners for tab navigation using event delegation
-     * This replaces inline onclick handlers for CSP compliance
+     * Attach event listeners for all interactions using event delegation
+     * This replaces inline onclick, onchange, onkeyup handlers for CSP compliance
      */
     attachEventListeners() {
-        // Event delegation for tab navigation
-        const tabContainer = document.querySelector('.profile-tabs');
-        if (tabContainer) {
-            tabContainer.addEventListener('click', (e) => {
-                const tabButton = e.target.closest('.tab-button');
-                if (tabButton) {
-                    const tabName = tabButton.dataset.tab;
-                    if (tabName) {
-                        this.switchTab(tabName);
-                    }
-                }
-            });
+        // Remove existing listeners if they exist
+        if (this.documentClickHandler) {
+            document.removeEventListener('click', this.documentClickHandler);
         }
+        if (this.documentChangeHandler) {
+            document.removeEventListener('change', this.documentChangeHandler);
+        }
+        if (this.documentKeyupHandler) {
+            document.removeEventListener('keyup', this.documentKeyupHandler);
+        }
+
+        // Click event delegation
+        this.documentClickHandler = (e) => {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+            const param1 = target.dataset.param1;
+            const param2 = target.dataset.param2;
+            const inputSelector = target.dataset.inputSelector;
+
+            switch (action) {
+                case 'switchTab': this.switchTab(param1); break;
+                case 'closeModal': target.closest('.modal, .totp-modal-simple, #pendingTagsModal')?.remove(); break;
+                case 'triggerFileUpload':
+                    const fileInput = target.parentNode.querySelector(inputSelector || '.profile-upload');
+                    if (fileInput) fileInput.click();
+                    break;
+                case 'showBadgeVault': window.badgeVault?.showVault(); break;
+                case 'searchActivities': this.searchActivities(document.getElementById('activitySearch').value); break;
+                case 'toggleFilterDropdown': this.toggleFilterDropdown(); break;
+                case 'loadMoreActivities': this.loadMoreActivities(); break;
+                case 'submitQuickPost': this.submitQuickPost(); break;
+                case 'editPost': this.editPost(param1); break;
+                case 'deletePost': this.deletePost(param1); break;
+                case 'openExternal': window.open(param1, '_blank'); break;
+                case 'editDemographics': this.editDemographics(); break;
+                case 'editAddress': this.editAddress(); break;
+                case 'editPolitical': this.editPolitical(); break;
+                case 'resendEmailVerification': this.resendEmailVerification(); break;
+                case 'verifyPhone': this.verifyPhone(); break;
+                case 'refreshMessages': this.refreshMessages(); break;
+                case 'changePassword': this.changePassword(); break;
+                case 'downloadData': this.downloadData(); break;
+                case 'openAdminDashboard': this.openAdminDashboard(); break;
+                case 'requestNotificationPermission': this.requestNotificationPermission(); break;
+                case 'testNotification': this.testNotification(); break;
+                case 'viewPendingTags': this.viewPendingTags(); break;
+                case 'deactivateAccount': this.deactivateAccount(); break;
+                case 'uploadPhotos': this.uploadPhotos(); break;
+                case 'createGallery': this.createGallery(); break;
+                case 'renderProfile': this.render('mainContent'); break;
+                case 'saveAddress': this.saveAddress(); break;
+                case 'regenerateBackupCodes': this.regenerateBackupCodes(); break;
+                case 'disableTOTP': this.disableTOTP(); break;
+                case 'setupTOTP': this.setupTOTP(); break;
+                case 'loadTOTPStatus': this.loadTOTPStatus(); break;
+                case 'verifyTOTPSetup': this.verifyTOTPSetup(); break;
+                case 'copyBackupCodes':
+                    try {
+                        const codes = JSON.parse(target.dataset.codes);
+                        this.copyBackupCodes(codes);
+                    } catch (e) {
+                        console.error('Failed to parse backup codes:', e);
+                    }
+                    break;
+                case 'setAsProfilePicture': this.setAsProfilePicture(param1); break;
+                case 'movePhoto': this.movePhoto(param1); break;
+                case 'deletePhoto': this.deletePhoto(param1); break;
+                case 'respondToTag': this.respondToTag(param1, param2 === 'true'); break;
+                case 'loadCandidateMessages': this.loadCandidateMessages(); break;
+                case 'loadUserActivities': this.loadUserActivities(true); break;
+                case 'loadSavedPosts': this.loadSavedPosts(); break;
+                case 'navigateToPost': this.navigateToPost(param1); break;
+                case 'viewDeletedContent': this.viewDeletedContent(param1, param2); break;
+                case 'navigateToComment': this.navigateToComment(param1, param2); break;
+                case 'navigateToUser': this.navigateToUser(param1); break;
+                case 'openAuthModal':
+                    if (typeof openAuthModal === 'function') {
+                        openAuthModal(param1);
+                    }
+                    break;
+            }
+        };
+
+        // Change event delegation
+        this.documentChangeHandler = (e) => {
+            const target = e.target.closest('[data-change-action]');
+            if (!target) return;
+
+            const action = target.dataset.changeAction;
+            const param1 = target.dataset.param1;
+
+            switch (action) {
+                case 'uploadProfilePicture': this.uploadProfilePicture(target); break;
+                case 'toggleActivityFilter': this.toggleActivityFilter(param1, target.checked); break;
+                case 'updatePrivacySetting': this.updatePrivacySetting(param1, target.value); break;
+                case 'updateNotificationPreference': this.updateNotificationPreference(param1, target.checked); break;
+                case 'updateTaggingPreference': this.updateTaggingPreference(param1, target.checked); break;
+                case 'handleBulkUpload': this.handleBulkUpload(target); break;
+            }
+        };
+
+        // Keyup event delegation
+        this.documentKeyupHandler = (e) => {
+            const target = e.target.closest('[data-keyup-action]');
+            if (!target) return;
+
+            const action = target.dataset.keyupAction;
+            if (action === 'searchOnEnter' && e.key === 'Enter') {
+                this.searchActivities(target.value);
+            }
+        };
+
+        document.addEventListener('click', this.documentClickHandler);
+        document.addEventListener('change', this.documentChangeHandler);
+        document.addEventListener('keyup', this.documentKeyupHandler);
     }
     async render(containerId, targetUserId = null) {
         const container = document.getElementById(containerId);
@@ -302,15 +406,15 @@ class Profile {
                     <div class="profile-picture-container">
                         <div class="profile-picture">
                             ${avatarUrl ?
-                                `<img src="${avatarUrl}" alt="Profile Picture" onclick="this.parentNode.parentNode.querySelector('.profile-upload').click()">` :
-                                `<div class="profile-placeholder" onclick="this.parentNode.parentNode.querySelector('.profile-upload').click()">
+                                `<img src="${avatarUrl}" alt="Profile Picture" data-action="triggerFileUpload">` :
+                                `<div class="profile-placeholder" data-action="triggerFileUpload">
                                     <span style="font-size: 3rem;">👤</span>
                                     <p>Click to upload photo</p>
                                 </div>`
                             }
-                            <input type="file" class="profile-upload" accept="image/*" style="display: none;" onchange="window.profile.uploadProfilePicture(this)">
+                            <input type="file" class="profile-upload" accept="image/*" style="display: none;" data-change-action="uploadProfilePicture">
                         </div>
-                        ${avatarUrl ? '<button class="change-photo-btn" onclick="this.parentNode.querySelector(\'.profile-upload\').click()">Change Photo</button>' : ''}
+                        ${avatarUrl ? '<button class="change-photo-btn" data-action="triggerFileUpload">Change Photo</button>' : ''}
                     </div>
                     
                     <div class="profile-info">
@@ -438,7 +542,7 @@ class Profile {
                             <h3 style="margin: 0; color: #333;">
                                 <span style="font-size: 1.5rem;">🏆</span> My Badges
                             </h3>
-                            <button onclick="window.badgeVault?.showVault()"
+                            <button data-action="showBadgeVault"
                                     style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
                                 Manage Badge Vault
                             </button>
@@ -461,9 +565,8 @@ class Profile {
                                    value="${this.activitySearchQuery}"
                                    autocomplete="off" autocapitalize="off" spellcheck="false"
                                    style="flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;"
-                                   onkeyup="if(event.key==='Enter') window.profile.searchActivities(this.value)"
-                                   oninput="window.profile.activitySearchQuery = this.value">
-                            <button onclick="window.profile.searchActivities(document.getElementById('activitySearch').value)"
+                                   data-keyup-action="searchOnEnter">
+                            <button data-action="searchActivities"
                                     style="padding: 0.75rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">
                                 Search
                             </button>
@@ -477,7 +580,7 @@ class Profile {
                         </label>
                         <div class="filter-dropdown-container" style="position: relative;">
                             <button id="filterDropdownButton"
-                                    onclick="window.profile.toggleFilterDropdown()"
+                                    data-action="toggleFilterDropdown"
                                     style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: white; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
                                 <span id="filterButtonText">Select filters...</span>
                                 <span id="filterDropdownIcon" style="transition: transform 0.2s ease;">▼</span>
@@ -486,49 +589,49 @@ class Profile {
                                 <div style="padding: 0.5rem;">
                                     <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
                                         <input type="checkbox" ${this.activityFilters.POST_CREATED ? 'checked' : ''}
-                                               onchange="window.profile.toggleActivityFilter('POST_CREATED', this.checked)"
+                                               data-change-action="toggleActivityFilter" data-param1="POST_CREATED"
                                                style="width: 16px; height: 16px; accent-color: #007bff;">
                                         <span style="font-size: 0.85rem; color: #333;">📝 Posts Created</span>
                                     </label>
                                     <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
                                         <input type="checkbox" ${this.activityFilters.POST_EDITED ? 'checked' : ''}
-                                               onchange="window.profile.toggleActivityFilter('POST_EDITED', this.checked)"
+                                               data-change-action="toggleActivityFilter" data-param1="POST_EDITED"
                                                style="width: 16px; height: 16px; accent-color: #007bff;">
                                         <span style="font-size: 0.85rem; color: #333;">✏️ Posts Edited</span>
                                     </label>
                                     <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
                                         <input type="checkbox" ${this.activityFilters.POST_DELETED ? 'checked' : ''}
-                                               onchange="window.profile.toggleActivityFilter('POST_DELETED', this.checked)"
+                                               data-change-action="toggleActivityFilter" data-param1="POST_DELETED"
                                                style="width: 16px; height: 16px; accent-color: #007bff;">
                                         <span style="font-size: 0.85rem; color: #333;">🗑️ Posts Deleted</span>
                                     </label>
                                     <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
                                         <input type="checkbox" ${this.activityFilters.COMMENT_CREATED ? 'checked' : ''}
-                                               onchange="window.profile.toggleActivityFilter('COMMENT_CREATED', this.checked)"
+                                               data-change-action="toggleActivityFilter" data-param1="COMMENT_CREATED"
                                                style="width: 16px; height: 16px; accent-color: #007bff;">
                                         <span style="font-size: 0.85rem; color: #333;">💬 Comments</span>
                                     </label>
                                     <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
                                         <input type="checkbox" ${this.activityFilters.COMMENT_EDITED ? 'checked' : ''}
-                                               onchange="window.profile.toggleActivityFilter('COMMENT_EDITED', this.checked)"
+                                               data-change-action="toggleActivityFilter" data-param1="COMMENT_EDITED"
                                                style="width: 16px; height: 16px; accent-color: #007bff;">
                                         <span style="font-size: 0.85rem; color: #333;">✏️ Comments Edited</span>
                                     </label>
                                     <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
                                         <input type="checkbox" ${this.activityFilters.COMMENT_DELETED ? 'checked' : ''}
-                                               onchange="window.profile.toggleActivityFilter('COMMENT_DELETED', this.checked)"
+                                               data-change-action="toggleActivityFilter" data-param1="COMMENT_DELETED"
                                                style="width: 16px; height: 16px; accent-color: #007bff;">
                                         <span style="font-size: 0.85rem; color: #333;">🗑️ Comments Deleted</span>
                                     </label>
                                     <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
                                         <input type="checkbox" ${this.activityFilters.LIKE_ADDED ? 'checked' : ''}
-                                               onchange="window.profile.toggleActivityFilter('LIKE_ADDED', this.checked)"
+                                               data-change-action="toggleActivityFilter" data-param1="LIKE_ADDED"
                                                style="width: 16px; height: 16px; accent-color: #007bff;">
                                         <span style="font-size: 0.85rem; color: #333;">❤️ Likes</span>
                                     </label>
                                     <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
                                         <input type="checkbox" ${this.activityFilters.FOLLOW_ADDED ? 'checked' : ''}
-                                               onchange="window.profile.toggleActivityFilter('FOLLOW_ADDED', this.checked)"
+                                               data-change-action="toggleActivityFilter" data-param1="FOLLOW_ADDED"
                                                style="width: 16px; height: 16px; accent-color: #007bff;">
                                         <span style="font-size: 0.85rem; color: #333;">👥 Follows</span>
                                     </label>
@@ -546,7 +649,7 @@ class Profile {
 
                 <!-- Load More Button -->
                 <div class="load-more-container" style="text-align: center; margin-top: 2rem;">
-                    <button onclick="window.profile.loadMoreActivities()"
+                    <button data-action="loadMoreActivities"
                             class="btn btn-secondary" id="loadMoreActivities"
                             style="display: ${this.userActivities.length >= this.activityLimit ? 'inline-block' : 'none'}">
                         Load More Activity
@@ -581,7 +684,7 @@ class Profile {
                     <div class="quick-post-composer">
                         <textarea id="quickPostContent" placeholder="What's on your mind?" rows="4"></textarea>
                         <div style="margin-top: 1rem;">
-                            <button onclick="window.profile.submitQuickPost()" class="btn">Create Post</button>
+                            <button data-action="submitQuickPost" class="btn">Create Post</button>
                         </div>
                     </div>
                 </div>
@@ -666,8 +769,8 @@ class Profile {
                 <div class="post-header">
                     <span class="post-date">${timeAgo}</span>
                     <div class="post-menu">
-                        <button onclick="window.profile.editPost('${post.id}')">Edit</button>
-                        <button onclick="window.profile.deletePost('${post.id}')" class="delete-btn">Delete</button>
+                        <button data-action="editPost" data-param1="${post.id}">Edit</button>
+                        <button data-action="deletePost" data-param1="${post.id}" class="delete-btn">Delete</button>
                     </div>
                 </div>
                 <div class="post-content">${post.content}</div>
@@ -676,7 +779,7 @@ class Profile {
                     <div class="post-photos">
                         ${post.photos.map(photo => `
                             <img src="${photo.url}" alt="Post image" class="post-image"
-                                 onclick="window.open('${photo.url}', '_blank')">
+                                 data-action="openExternal" data-param1="${photo.url}">
                         `).join('')}
                     </div>
                 ` : ''}
@@ -762,7 +865,7 @@ class Profile {
                 <div class="demographics-section">
                     <div class="section-header">
                         <h3>Personal Information</h3>
-                        ${this.isOwnProfile ? `<button onclick="window.profile.editDemographics()" class="edit-btn">Edit</button>` : ''}
+                        ${this.isOwnProfile ? `<button data-action="editDemographics" class="edit-btn">Edit</button>` : ''}
                     </div>
                     <div class="info-grid">
                         <div class="info-item">
@@ -789,7 +892,7 @@ class Profile {
                 <div class="demographics-section">
                     <div class="section-header">
                         <h3>Address</h3>
-                        ${this.isOwnProfile ? `<button onclick="window.profile.editAddress()" class="edit-btn">Edit</button>` : ''}
+                        ${this.isOwnProfile ? `<button data-action="editAddress" class="edit-btn">Edit</button>` : ''}
                     </div>
                     <div class="info-grid">
                         ${this.isOwnProfile ? `
@@ -833,7 +936,7 @@ class Profile {
                 <div class="political-section">
                     <div class="section-header">
                         <h3>Political Profile</h3>
-                        ${this.isOwnProfile ? `<button onclick="window.profile.editPolitical()" class="edit-btn">Edit</button>` : ''}
+                        ${this.isOwnProfile ? `<button data-action="editPolitical" class="edit-btn">Edit</button>` : ''}
                     </div>
                     <div class="info-grid">
                         <div class="info-item">
@@ -868,11 +971,11 @@ class Profile {
                         <div class="verification-items">
                             <div class="verification-item">
                                 <span>Email ${user.emailVerified ? '✅' : '❌'}</span>
-                                ${!user.emailVerified ? '<button onclick="window.profile.resendEmailVerification()" class="verify-btn">Verify Email</button>' : ''}
+                                ${!user.emailVerified ? '<button data-action="resendEmailVerification" class="verify-btn">Verify Email</button>' : ''}
                             </div>
                             <div class="verification-item">
                                 <span>Phone ${user.phoneVerified ? '✅' : '❌'}</span>
-                                ${!user.phoneVerified ? '<button onclick="window.profile.verifyPhone()" class="verify-btn">Verify Phone</button>' : ''}
+                                ${!user.phoneVerified ? '<button data-action="verifyPhone" class="verify-btn">Verify Phone</button>' : ''}
                             </div>
                         </div>
                     </div>
@@ -887,7 +990,7 @@ class Profile {
                 <div class="messaging-section">
                     <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #ddd;">
                         <h3 style="margin: 0;">💬 Messages with Site Admins</h3>
-                        <button onclick="window.profile.refreshMessages()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Refresh</button>
+                        <button data-action="refreshMessages" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Refresh</button>
                     </div>
                     
                     <div id="candidateMessagesContainer" style="height: 400px; overflow-y: auto; padding: 1rem; background: #fafafa;">
@@ -924,7 +1027,7 @@ class Profile {
                     
                     <div class="settings-group">
                         <h4>Security</h4>
-                        <button onclick="window.profile.changePassword()" class="btn">Change Password</button>
+                        <button data-action="changePassword" class="btn">Change Password</button>
                         <div class="totp-section">
                             <div id="totpStatus" class="totp-status">
                                 <div class="loading">Loading 2FA status...</div>
@@ -933,7 +1036,7 @@ class Profile {
                                 <!-- TOTP controls will be populated here -->
                             </div>
                         </div>
-                        <button onclick="window.profile.downloadData()" class="btn">Download My Data</button>
+                        <button data-action="downloadData" class="btn">Download My Data</button>
                         ${this.userProfile?.isAdmin ? `
                             <div class="admin-section" style="margin-top: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; border: 2px solid #5a67d8;">
                                 <h4 style="color: white; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
@@ -942,7 +1045,7 @@ class Profile {
                                 <p style="color: rgba(255,255,255,0.9); margin: 0 0 1rem 0; font-size: 0.9rem;">
                                     Access the administrative dashboard to manage users, content, and system settings.
                                 </p>
-                                <button onclick="window.profile.openAdminDashboard()" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s;">
+                                <button data-action="openAdminDashboard" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s;">
                                     🛠️ Open Admin Dashboard
                                 </button>
                             </div>
@@ -957,7 +1060,7 @@ class Profile {
                         <div class="privacy-settings">
                             <div class="privacy-field">
                                 <label class="privacy-label">Bio</label>
-                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('bio', this.value)">
+                                <select class="privacy-dropdown" data-change-action="updatePrivacySetting" data-param1="bio">
                                     <option value="public" ${this.getPrivacySetting('bio') === 'public' ? 'selected' : ''}>Public</option>
                                     <option value="followers" ${this.getPrivacySetting('bio') === 'followers' ? 'selected' : ''}>Followers</option>
                                     <option value="friends" ${this.getPrivacySetting('bio') === 'friends' ? 'selected' : ''}>Friends</option>
@@ -967,7 +1070,7 @@ class Profile {
 
                             <div class="privacy-field">
                                 <label class="privacy-label">Website</label>
-                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('website', this.value)">
+                                <select class="privacy-dropdown" data-change-action="updatePrivacySetting" data-param1="website">
                                     <option value="public" ${this.getPrivacySetting('website') === 'public' ? 'selected' : ''}>Public</option>
                                     <option value="followers" ${this.getPrivacySetting('website') === 'followers' ? 'selected' : ''}>Followers</option>
                                     <option value="friends" ${this.getPrivacySetting('website') === 'friends' ? 'selected' : ''}>Friends</option>
@@ -977,7 +1080,7 @@ class Profile {
 
                             <div class="privacy-field">
                                 <label class="privacy-label">City</label>
-                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('city', this.value)">
+                                <select class="privacy-dropdown" data-change-action="updatePrivacySetting" data-param1="city">
                                     <option value="public" ${this.getPrivacySetting('city') === 'public' ? 'selected' : ''}>Public</option>
                                     <option value="followers" ${this.getPrivacySetting('city') === 'followers' ? 'selected' : ''}>Followers</option>
                                     <option value="friends" ${this.getPrivacySetting('city') === 'friends' ? 'selected' : ''}>Friends</option>
@@ -987,7 +1090,7 @@ class Profile {
 
                             <div class="privacy-field">
                                 <label class="privacy-label">State</label>
-                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('state', this.value)">
+                                <select class="privacy-dropdown" data-change-action="updatePrivacySetting" data-param1="state">
                                     <option value="public" ${this.getPrivacySetting('state') === 'public' ? 'selected' : ''}>Public</option>
                                     <option value="followers" ${this.getPrivacySetting('state') === 'followers' ? 'selected' : ''}>Followers</option>
                                     <option value="friends" ${this.getPrivacySetting('state') === 'friends' ? 'selected' : ''}>Friends</option>
@@ -997,7 +1100,7 @@ class Profile {
 
                             <div class="privacy-field">
                                 <label class="privacy-label">Relationship Status</label>
-                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('maritalStatus', this.value)">
+                                <select class="privacy-dropdown" data-change-action="updatePrivacySetting" data-param1="maritalStatus">
                                     <option value="public" ${this.getPrivacySetting('maritalStatus') === 'public' ? 'selected' : ''}>Public</option>
                                     <option value="followers" ${this.getPrivacySetting('maritalStatus') === 'followers' ? 'selected' : ''}>Followers</option>
                                     <option value="friends" ${this.getPrivacySetting('maritalStatus') === 'friends' ? 'selected' : ''}>Friends</option>
@@ -1018,7 +1121,7 @@ class Profile {
                                 <input type="checkbox" 
                                        id="browserNotificationsEnabled"
                                        ${this.getNotificationPreference('browserNotifications') ? 'checked' : ''} 
-                                       onchange="window.profile.updateNotificationPreference('browserNotifications', this.checked)">
+                                       data-change-action="updateNotificationPreference" data-param1="browserNotifications">
                                 <span>Enable browser notifications</span>
                             </label>
                             
@@ -1027,7 +1130,7 @@ class Profile {
                                     <input type="checkbox" 
                                            id="browserNotifyNewMessages"
                                            ${this.getNotificationPreference('browserNotifyNewMessages') ? 'checked' : ''} 
-                                           onchange="window.profile.updateNotificationPreference('browserNotifyNewMessages', this.checked)"
+                                           data-change-action="updateNotificationPreference" data-param1="browserNotifyNewMessages"
                                            ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}>
                                     <span>New messages</span>
                                 </label>
@@ -1036,7 +1139,7 @@ class Profile {
                                     <input type="checkbox" 
                                            id="browserNotifyLikes"
                                            ${this.getNotificationPreference('browserNotifyLikes') ? 'checked' : ''} 
-                                           onchange="window.profile.updateNotificationPreference('browserNotifyLikes', this.checked)"
+                                           data-change-action="updateNotificationPreference" data-param1="browserNotifyLikes"
                                            ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}>
                                     <span>Likes and reactions</span>
                                 </label>
@@ -1045,7 +1148,7 @@ class Profile {
                                     <input type="checkbox" 
                                            id="browserNotifyComments"
                                            ${this.getNotificationPreference('browserNotifyComments') ? 'checked' : ''} 
-                                           onchange="window.profile.updateNotificationPreference('browserNotifyComments', this.checked)"
+                                           data-change-action="updateNotificationPreference" data-param1="browserNotifyComments"
                                            ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}>
                                     <span>Comments on my posts</span>
                                 </label>
@@ -1056,7 +1159,7 @@ class Profile {
                                 <input type="checkbox" 
                                        id="emailNotificationsEnabled"
                                        ${this.getNotificationPreference('emailNotifications') ? 'checked' : ''} 
-                                       onchange="window.profile.updateNotificationPreference('emailNotifications', this.checked)">
+                                       data-change-action="updateNotificationPreference" data-param1="emailNotifications">
                                 <span>Enable email notifications</span>
                             </label>
                             
@@ -1065,7 +1168,7 @@ class Profile {
                                     <input type="checkbox" 
                                            id="emailNotifyImportantMessages"
                                            ${this.getNotificationPreference('emailNotifyImportantMessages') ? 'checked' : ''} 
-                                           onchange="window.profile.updateNotificationPreference('emailNotifyImportantMessages', this.checked)"
+                                           data-change-action="updateNotificationPreference" data-param1="emailNotifyImportantMessages"
                                            ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}>
                                     <span>Important messages and replies</span>
                                 </label>
@@ -1074,7 +1177,7 @@ class Profile {
                                     <input type="checkbox" 
                                            id="emailNotifyWeeklyDigest"
                                            ${this.getNotificationPreference('emailNotifyWeeklyDigest') ? 'checked' : ''} 
-                                           onchange="window.profile.updateNotificationPreference('emailNotifyWeeklyDigest', this.checked)"
+                                           data-change-action="updateNotificationPreference" data-param1="emailNotifyWeeklyDigest"
                                            ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}>
                                     <span>Weekly activity digest</span>
                                 </label>
@@ -1083,7 +1186,7 @@ class Profile {
                                     <input type="checkbox" 
                                            id="emailNotifySecurityAlerts"
                                            ${this.getNotificationPreference('emailNotifySecurityAlerts') !== false ? 'checked' : ''} 
-                                           onchange="window.profile.updateNotificationPreference('emailNotifySecurityAlerts', this.checked)"
+                                           data-change-action="updateNotificationPreference" data-param1="emailNotifySecurityAlerts"
                                            ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}>
                                     <span>Security alerts (recommended)</span>
                                 </label>
@@ -1095,7 +1198,7 @@ class Profile {
                                     <input type="checkbox" 
                                            id="candidateInboxNotifications"
                                            ${this.getNotificationPreference('candidateInboxNotifications') ? 'checked' : ''} 
-                                           onchange="window.profile.updateNotificationPreference('candidateInboxNotifications', this.checked)">
+                                           data-change-action="updateNotificationPreference" data-param1="candidateInboxNotifications">
                                     <span>Constituent messages (candidate inbox)</span>
                                 </label>
                                 
@@ -1103,16 +1206,16 @@ class Profile {
                                     <input type="checkbox" 
                                            id="candidateElectionReminders"
                                            ${this.getNotificationPreference('candidateElectionReminders') ? 'checked' : ''} 
-                                           onchange="window.profile.updateNotificationPreference('candidateElectionReminders', this.checked)">
+                                           data-change-action="updateNotificationPreference" data-param1="candidateElectionReminders">
                                     <span>Filing deadlines and election reminders</span>
                                 </label>
                             </div>
                             
                             <div class="notification-controls">
-                                <button onclick="window.profile.requestNotificationPermission()" class="btn-secondary">
+                                <button data-action="requestNotificationPermission" class="btn-secondary">
                                     🔔 Grant Browser Permission
                                 </button>
-                                <button onclick="window.profile.testNotification()" class="btn-secondary">
+                                <button data-action="testNotification" class="btn-secondary">
                                     📨 Test Notification
                                 </button>
                             </div>
@@ -1126,7 +1229,7 @@ class Profile {
                                 <input type="checkbox" 
                                        id="photoTaggingEnabled"
                                        ${this.userProfile.photoTaggingEnabled !== false ? 'checked' : ''} 
-                                       onchange="window.profile.updateTaggingPreference('photoTaggingEnabled', this.checked)">
+                                       data-change-action="updateTaggingPreference" data-param1="photoTaggingEnabled">
                                 <span>Allow people to tag me in photos</span>
                             </label>
                             
@@ -1135,7 +1238,7 @@ class Profile {
                                     <input type="checkbox" 
                                            id="requireTagApproval"
                                            ${this.userProfile.requireTagApproval ? 'checked' : ''} 
-                                           onchange="window.profile.updateTaggingPreference('requireTagApproval', this.checked)"
+                                           data-change-action="updateTaggingPreference" data-param1="requireTagApproval"
                                            ${this.userProfile.photoTaggingEnabled === false ? 'disabled' : ''}>
                                     <span>Require my approval before tags appear</span>
                                 </label>
@@ -1144,14 +1247,14 @@ class Profile {
                                     <input type="checkbox" 
                                            id="allowTagsByFriendsOnly"
                                            ${this.userProfile.allowTagsByFriendsOnly ? 'checked' : ''} 
-                                           onchange="window.profile.updateTaggingPreference('allowTagsByFriendsOnly', this.checked)"
+                                           data-change-action="updateTaggingPreference" data-param1="allowTagsByFriendsOnly"
                                            ${this.userProfile.photoTaggingEnabled === false ? 'disabled' : ''}>
                                     <span>Only allow friends to tag me</span>
                                 </label>
                             </div>
                             
                             <div class="pending-tags-section" id="pendingTagsSection">
-                                <button onclick="window.profile.viewPendingTags()" class="btn-secondary">
+                                <button data-action="viewPendingTags" class="btn-secondary">
                                     View Pending Tags <span class="badge" id="pendingTagsCount"></span>
                                 </button>
                             </div>
@@ -1160,7 +1263,7 @@ class Profile {
 
                     <div class="settings-group danger">
                         <h4>Danger Zone</h4>
-                        <button onclick="window.profile.deactivateAccount()" class="btn-danger">Deactivate Account</button>
+                        <button data-action="deactivateAccount" class="btn-danger">Deactivate Account</button>
                     </div>
                 </div>
             </div>
@@ -1175,10 +1278,10 @@ class Profile {
                     <div class="section-header">
                         <h3>Photo Gallery</h3>
                         <div class="photo-actions">
-                            <button onclick="window.profile.uploadPhotos()" class="btn">
+                            <button data-action="uploadPhotos" class="btn">
                                 📷 Upload Photos
                             </button>
-                            <button onclick="window.profile.createGallery()" class="btn-secondary">
+                            <button data-action="createGallery" class="btn-secondary">
                                 📁 New Gallery
                             </button>
                         </div>
@@ -1200,7 +1303,7 @@ class Profile {
 
                 <!-- Hidden upload input -->
                 <input type="file" id="bulkPhotoUpload" multiple accept="image/*,image/gif" 
-                       style="display: none;" onchange="window.profile.handleBulkUpload(this)">
+                       style="display: none;" data-change-action="handleBulkUpload">
             </div>
         `;
     }
@@ -1210,7 +1313,7 @@ class Profile {
             <div class="error-state">
                 <h2>Error</h2>
                 <p>${message}</p>
-                <button onclick="window.profile.render('mainContent')" class="btn">Try Again</button>
+                <button data-action="renderProfile" class="btn">Try Again</button>
             </div>
         `;
     }
@@ -1395,7 +1498,7 @@ class Profile {
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
                     <h2>Edit Address</h2>
-                    <button onclick="this.closest('.modal').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                    <button data-action="closeModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -1415,8 +1518,8 @@ class Profile {
                         <input type="text" id="editZipCode" value="${user.zipCode || ''}" placeholder="12345" maxlength="5">
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button onclick="window.profile.saveAddress()" class="btn" style="background: #4b5c09;">Save Address</button>
-                        <button onclick="this.closest('.modal').remove()" class="btn" style="background: #666;">Cancel</button>
+                        <button data-action="saveAddress" class="btn" style="background: #4b5c09;">Save Address</button>
+                        <button data-action="closeModal" class="btn" style="background: #666;">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -1645,10 +1748,10 @@ class Profile {
             
             totpControls.innerHTML = `
                 <div class="totp-actions">
-                    <button onclick="window.profile.regenerateBackupCodes()" class="btn-secondary">
+                    <button data-action="regenerateBackupCodes" class="btn-secondary">
                         Generate New Backup Codes
                     </button>
-                    <button onclick="window.profile.disableTOTP()" class="btn-danger">
+                    <button data-action="disableTOTP" class="btn-danger">
                         Disable 2FA
                     </button>
                     <div class="backup-codes-info">
@@ -1666,7 +1769,7 @@ class Profile {
             
             totpControls.innerHTML = `
                 <div class="totp-actions">
-                    <button onclick="window.profile.setupTOTP()" class="btn">
+                    <button data-action="setupTOTP" class="btn">
                         🔒 Enable Two-Factor Authentication
                     </button>
                     <div class="totp-info">
@@ -1686,7 +1789,7 @@ class Profile {
                 <div class="totp-error">
                     <span class="totp-icon">⚠️</span>
                     <span>${message}</span>
-                    <button onclick="window.profile.loadTOTPStatus()" class="btn-small">Retry</button>
+                    <button data-action="loadTOTPStatus" class="btn-small">Retry</button>
                 </div>
             `;
         }
@@ -1786,7 +1889,7 @@ class Profile {
             <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                 <div style="text-align: center; margin-bottom: 20px;">
                     <h3 style="margin: 0 0 10px 0; color: #333;">Setup Two-Factor Authentication</h3>
-                    <button onclick="this.closest('.totp-modal-simple').remove()" 
+                    <button data-action="closeModal"
                             style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
                 </div>
                 <div style="margin-bottom: 25px;">
@@ -1805,13 +1908,13 @@ class Profile {
                     <p style="color: #666; margin-bottom: 10px;">Enter the 6-digit code:</p>
                     <input type="text" id="totpVerificationCode" placeholder="000000" maxlength="6" 
                            style="width: 100%; padding: 10px; font-size: 18px; text-align: center; border: 2px solid #ddd; border-radius: 5px; margin-bottom: 15px;"
-                           oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                          >
                     <div style="text-align: center;">
-                        <button onclick="window.profile.verifyTOTPSetup()" 
+                        <button data-action="verifyTOTPSetup"
                                 style="background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin-right: 10px; cursor: pointer;">
                             Verify & Enable 2FA
                         </button>
-                        <button onclick="this.closest('.totp-modal-simple').remove()" 
+                        <button data-action="closeModal"
                                 style="background: #ccc; color: #333; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
                             Cancel
                         </button>
@@ -1894,7 +1997,7 @@ class Profile {
             <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                 <div style="text-align: center; margin-bottom: 20px;">
                     <h3 style="margin: 0 0 10px 0; color: #333;">🔑 Backup Codes</h3>
-                    <button onclick="this.closest('.totp-modal-simple').remove()" 
+                    <button data-action="closeModal"
                             style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
                 </div>
                 <div style="margin-bottom: 20px;">
@@ -1903,11 +2006,11 @@ class Profile {
                         ${backupCodes.map(code => `<div style="padding: 3px 0; font-size: 14px;">${code}</div>`).join('')}
                     </div>
                     <div style="text-align: center; margin-top: 20px;">
-                        <button onclick="window.profile.copyBackupCodes(${JSON.stringify(backupCodes).replace(/"/g, '&quot;')})" 
+                        <button data-action="copyBackupCodes" data-codes='${JSON.stringify(backupCodes)}'
                                 style="background: #2196F3; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin-right: 10px; cursor: pointer;">
                             📋 Copy to Clipboard
                         </button>
-                        <button onclick="this.closest('.totp-modal-simple').remove()" 
+                        <button data-action="closeModal"
                                 style="background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
                             I've Saved My Codes
                         </button>
@@ -2054,7 +2157,7 @@ class Profile {
                 <div class="empty-state">
                     <h3>No Photos Yet</h3>
                     <p>Start building your photo gallery by uploading your first photos!</p>
-                    <button onclick="window.profile.uploadPhotos()" class="btn">Upload Photos</button>
+                    <button data-action="uploadPhotos" class="btn">Upload Photos</button>
                 </div>
             `;
             return;
@@ -2072,13 +2175,13 @@ class Profile {
                             <img src="${photo.thumbnailUrl || photo.url}" alt="${photo.caption || photo.filename}">
                             ${photo.caption ? `<div class="photo-caption">${photo.caption}</div>` : ''}
                             <div class="photo-overlay">
-                                <button onclick="window.profile.setAsProfilePicture('${photo.id}')" class="photo-action">
+                                <button data-action="setAsProfilePicture" data-param1="${photo.id}" class="photo-action">
                                     👤 Set as Profile
                                 </button>
-                                <button onclick="window.profile.movePhoto('${photo.id}')" class="photo-action">
+                                <button data-action="movePhoto" data-param1="${photo.id}" class="photo-action">
                                     📁 Move
                                 </button>
-                                <button onclick="window.profile.deletePhoto('${photo.id}')" class="photo-action delete">
+                                <button data-action="deletePhoto" data-param1="${photo.id}" class="photo-action delete">
                                     🗑️ Delete
                                 </button>
                             </div>
@@ -3320,7 +3423,7 @@ class Profile {
             <div class="pending-tags-modal">
                 <div class="pending-tags-header">
                     <h3>Pending Photo Tags (${pendingTags.length})</h3>
-                    <button onclick="document.getElementById('pendingTagsModal').remove()" class="close-btn">&times;</button>
+                    <button data-action="closeModal" class="close-btn">&times;</button>
                 </div>
                 <div class="pending-tags-body">
                     ${pendingTags.length === 0 ? 
@@ -3336,10 +3439,10 @@ class Profile {
                                     <small>${this.getTimeAgo(new Date(tag.createdAt))}</small>
                                 </div>
                                 <div class="pending-tag-actions">
-                                    <button class="approve-btn" onclick="window.profile.respondToTag('${tag.id}', true)">
+                                    <button class="approve-btn" data-action="respondToTag" data-param1="${tag.id}" data-param2="true">
                                         ✓ Approve
                                     </button>
-                                    <button class="decline-btn" onclick="window.profile.respondToTag('${tag.id}', false)">
+                                    <button class="decline-btn" data-action="respondToTag" data-param1="${tag.id}" data-param2="false">
                                         ✗ Decline
                                     </button>
                                 </div>
@@ -3453,7 +3556,7 @@ class Profile {
                     <div style="text-align: center; color: #dc3545; margin: 2rem 0;">
                         <p>❌ Error loading messages</p>
                         <p style="font-size: 0.875rem;">${error.message}</p>
-                        <button onclick="window.profile.loadCandidateMessages()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Try Again</button>
+                        <button data-action="loadCandidateMessages" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Try Again</button>
                     </div>
                 `;
             }
@@ -4038,7 +4141,7 @@ class Profile {
                     <div class="error-state" style="text-align: center; padding: 2rem; color: #dc3545;">
                         <h3>Unable to load activities</h3>
                         <p>${error.message}</p>
-                        <button onclick="window.profile.loadUserActivities(true)" class="btn">Try Again</button>
+                        <button data-action="loadUserActivities" class="btn">Try Again</button>
                     </div>
                 `;
             }
@@ -4065,7 +4168,7 @@ class Profile {
                     <div class="error-state" style="text-align: center; padding: 2rem; color: #dc3545;">
                         <h4>Unable to load saved posts</h4>
                         <p>${error.message}</p>
-                        <button onclick="window.profile.loadSavedPosts()" class="btn" style="margin-top: 1rem;">Try Again</button>
+                        <button data-action="loadSavedPosts" class="btn" style="margin-top: 1rem;">Try Again</button>
                     </div>
                 `;
             }
@@ -4155,9 +4258,7 @@ class Profile {
             case 'POST_CREATED':
                 return `
                     <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid transparent;"
-                         onclick="window.profile.navigateToPost('${activity.targetId}')"
-                         onmouseover="this.style.background='#f8f9fa'; this.style.borderLeftColor='#007bff';"
-                         onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
+                         data-action="navigateToPost" data-param1="${activity.targetId}">
                         <div class="activity-icon" style="font-size: 1.5rem;">📝</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 600; margin-bottom: 0.5rem; color: #333; font-size: 1rem;">
@@ -4176,9 +4277,7 @@ class Profile {
             case 'POST_EDITED':
                 return `
                     <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid transparent;"
-                         onclick="window.profile.navigateToPost('${activity.targetId}')"
-                         onmouseover="this.style.background='#f8f9fa'; this.style.borderLeftColor='#007bff';"
-                         onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
+                         data-action="navigateToPost" data-param1="${activity.targetId}">
                         <div class="activity-icon" style="font-size: 1.5rem;">✏️</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 600; margin-bottom: 0.5rem; color: #333; font-size: 1rem;">
@@ -4207,7 +4306,7 @@ class Profile {
                             <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
                                 "${metadata.contentPreview || 'Content preview not available'}"
                             </div>
-                            <button onclick="window.profile.viewDeletedContent('post', '${activity.targetId}')"
+                            <button data-action="viewDeletedContent" data-param1="post" data-param2="${activity.targetId}"
                                     style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                                 View Deleted Content
                             </button>
@@ -4221,9 +4320,7 @@ class Profile {
             case 'COMMENT_CREATED':
                 return `
                     <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid transparent;"
-                         onclick="window.profile.navigateToComment('${activity.targetId}', '${metadata.postId || ''}')"
-                         onmouseover="this.style.background='#f8f9fa'; this.style.borderLeftColor='#007bff';"
-                         onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
+                         data-action="navigateToComment" data-param1="${activity.targetId}" data-param2="${metadata.postId || ''}">
                         <div class="activity-icon" style="font-size: 1.5rem;">💬</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 600; margin-bottom: 0.5rem; color: #333; font-size: 1rem;">
@@ -4250,7 +4347,7 @@ class Profile {
                             <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
                                 "${metadata.contentPreview || 'Comment preview not available'}"
                             </div>
-                            <button onclick="window.profile.viewDeletedContent('comment', '${activity.targetId}')"
+                            <button data-action="viewDeletedContent" data-param1="comment" data-param2="${activity.targetId}"
                                     style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                                 View Deleted Comment
                             </button>
@@ -4264,9 +4361,7 @@ class Profile {
             case 'LIKE_ADDED':
                 return `
                     <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid transparent;"
-                         onclick="window.profile.navigateToPost('${metadata.postId || activity.targetId}')"
-                         onmouseover="this.style.background='#f8f9fa'; this.style.borderLeftColor='#007bff';"
-                         onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
+                         data-action="navigateToPost" data-param1="${metadata.postId || activity.targetId}">
                         <div class="activity-icon" style="font-size: 1.5rem;">❤️</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 600; margin-bottom: 0.5rem; color: #333; font-size: 1rem;">
@@ -4282,9 +4377,7 @@ class Profile {
             case 'FOLLOW_ADDED':
                 return `
                     <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid transparent;"
-                         onclick="window.profile.navigateToUser('${metadata.targetUsername || ''}')"
-                         onmouseover="this.style.background='#f8f9fa'; this.style.borderLeftColor='#007bff';"
-                         onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
+                         data-action="navigateToUser" data-param1="${metadata.targetUsername || ''}">
                         <div class="activity-icon" style="font-size: 1.5rem;">👥</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 600; margin-bottom: 0.5rem; color: #333; font-size: 1rem;">
@@ -4625,7 +4718,7 @@ function showProfile(userId = null) {
                     profilePanel.innerHTML = `
                         <div style="text-align: center; padding: 3rem;">
                             <h2>Please log in to view your profile</h2>
-                            <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                            <button data-action="openAuthModal" data-param1="login" class="btn">Log In</button>
                         </div>
                     `;
                     return;
@@ -4645,7 +4738,7 @@ function showProfile(userId = null) {
                     mainContent.innerHTML = `
                         <div style="text-align: center; padding: 3rem;">
                             <h2>Please log in to view your profile</h2>
-                            <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                            <button data-action="openAuthModal" data-param1="login" class="btn">Log In</button>
                         </div>
                     `;
                 }
