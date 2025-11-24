@@ -2357,7 +2357,8 @@ class PostComponent {
         // Event delegation for data-action attributes
         document.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
-            if (action) {
+            const isPostAction = e.target.closest("[data-post-id], .comment-section, .post-component");
+            if (action && isPostAction) {
                 const postId = e.target.dataset.postId;
                 const commentId = e.target.dataset.commentId;
 

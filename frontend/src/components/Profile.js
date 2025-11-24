@@ -182,7 +182,7 @@ class Profile {
             const inputSelector = target.dataset.inputSelector;
 
             switch (action) {
-                case 'switchTab': this.switchTab(param1); break;
+                case 'switchTab': this.switchTab(param1); e.stopPropagation(); break;
                 case 'closeModal': target.closest('.modal, .totp-modal-simple, #pendingTagsModal')?.remove(); break;
                 case 'triggerFileUpload':
                     const fileInput = target.parentNode.querySelector(inputSelector || '.profile-upload');
@@ -383,21 +383,7 @@ class Profile {
     renderProfile(container) {
         const user = this.userProfile;
 
-        // === COMPREHENSIVE AVATAR DEBUGGING ===
-        // Admin debug (requires verification)
-        adminDebugLog('ProfileAvatar', '=== PROFILE AVATAR DIAGNOSTIC START ===');
-        adminDebugLog('ProfileAvatar', 'renderProfile user object', user);
-        adminDebugLog('ProfileAvatar', 'user.avatar value', user?.avatar);
-        adminDebugLog('ProfileAvatar', 'user.avatar type', typeof user?.avatar);
-        adminDebugLog('ProfileAvatar', 'window.currentUser', window.currentUser);
-        adminDebugLog('ProfileAvatar', 'window.currentUser.avatar', window.currentUser?.avatar);
-        adminDebugLog('ProfileAvatar', 'window.currentUser.avatar type', typeof window.currentUser?.avatar);
-
-        // Fallback to global user state if profile doesn't have avatar
         const avatarUrl = user?.avatar || window.currentUser?.avatar;
-        adminDebugLog('ProfileAvatar', 'FINAL avatar URL to display', avatarUrl);
-        adminDebugLog('ProfileAvatar', 'Will show image?', !!avatarUrl);
-        adminDebugLog('ProfileAvatar', '=== PROFILE AVATAR DIAGNOSTIC END ===');
 
         container.innerHTML = `
             <div class="my-profile">
@@ -1576,7 +1562,6 @@ class Profile {
             }
         });
         
-        adminDebugLog('✅ Legacy profile autocomplete initialized');
     }
     
     async saveAddress() {
