@@ -441,28 +441,28 @@ class Profile {
 
                 <!-- Tab Navigation -->
                 <div class="profile-tabs">
-                    <button class="tab-button ${this.currentTab === 'activity' ? 'active' : ''}" data-tab='activity'>
+                    <button class="tab-button ${this.currentTab === 'activity' ? 'active' : ''}" data-action="switchTab" data-param1="activity">
                         ${this.isOwnProfile ? 'My Activity' : 'Activity'}
                     </button>
-                    <button class="tab-button ${this.currentTab === 'photos' ? 'active' : ''}" data-tab='photos'>
+                    <button class="tab-button ${this.currentTab === 'photos' ? 'active' : ''}" data-action="switchTab" data-param1="photos">
                         Photos
                     </button>
-                    <button class="tab-button ${this.currentTab === 'demographics' ? 'active' : ''}" data-tab='demographics'>
+                    <button class="tab-button ${this.currentTab === 'demographics' ? 'active' : ''}" data-action="switchTab" data-param1="demographics">
                         Demographics
                     </button>
                     <!-- Temporarily hidden - Political Profile tab -->
-                    <!-- <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" data-tab='political'>
+                    <!-- <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" data-action="switchTab" data-param1="political">
                         Political Profile
                     </button> -->
                     ${this.isOwnProfile && user.candidateProfile ? `
                         <!-- Policy Platform moved to Candidate Dashboard -->
-                        <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" data-tab='messages' id="messagesTab">
+                        <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" data-action="switchTab" data-param1="messages" id="messagesTab">
                             💬 Admin Messages
                             <span id="unreadBadge" style="display: none; background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; margin-left: 0.5rem;">0</span>
                         </button>
                     ` : ''}
                     ${this.isOwnProfile ? `
-                        <button class="tab-button ${this.currentTab === 'settings' ? 'active' : ''}" data-tab='settings'>
+                        <button class="tab-button ${this.currentTab === 'settings' ? 'active' : ''}" data-action="switchTab" data-param1="settings">
                             Settings
                         </button>
                     ` : ''}
@@ -4081,7 +4081,7 @@ class Profile {
             button.classList.remove('active');
         });
         
-        const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
+        const activeButton = document.querySelector(`[data-action="switchTab"][data-param1="${tabName}"]`);
         if (activeButton) {
             activeButton.classList.add('active');
         }
