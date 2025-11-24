@@ -16,7 +16,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.2.1",
+    "@types/node": "^24.10.1",
     "@types/nodemailer": "^6.4.14",
     "@types/socket.io": "^3.0.2",
     "@types/swagger-jsdoc": "^6.0.1",
@@ -24,7 +24,7 @@
     "@types/ws": "^8.18.1",
     "prisma": "^6.13.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@azure-rest/ai-content-safety": "^1.0.1",
