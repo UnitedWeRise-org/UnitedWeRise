@@ -94,7 +94,7 @@ class PostComponent {
                 ${settings.showAuthor ? `
                     <div class="post-header">
                         <div class="post-avatar user-card-trigger"
-                             onclick="postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}'})"
+                             data-action="showUserCard" data-author-id="${post.author?.id || ''}" data-post-id="${post.id}"
                              style="cursor: pointer;"
                              title="Click to view profile">
                             ${post.author?.avatar ?
@@ -104,7 +104,7 @@ class PostComponent {
                         </div>
                         <div class="post-author-info">
                             <div class="post-author-name user-card-trigger"
-                                 onclick="postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}'})"
+                                 data-action="showUserCard" data-author-id="${post.author?.id || ''}" data-post-id="${post.id}"
                                  style="cursor: pointer;"
                                  title="Click to view profile">
                                 ${authorName}
@@ -118,7 +118,7 @@ class PostComponent {
                     </div>
                 ` : ''}
 
-                <div class="post-content" onclick="postComponent.openPostFocus('${post.id}')" style="cursor: pointer;">
+                <div class="post-content" data-action="openPostFocus" data-post-id="${post.id}" style="cursor: pointer;">
                     ${this.formatPostContent(post.content, post)}
                 </div>
 
@@ -135,25 +135,25 @@ class PostComponent {
                         ${this.renderEnhancedReactions(post)}
 
                         <button class="post-action-btn comment-btn"
-                                onclick="postComponent.toggleComments('${post.id}')">
+                                data-action="toggleComments" data-post-id="${post.id}">
                             <span class="action-icon">💬</span>
                             <span class="action-count">${post.commentsCount || 0}</span>
                         </button>
 
                         <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}"
-                                onclick="postComponent.sharePost('${post.id}')">
+                                data-action="sharePost" data-post-id="${post.id}">
                             <span class="action-icon">🔄</span>
                             <span class="action-count">${post.sharesCount || 0}</span>
                         </button>
 
                         <button class="post-action-btn save-btn ${post.isSaved ? 'saved' : ''}"
-                                onclick="postComponent.toggleSave('${post.id}')">
+                                data-action="toggleSave" data-post-id="${post.id}">
                             <span class="action-icon">${post.isSaved ? '🔖' : '🔖'}</span>
                         </button>
 
                         ${post.isOwner ? `
                             <button class="post-action-btn more-btn"
-                                    onclick="postComponent.showPostMenu('${post.id}')">
+                                    data-action="showPostMenu" data-post-id="${post.id}">
                                 <span class="action-icon">⋯</span>
                             </button>
                         ` : ''}
@@ -173,7 +173,7 @@ class PostComponent {
                                     Post Comment
                                 </button>
                                 <button class="btn btn-sm btn-secondary"
-                                        onclick="postComponent.hideComments('${post.id}')">
+                                        data-action="hideComments" data-post-id="${post.id}">
                                     Cancel
                                 </button>
                             </div>
@@ -804,19 +804,19 @@ class PostComponent {
                 <div class="comment-actions">
                     ${this.renderCommentReactions(comment)}
                     ${hasReplies ? `
-                        <button class="expand-thread-btn" onclick="postComponent.toggleThread('${comment.id}')">
+                        <button class="expand-thread-btn" data-action="toggleThread" data-comment-id="${comment.id}">
                             <span class="expand-icon">▶</span> <span class="replies-count">${comment.replyCount || ''} replies</span>
                         </button>
                     ` : ''}
-                    <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
+                    <button class="reply-btn" data-action="toggleReplyBox" data-comment-id="${comment.id}" data-post-id="${postId}">
                         💬 Reply
                     </button>
                 </div>
                 <div class="reply-box" id="reply-box-${comment.id}" style="display: none; margin-top: 10px;">
                     <textarea class="reply-input" id="reply-input-${comment.id}" placeholder="Write a reply..." rows="2"></textarea>
                     <div class="reply-box-actions">
-                        <button class="submit-reply-btn" onclick="postComponent.submitReply('${comment.id}', '${postId}')">Post Reply</button>
-                        <button class="cancel-reply-btn" onclick="postComponent.cancelReply('${comment.id}')">Cancel</button>
+                        <button class="submit-reply-btn" data-action="submitReply" data-comment-id="${comment.id}" data-post-id="${postId}">Post Reply</button>
+                        <button class="cancel-reply-btn" data-action="cancelReply" data-comment-id="${comment.id}">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -859,11 +859,11 @@ class PostComponent {
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
                     ${this.renderCommentReactions(comment)}
-                    <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
+                    <button class="reply-btn" data-action="toggleReplyBox" data-comment-id="${comment.id}" data-post-id="${postId}">
                         💬 Reply
                     </button>
                     ${hasReplies ? `
-                        <button class="toggle-replies-btn" onclick="postComponent.toggleReplies('${comment.id}')">
+                        <button class="toggle-replies-btn" data-action="toggleReplies" data-comment-id="${comment.id}">
                             <span class="toggle-text">${replyCount > 1 ? `▼ ${replyCount} replies` : `▼ ${replyCount} reply`}</span>
                         </button>
                     ` : ''}
@@ -871,8 +871,8 @@ class PostComponent {
                 <div class="reply-box" id="reply-box-${comment.id}" style="display: none; margin-top: 10px;">
                     <textarea class="reply-input" id="reply-input-${comment.id}" placeholder="Write a reply..." rows="2"></textarea>
                     <div class="reply-box-actions">
-                        <button class="submit-reply-btn" onclick="postComponent.submitReply('${comment.id}', '${postId}')">Post Reply</button>
-                        <button class="cancel-reply-btn" onclick="postComponent.cancelReply('${comment.id}')">Cancel</button>
+                        <button class="submit-reply-btn" data-action="submitReply" data-comment-id="${comment.id}" data-post-id="${postId}">Post Reply</button>
+                        <button class="cancel-reply-btn" data-action="cancelReply" data-comment-id="${comment.id}">Cancel</button>
                     </div>
                 </div>
         `;
@@ -943,15 +943,15 @@ class PostComponent {
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
                     ${this.renderCommentReactions(comment)}
-                    <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
+                    <button class="reply-btn" data-action="toggleReplyBox" data-comment-id="${comment.id}" data-post-id="${postId}">
                         💬 Reply
                     </button>
                 </div>
                 <div class="reply-box" id="reply-box-${comment.id}" style="display: none; margin-top: 10px;">
                     <textarea class="reply-input" id="reply-input-${comment.id}" placeholder="Write a reply..." rows="2"></textarea>
                     <div class="reply-box-actions">
-                        <button class="submit-reply-btn" onclick="postComponent.submitReply('${comment.id}', '${postId}')">Post Reply</button>
-                        <button class="cancel-reply-btn" onclick="postComponent.cancelReply('${comment.id}')">Cancel</button>
+                        <button class="submit-reply-btn" data-action="submitReply" data-comment-id="${comment.id}" data-post-id="${postId}">Post Reply</button>
+                        <button class="cancel-reply-btn" data-action="cancelReply" data-comment-id="${comment.id}">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -1257,11 +1257,11 @@ class PostComponent {
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>Share Post</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                    <button class="modal-close" data-action="closeModal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="share-options">
-                        <button class="share-option simple-share" onclick="postComponent.performSimpleShare('${postId}')">
+                        <button class="share-option simple-share" data-action="performSimpleShare" data-post-id="${postId}">
                             <span class="option-icon">🔄</span>
                             <div class="option-text">
                                 <span class="option-title">Share</span>
@@ -1269,7 +1269,7 @@ class PostComponent {
                             </div>
                         </button>
 
-                        <button class="share-option quote-share" onclick="postComponent.showQuoteShareDialog('${postId}')">
+                        <button class="share-option quote-share" data-action="showQuoteShareDialog" data-post-id="${postId}">
                             <span class="option-icon">💬</span>
                             <div class="option-text">
                                 <span class="option-title">Quote Share</span>
@@ -1279,7 +1279,7 @@ class PostComponent {
 
                         <hr class="menu-divider">
 
-                        <button class="share-option copy-link" onclick="postComponent.copyPostLink('${postId}')">
+                        <button class="share-option copy-link" data-action="copyPostLink" data-post-id="${postId}">
                             <span class="option-icon">🔗</span>
                             <div class="option-text">
                                 <span class="option-title">Copy Link</span>
@@ -1287,7 +1287,7 @@ class PostComponent {
                             </div>
                         </button>
 
-                        <button class="share-option external-share" onclick="postComponent.externalShare('${postId}')">
+                        <button class="share-option external-share" data-action="externalShare" data-post-id="${postId}">
                             <span class="option-icon">📱</span>
                             <div class="option-text">
                                 <span class="option-title">Share Externally</span>
@@ -1342,7 +1342,7 @@ class PostComponent {
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>Quote Share</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                    <button class="modal-close" data-action="closeModal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="quote-form">
@@ -1357,8 +1357,8 @@ class PostComponent {
                         </div>
                     </div>
                     <div class="quote-actions">
-                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
-                        <button class="btn btn-primary" onclick="postComponent.performQuoteShare('${postId}')">Share with Quote</button>
+                        <button class="btn btn-secondary" data-action="closeModal">Cancel</button>
+                        <button class="btn btn-primary" data-action="performQuoteShare" data-post-id="${postId}">Share with Quote</button>
                     </div>
                 </div>
             </div>
@@ -1489,11 +1489,11 @@ class PostComponent {
                 <div class="modal-content post-menu-content">
                     <div class="modal-header">
                         <h3>Post Options</h3>
-                        <span class="close" onclick="postComponent.closePostMenu('${postId}')">&times;</span>
+                        <span class="close" data-action="closePostMenu" data-post-id="${postId}">&times;</span>
                     </div>
                     <div class="modal-body">
                         <div class="post-menu-options">
-                            <button class="menu-option edit-option" onclick="postComponent.editPost('${postId}')">
+                            <button class="menu-option edit-option" data-action="editPost" data-post-id="${postId}">
                                 <span class="option-icon">✏️</span>
                                 <div class="option-text">
                                     <span class="option-title">Edit Post</span>
@@ -1501,7 +1501,7 @@ class PostComponent {
                                 </div>
                             </button>
 
-                            <button class="menu-option history-option" onclick="postComponent.viewPostHistory('${postId}')">
+                            <button class="menu-option history-option" data-action="viewPostHistory" data-post-id="${postId}">
                                 <span class="option-icon">📜</span>
                                 <div class="option-text">
                                     <span class="option-title">View Edit History</span>
@@ -1511,7 +1511,7 @@ class PostComponent {
 
                             <hr class="menu-divider">
 
-                            <button class="menu-option delete-option danger" onclick="postComponent.deletePost('${postId}')">
+                            <button class="menu-option delete-option danger" data-action="deletePost" data-post-id="${postId}">
                                 <span class="option-icon">🗑️</span>
                                 <div class="option-text">
                                     <span class="option-title">Delete Post</span>
@@ -1560,7 +1560,7 @@ class PostComponent {
                 <div class="modal-content edit-post-content">
                     <div class="modal-header">
                         <h3>Edit Post</h3>
-                        <span class="close" onclick="postComponent.closeEditModal('${postId}')">&times;</span>
+                        <span class="close" data-action="closeEditModal" data-post-id="${postId}">&times;</span>
                     </div>
                     <div class="modal-body">
                         <div class="edit-form">
@@ -1579,10 +1579,10 @@ class PostComponent {
                             </div>
 
                             <div class="edit-actions">
-                                <button onclick="postComponent.closeEditModal('${postId}')" class="btn btn-secondary">
+                                <button data-action="closeEditModal" data-post-id="${postId}" class="btn btn-secondary">
                                     Cancel
                                 </button>
-                                <button onclick="postComponent.submitPostEdit('${postId}')" class="btn btn-primary">
+                                <button data-action="submitPostEdit" data-post-id="${postId}" class="btn btn-primary">
                                     Save Changes
                                 </button>
                             </div>
@@ -1675,7 +1675,7 @@ class PostComponent {
                 <div class="modal-content delete-post-content">
                     <div class="modal-header">
                         <h3>Delete Post</h3>
-                        <span class="close" onclick="postComponent.closeDeleteModal('${postId}')">&times;</span>
+                        <span class="close" data-action="closeDeleteModal" data-post-id="${postId}">&times;</span>
                     </div>
                     <div class="modal-body">
                         <div class="delete-warning">
@@ -1693,10 +1693,10 @@ class PostComponent {
                         </div>
 
                         <div class="delete-actions">
-                            <button onclick="postComponent.closeDeleteModal('${postId}')" class="btn btn-secondary">
+                            <button data-action="closeDeleteModal" data-post-id="${postId}" class="btn btn-secondary">
                                 Cancel
                             </button>
-                            <button onclick="postComponent.confirmDeletePost('${postId}')" class="btn btn-danger">
+                            <button data-action="confirmDeletePost" data-post-id="${postId}" class="btn btn-danger">
                                 Delete Post
                             </button>
                         </div>
@@ -1767,7 +1767,7 @@ class PostComponent {
                 <div class="modal-content history-content">
                     <div class="modal-header">
                         <h3>Post Edit History</h3>
-                        <span class="close" onclick="postComponent.closeHistoryModal('${postId}')">&times;</span>
+                        <span class="close" data-action="closeHistoryModal" data-post-id="${postId}">&times;</span>
                     </div>
                     <div class="modal-body">
                         <div id="historyContent-${postId}" class="history-content">
@@ -1967,14 +1967,14 @@ class PostComponent {
             <div class="reaction-groups">
                 <div class="sentiment-group">
                     <button class="reaction-btn sentiment-like ${post.userSentiment === 'LIKE' ? 'active' : ''}"
-                            onclick="postComponent.toggleReaction('${post.id}', 'sentiment', 'LIKE')"
+                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="sentiment" data-param2="LIKE"
                             data-reaction-type="sentiment"
                             data-reaction-value="LIKE">
                         <span class="emoji">😊</span>
                         <span class="reaction-count">${post.likesCount || 0}</span>
                     </button>
                     <button class="reaction-btn sentiment-dislike ${post.userSentiment === 'DISLIKE' ? 'active' : ''}"
-                            onclick="postComponent.toggleReaction('${post.id}', 'sentiment', 'DISLIKE')"
+                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="sentiment" data-param2="DISLIKE"
                             data-reaction-type="sentiment"
                             data-reaction-value="DISLIKE">
                         <span class="emoji">😞</span>
@@ -1983,14 +1983,14 @@ class PostComponent {
                 </div>
                 <div class="stance-group">
                     <button class="reaction-btn stance-agree ${post.userStance === 'AGREE' ? 'active' : ''}"
-                            onclick="postComponent.toggleReaction('${post.id}', 'stance', 'AGREE')"
+                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="stance" data-param2="AGREE"
                             data-reaction-type="stance"
                             data-reaction-value="AGREE">
                         <span class="emoji">👍</span>
                         <span class="reaction-count">${post.agreesCount || 0}</span>
                     </button>
                     <button class="reaction-btn stance-disagree ${post.userStance === 'DISAGREE' ? 'active' : ''}"
-                            onclick="postComponent.toggleReaction('${post.id}', 'stance', 'DISAGREE')"
+                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="stance" data-param2="DISAGREE"
                             data-reaction-type="stance"
                             data-reaction-value="DISAGREE">
                         <span class="emoji">👎</span>
@@ -2009,13 +2009,13 @@ class PostComponent {
             <div class="comment-reaction-groups">
                 <div class="comment-sentiment-group">
                     <button class="comment-reaction-btn sentiment-like ${comment.userSentiment === 'LIKE' ? 'active' : ''}"
-                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'sentiment', 'LIKE')"
+                            data-action="toggleCommentReaction" data-comment-id="${comment.id}" data-param1="sentiment" data-param2="LIKE"
                             title="Like this comment">
                         <span class="emoji">😊</span>
                         <span class="reaction-count">${comment.likesCount || 0}</span>
                     </button>
                     <button class="comment-reaction-btn sentiment-dislike ${comment.userSentiment === 'DISLIKE' ? 'active' : ''}"
-                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'sentiment', 'DISLIKE')"
+                            data-action="toggleCommentReaction" data-comment-id="${comment.id}" data-param1="sentiment" data-param2="DISLIKE"
                             title="Dislike this comment">
                         <span class="emoji">😞</span>
                         <span class="reaction-count">${comment.dislikesCount || 0}</span>
@@ -2023,13 +2023,13 @@ class PostComponent {
                 </div>
                 <div class="comment-stance-group">
                     <button class="comment-reaction-btn stance-agree ${comment.userStance === 'AGREE' ? 'active' : ''}"
-                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'stance', 'AGREE')"
+                            data-action="toggleCommentReaction" data-comment-id="${comment.id}" data-param1="stance" data-param2="AGREE"
                             title="Agree with this comment">
                         <span class="emoji">👍</span>
                         <span class="reaction-count">${comment.agreesCount || 0}</span>
                     </button>
                     <button class="comment-reaction-btn stance-disagree ${comment.userStance === 'DISAGREE' ? 'active' : ''}"
-                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'stance', 'DISAGREE')"
+                            data-action="toggleCommentReaction" data-comment-id="${comment.id}" data-param1="stance" data-param2="DISAGREE"
                             title="Disagree with this comment">
                         <span class="emoji">👎</span>
                         <span class="reaction-count">${comment.disagreesCount || 0}</span>
@@ -2054,7 +2054,7 @@ class PostComponent {
                     <img src="${photo.url}"
                          alt="Post image"
                          loading="lazy"
-                         onclick="postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                         data-action="openMediaViewer" data-param1="${photo.url}" data-param2="${photo.mimeType}" data-param3="${photo.id}"
                          style="width: 100%; max-height: 500px; object-fit: cover; cursor: pointer; display: block;">
                     ${isGif ? '<div class="media-type-badge gif-badge" style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">GIF</div>' : ''}
                 </div>
@@ -2073,7 +2073,7 @@ class PostComponent {
                             <img src="${photo.url}"
                                  alt="Post image ${index + 1}"
                                  loading="lazy"
-                                 onclick="postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                                 data-action="openMediaViewer" data-param1="${photo.url}" data-param2="${photo.mimeType}" data-param3="${photo.id}"
                                  style="width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block;">
                             ${isGif ? '<div class="media-type-badge gif-badge" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">GIF</div>' : ''}
                             ${photos.length > 4 && index === 3 ? `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold;">+${photos.length - 4}</div>` : ''}
@@ -2125,13 +2125,13 @@ class PostComponent {
         overlay.innerHTML = `
             <div class="media-viewer-content" ${photoId ? `data-photo-id="${photoId}"` : ''}>
                 <div class="media-viewer-header">
-                    <button class="media-viewer-close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</button>
-                    ${photoId ? '<button class="media-viewer-tag-btn" onclick="postComponent.toggleTaggingMode(this)">🏷️ Tag People</button>' : ''}
+                    <button class="media-viewer-close" data-action="closeModal">&times;</button>
+                    ${photoId ? '<button class="media-viewer-tag-btn" data-action="toggleTaggingMode">🏷️ Tag People</button>' : ''}
                 </div>
                 <div class="media-viewer-image-container" style="position: relative;">
-                    <img src="${url}" alt="Full size image" 
+                    <img src="${url}" alt="Full size image"
                          style="max-width: 90vw; max-height: 90vh; object-fit: contain;"
-                         ${photoId ? `onclick="postComponent.handleImageClick(event, '${photoId}')"` : ''}>
+                         ${photoId ? `data-action="handleImageClick" data-param1="${photoId}"` : ''}>
                     ${photoId ? '<div class="photo-tags-overlay"></div>' : ''}
                 </div>
                 ${mimeType === 'image/gif' ? '<div class="media-viewer-badge">GIF</div>' : ''}
@@ -2187,18 +2187,24 @@ class PostComponent {
         searchContainer.style.display = 'block';
         searchContainer.style.left = `${screenX - 150}px`;
         searchContainer.style.top = `${screenY + 10}px`;
-        
+
         searchContainer.innerHTML = `
             <div class="user-search-box">
                 <input type="search" placeholder="Search users..." class="user-search-input"
                        autocomplete="off" autocapitalize="off" spellcheck="false"
-                       oninput="postComponent.searchUsers(this.value, ${x}, ${y}, '${photoId}')"
-                       onkeydown="if(event.key==='Escape') postComponent.hideUserSearch()">
+                       data-tag-x="${x}" data-tag-y="${y}" data-photo-id="${photoId}">
                 <div class="user-search-results"></div>
             </div>
         `;
 
-        searchContainer.querySelector('.user-search-input').focus();
+        const input = searchContainer.querySelector('.user-search-input');
+        input.addEventListener('input', (e) => {
+            this.searchUsers(e.target.value, x, y, photoId);
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.hideUserSearch();
+        });
+        input.focus();
     }
 
     /**
@@ -2226,9 +2232,9 @@ class PostComponent {
             if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 const users = response.data.users;
                 const resultsContainer = document.querySelector('.user-search-results');
-                
+
                 resultsContainer.innerHTML = users.map(user => `
-                    <div class="user-search-result" onclick="postComponent.tagUser('${user.id}', ${x}, ${y}, '${photoId}')">
+                    <div class="user-search-result" data-action="tagUser" data-param1="${user.id}" data-param2="${x}" data-param3="${y}" data-post-id="${photoId}">
                         <div class="user-avatar">${user.avatar ? `<img src="${user.avatar}" alt="">` : user.firstName?.[0] || user.username[0]}</div>
                         <div class="user-info">
                             <div class="user-name">${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}</div>
@@ -2354,43 +2360,194 @@ class PostComponent {
             }
         });
 
-        // Event delegation for data-action attributes
+        // Event delegation for data-action attributes (CSP compliant)
         document.addEventListener('click', (e) => {
-            const action = e.target.dataset.action;
-            const isPostAction = e.target.closest("[data-post-id], .comment-section, .post-component");
-            if (action && isPostAction) {
-                const postId = e.target.dataset.postId;
-                const commentId = e.target.dataset.commentId;
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
 
-                console.log('🎯 PostComponent event delegation:', action, { postId, commentId });
+            const action = target.dataset.action;
+            const postId = target.dataset.postId;
+            const commentId = target.dataset.commentId;
+            const authorId = target.dataset.authorId;
+            const param1 = target.dataset.param1;
+            const param2 = target.dataset.param2;
+            const param3 = target.dataset.param3;
 
-                try {
-                    switch (action) {
-                        case 'addComment':
-                            if (postId) {
-                                this.addComment(postId);
-                            }
-                            break;
-                        case 'addCommentFromFocus':
-                            if (postId) {
-                                this.addCommentFromFocus(postId);
-                            }
-                            break;
-                        case 'handle-post-media-upload':
-                            // Media upload is now handled by direct button onclick
-                            // This event comes from the file input itself, not the button
-                            console.log('📷 PostComponent: File input change detected - handled by navigation-handlers');
-                            // No need to do anything here - just acknowledge the event
-                            return; // Let navigation-handlers process the file selection
-                        case 'create-post-from-feed':
-                            // Handled by my-feed.js handler - pass through
+            // Only handle post-related actions
+            const isPostAction = target.closest("[data-post-id], .comment-section, .post-component, .post-focus-overlay, .share-modal, .post-menu-modal, .media-viewer-overlay, .badge-modal");
+            if (!isPostAction && !['showUserCard', 'openPostFocus', 'returnToFeed', 'closeModal'].includes(action)) {
+                return;
+            }
+
+            console.log('🎯 PostComponent event delegation:', action, { postId, commentId, authorId });
+
+            try {
+                switch (action) {
+                    // User card actions
+                    case 'showUserCard':
+                        this.showUserCard(e, authorId, { postId: postId, context: param1 });
+                        break;
+
+                    // Post navigation
+                    case 'openPostFocus':
+                        this.openPostFocus(postId);
+                        break;
+                    case 'returnToFeed':
+                        // For overlay close, only close if click was directly on the overlay
+                        if (target.dataset.overlayClose === 'true' && e.target !== target) {
                             return;
-                        default:
-                            console.warn('🚨 PostComponent: Unhandled data-action:', action);
-                    }
-                } catch (error) {
-                    console.error('❌ PostComponent event delegation error:', error);
+                        }
+                        this.returnToFeed();
+                        break;
+
+                    // Comment actions
+                    case 'toggleComments':
+                        this.toggleComments(postId);
+                        break;
+                    case 'hideComments':
+                        this.hideComments(postId);
+                        break;
+                    case 'addComment':
+                        this.addComment(postId);
+                        break;
+                    case 'addCommentFromFocus':
+                        this.addCommentFromFocus(postId);
+                        break;
+                    case 'toggleReplyBox':
+                        this.toggleReplyBox(commentId, postId);
+                        break;
+                    case 'submitReply':
+                        this.submitReply(commentId, postId);
+                        break;
+                    case 'cancelReply':
+                        this.cancelReply(commentId);
+                        break;
+                    case 'toggleThread':
+                        this.toggleThread(commentId);
+                        break;
+                    case 'toggleReplies':
+                        this.toggleReplies(commentId);
+                        break;
+
+                    // Share actions
+                    case 'sharePost':
+                        this.sharePost(postId);
+                        break;
+                    case 'performSimpleShare':
+                        this.performSimpleShare(postId);
+                        break;
+                    case 'showQuoteShareDialog':
+                        this.showQuoteShareDialog(postId);
+                        break;
+                    case 'performQuoteShare':
+                        this.performQuoteShare(postId);
+                        break;
+                    case 'copyPostLink':
+                        this.copyPostLink(postId);
+                        break;
+                    case 'externalShare':
+                        this.externalShare(postId);
+                        break;
+
+                    // Save action
+                    case 'toggleSave':
+                        this.toggleSave(postId);
+                        break;
+
+                    // Post menu actions
+                    case 'showPostMenu':
+                        this.showPostMenu(postId);
+                        break;
+                    case 'closePostMenu':
+                        this.closePostMenu(postId);
+                        break;
+                    case 'editPost':
+                        this.editPost(postId);
+                        break;
+                    case 'viewPostHistory':
+                        this.viewPostHistory(postId);
+                        break;
+                    case 'deletePost':
+                        this.deletePost(postId);
+                        break;
+                    case 'closeEditModal':
+                        this.closeEditModal(postId);
+                        break;
+                    case 'submitPostEdit':
+                        this.submitPostEdit(postId);
+                        break;
+                    case 'closeDeleteModal':
+                        this.closeDeleteModal(postId);
+                        break;
+                    case 'confirmDeletePost':
+                        this.confirmDeletePost(postId);
+                        break;
+                    case 'closeHistoryModal':
+                        this.closeHistoryModal(postId);
+                        break;
+
+                    // Reaction actions
+                    case 'toggleReaction':
+                        this.toggleReaction(postId, param1, param2);
+                        break;
+                    case 'toggleCommentReaction':
+                        this.toggleCommentReaction(commentId, param1, param2);
+                        break;
+
+                    // Media viewer actions
+                    case 'openMediaViewer':
+                        this.openMediaViewer(param1, param2, param3);
+                        break;
+                    case 'toggleTaggingMode':
+                        this.toggleTaggingMode(target);
+                        break;
+                    case 'handleImageClick':
+                        this.handleImageClick(e, param1);
+                        break;
+                    case 'tagUser':
+                        this.tagUser(param1, parseFloat(param2), parseFloat(param3), postId);
+                        break;
+
+                    // Badge actions
+                    case 'showBadgeDetails':
+                        const badgeData = JSON.parse(target.dataset.badge || '{}');
+                        this.showBadgeDetails(e, badgeData, param1);
+                        break;
+
+                    // Modal close actions
+                    case 'closeModal':
+                        target.closest('.modal, .modal-overlay')?.remove();
+                        break;
+
+                    // Legacy actions
+                    case 'handle-post-media-upload':
+                        console.log('📷 PostComponent: File input change detected - handled by navigation-handlers');
+                        return;
+                    case 'create-post-from-feed':
+                        return;
+
+                    // Legacy comment functions (for compatibility)
+                    case 'likePost':
+                        if (typeof likePost === 'function') likePost(postId, e);
+                        break;
+                    case 'showCommentBox':
+                        if (typeof showCommentBox === 'function') showCommentBox(postId);
+                        break;
+                    case 'viewComments':
+                        if (typeof viewComments === 'function') viewComments(postId);
+                        break;
+                    case 'hideCommentBoxLegacy':
+                        if (typeof hideCommentBox === 'function') hideCommentBox(postId);
+                        break;
+                    case 'addInlineComment':
+                        if (typeof addInlineComment === 'function') addInlineComment(postId);
+                        break;
+
+                    default:
+                        console.warn('🚨 PostComponent: Unhandled data-action:', action);
                 }
+            } catch (error) {
+                console.error('❌ PostComponent event delegation error:', error);
             }
         });
     }
@@ -2561,21 +2718,21 @@ class PostComponent {
 
         // Create modal overlay structure
         const modalHTML = `
-            <div class="post-focus-overlay" onclick="if (event.target === this) postComponent.returnToFeed()">
+            <div class="post-focus-overlay" data-action="returnToFeed" data-overlay-close="true">
                 <div class="post-focus-modal">
                     <div class="post-focus-view">
                 <div class="post-focus-header">
-                    <button class="btn btn-secondary" onclick="postComponent.returnToFeed()" style="margin-bottom: 1rem;">
+                    <button class="btn btn-secondary" data-action="returnToFeed" style="margin-bottom: 1rem;">
                         ← Back to Feed
                     </button>
                     <h2>Post Details</h2>
                 </div>
-                
+
                 <!-- Original Post -->
                 <div class="post-component focused-post" style="margin-bottom: 2rem;">
                     <div class="post-header">
                         <div class="post-avatar user-card-trigger"
-                             onclick="postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}', context: 'focused'})"
+                             data-action="showUserCard" data-author-id="${post.author?.id || ''}" data-post-id="${post.id}" data-param1="focused"
                              style="cursor: pointer;"
                              title="Click to view profile">
                             ${post.author?.avatar ?
@@ -2585,7 +2742,7 @@ class PostComponent {
                         </div>
                         <div class="post-author-info">
                             <div class="post-author-name user-card-trigger"
-                                 onclick="postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}', context: 'focused'})"
+                                 data-action="showUserCard" data-author-id="${post.author?.id || ''}" data-post-id="${post.id}" data-param1="focused"
                                  style="cursor: pointer;"
                                  title="Click to view profile">
                                 ${authorName}
@@ -2595,13 +2752,13 @@ class PostComponent {
                             <div class="post-timestamp">@${post.author?.username || 'unknown'} • ${timeAgo}</div>
                         </div>
                     </div>
-                    
+
                     <div class="post-content focused-post-content">
                         ${fullPostContent}
                     </div>
-                    
+
                     ${this.renderPostMedia(post.photos)}
-                    
+
                     <div class="post-actions" data-post-id="${post.id}">
                         ${this.renderEnhancedReactions(post)}
 
@@ -2610,13 +2767,13 @@ class PostComponent {
                             <span class="action-count">${comments.length}</span>
                         </button>
 
-                        <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}" onclick="postComponent.sharePost('${post.id}')">
+                        <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}" data-action="sharePost" data-post-id="${post.id}">
                             <span class="action-icon">🔄</span>
                             <span class="action-count">${post.sharesCount || 0}</span>
                         </button>
 
                         <button class="post-action-btn save-btn ${post.isSaved ? 'saved' : ''}"
-                                onclick="postComponent.toggleSave('${post.id}')">
+                                data-action="toggleSave" data-post-id="${post.id}">
                             <span class="action-icon">${post.isSaved ? '🔖' : '🔖'}</span>
                         </button>
                     </div>
@@ -2924,15 +3081,16 @@ class PostComponent {
                 ${displayBadges.map(userBadge => {
                     const badge = userBadge.badge;
                     if (!badge) return '';
+                    const badgeJson = JSON.stringify(badge).replace(/"/g, '&quot;');
 
                     return `
                         <img src="${badge.imageUrl || badge.animatedUrl}"
                              alt="${badge.name}"
                              class="nameplate-badge ${badge.rarity?.toLowerCase() || 'common'}"
                              title="${badge.name} - ${badge.description} (${this.getBadgeRarityText(badge.rarity)})"
-                             onmouseover="postComponent.showBadgeTooltip(this, ${JSON.stringify(badge).replace(/"/g, '&quot;')}, '${userBadge.earnedAt}')"
-                             onmouseout="postComponent.hideBadgeTooltip(this)"
-                             onclick="postComponent.showBadgeDetails(event, ${JSON.stringify(badge).replace(/"/g, '&quot;')}, '${userBadge.earnedAt}')">
+                             data-action="showBadgeDetails"
+                             data-badge="${badgeJson}"
+                             data-param1="${userBadge.earnedAt}">
                     `;
                 }).join('')}
             </div>
@@ -3029,7 +3187,7 @@ class PostComponent {
             <div class="modal">
                 <div class="modal-header">
                     <h3>Badge Details</h3>
-                    <button class="close-modal" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="close-modal" data-action="closeModal">×</button>
                 </div>
                 <div class="modal-content">
                     <div class="badge-detail-view">
@@ -3270,25 +3428,25 @@ class PostComponent {
                             ${post.photos.map(photo => `
                                 <img src="${photo.url}" alt="Post image"
                                      style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 8px; display: block; cursor: pointer;"
-                                     onclick="window.open('${photo.url}', '_blank')"
+                                     data-action="openMediaViewer" data-param1="${photo.url}" data-param2="${photo.mimeType || 'image/jpeg'}" data-param3="${photo.id || ''}"
                                      loading="lazy">
                             `).join('')}
                         </div>
                     ` : ''}
                     <div class="post-actions">
-                        <span class="post-action" onclick="likePost('${post.id}', event)" style="cursor: pointer; transition: transform 0.2s;">
+                        <span class="post-action" data-action="likePost" data-post-id="${post.id}" style="cursor: pointer; transition: transform 0.2s;">
                             ${post.isLiked ? '❤️' : '👍'} ${post.likesCount || 0}
                         </span>
-                        <span class="post-action" onclick="showCommentBox('${post.id}')">
+                        <span class="post-action" data-action="showCommentBox" data-post-id="${post.id}">
                             💬 Add Comment
                         </span>
-                        ${post.commentsCount > 0 ? `<span class="post-action" onclick="viewComments('${post.id}')" style="color: #4b5c09;">👁️ View ${post.commentsCount} Comment${post.commentsCount === 1 ? '' : 's'}</span>` : ''}
+                        ${post.commentsCount > 0 ? `<span class="post-action" data-action="viewComments" data-post-id="${post.id}" style="color: #4b5c09;">👁️ View ${post.commentsCount} Comment${post.commentsCount === 1 ? '' : 's'}</span>` : ''}
                     </div>
                     <div id="comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
                         <textarea id="comment-input-${post.id}" placeholder="Add a comment..." style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; box-sizing: border-box; resize: vertical;"></textarea>
                         <div style="margin-top: 0.5rem;">
                             <button data-action="addComment" data-post-id="${post.id}" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Comment</button>
-                            <button onclick="hideCommentBox('${post.id}')" style="background: #666; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-left: 0.5rem;">Cancel</button>
+                            <button data-action="hideCommentBoxLegacy" data-post-id="${post.id}" style="background: #666; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-left: 0.5rem;">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -3324,7 +3482,7 @@ class PostComponent {
         let html = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h4 style="margin: 0; color: #4b5c09;">Comments (${comments.length})</h4>
-                <button onclick="hideComments('${postId}')" style="background: none; border: none; color: #666; cursor: pointer; font-size: 1.2rem;">&times;</button>
+                <button data-action="hideComments" data-post-id="${postId}" style="background: none; border: none; color: #666; cursor: pointer; font-size: 1.2rem;">&times;</button>
             </div>
         `;
 
@@ -3359,7 +3517,7 @@ class PostComponent {
                 <div style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #ddd;">
                     <textarea id="inline-comment-input-${postId}" placeholder="Add a comment..." style="width: 100%; height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; box-sizing: border-box; resize: vertical; font-family: inherit; font-size: 0.9rem;"></textarea>
                     <div style="margin-top: 0.75rem; text-align: right;">
-                        <button onclick="addInlineComment('${postId}')" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Post Comment</button>
+                        <button data-action="addInlineComment" data-post-id="${postId}" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Post Comment</button>
                     </div>
                 </div>
             `;

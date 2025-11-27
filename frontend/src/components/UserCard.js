@@ -16,8 +16,64 @@ class UserCard {
         // Bind methods for event listeners
         this.handleClickOutside = this.handleClickOutside.bind(this);
         this.handleEscapeKey = this.handleEscapeKey.bind(this);
+        this.handleCardAction = this.handleCardAction.bind(this);
 
         this.initializeStyles();
+        this.setupEventDelegation();
+    }
+
+    /**
+     * Setup event delegation for CSP compliance
+     * Replaces inline onclick handlers with data-action pattern
+     */
+    setupEventDelegation() {
+        document.addEventListener('click', this.handleCardAction);
+    }
+
+    /**
+     * Handle delegated click actions from user card
+     * @param {Event} e - Click event
+     */
+    handleCardAction(e) {
+        const target = e.target.closest('[data-card-action]');
+        if (!target) return;
+
+        const action = target.dataset.cardAction;
+        const userId = target.dataset.userId;
+        const param1 = target.dataset.param1;
+        const param2 = target.dataset.param2;
+
+        switch (action) {
+            case 'hideCard':
+                this.hideCard();
+                break;
+            case 'viewProfile':
+                this.viewProfile(userId);
+                break;
+            case 'editProfile':
+                this.editProfile();
+                break;
+            case 'viewSettings':
+                this.viewSettings();
+                break;
+            case 'toggleFollow':
+                this.toggleFollow(userId, param1 === 'true');
+                break;
+            case 'toggleFriend':
+                this.toggleFriend(userId, param1);
+                break;
+            case 'toggleSubscribe':
+                this.toggleSubscribe(userId, param1 === 'true');
+                break;
+            case 'reportPost':
+                this.reportPost(param1);
+                break;
+            case 'openAuthModal':
+                if (typeof openAuthModal === 'function') {
+                    openAuthModal(param1 || 'login');
+                }
+                break;
+        }
     }
 
     /**
@@ -222,7 +278,7 @@ class UserCard {
             <div class="user-card-content">
                 <div class="user-card-error">
                     <p>❌ ${message}</p>
-                    <button onclick="window.userCard.hideCard()" class="btn btn-sm">Close</button>
+                    <button data-card-action="hideCard" class="btn btn-sm">Close</button>
                 </div>
             </div>
         `;
@@ -262,41 +318,41 @@ class UserCard {
                 </div>
 
                 <div class="user-card-actions">
-                    <button onclick="window.userCard.viewProfile('${user.id}')" class="user-card-btn primary">
+                    <button data-card-action="viewProfile" data-user-id="${user.id}" class="user-card-btn primary">
                         👤 View Profile
                     </button>
 
                     ${isCurrentUser ? `
-                        <button onclick="window.userCard.editProfile()" class="user-card-btn secondary">
+                        <button data-card-action="editProfile" class="user-card-btn secondary">
                             ✏️ Edit Profile
                         </button>
-                        <button onclick="window.userCard.viewSettings()" class="user-card-btn outline">
+                        <button data-card-action="viewSettings" class="user-card-btn outline">
                             ⚙️ Settings
                         </button>
                     ` : isAuthenticated ? `
-                        <button onclick="window.userCard.toggleFollow('${user.id}', ${relationship.follow?.isFollowing || false})"
+                        <button data-card-action="toggleFollow" data-user-id="${user.id}" data-param1="${relationship.follow?.isFollowing || false}"
                                 class="user-card-btn ${relationship.follow?.isFollowing ? 'secondary' : 'primary'}">
                             ${relationship.follow?.isFollowing ? '✓ Following' : '+ Follow'}
                         </button>
 
-                        <button onclick="window.userCard.toggleFriend('${user.id}', '${relationship.friend?.friendshipStatus || 'none'}')"
+                        <button data-card-action="toggleFriend" data-user-id="${user.id}" data-param1="${relationship.friend?.friendshipStatus || 'none'}"
                                 class="user-card-btn ${relationship.friend?.isFriend ? 'success' : 'outline'}">
                             ${this.getFriendButtonText(relationship.friend?.friendshipStatus || 'none')}
                         </button>
 
-                        <button onclick="window.userCard.toggleSubscribe('${user.id}', ${relationship.isSubscribed || false})"
+                        <button data-card-action="toggleSubscribe" data-user-id="${user.id}" data-param1="${relationship.isSubscribed || false}"
                                 class="user-card-btn ${relationship.isSubscribed ? 'warning' : 'outline'}">
                             ${relationship.isSubscribed ? '🔔 Subscribed' : '🔔 Subscribe'}
                         </button>
 
                         ${context.postId ? `
-                            <button onclick="window.userCard.reportPost('${context.postId}')" class="user-card-btn danger">
+                            <button data-card-action="reportPost" data-param1="${context.postId}" class="user-card-btn danger">
                                 🚨 Report Post
                             </button>
                         ` : ''}
                     ` : `
                         <p class="login-prompt">
-                            <a href="#" onclick="openAuthModal('login')">Log in</a> to interact with users
+                            <a href="#" data-card-action="openAuthModal" data-param1="login">Log in</a> to interact with users
                         </p>
                     `}
                 </div>
