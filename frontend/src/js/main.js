@@ -58,6 +58,9 @@ import '../handlers/modal-handlers.js';
 // Phase 4e: Content handlers (MOTD, trending, officials, conversations)
 import '../handlers/content-handlers.js';
 
+// Phase 4e-messages: Messaging handlers (openConversation, sendMessage, etc.)
+import '../handlers/messages-handlers.js';
+
 // Phase 4f: Relationship handlers (friends, following, social connections)
 import '../handlers/relationship-handlers.js';
 
@@ -102,6 +105,12 @@ import '../components/UserCard.js';  // User profile card popup
 
 // Phase 5e: Heavy Component (Batch 7)
 import '../components/CandidateSystem.js';  // Candidate registration & management
+
+// Phase 5e-civic: Civic engagement components
+import '../components/OnboardingFlow.js';  // New user onboarding (used by backend-integration.js)
+import '../components/PolicyDisplay.js';  // Candidate policy display
+import '../components/PolicyComparison.js';  // AI policy comparison
+import '../components/TopicNavigation.js';  // Topic mode navigation
 
 // Phase 5f: Small Integrations (Batch 8)
 import '../js/force-optimization.js';  // Force override old initialization system
