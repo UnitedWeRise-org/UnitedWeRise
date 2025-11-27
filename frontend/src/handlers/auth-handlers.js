@@ -484,15 +484,23 @@ export class AuthHandlers {
      * Migrated from index.html DOMContentLoaded handler line 3812
      */
     setupRealtimeValidation() {
-        // Username field validation
+        // Username field validation (availability check + format validation)
         const usernameField = document.getElementById('registerUsername');
         if (usernameField) {
             let usernameCheckTimeout;
             usernameField.addEventListener('input', (event) => {
+                const value = event.target.value;
+
+                // Real-time format validation (immediate feedback)
+                if (typeof validateUsername === 'function') {
+                    validateUsername(value);
+                }
+
+                // Debounced availability check (API call)
                 clearTimeout(usernameCheckTimeout);
                 usernameCheckTimeout = setTimeout(() => {
-                    this.checkUsername(event.target.value);
-                }, 500); // Debounce for 500ms
+                    this.checkUsername(value);
+                }, 500);
             });
         }
 
@@ -513,14 +521,6 @@ export class AuthHandlers {
         if (passwordField && typeof validatePassword === 'function') {
             passwordField.addEventListener('input', (event) => {
                 validatePassword(event.target.value);
-            });
-        }
-
-        // Username field format validation (if validation utility exists)
-        const usernameField = document.getElementById('registerUsername');
-        if (usernameField && typeof validateUsername === 'function') {
-            usernameField.addEventListener('input', (event) => {
-                validateUsername(event.target.value);
             });
         }
     }
