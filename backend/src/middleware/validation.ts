@@ -37,7 +37,7 @@ export const validateRegistration = [
   body('password')
     .isLength({ min: 8 })
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .withMessage('Password must be at least 8 characters with uppercase, lowercase, number, and special character'),
+    .withMessage('Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)'),
   body('firstName')
     .optional()
     .isLength({ min: 1, max: 50 })

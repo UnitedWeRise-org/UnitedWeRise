@@ -515,6 +515,14 @@ export class AuthHandlers {
                 validatePassword(event.target.value);
             });
         }
+
+        // Username field format validation (if validation utility exists)
+        const usernameField = document.getElementById('registerUsername');
+        if (usernameField && typeof validateUsername === 'function') {
+            usernameField.addEventListener('input', (event) => {
+                validateUsername(event.target.value);
+            });
+        }
     }
 }
 

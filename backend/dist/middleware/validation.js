@@ -36,7 +36,7 @@ exports.validateRegistration = [
     (0, express_validator_1.body)('password')
         .isLength({ min: 8 })
         .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-        .withMessage('Password must be at least 8 characters with uppercase, lowercase, number, and special character'),
+        .withMessage('Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)'),
     (0, express_validator_1.body)('firstName')
         .optional()
         .isLength({ min: 1, max: 50 })

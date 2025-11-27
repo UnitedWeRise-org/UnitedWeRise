@@ -12,6 +12,8 @@ import '../utils/performance.js';
 import '../utils/error-handler.js';
 import '../utils/advanced-caching.js';
 import '../utils/smart-loader.js';
+import '../utils/validation.js';  // Form validation utilities (password requirements, username validation)
+import '../utils/toast.js';  // Toast notifications (window.showToast)
 import { initializeGoogleAds } from './google-ads-init.js';
 import { initLoadingOverlayFailsafe } from './loading-overlay-failsafe.js';
 
@@ -161,6 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Note: preloadCriticalContent is handled by performance.js with proper auth checks
     // Don't call it directly here to avoid duplicate API calls before authentication
+
+    // Load MOTD (Message of the Day) - must be called from ES6 module context
+    // because content-handlers.js (which defines loadMOTD) is an ES6 module that
+    // loads after the non-module critical-functions.js DOMContentLoaded fires
+    if (typeof window.loadMOTD === 'function') {
+        window.loadMOTD();
+    }
 });
 
 /**

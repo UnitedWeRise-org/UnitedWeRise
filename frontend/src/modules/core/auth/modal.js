@@ -238,9 +238,43 @@ export async function handleRegister() {
         return;
     }
 
-    // Password strength validation
-    if (password.length < 8) {
+    // Password strength validation (must match backend requirements)
+    const passwordRequirements = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /\d/.test(password),
+        special: /[@$!%*?&]/.test(password)
+    };
+
+    if (!passwordRequirements.length) {
         showAuthMessage('Password must be at least 8 characters long', 'error', 'register');
+        return;
+    }
+    if (!passwordRequirements.uppercase) {
+        showAuthMessage('Password must contain at least one uppercase letter', 'error', 'register');
+        return;
+    }
+    if (!passwordRequirements.lowercase) {
+        showAuthMessage('Password must contain at least one lowercase letter', 'error', 'register');
+        return;
+    }
+    if (!passwordRequirements.number) {
+        showAuthMessage('Password must contain at least one number', 'error', 'register');
+        return;
+    }
+    if (!passwordRequirements.special) {
+        showAuthMessage('Password must contain a special character: @ $ ! % * ? &', 'error', 'register');
+        return;
+    }
+
+    // Username format validation (must match backend requirements)
+    if (username.length < 3 || username.length > 30) {
+        showAuthMessage('Username must be 3-30 characters', 'error', 'register');
+        return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        showAuthMessage('Username can only contain letters, numbers, and underscores', 'error', 'register');
         return;
     }
 

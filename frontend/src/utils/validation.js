@@ -9,7 +9,7 @@ function validatePassword(password) {
         uppercase: /[A-Z]/.test(password),
         lowercase: /[a-z]/.test(password),
         number: /\d/.test(password),
-        special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+        special: /[@$!%*?&]/.test(password)  // Must match backend allowed chars
     };
 
     const isValid = Object.values(requirements).every(req => req);
@@ -58,6 +58,46 @@ function updateRequirement(elementId, met) {
     }
 }
 
+/**
+ * Validate username with real-time feedback
+ * Rules: 3-30 characters, alphanumeric + underscores only
+ */
+function validateUsername(username) {
+    const requirements = {
+        length: username.length >= 3 && username.length <= 30,
+        format: /^[a-zA-Z0-9_]*$/.test(username) // Allow empty for partial validation
+    };
+
+    const isValid = username.length > 0 && requirements.length && requirements.format;
+    const hasContent = username.length > 0;
+
+    // Show/hide requirements based on content
+    const reqContainer = document.getElementById('username-requirements');
+    const statusIndicator = document.getElementById('username-status');
+
+    if (reqContainer) {
+        if (hasContent && !isValid) {
+            // Show detailed requirements when typing but not valid
+            reqContainer.style.display = 'block';
+            if (statusIndicator) statusIndicator.style.display = 'none';
+        } else if (isValid) {
+            // Show green checkmark when valid, hide requirements
+            reqContainer.style.display = 'none';
+            if (statusIndicator) statusIndicator.style.display = 'block';
+        } else {
+            // Hide both when empty
+            reqContainer.style.display = 'none';
+            if (statusIndicator) statusIndicator.style.display = 'none';
+        }
+    }
+
+    // Update individual requirement indicators
+    updateRequirement('username-req-length', requirements.length);
+    updateRequirement('username-req-format', requirements.format && hasContent);
+
+    return isValid;
+}
+
 // Debug hCaptcha loading
 function checkHCaptchaStatus() {
     const widget = document.getElementById('hcaptcha-register');
@@ -92,11 +132,13 @@ function checkHCaptchaStatus() {
 // ES6 Module Exports
 export {
     validatePassword,
+    validateUsername,
     updateRequirement,
     checkHCaptchaStatus
 };
 
 // Global Exposure (Temporary for transition)
 window.validatePassword = validatePassword;
+window.validateUsername = validateUsername;
 window.updateRequirement = updateRequirement;
 window.checkHCaptchaStatus = checkHCaptchaStatus;
