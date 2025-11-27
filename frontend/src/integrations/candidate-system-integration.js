@@ -30,10 +30,13 @@ class CandidateSystemIntegration {
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('CandidateSystem', 'Initializing enhanced candidate system integration...');
         }
-        
+
         // Load CSS styles
         this.loadCandidateSystemStyles();
-        
+
+        // Setup event delegation for all candidate actions
+        this.setupEventDelegation();
+
         // Initialize the candidate system
         if (window.CandidateSystem) {
             this.candidateSystem = new window.CandidateSystem();
@@ -44,16 +47,120 @@ class CandidateSystemIntegration {
 
         // Enhance existing UI elements
         this.enhanceExistingElements();
-        
+
         // Add navigation enhancements
         this.addCandidateNavigation();
-        
+
         // Setup sidebar state monitoring
         this.setupSidebarMonitoring();
-        
+
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('CandidateSystem', 'Candidate system integration complete!');
         }
+    }
+
+    /**
+     * Setup event delegation for all candidate system actions
+     */
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-candidate-action]');
+            if (!target) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const action = target.dataset.candidateAction;
+            const candidateId = target.dataset.candidateId;
+            const username = target.dataset.username;
+            const conversationId = target.dataset.conversationId;
+            const conversationData = target.dataset.conversationData;
+            const senderId = target.dataset.senderId;
+
+            switch (action) {
+                case 'loadElections':
+                    this.loadElections();
+                    break;
+                case 'showCandidateDashboard':
+                    this.showCandidateDashboard();
+                    break;
+                case 'showCandidateRegistration':
+                    this.showCandidateRegistration();
+                    break;
+                case 'showAIAnalysis':
+                    this.showAIAnalysis();
+                    break;
+                case 'restoreMainContent':
+                    this.restoreMainContent();
+                    break;
+                case 'searchFromPlaceholder':
+                    this.searchFromPlaceholder();
+                    break;
+                case 'viewCandidateProfile':
+                    if (username) this.viewCandidateProfile(username);
+                    break;
+                case 'contactCandidate':
+                    if (candidateId) this.contactCandidate(candidateId);
+                    break;
+                case 'viewExternalCandidate':
+                    if (candidateId) this.viewExternalCandidate(candidateId);
+                    break;
+                case 'searchCandidatesByAddress':
+                    this.searchCandidatesByAddress();
+                    break;
+                case 'previousStep':
+                    this.previousStep();
+                    break;
+                case 'nextStep':
+                    this.nextStep();
+                    break;
+                case 'submitRegistration':
+                    this.submitRegistration();
+                    break;
+                case 'showPolicyPlatform':
+                    this.showPolicyPlatform();
+                    break;
+                case 'openConstituentInbox':
+                    this.openConstituentInbox();
+                    break;
+                case 'showElectionStatus':
+                    this.showElectionStatus();
+                    break;
+                case 'backToHub':
+                    this.backToHub();
+                    break;
+                case 'toggleProfile':
+                    if (typeof toggleProfile === 'function') toggleProfile();
+                    break;
+                case 'viewPublicProfile':
+                    this.viewPublicProfile();
+                    break;
+                case 'toggleAISummary':
+                    this.toggleAISummary();
+                    break;
+                case 'loadConstituentConversations':
+                    this.loadConstituentConversations();
+                    break;
+                case 'openConversation':
+                    if (conversationId) {
+                        const convData = conversationData ? JSON.parse(conversationData.replace(/&#39;/g, "'")) : null;
+                        this.openConversation(conversationId, convData);
+                    }
+                    break;
+                case 'markConversationRead':
+                    if (conversationId) this.markConversationRead(conversationId);
+                    break;
+                case 'clearReply':
+                    this.clearReply();
+                    break;
+                case 'sendReply':
+                    if (conversationId && senderId) this.sendReply(conversationId, senderId);
+                    break;
+                case 'closeModal':
+                    target.closest('.modal-overlay')?.remove();
+                    break;
+            }
+        });
     }
 
     loadCandidateSystemStyles() {
@@ -322,21 +429,21 @@ class CandidateSystemIntegration {
                         <h1>🤖 Candidate Hub</h1>
                         <p class="subtitle">Intelligent candidate analysis, comparison, and communication</p>
                         <div class="header-actions">
-                            <button class="header-btn primary" onclick="candidateSystemIntegration.loadElections()">
+                            <button class="header-btn primary" data-candidate-action="loadElections">
                                 🗳️ Load Elections
                             </button>
                             ${this.isCandidate ? 
-                                `<button class="header-btn primary dashboard" onclick="candidateSystemIntegration.showCandidateDashboard()">
+                                `<button class="header-btn primary dashboard" data-candidate-action="showCandidateDashboard">
                                     📊 Candidate Dashboard
                                 </button>` : 
-                                `<button class="header-btn register" onclick="candidateSystemIntegration.showCandidateRegistration()">
+                                `<button class="header-btn register" data-candidate-action="showCandidateRegistration">
                                     🏆 Register as Candidate
                                 </button>`
                             }
-                            <button class="header-btn secondary" onclick="candidateSystemIntegration.showAIAnalysis()">
+                            <button class="header-btn secondary" data-candidate-action="showAIAnalysis">
                                 🤖 AI Capabilities
                             </button>
-                            <button class="header-btn secondary" onclick="candidateSystemIntegration.restoreMainContent()">
+                            <button class="header-btn secondary" data-candidate-action="restoreMainContent">
                                 ← Back to Map
                             </button>
                         </div>
@@ -391,7 +498,7 @@ class CandidateSystemIntegration {
                                 </div>
                             </div>
                             
-                            <div class="feature-card registration" onclick="candidateSystemIntegration.showCandidateRegistration()">
+                            <div class="feature-card registration" data-candidate-action="showCandidateRegistration">
                                 <div class="card-icon">🏆</div>
                                 <h3>Run for Office</h3>
                                 <p>Register as a candidate with ID.me verification and secure payment</p>
@@ -422,13 +529,13 @@ class CandidateSystemIntegration {
                                                id="placeholderAddressInput" 
                                                placeholder="Enter your address (street, city, state)"
                                                class="address-input">
-                                        <button class="placeholder-btn" onclick="candidateSystemIntegration.searchFromPlaceholder()">
+                                        <button class="placeholder-btn" data-candidate-action="searchFromPlaceholder">
                                             🔍 Find Candidates
                                         </button>
                                     </div>
                                     <div class="placeholder-alt">
                                         <span>or</span>
-                                        <button class="placeholder-btn secondary" onclick="candidateSystemIntegration.loadElections()">
+                                        <button class="placeholder-btn secondary" data-candidate-action="loadElections">
                                             Use My Profile Address
                                         </button>
                                     </div>
@@ -481,7 +588,7 @@ class CandidateSystemIntegration {
                         <div class="error-icon">❌</div>
                         <h3>Unable to Load Candidates</h3>
                         <p>${error.message}</p>
-                        <button class="retry-btn" onclick="candidateSystemIntegration.loadElections()">
+                        <button class="retry-btn" data-candidate-action="loadElections">
                             🔄 Retry
                         </button>
                     </div>
@@ -517,16 +624,16 @@ class CandidateSystemIntegration {
                     </div>
                     ${candidate.isRegistered ? `
                         <div class="candidate-actions">
-                            <button class="btn primary small" onclick="candidateSystemIntegration.viewCandidateProfile('${candidate.username}')">
+                            <button class="btn primary small" data-candidate-action="viewCandidateProfile" data-username="${candidate.username}">
                                 View Profile
                             </button>
-                            <button class="btn secondary small" onclick="candidateSystemIntegration.contactCandidate('${candidate.id}')">
+                            <button class="btn secondary small" data-candidate-action="contactCandidate" data-candidate-id="${candidate.id}">
                                 💬 Contact
                             </button>
                         </div>
                     ` : `
                         <div class="candidate-actions">
-                            <button class="btn outline small" onclick="candidateSystemIntegration.viewExternalCandidate('${candidate.id}')">
+                            <button class="btn outline small" data-candidate-action="viewExternalCandidate" data-candidate-id="${candidate.id}">
                                 View Details
                             </button>
                             ${candidate.campaignWebsite ? `
@@ -571,7 +678,7 @@ class CandidateSystemIntegration {
                                placeholder="Enter your address..."
                                value="${currentAddress || ''}"
                                class="address-input">
-                        <button class="btn primary" onclick="candidateSystemIntegration.searchCandidatesByAddress()">
+                        <button class="btn primary" data-candidate-action="searchCandidatesByAddress">
                             🔍 Search
                         </button>
                     </div>
@@ -1422,7 +1529,7 @@ class CandidateSystemIntegration {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>🤖 AI-Powered Candidate Analysis</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" data-candidate-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="ai-capabilities">
@@ -1601,7 +1708,7 @@ class CandidateSystemIntegration {
             <div class="modal-container registration-container">
                 <div class="modal-header registration-header">
                     <h3>🏆 Register as a Candidate</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" data-candidate-action="closeModal">×</button>
                 </div>
                 <div class="modal-body registration-body">
                     <div class="registration-steps">
@@ -1827,13 +1934,13 @@ class CandidateSystemIntegration {
                 </div>
                 
                 <div class="form-navigation" style="display: flex !important; justify-content: space-between; padding: 1rem 1.5rem; border-top: 1px solid #e9ecef; background: white;">
-                    <button type="button" class="nav-btn prev" id="prevStep" onclick="candidateSystemIntegration.previousStep()" style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <button type="button" class="nav-btn prev" id="prevStep" data-candidate-action="previousStep" style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">
                         ← Previous
                     </button>
-                    <button type="button" class="nav-btn next" id="nextStep" onclick="candidateSystemIntegration.nextStep()" style="padding: 0.75rem 1.5rem; background: #ff6b35; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <button type="button" class="nav-btn next" id="nextStep" data-candidate-action="nextStep" style="padding: 0.75rem 1.5rem; background: #ff6b35; color: white; border: none; border-radius: 6px; cursor: pointer;">
                         Next →
                     </button>
-                    <button type="button" class="nav-btn submit" id="submitRegistration" onclick="candidateSystemIntegration.submitRegistration()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; border-radius: 6px; cursor: pointer; display: none;">
+                    <button type="button" class="nav-btn submit" id="submitRegistration" data-candidate-action="submitRegistration" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; border-radius: 6px; cursor: pointer; display: none;">
                         🏆 Complete Registration
                     </button>
                 </div>
@@ -3074,7 +3181,7 @@ class CandidateSystemIntegration {
                                 </div>
                             </div>
                             <div class="card-actions">
-                                <button class="btn primary" onclick="candidateSystemIntegration.showPolicyPlatform()">
+                                <button class="btn primary" data-candidate-action="showPolicyPlatform">
                                     Open Policy Platform
                                 </button>
                             </div>
@@ -3094,7 +3201,7 @@ class CandidateSystemIntegration {
                                 </div>
                             </div>
                             <div class="card-actions">
-                                <button class="btn secondary" onclick="candidateSystemIntegration.openConstituentInbox()">
+                                <button class="btn secondary" data-candidate-action="openConstituentInbox">
                                     View Messages
                                 </button>
                             </div>
@@ -3114,7 +3221,7 @@ class CandidateSystemIntegration {
                                 </div>
                             </div>
                             <div class="card-actions">
-                                <button class="btn secondary" onclick="this.showElectionStatus()">
+                                <button class="btn secondary" data-candidate-action="showElectionStatus">
                                     View Status
                                 </button>
                             </div>
@@ -3128,13 +3235,13 @@ class CandidateSystemIntegration {
                             </div>
                             <div class="card-content">
                                 <div class="quick-actions">
-                                    <button class="quick-btn" onclick="this.backToHub()">
+                                    <button class="quick-btn" data-candidate-action="backToHub">
                                         🏠 Back to Hub
                                     </button>
-                                    <button class="quick-btn" onclick="toggleProfile()">
+                                    <button class="quick-btn" data-candidate-action="toggleProfile">
                                         👤 My Profile
                                     </button>
-                                    <button class="quick-btn" onclick="this.viewPublicProfile()">
+                                    <button class="quick-btn" data-candidate-action="viewPublicProfile">
                                         👁️ View Public Profile
                                     </button>
                                 </div>
@@ -3211,7 +3318,7 @@ class CandidateSystemIntegration {
                         <h1>📋 Policy Platform Management</h1>
                         <p class="subtitle">Create and manage your policy positions</p>
                         <div class="header-actions">
-                            <button class="header-btn secondary" onclick="candidateSystemIntegration.showCandidateDashboard()">
+                            <button class="header-btn secondary" data-candidate-action="showCandidateDashboard">
                                 ← Back to Dashboard
                             </button>
                         </div>
@@ -3285,10 +3392,10 @@ class CandidateSystemIntegration {
                         <h1>💬 Constituent Messages</h1>
                         <p class="subtitle">Engage with voters and answer their questions</p>
                         <div class="header-actions">
-                            <button class="header-btn secondary" onclick="candidateSystemIntegration.showCandidateDashboard()">
+                            <button class="header-btn secondary" data-candidate-action="showCandidateDashboard">
                                 ← Back to Dashboard
                             </button>
-                            <button class="header-btn primary" onclick="candidateSystemIntegration.toggleAISummary()">
+                            <button class="header-btn primary" data-candidate-action="toggleAISummary">
                                 🤖 AI Summary
                             </button>
                         </div>
@@ -3350,7 +3457,7 @@ class CandidateSystemIntegration {
                     <div class="error-message">
                         <div class="error-icon">⚠️</div>
                         <p>Error loading conversations: ${error.message}</p>
-                        <button onclick="candidateSystemIntegration.loadConstituentConversations()" class="btn-secondary">
+                        <button data-candidate-action="loadConstituentConversations" class="btn-secondary">
                             Try Again
                         </button>
                     </div>
@@ -3381,8 +3488,8 @@ class CandidateSystemIntegration {
             const isUnread = conv.unreadCount > 0;
 
             return `
-                <div class="conversation-item ${isUnread ? 'unread' : ''}" 
-                     onclick="candidateSystemIntegration.openConversation('${conv.id}', '${JSON.stringify(conv).replace(/'/g, '&#39;')}')">
+                <div class="conversation-item ${isUnread ? 'unread' : ''}"
+                     data-candidate-action="openConversation" data-conversation-id="${conv.id}" data-conversation-data="${JSON.stringify(conv).replace(/'/g, '&#39;').replace(/"/g, '&quot;')}">
                     <div class="conversation-avatar">
                         <div class="avatar-circle">
                             ${lastMessage?.sender?.firstName?.[0] || '👤'}
@@ -3438,7 +3545,7 @@ class CandidateSystemIntegration {
                     </div>
                 </div>
                 <div class="conversation-actions">
-                    <button class="btn secondary small" onclick="candidateSystemIntegration.markConversationRead('${conversationId}')">
+                    <button class="btn secondary small" data-candidate-action="markConversationRead" data-conversation-id="${conversationId}">
                         ✓ Mark Read
                     </button>
                 </div>
@@ -3461,10 +3568,10 @@ class CandidateSystemIntegration {
                 <div class="compose-form">
                     <textarea id="replyContent" placeholder="Type your response..." rows="4"></textarea>
                     <div class="compose-actions">
-                        <button class="btn secondary" onclick="candidateSystemIntegration.clearReply()">
+                        <button class="btn secondary" data-candidate-action="clearReply">
                             Clear
                         </button>
-                        <button class="btn primary" onclick="candidateSystemIntegration.sendReply('${conversationId}', '${sender?.id}')">
+                        <button class="btn primary" data-candidate-action="sendReply" data-conversation-id="${conversationId}" data-sender-id="${sender?.id}">
                             Send Reply
                         </button>
                     </div>
