@@ -23,19 +23,104 @@ class TrendingSystemIntegration {
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('TrendingSystem', 'Initializing enhanced trending system integration...');
         }
-        
+
         // Load CSS styles
         this.loadTrendingSystemStyles();
-        
+
+        // Setup event delegation for all trending actions
+        this.setupEventDelegation();
+
         // Enhance trending navigation
         this.addTrendingNavigation();
-        
+
         // Setup sidebar state monitoring
         this.setupSidebarMonitoring();
-        
+
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('TrendingSystem', 'Trending system integration complete!');
         }
+    }
+
+    /**
+     * Setup event delegation for all trending system actions
+     */
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-trending-system-action]');
+            if (!target) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const action = target.dataset.trendingSystemAction;
+            const category = target.dataset.category;
+            const view = target.dataset.view;
+            const topicId = target.dataset.topicId;
+
+            switch (action) {
+                case 'showCompactTrending':
+                    this.showCompactTrending();
+                    break;
+                case 'toggleTrendingMainView':
+                    this.toggleTrendingMainView();
+                    break;
+                case 'showSidePanelTrending':
+                    this.showSidePanelTrending();
+                    break;
+                case 'showTrendingSettings':
+                    this.showTrendingSettings();
+                    break;
+                case 'refreshTrending':
+                    this.refreshTrending();
+                    break;
+                case 'showTrendingFilters':
+                    this.showTrendingFilters();
+                    break;
+                case 'restoreMainContent':
+                    this.restoreMainContent();
+                    break;
+                case 'filterByCategory':
+                    if (category) this.filterByCategory(category);
+                    break;
+                case 'switchView':
+                    if (view) this.switchView(view);
+                    break;
+                case 'enterTopicMode':
+                    if (topicId) this.enterTopicMode(topicId);
+                    break;
+                case 'showTopicPreview':
+                    if (topicId) this.showTopicPreview(topicId);
+                    break;
+                case 'discoverMoreTopics':
+                    this.discoverMoreTopics();
+                    break;
+                case 'loadMoreTrending':
+                    this.loadMoreTrending();
+                    break;
+                case 'exitTopicMode':
+                    this.exitTopicMode();
+                    break;
+                case 'likePost':
+                    const postIdLike = target.dataset.postId;
+                    if (typeof likeTrendingPost === 'function' && postIdLike) {
+                        likeTrendingPost(postIdLike);
+                    }
+                    break;
+                case 'showCommentBox':
+                    const postIdComment = target.dataset.postId;
+                    if (typeof showTrendingCommentBox === 'function' && postIdComment) {
+                        showTrendingCommentBox(postIdComment);
+                    }
+                    break;
+                case 'closeModal':
+                    target.closest('.modal-overlay')?.remove();
+                    break;
+                case 'enterTopicModeAndClose':
+                    if (topicId) this.enterTopicMode(topicId);
+                    target.closest('.modal-overlay')?.remove();
+                    break;
+            }
+        });
     }
 
     loadTrendingSystemStyles() {
@@ -168,16 +253,16 @@ class TrendingSystemIntegration {
         `;
         
         menu.innerHTML = `
-            <div class="menu-item" onclick="trendingSystemIntegration.showCompactTrending()">
+            <div class="menu-item" data-trending-system-action="showCompactTrending">
                 📱 Compact Panel
             </div>
-            <div class="menu-item" onclick="trendingSystemIntegration.toggleTrendingMainView()">
+            <div class="menu-item" data-trending-system-action="toggleTrendingMainView">
                 📺 Full Screen View
             </div>
-            <div class="menu-item" onclick="trendingSystemIntegration.showSidePanelTrending()">
+            <div class="menu-item" data-trending-system-action="showSidePanelTrending">
                 📋 Side Panel
             </div>
-            <div class="menu-item" onclick="trendingSystemIntegration.showTrendingSettings()">
+            <div class="menu-item" data-trending-system-action="showTrendingSettings">
                 ⚙️ Trending Settings
             </div>
         `;
@@ -288,13 +373,13 @@ class TrendingSystemIntegration {
                         <h1>🔥 Trending Now</h1>
                         <p class="subtitle">Real-time conversations and hot topics in your community</p>
                         <div class="header-actions">
-                            <button class="header-btn primary" onclick="trendingSystemIntegration.refreshTrending()">
+                            <button class="header-btn primary" data-trending-system-action="refreshTrending">
                                 🔄 Refresh
                             </button>
-                            <button class="header-btn secondary" onclick="trendingSystemIntegration.showTrendingFilters()">
+                            <button class="header-btn secondary" data-trending-system-action="showTrendingFilters">
                                 🎯 Filters
                             </button>
-                            <button class="header-btn secondary" onclick="trendingSystemIntegration.restoreMainContent()">
+                            <button class="header-btn secondary" data-trending-system-action="restoreMainContent">
                                 ← Back to Map
                             </button>
                         </div>
@@ -307,19 +392,19 @@ class TrendingSystemIntegration {
                         <div class="trending-sidebar">
                             <h3>🏷️ Categories</h3>
                             <div class="category-filters">
-                                <button class="category-btn active" data-category="all" onclick="trendingSystemIntegration.filterByCategory('all')">
+                                <button class="category-btn active" data-category="all" data-trending-system-action="filterByCategory">
                                     🌐 All Topics
                                 </button>
-                                <button class="category-btn" data-category="politics" onclick="trendingSystemIntegration.filterByCategory('politics')">
+                                <button class="category-btn" data-category="politics" data-trending-system-action="filterByCategory">
                                     🏛️ Politics
                                 </button>
-                                <button class="category-btn" data-category="local" onclick="trendingSystemIntegration.filterByCategory('local')">
+                                <button class="category-btn" data-category="local" data-trending-system-action="filterByCategory">
                                     🏙️ Local News
                                 </button>
-                                <button class="category-btn" data-category="elections" onclick="trendingSystemIntegration.filterByCategory('elections')">
+                                <button class="category-btn" data-category="elections" data-trending-system-action="filterByCategory">
                                     🗳️ Elections
                                 </button>
-                                <button class="category-btn" data-category="community" onclick="trendingSystemIntegration.filterByCategory('community')">
+                                <button class="category-btn" data-category="community" data-trending-system-action="filterByCategory">
                                     👥 Community
                                 </button>
                             </div>
@@ -346,13 +431,13 @@ class TrendingSystemIntegration {
                             <div class="feed-header">
                                 <div class="feed-controls">
                                     <div class="view-toggle">
-                                        <button class="toggle-btn active" data-view="feed" onclick="trendingSystemIntegration.switchView('feed')">
+                                        <button class="toggle-btn active" data-view="feed" data-trending-system-action="switchView">
                                             📝 Feed
                                         </button>
-                                        <button class="toggle-btn" data-view="topics" onclick="trendingSystemIntegration.switchView('topics')">
+                                        <button class="toggle-btn" data-view="topics" data-trending-system-action="switchView">
                                             🏷️ Topics
                                         </button>
-                                        <button class="toggle-btn" data-view="analytics" onclick="trendingSystemIntegration.switchView('analytics')">
+                                        <button class="toggle-btn" data-view="analytics" data-trending-system-action="switchView">
                                             📈 Analytics
                                         </button>
                                     </div>
@@ -464,10 +549,10 @@ class TrendingSystemIntegration {
                     </div>
                     
                     <div class="topic-engagement">
-                        <button class="topic-btn primary" onclick="trendingSystemIntegration.enterTopicMode('${topic.id}')">
+                        <button class="topic-btn primary" data-trending-system-action="enterTopicMode" data-topic-id="${topic.id}">
                             💬 Join Discussion (${topic.postCount} posts)
                         </button>
-                        <button class="topic-btn secondary" onclick="trendingSystemIntegration.showTopicPreview('${topic.id}')">
+                        <button class="topic-btn secondary" data-trending-system-action="showTopicPreview" data-topic-id="${topic.id}">
                             👀 Preview
                         </button>
                     </div>
@@ -477,7 +562,7 @@ class TrendingSystemIntegration {
         
         html += `
             <div class="load-more-container">
-                <button class="load-more-btn" onclick="trendingSystemIntegration.discoverMoreTopics()">
+                <button class="load-more-btn" data-trending-system-action="discoverMoreTopics">
                     🔍 Discover More Topics
                 </button>
             </div>
@@ -569,7 +654,7 @@ class TrendingSystemIntegration {
                 </div>
 
                 <div class="load-more-container">
-                    <button class="load-more-btn" onclick="trendingSystemIntegration.loadMoreTrending()">
+                    <button class="load-more-btn" data-trending-system-action="loadMoreTrending">
                         Load More Trending Posts
                     </button>
                 </div>
@@ -611,7 +696,7 @@ class TrendingSystemIntegration {
             
             html += `
                 <div class="load-more-container">
-                    <button class="load-more-btn" onclick="trendingSystemIntegration.loadMoreTrending()">
+                    <button class="load-more-btn" data-trending-system-action="loadMoreTrending">
                         Load More Trending Posts
                     </button>
                 </div>
@@ -651,8 +736,8 @@ class TrendingSystemIntegration {
                         ${post.isPolitical ? '<div class="political-indicator">🏛️ Political Content</div>' : ''}
                     </div>
                     <div class="post-engagement">
-                        <button class="engagement-btn" onclick="likeTrendingPost('${post.id}')">❤️ ${post.likesCount}</button>
-                        <button class="engagement-btn" onclick="showTrendingCommentBox('${post.id}')">💬 ${post.commentsCount}</button>
+                        <button class="engagement-btn" data-trending-system-action="likePost" data-post-id="${post.id}">❤️ ${post.likesCount}</button>
+                        <button class="engagement-btn" data-trending-system-action="showCommentBox" data-post-id="${post.id}">💬 ${post.commentsCount}</button>
                         <button class="engagement-btn">🔄 ${Math.floor(Math.random() * 20)}</button>
                         <button class="engagement-btn">📤 Share</button>
                     </div>
@@ -662,7 +747,7 @@ class TrendingSystemIntegration {
         
         html += `
             <div class="load-more-container">
-                <button class="load-more-btn" onclick="trendingSystemIntegration.loadMoreTrending()">
+                <button class="load-more-btn" data-trending-system-action="loadMoreTrending">
                     Load More Trending Posts
                 </button>
             </div>
@@ -842,7 +927,7 @@ class TrendingSystemIntegration {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>🎯 Trending Filters</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" data-trending-system-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="filter-options">
@@ -876,8 +961,8 @@ class TrendingSystemIntegration {
                         </div>
                         
                         <div class="filter-actions">
-                            <button class="filter-btn primary" onclick="this.closest('.modal-overlay').remove()">Apply Filters</button>
-                            <button class="filter-btn secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                            <button class="filter-btn primary" data-trending-system-action="closeModal">Apply Filters</button>
+                            <button class="filter-btn secondary" data-trending-system-action="closeModal">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -895,7 +980,7 @@ class TrendingSystemIntegration {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>⚙️ Trending Settings</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" data-trending-system-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="settings-options">
@@ -927,8 +1012,8 @@ class TrendingSystemIntegration {
                         </div>
                         
                         <div class="settings-actions">
-                            <button class="settings-btn primary" onclick="this.closest('.modal-overlay').remove()">Save Settings</button>
-                            <button class="settings-btn secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                            <button class="settings-btn primary" data-trending-system-action="closeModal">Save Settings</button>
+                            <button class="settings-btn secondary" data-trending-system-action="closeModal">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -1618,7 +1703,7 @@ class TrendingSystemIntegration {
                     <h3>Unable to Load Trending Content</h3>
                     <p>${message}</p>
                     <div class="error-actions">
-                        <button class="error-btn" onclick="trendingSystemIntegration.refreshTrending()">
+                        <button class="error-btn" data-trending-system-action="refreshTrending">
                             Try Again
                         </button>
                     </div>
@@ -1721,7 +1806,7 @@ class TrendingSystemIntegration {
                 <div class="topic-mode-container">
                     <div class="topic-mode-header">
                         <div class="topic-breadcrumb">
-                            <button class="breadcrumb-btn" onclick="trendingSystemIntegration.exitTopicMode()">
+                            <button class="breadcrumb-btn" data-trending-system-action="exitTopicMode">
                                 ← Back to Main Feed
                             </button>
                             <span class="breadcrumb-divider">/</span>
@@ -1803,7 +1888,7 @@ class TrendingSystemIntegration {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>👀 Topic Preview: ${topic.title}</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" data-trending-system-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="topic-summary-preview">
@@ -1823,10 +1908,10 @@ class TrendingSystemIntegration {
                     </div>
                     
                     <div class="modal-actions">
-                        <button class="modal-btn primary" onclick="trendingSystemIntegration.enterTopicMode('${topic.id}'); this.closest('.modal-overlay').remove();">
+                        <button class="modal-btn primary" data-trending-system-action="enterTopicModeAndClose" data-topic-id="${topic.id}">
                             💬 Join Discussion
                         </button>
-                        <button class="modal-btn secondary" onclick="this.closest('.modal-overlay').remove()">
+                        <button class="modal-btn secondary" data-trending-system-action="closeModal">
                             Cancel
                         </button>
                     </div>
