@@ -19,6 +19,53 @@ class SearchHandlers {
         this.globalSearchTimeout = null;
 
         this.setupEventListeners();
+        this.setupEventDelegation();
+    }
+
+    /**
+     * Set up event delegation for dynamically rendered search results
+     */
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-search-action]');
+            if (!target) return;
+
+            const action = target.dataset.searchAction;
+            const userId = target.dataset.userId;
+            const username = target.dataset.username;
+            const postId = target.dataset.postId;
+            const officialId = target.dataset.officialId;
+            const candidateId = target.dataset.candidateId;
+            const topicId = target.dataset.topicId;
+
+            switch (action) {
+                case 'openUserProfile':
+                    this.openUserProfile(userId, username);
+                    break;
+                case 'showPostInFeed':
+                    this.showPostInFeed(postId);
+                    break;
+                case 'showOfficialDetails':
+                    this.showOfficialDetails(officialId);
+                    break;
+                case 'showCandidateDetails':
+                    this.showCandidateDetails(candidateId);
+                    break;
+                case 'enterTopicMode':
+                    this.enterTopicMode(topicId);
+                    break;
+                case 'toggleFollow':
+                    if (typeof toggleFollow === 'function') {
+                        toggleFollow(userId, target);
+                    }
+                    break;
+                case 'startConversation':
+                    if (typeof startConversationWithUser === 'function') {
+                        startConversationWithUser(userId, username);
+                    }
+                    break;
+            }
+        });
     }
 
     setupEventListeners() {
@@ -266,7 +313,7 @@ class SearchHandlers {
 
     renderUserResult(user) {
         return `
-            <div class="search-result-item" onclick="window.searchHandlers.openUserProfile(${user.id}, '${user.username}')" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="openUserProfile" data-user-id="${user.id}" data-username="${user.username}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <img src="${user.profilePicture || '/images/default-avatar.png'}" alt="${user.username}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                     <div>
@@ -284,7 +331,7 @@ class SearchHandlers {
         const timeAgo = this.formatTimeAgo(new Date(post.createdAt));
 
         return `
-            <div class="search-result-item" onclick="window.searchHandlers.showPostInFeed(${post.id})" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="showPostInFeed" data-post-id="${post.id}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
                     <img src="${post.user?.profilePicture || '/images/default-avatar.png'}" alt="${post.user?.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
                     <div style="flex: 1;">
@@ -301,7 +348,7 @@ class SearchHandlers {
 
     renderOfficialResult(official) {
         return `
-            <div class="search-result-item" onclick="window.searchHandlers.showOfficialDetails(${official.id})" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="showOfficialDetails" data-official-id="${official.id}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <img src="${official.photo || '/images/default-official.png'}" alt="${official.name}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                     <div>
@@ -316,7 +363,7 @@ class SearchHandlers {
 
     renderCandidateResult(candidate) {
         return `
-            <div class="search-result-item" onclick="window.searchHandlers.showCandidateDetails(${candidate.id})" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="showCandidateDetails" data-candidate-id="${candidate.id}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <img src="${candidate.profilePicture || '/images/default-candidate.png'}" alt="${candidate.fullName}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                     <div>
@@ -331,7 +378,7 @@ class SearchHandlers {
 
     renderTopicResult(topic) {
         return `
-            <div class="search-result-item" onclick="window.searchHandlers.enterTopicMode('${topic.id}')" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="enterTopicMode" data-topic-id="${topic.id}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <div style="width: 40px; height: 40px; background: #4b5c09; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem;">
                         🏷️
@@ -708,8 +755,8 @@ class SearchHandlers {
                         <h1>${userProfile.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}` : userProfile.username}</h1>
                         <p>@${userProfile.username} • ${userProfile.followersCount || 0} followers</p>
                         ${userId !== window.currentUser?.id ? `
-                            <button onclick="toggleFollow('${userId}', this)" style="padding: 0.5rem 1rem; background: #fff; color: #4b5c09; border: none; border-radius: 4px;">Follow</button>
-                            <button onclick="startConversationWithUser('${userId}', '${username}')" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 4px; margin-left: 0.5rem;">Message</button>
+                            <button data-search-action="toggleFollow" data-user-id="${userId}" style="padding: 0.5rem 1rem; background: #fff; color: #4b5c09; border: none; border-radius: 4px;">Follow</button>
+                            <button data-search-action="startConversation" data-user-id="${userId}" data-username="${username}" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 4px; margin-left: 0.5rem;">Message</button>
                         ` : ''}
                     </div>
                     <div style="border-bottom: 2px solid #4b5c09; margin-bottom: 1rem; padding-bottom: 0.5rem;">
@@ -787,7 +834,7 @@ class SearchHandlers {
             const isFollowing = status.isFollowing;
 
             const buttonHtml = `
-                <button onclick="toggleFollow('${userId}', this)"
+                <button data-search-action="toggleFollow"
                     data-user-id="${userId}"
                     data-following="${isFollowing}"
                     style="padding: 0.25rem 0.5rem; background: ${isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
@@ -799,7 +846,7 @@ class SearchHandlers {
         } catch (error) {
             console.error('Error loading cached follow status:', error);
             return `
-                <button onclick="toggleFollow('${userId}', this)"
+                <button data-search-action="toggleFollow"
                     data-user-id="${userId}"
                     data-following="false"
                     style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
