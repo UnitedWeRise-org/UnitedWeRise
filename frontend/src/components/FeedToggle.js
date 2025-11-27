@@ -197,6 +197,23 @@ export class FeedToggle {
     }
 
     attachEventListeners() {
+        // Event delegation for dynamically rendered elements
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-feed-action]');
+            if (!target) return;
+
+            const action = target.dataset.feedAction;
+            const feedType = target.dataset.feedType;
+
+            switch (action) {
+                case 'retry-load':
+                    if (feedType) {
+                        this.loadFeed(feedType);
+                    }
+                    break;
+            }
+        });
+
         // Feed type buttons
         document.querySelectorAll('.feed-toggle-btn[data-feed-type]').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -552,7 +569,7 @@ export class FeedToggle {
             loadingDiv.innerHTML = `
                 <div style="text-align: center; padding: 2rem;">
                     <p>Unable to load feed. Please try again.</p>
-                    <button onclick="window.feedToggle.loadFeed('${feedType}')" class="btn">Retry</button>
+                    <button data-feed-action="retry-load" data-feed-type="${feedType}" class="btn">Retry</button>
                 </div>
             `;
         }

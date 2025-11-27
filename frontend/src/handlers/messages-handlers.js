@@ -65,6 +65,39 @@ export class MessagesHandlers {
             case 'show-new-conversation':
                 this.showNewConversationForm();
                 break;
+            case 'open-auth-modal':
+                const mode = target.dataset.mode || 'login';
+                if (typeof openAuthModal === 'function') {
+                    openAuthModal(mode);
+                }
+                break;
+            case 'show-friends-list':
+                if (typeof showFriendsList === 'function') {
+                    showFriendsList();
+                }
+                break;
+            case 'open-conversation':
+                if (conversationId && username) {
+                    this.openConversation(conversationId, username);
+                }
+                break;
+            case 'focus-search':
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) searchInput.focus();
+                if (typeof openSearch === 'function') {
+                    openSearch();
+                }
+                break;
+            case 'open-message-with':
+                if (userId) {
+                    this.openMessageWith(userId);
+                }
+                break;
+            case 'focus-search-back':
+                const searchInputBack = document.getElementById('searchInput');
+                if (searchInputBack) searchInputBack.focus();
+                this.backToConversations();
+                break;
         }
     }
 
@@ -113,7 +146,7 @@ export class MessagesHandlers {
             body.innerHTML = `
                 <div style="text-align: center; padding: 2rem; color: #666;">
                     <p>Please log in to view messages</p>
-                    <button onclick="openAuthModal('login')" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <button data-messaging-action="open-auth-modal" data-mode="login" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
                         Log In
                     </button>
                 </div>
@@ -126,7 +159,7 @@ export class MessagesHandlers {
                 <button data-messaging-action="show-new-conversation" style="width: 100%; padding: 0.5vh; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-bottom: 0.5vh;">
                     + New Conversation
                 </button>
-                <button onclick="showFriendsList()" style="width: 100%; padding: 0.5vh; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                <button data-messaging-action="show-friends-list" style="width: 100%; padding: 0.5vh; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
                     👥 Message Friends
                 </button>
             </div>
@@ -145,7 +178,7 @@ export class MessagesHandlers {
                 const timeAgo = conv.lastMessageAt ? this.getTimeAgo(new Date(conv.lastMessageAt)) : '';
 
                 html += `
-                    <div class="conversation-item" onclick="openConversation('${conv.id}', '${participant.username}')">
+                    <div class="conversation-item" data-messaging-action="open-conversation" data-conversation-id="${conv.id}" data-username="${participant.username}">
                         <div class="user-avatar">${(participant.firstName?.[0] || participant.username[0]).toUpperCase()}</div>
                         <div class="conversation-info">
                             <div class="conversation-name">${participant.firstName || participant.username}</div>
@@ -177,7 +210,7 @@ export class MessagesHandlers {
                     <p>To start a new conversation, use the search bar at the top of the page to find users.</p>
                     <p style="font-size: 0.9rem;">Search results will include options to message, follow, and add as friend.</p>
                 </div>
-                <button onclick="document.getElementById('searchInput').focus(); openSearch();" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                <button data-messaging-action="focus-search" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
                     Open Search
                 </button>
             </div>
@@ -359,7 +392,7 @@ export class MessagesHandlers {
                     <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
                     <h3>No Friends Yet</h3>
                     <p>Add friends to start messaging them!</p>
-                    <button onclick="document.getElementById('searchInput').focus(); backToConversations();" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 1rem;">
+                    <button data-messaging-action="focus-search-back" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 1rem;">
                         Find Friends
                     </button>
                 </div>
@@ -385,7 +418,7 @@ export class MessagesHandlers {
             const onlineStatus = this.createOnlineStatusIndicator(user.lastActiveAt, 'small');
 
             html += `
-                <div class="friend-item" onclick="openMessageWith('${user.id}')" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='white'">
+                <div class="friend-item" data-messaging-action="open-message-with" data-user-id="${user.id}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                     <div class="user-avatar" style="width: 50px; height: 50px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin-right: 1rem; position: relative;">
                         ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
                         ${user.lastActiveAt && (new Date() - new Date(user.lastActiveAt)) < 300000 ?

@@ -46,6 +46,8 @@ export class TrendingHandlers {
 
         const action = target.dataset.trendingAction;
         const topicId = target.dataset.topicId;
+        const postId = target.dataset.postId;
+        const photoUrl = target.dataset.photoUrl;
 
         switch (action) {
             case 'enter-topic-mode':
@@ -58,6 +60,36 @@ export class TrendingHandlers {
                 break;
             case 'load-trending-updates':
                 this.loadTrendingUpdates();
+                break;
+            case 'openPhoto':
+                if (photoUrl) {
+                    window.open(photoUrl, '_blank');
+                }
+                break;
+            case 'likePost':
+                if (typeof likeTrendingPost === 'function') {
+                    likeTrendingPost(postId);
+                }
+                break;
+            case 'showCommentBox':
+                if (typeof showTrendingCommentBox === 'function') {
+                    showTrendingCommentBox(postId);
+                }
+                break;
+            case 'viewComments':
+                if (typeof viewComments === 'function') {
+                    viewComments(postId);
+                }
+                break;
+            case 'addComment':
+                if (typeof addTrendingComment === 'function') {
+                    addTrendingComment(postId);
+                }
+                break;
+            case 'hideCommentBox':
+                if (typeof hideTrendingCommentBox === 'function') {
+                    hideTrendingCommentBox(postId);
+                }
                 break;
         }
     }
@@ -401,8 +433,8 @@ export class TrendingHandlers {
                 <div style="margin-bottom: 1rem;">
                     ${post.photos.map(photo => `
                         <img src="${photo.url}" alt="Post image"
-                             style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 0.5rem; display: block;"
-                             onclick="window.open('${photo.url}', '_blank')">
+                             style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 0.5rem; display: block; cursor: pointer;"
+                             data-trending-action="openPhoto" data-photo-url="${photo.url}">
                     `).join('')}
                 </div>
             ` : ''}
@@ -536,7 +568,7 @@ export class TrendingHandlers {
             const opposePct = topic.oppose?.percentage || 50;
 
             html += `
-                <div class="trending-item topic-item" onclick="enterTopicMode('${topic.id}')" style="cursor: pointer; padding: 0.8rem; border-bottom: 1px solid #eee; transition: background 0.2s;">
+                <div class="trending-item topic-item" data-trending-action="enter-topic-mode" data-topic-id="${topic.id}" style="cursor: pointer; padding: 0.8rem; border-bottom: 1px solid #eee; transition: background 0.2s;">
                     <div class="topic-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 6px;">
                         <span style="font-size: 1.1rem;">${isFeature ? '🔥' : '💭'}</span>
                         <div style="font-weight: bold; font-size: 0.9rem; flex: 1; color: #333;">${topic.title}</div>
@@ -625,16 +657,16 @@ export class TrendingHandlers {
                     <div style="font-weight: bold; margin-bottom: 2px; font-size: 0.85rem;">@${post.author.username}</div>
                     <div style="margin-bottom: 4px;">${preview}</div>
                     <div style="color: #666; font-size: 0.75rem; margin-bottom: 4px;">
-                        <span style="cursor: pointer; margin-right: 8px;" onclick="likeTrendingPost('${post.id}')">❤️ ${post.likesCount}</span>
-                        <span style="cursor: pointer; margin-right: 8px;" onclick="showTrendingCommentBox('${post.id}')">💬 Add</span>
-                        ${post.commentsCount > 0 ? `<span style="cursor: pointer; margin-right: 8px; color: #4b5c09;" onclick="viewComments('${post.id}')">👁️ ${post.commentsCount}</span>` : ''}
+                        <span style="cursor: pointer; margin-right: 8px;" data-trending-action="likePost" data-post-id="${post.id}">❤️ ${post.likesCount}</span>
+                        <span style="cursor: pointer; margin-right: 8px;" data-trending-action="showCommentBox" data-post-id="${post.id}">💬 Add</span>
+                        ${post.commentsCount > 0 ? `<span style="cursor: pointer; margin-right: 8px; color: #4b5c09;" data-trending-action="viewComments" data-post-id="${post.id}">👁️ ${post.commentsCount}</span>` : ''}
                         <span>${timeAgo}</span>
                     </div>
                     <div id="trending-comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
                         <textarea id="trending-comment-input-${post.id}" placeholder="Add a comment..." style="width: 100%; height: 50px; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; box-sizing: border-box; resize: vertical; font-size: 0.8rem;"></textarea>
                         <div style="margin-top: 0.5rem;">
-                            <button onclick="addTrendingComment('${post.id}')" style="background: #4b5c09; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Comment</button>
-                            <button onclick="hideTrendingCommentBox('${post.id}')" style="background: #666; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-left: 0.5rem; font-size: 0.8rem;">Cancel</button>
+                            <button data-trending-action="addComment" data-post-id="${post.id}" style="background: #4b5c09; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Comment</button>
+                            <button data-trending-action="hideCommentBox" data-post-id="${post.id}" style="background: #666; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-left: 0.5rem; font-size: 0.8rem;">Cancel</button>
                         </div>
                     </div>
                 </div>
