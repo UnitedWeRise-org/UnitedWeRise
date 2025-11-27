@@ -23,19 +23,77 @@ class ElectionsSystemIntegration {
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('ElectionsSystem', 'Initializing enhanced elections system integration...');
         }
-        
+
         // Load CSS styles
         this.loadElectionsSystemStyles();
-        
+
+        // Setup event delegation for all elections actions
+        this.setupEventDelegation();
+
         // Enhance elections navigation
         this.addElectionsNavigation();
-        
+
         // Setup sidebar state monitoring
         this.setupSidebarMonitoring();
-        
+
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('ElectionsSystem', 'Elections system integration complete!');
         }
+    }
+
+    /**
+     * Setup event delegation for all elections system actions
+     */
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-elections-action]');
+            if (!target) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const action = target.dataset.electionsAction;
+            const electionId = target.dataset.electionId;
+            const contestName = target.dataset.contestName;
+            const url = target.dataset.url;
+
+            switch (action) {
+                case 'loadElections':
+                    this.loadElections();
+                    break;
+                case 'showVotingInfo':
+                    this.showVotingInfo();
+                    break;
+                case 'restoreMainContent':
+                    this.restoreMainContent();
+                    break;
+                case 'viewElectionDetails':
+                    if (electionId) this.viewElectionDetails(electionId);
+                    break;
+                case 'viewCandidates':
+                    if (electionId) this.viewCandidates(electionId);
+                    else if (contestName) this.viewCandidates(contestName);
+                    break;
+                case 'viewBallotMeasures':
+                    if (electionId) this.viewBallotMeasures(electionId);
+                    break;
+                case 'getVotingInfo':
+                    if (contestName) this.getVotingInfo(contestName);
+                    break;
+                case 'refreshElections':
+                    this.refreshElections();
+                    break;
+                case 'searchCandidates':
+                    this.searchCandidates();
+                    break;
+                case 'openUrl':
+                    if (url) window.open(url, '_blank');
+                    break;
+                case 'closeModal':
+                    target.closest('.elections-modal, .modal-overlay')?.remove();
+                    break;
+            }
+        });
     }
 
     loadElectionsSystemStyles() {
@@ -116,13 +174,13 @@ class ElectionsSystemIntegration {
                         <h1>📅 Upcoming Elections & Contests</h1>
                         <p class="subtitle">Stay informed about all elections in your area</p>
                         <div class="header-actions">
-                            <button class="header-btn primary" onclick="electionsSystemIntegration.loadElections()">
+                            <button class="header-btn primary" data-elections-action="loadElections">
                                 🔄 Refresh Elections
                             </button>
-                            <button class="header-btn secondary" onclick="electionsSystemIntegration.showVotingInfo()">
+                            <button class="header-btn secondary" data-elections-action="showVotingInfo">
                                 🗳️ Voter Guide
                             </button>
-                            <button class="header-btn secondary" onclick="electionsSystemIntegration.restoreMainContent()">
+                            <button class="header-btn secondary" data-elections-action="restoreMainContent">
                                 ← Back to Map
                             </button>
                         </div>
@@ -193,7 +251,7 @@ class ElectionsSystemIntegration {
                                     <h3>Ready to Load Elections</h3>
                                     <p>Click "Refresh Elections" to see upcoming contests in your area</p>
                                     <p class="address-note">Ensure your address is set for personalized results</p>
-                                    <button class="placeholder-btn" onclick="electionsSystemIntegration.loadElections()">
+                                    <button class="placeholder-btn" data-elections-action="loadElections">
                                         Load Elections Now
                                     </button>
                                 </div>
@@ -292,7 +350,7 @@ class ElectionsSystemIntegration {
                     <h3>No Upcoming Elections</h3>
                     <p>There are no elections scheduled in your area at this time.</p>
                     <div class="error-actions">
-                        <button class="error-btn" onclick="electionsSystemIntegration.loadElections()">
+                        <button class="error-btn" data-elections-action="loadElections">
                             Check Again
                         </button>
                     </div>
@@ -366,16 +424,16 @@ class ElectionsSystemIntegration {
                                 ` : ''}
                             </div>
                             <div class="contest-actions">
-                                <button class="action-btn primary" onclick="electionsSystemIntegration.viewElectionDetails('${election.id}')">
+                                <button class="action-btn primary" data-elections-action="viewElectionDetails" data-election-id="${election.id}">
                                     View Details
                                 </button>
                                 ${election.offices.length > 0 ? `
-                                    <button class="action-btn secondary" onclick="electionsSystemIntegration.viewCandidates('${election.id}')">
+                                    <button class="action-btn secondary" data-elections-action="viewCandidates" data-election-id="${election.id}">
                                         See Candidates (${election.offices.reduce((total, office) => total + office.candidates.length, 0)})
                                     </button>
                                 ` : ''}
                                 ${election.ballotMeasures.length > 0 ? `
-                                    <button class="action-btn secondary" onclick="electionsSystemIntegration.viewBallotMeasures('${election.id}')">
+                                    <button class="action-btn secondary" data-elections-action="viewBallotMeasures" data-election-id="${election.id}">
                                         Ballot Measures (${election.ballotMeasures.length})
                                     </button>
                                 ` : ''}
@@ -503,7 +561,7 @@ class ElectionsSystemIntegration {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>${electionData.name}</h3>
-                    <button class="modal-close" onclick="this.closest('.elections-modal').remove()">×</button>
+                    <button class="modal-close" data-elections-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="election-details">
@@ -532,7 +590,7 @@ class ElectionsSystemIntegration {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>Candidates - ${candidatesData.election.name}</h3>
-                    <button class="modal-close" onclick="this.closest('.elections-modal').remove()">×</button>
+                    <button class="modal-close" data-elections-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="candidates-list">
@@ -577,7 +635,7 @@ class ElectionsSystemIntegration {
                     <h3>No Election Data</h3>
                     <p>Election information is not currently available.</p>
                     <div class="error-actions">
-                        <button class="error-btn" onclick="electionsSystemIntegration.loadElections()">
+                        <button class="error-btn" data-elections-action="loadElections">
                             Try Again
                         </button>
                     </div>
@@ -639,10 +697,10 @@ class ElectionsSystemIntegration {
                             </div>
                         </div>
                         <div class="contest-actions">
-                            <button class="action-btn primary" onclick="electionsSystemIntegration.viewCandidates('${contestName}')">
+                            <button class="action-btn primary" data-elections-action="viewCandidates" data-contest-name="${contestName}">
                                 👥 Candidates
                             </button>
-                            <button class="action-btn secondary" onclick="electionsSystemIntegration.getVotingInfo('${contestName}')">
+                            <button class="action-btn secondary" data-elections-action="getVotingInfo" data-contest-name="${contestName}">
                                 ℹ️ Voting Info
                             </button>
                         </div>
@@ -752,7 +810,7 @@ class ElectionsSystemIntegration {
                     <h3>Unable to Load Elections</h3>
                     <p>${message}</p>
                     <div class="error-actions">
-                        <button class="error-btn" onclick="electionsSystemIntegration.loadElections()">
+                        <button class="error-btn" data-elections-action="loadElections">
                             Try Again
                         </button>
                     </div>
@@ -1370,7 +1428,7 @@ class ElectionsSystemIntegration {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>🗳️ Comprehensive Voter Guide</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" data-elections-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="voter-guide">
@@ -1470,13 +1528,13 @@ class ElectionsSystemIntegration {
                         <div class="guide-section">
                             <h4>🎯 Quick Actions</h4>
                             <div class="quick-actions">
-                                <button class="action-btn primary" onclick="electionsSystemIntegration.refreshElections()">
+                                <button class="action-btn primary" data-elections-action="refreshElections">
                                     🔄 Refresh Elections
                                 </button>
-                                <button class="action-btn secondary" onclick="window.open('${voterGuideData.registrationInfo.registrationUrl}', '_blank')">
+                                <button class="action-btn secondary" data-elections-action="openUrl" data-url="${voterGuideData.registrationInfo.registrationUrl}">
                                     📝 Register to Vote
                                 </button>
-                                <button class="action-btn secondary" onclick="electionsSystemIntegration.searchCandidates()">
+                                <button class="action-btn secondary" data-elections-action="searchCandidates">
                                     👥 Search Candidates
                                 </button>
                             </div>
@@ -1513,7 +1571,7 @@ class ElectionsSystemIntegration {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>🗳️ Voting Information</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" data-elections-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="voting-info">
