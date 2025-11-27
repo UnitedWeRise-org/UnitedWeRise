@@ -2543,6 +2543,14 @@ class PostComponent {
                         if (typeof addInlineComment === 'function') addInlineComment(postId);
                         break;
 
+                    // Moderation actions (from UnifiedPostRenderer)
+                    case 'moderatePost':
+                        this.moderatePost(postId, param1);
+                        break;
+                    case 'toggleContentWarning':
+                        this.toggleContentWarning(postId);
+                        break;
+
                     default:
                         console.warn('🚨 PostComponent: Unhandled data-action:', action);
                 }

@@ -153,7 +153,7 @@ class UnifiedPostRenderer {
 
                 ${shouldShowWarning ? this.renderContentWarning(post.contentFlags) : ''}
 
-                <div class="post-content ${shouldShowWarning ? 'content-hidden' : ''}" onclick="if(window.postComponent) window.postComponent.openPostFocus('${post.id}')" style="cursor: pointer;">
+                <div class="post-content ${shouldShowWarning ? 'content-hidden' : ''}" data-action="openPostFocus" data-post-id="${post.id}" style="cursor: pointer;">
                     ${this.renderPostContent(post.content, settings)}
                 </div>
 
@@ -180,7 +180,7 @@ class UnifiedPostRenderer {
         return `
             <div class="post-header">
                 <div class="post-avatar user-card-trigger"
-                     onclick="if(window.postComponent) postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}'})"
+                     data-action="showUserCard" data-author-id="${post.author?.id || ''}" data-post-id="${post.id}"
                      style="cursor: pointer;"
                      title="Click to view profile">
                     ${post.author?.avatar ?
@@ -190,7 +190,7 @@ class UnifiedPostRenderer {
                 </div>
                 <div class="post-author-info">
                     <div class="post-author-name user-card-trigger"
-                         onclick="if(window.postComponent) postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}'})"
+                         data-action="showUserCard" data-author-id="${post.author?.id || ''}" data-post-id="${post.id}"
                          style="cursor: pointer;"
                          title="Click to view profile">
                         ${authorName}
@@ -258,7 +258,7 @@ class UnifiedPostRenderer {
                     <img src="${photo.url}"
                          alt="Post image"
                          ${settings.enableLazyLoading ? 'loading="lazy"' : ''}
-                         onclick="if(window.postComponent) postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                         data-action="openMediaViewer" data-param1="${photo.url}" data-param2="${photo.mimeType}" data-param3="${photo.id}"
                          style="max-width: ${sizeConfig.maxWidth}; max-height: ${sizeConfig.maxHeight}; width: auto; height: auto; object-fit: contain; cursor: pointer; display: block;">
                     ${isGif ? '<div class="media-type-badge gif-badge" style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">GIF</div>' : ''}
                 </div>
@@ -277,7 +277,7 @@ class UnifiedPostRenderer {
                             <img src="${photo.url}"
                                  alt="Post image ${index + 1}"
                                  ${settings.enableLazyLoading ? 'loading="lazy"' : ''}
-                                 onclick="if(window.postComponent) window.postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                                 data-action="openMediaViewer" data-param1="${photo.url}" data-param2="${photo.mimeType}" data-param3="${photo.id}"
                                  style="width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block;">
                             ${isGif ? '<div class="media-type-badge gif-badge" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">GIF</div>' : ''}
                             ${photos.length > 4 && index === 3 ? `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold;">+${photos.length - 4}</div>` : ''}
@@ -367,25 +367,25 @@ class UnifiedPostRenderer {
                 ${this.renderEnhancedReactions(post)}
 
                 <button class="post-action-btn comment-btn"
-                        onclick="if(window.postComponent) window.postComponent.toggleComments('${post.id}')">
+                        data-action="toggleComments" data-post-id="${post.id}">
                     <span class="action-icon">💬</span>
                     <span class="action-count">${post.commentsCount || 0}</span>
                 </button>
 
                 <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}"
-                        onclick="if(window.postComponent) window.postComponent.sharePost('${post.id}')">
+                        data-action="sharePost" data-post-id="${post.id}">
                     <span class="action-icon">🔄</span>
                     <span class="action-count">${post.sharesCount || 0}</span>
                 </button>
 
                 <button class="post-action-btn save-btn ${post.isSaved ? 'saved' : ''}"
-                        onclick="if(window.postComponent) window.postComponent.toggleSave('${post.id}')">
+                        data-action="toggleSave" data-post-id="${post.id}">
                     <span class="action-icon">🔖</span>
                 </button>
 
                 ${post.isOwner ? `
                     <button class="post-action-btn more-btn"
-                            onclick="if(window.postComponent) window.postComponent.showPostMenu('${post.id}')">
+                            data-action="showPostMenu" data-post-id="${post.id}">
                         <span class="action-icon">⋯</span>
                     </button>
                 ` : ''}
@@ -402,14 +402,14 @@ class UnifiedPostRenderer {
             <div class="reaction-groups">
                 <div class="sentiment-group">
                     <button class="reaction-btn sentiment-like ${post.userSentiment === 'LIKE' ? 'active' : ''}"
-                            onclick="if(window.postComponent) window.postComponent.toggleReaction('${post.id}', 'sentiment', 'LIKE')"
+                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="sentiment" data-param2="LIKE"
                             data-reaction-type="sentiment"
                             data-reaction-value="LIKE">
                         <span class="emoji">😊</span>
                         <span class="reaction-count">${post.likesCount || 0}</span>
                     </button>
                     <button class="reaction-btn sentiment-dislike ${post.userSentiment === 'DISLIKE' ? 'active' : ''}"
-                            onclick="if(window.postComponent) window.postComponent.toggleReaction('${post.id}', 'sentiment', 'DISLIKE')"
+                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="sentiment" data-param2="DISLIKE"
                             data-reaction-type="sentiment"
                             data-reaction-value="DISLIKE">
                         <span class="emoji">😞</span>
@@ -418,14 +418,14 @@ class UnifiedPostRenderer {
                 </div>
                 <div class="stance-group">
                     <button class="reaction-btn stance-agree ${post.userStance === 'AGREE' ? 'active' : ''}"
-                            onclick="if(window.postComponent) window.postComponent.toggleReaction('${post.id}', 'stance', 'AGREE')"
+                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="stance" data-param2="AGREE"
                             data-reaction-type="stance"
                             data-reaction-value="AGREE">
                         <span class="emoji">👍</span>
                         <span class="reaction-count">${post.agreesCount || 0}</span>
                     </button>
                     <button class="reaction-btn stance-disagree ${post.userStance === 'DISAGREE' ? 'active' : ''}"
-                            onclick="if(window.postComponent) window.postComponent.toggleReaction('${post.id}', 'stance', 'DISAGREE')"
+                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="stance" data-param2="DISAGREE"
                             data-reaction-type="stance"
                             data-reaction-value="DISAGREE">
                         <span class="emoji">👎</span>
@@ -443,9 +443,9 @@ class UnifiedPostRenderer {
     renderModerationTools(post) {
         return `
             <div class="post-moderation-tools" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
-                <button class="mod-btn" onclick="moderatePost('${post.id}', 'flag')" style="font-size: 0.8rem; margin-right: 8px;">🚩 Flag</button>
-                <button class="mod-btn" onclick="moderatePost('${post.id}', 'hide')" style="font-size: 0.8rem; margin-right: 8px;">👁️ Hide</button>
-                <button class="mod-btn" onclick="moderatePost('${post.id}', 'delete')" style="font-size: 0.8rem; color: #dc3545;">🗑️ Delete</button>
+                <button class="mod-btn" data-action="moderatePost" data-post-id="${post.id}" data-param1="flag" style="font-size: 0.8rem; margin-right: 8px;">🚩 Flag</button>
+                <button class="mod-btn" data-action="moderatePost" data-post-id="${post.id}" data-param1="hide" style="font-size: 0.8rem; margin-right: 8px;">👁️ Hide</button>
+                <button class="mod-btn" data-action="moderatePost" data-post-id="${post.id}" data-param1="delete" style="font-size: 0.8rem; color: #dc3545;">🗑️ Delete</button>
                 <span style="font-size: 0.7rem; color: #666; margin-left: 8px;">
                     ID: ${post.id} | Created: ${new Date(post.createdAt).toLocaleString()}
                 </span>
@@ -462,7 +462,7 @@ class UnifiedPostRenderer {
             <div class="content-warning" style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
                 <div style="font-weight: bold; color: #856404;">⚠️ Content Warning</div>
                 <div style="font-size: 0.9rem; color: #856404;">This post has been flagged for review.</div>
-                <button onclick="this.parentElement.nextElementSibling.classList.toggle('content-hidden')"
+                <button data-action="toggleContentWarning"
                         style="font-size: 0.8rem; background: transparent; border: 1px solid #856404; color: #856404; padding: 4px 8px; border-radius: 3px; margin-top: 4px; cursor: pointer;">
                     Show Content
                 </button>
@@ -488,7 +488,7 @@ class UnifiedPostRenderer {
                             Post Comment
                         </button>
                         <button class="btn btn-sm btn-secondary"
-                                onclick="if(window.postComponent) window.postComponent.hideComments('${post.id}')">
+                                data-action="hideComments" data-post-id="${post.id}">
                             Cancel
                         </button>
                     </div>
@@ -518,7 +518,7 @@ class UnifiedPostRenderer {
                 `).join('')}
                 ${comments.length > 3 ? `
                     <div class="view-more-comments" style="color: #666; font-size: 0.9rem; cursor: pointer;"
-                         onclick="if(window.postComponent) window.postComponent.openPostFocus('${comments[0].postId}')">
+                         data-action="openPostFocus" data-post-id="${comments[0].postId}">
                         View all ${comments.length} comments
                     </div>
                 ` : ''}
