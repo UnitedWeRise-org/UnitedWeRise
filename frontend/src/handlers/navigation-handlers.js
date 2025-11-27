@@ -181,6 +181,41 @@ class NavigationHandlers {
                 }
                 break;
 
+            // Auth modal action (CSP compliant)
+            case 'openAuthModal':
+                {
+                    const mode = target.dataset.mode || 'login';
+                    if (typeof window.openAuthModal === 'function') {
+                        window.openAuthModal(mode);
+                    }
+                }
+                break;
+
+            // Notification click action (CSP compliant)
+            case 'handleNotificationClick':
+                {
+                    const notifId = target.dataset.notifId;
+                    if (typeof window.handleNotificationClick === 'function' && notifId) {
+                        window.handleNotificationClick(notifId);
+                    }
+                }
+                break;
+
+            // Mark all notifications read (CSP compliant)
+            case 'markAllNotificationsRead':
+                if (typeof window.markAllNotificationsRead === 'function') {
+                    window.markAllNotificationsRead();
+                }
+                break;
+
+            // Retry alerts (CSP compliant)
+            case 'retryAlerts':
+                {
+                    const alertsBtn = document.querySelector('[data-action="mobile-alerts"]');
+                    if (alertsBtn) alertsBtn.click();
+                }
+                break;
+
             // Profile actions
             case 'toggle-profile':
                 if (typeof window.toggleProfile === 'function') {
@@ -354,7 +389,7 @@ class NavigationHandlers {
                             <div style="padding: 3rem 2rem; text-align: center;">
                                 <h2>📬 Alerts & Notifications</h2>
                                 <p style="color: #666; margin-top: 1rem;">Please log in to view your notifications</p>
-                                <button onclick="openAuthModal('login')" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">
+                                <button data-action="openAuthModal" data-mode="login" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">
                                     Log In
                                 </button>
                             </div>
@@ -399,7 +434,7 @@ class NavigationHandlers {
                                     const isUnread = !notif.isRead;
 
                                     notificationsHTML += `
-                                        <div onclick="window.handleNotificationClick && window.handleNotificationClick('${notif.id}')"
+                                        <div data-action="handleNotificationClick" data-notif-id="${notif.id}"
                                              style="padding: 1rem; background: ${isUnread ? '#f0f8ff' : 'white'}; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; border-left: 4px solid ${isUnread ? '#4b5c09' : '#ddd'};">
                                             <div style="font-weight: ${isUnread ? '600' : '400'};">${notif.message || 'New notification'}</div>
                                             <div style="font-size: 0.85rem; color: #666; margin-top: 0.25rem;">${timeAgo}</div>
@@ -410,7 +445,7 @@ class NavigationHandlers {
                                 notificationsHTML += `
                                         </div>
                                         ${notifications.some(n => !n.isRead) ? `
-                                            <button onclick="window.markAllNotificationsRead && window.markAllNotificationsRead()"
+                                            <button data-action="markAllNotificationsRead"
                                                     style="width: 100%; margin-top: 1.5rem; padding: 0.75rem; background: #4b5c09; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem;">
                                                 Mark All as Read
                                             </button>
@@ -427,7 +462,7 @@ class NavigationHandlers {
                                     <h2>📬 Alerts & Notifications</h2>
                                     <div style="margin-top: 2rem; font-size: 3rem; opacity: 0.3;">⚠️</div>
                                     <p style="color: #666; margin-top: 1rem;">Failed to load notifications</p>
-                                    <button onclick="document.querySelector('[data-action=\"mobile-alerts\"]').click()"
+                                    <button data-action="retryAlerts"
                                             style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">
                                         Retry
                                     </button>
@@ -619,7 +654,7 @@ class NavigationHandlers {
             document.getElementById('mainContent').innerHTML = `
                 <div style="text-align: center; padding: 3rem;">
                     <h2>Please log in to view your feed</h2>
-                    <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                    <button data-action="openAuthModal" data-mode="login" class="btn">Log In</button>
                 </div>
             `;
             return;
@@ -782,8 +817,8 @@ class NavigationHandlers {
                     <div style="text-align: center; padding: 3rem;">
                         <h2>Welcome to United We Rise</h2>
                         <p>Connect with your community and engage in meaningful political discourse.</p>
-                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
-                        <button onclick="openAuthModal('register')" class="btn" style="margin-left: 1rem;">Sign Up</button>
+                        <button data-action="openAuthModal" data-mode="login" class="btn">Log In</button>
+                        <button data-action="openAuthModal" data-mode="register" class="btn" style="margin-left: 1rem;">Sign Up</button>
                     </div>
                 `;
             }
