@@ -319,10 +319,10 @@
                         <h4>${doc.documentType.replace(/_/g, ' ')}</h4>
                         <p>Requested on: ${requestedDate}</p>
                         <input type="file" class="file-input" id="file-${doc.id}" accept=".pdf,.jpg,.jpeg,.png">
-                        <button class="upload-btn" onclick="document.getElementById('file-${doc.id}').click()">
+                        <button class="upload-btn" data-verification-action="select-file" data-doc-id="${doc.id}">
                             📄 Select File
                         </button>
-                        <button class="upload-btn" onclick="uploadDocument('${doc.id}', '${doc.documentType}')" style="margin-left: 1rem; background: #28a745;">
+                        <button class="upload-btn" data-verification-action="upload" data-doc-id="${doc.id}" data-doc-type="${doc.documentType}" style="margin-left: 1rem; background: #28a745;">
                             ⬆️ Upload
                         </button>
                         <div id="upload-status-${doc.id}" style="margin-top: 1rem;"></div>
@@ -450,7 +450,7 @@
                 document.querySelectorAll('.document-upload').forEach(upload => {
                     upload.classList.remove('dragover');
                 });
-                
+
                 // Find which upload area the file was dropped on
                 const target = e.target.closest('.document-upload');
                 if (target) {
@@ -458,6 +458,27 @@
                     if (fileInput && e.dataTransfer.files.length > 0) {
                         fileInput.files = e.dataTransfer.files;
                     }
+                }
+            });
+
+            // Event delegation for verification actions
+            document.addEventListener('click', (e) => {
+                const target = e.target.closest('[data-verification-action]');
+                if (!target) return;
+
+                const action = target.dataset.verificationAction;
+                const docId = target.dataset.docId;
+                const docType = target.dataset.docType;
+
+                switch (action) {
+                    case 'select-file':
+                        if (docId) document.getElementById(`file-${docId}`)?.click();
+                        break;
+                    case 'upload':
+                        if (docId && docType && typeof uploadDocument === 'function') {
+                            uploadDocument(docId, docType);
+                        }
+                        break;
                 }
             });
         });

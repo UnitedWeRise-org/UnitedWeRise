@@ -178,7 +178,7 @@
         
         <div class="actions">
             <a href="/" class="btn btn-primary">Return Home</a>
-            <button onclick="retryDonation()" class="btn btn-secondary">Try Again</button>
+            <button data-donation-action="retry" class="btn btn-secondary">Try Again</button>
         </div>
     </div>
     
@@ -196,6 +196,17 @@
         if (paymentId) {
             console.log('Cancelled payment ID:', paymentId);
         }
+
+        // Event delegation for donation actions
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-donation-action]');
+            if (!target) return;
+
+            const action = target.dataset.donationAction;
+            if (action === 'retry') {
+                retryDonation();
+            }
+        });
     </script>
 </body>
 </html>

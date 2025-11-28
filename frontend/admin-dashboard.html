@@ -2058,7 +2058,7 @@ Auto-refresh enabled every 60 seconds
                         <select id="claim-codes-badge-filter" data-action="filterClaimCodesByBadge" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;">
                             <option value="all">All Badges</option>
                         </select>
-                        <button class="btn btn-primary" onclick="civicEngagementController.loadClaimCodes()">🔄 Refresh</button>
+                        <button class="btn btn-primary" data-admin-action="refresh-claim-codes">🔄 Refresh</button>
                     </div>
                 </div>
 
@@ -2524,5 +2524,18 @@ Auto-refresh enabled every 60 seconds
     <!-- Analytics tab functionality now handled by AdminTabsManager module -->
 
     <!-- Global utilities, TOTP modal, and error handling now handled by AdminGlobalUtils module -->
+
+    <!-- Event delegation for admin dashboard actions -->
+    <script type="module">
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-admin-action]');
+            if (!target) return;
+
+            const action = target.dataset.adminAction;
+            if (action === 'refresh-claim-codes' && window.civicEngagementController) {
+                window.civicEngagementController.loadClaimCodes();
+            }
+        });
+    </script>
 </body>
 </html>

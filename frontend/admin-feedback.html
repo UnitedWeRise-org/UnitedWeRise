@@ -185,15 +185,15 @@
                 <p>AI-detected suggestions and concerns about UnitedWeRise</p>
             </div>
             <div>
-                <button onclick="refreshFeedback()" class="btn">🔄 Refresh</button>
-                <button onclick="window.location.href='index.html'" class="btn" style="background: #6c757d;">← Back to Site</button>
+                <button data-feedback-action="refresh" class="btn">🔄 Refresh</button>
+                <button data-feedback-action="back-to-site" class="btn" style="background: #6c757d;">← Back to Site</button>
             </div>
         </div>
 
         <div class="feedback-filters">
             <div class="filter-group">
                 <label>Type:</label>
-                <select id="typeFilter" onchange="applyFilters()">
+                <select id="typeFilter" data-feedback-filter="type">
                     <option value="">All Types</option>
                     <option value="suggestion">Suggestions</option>
                     <option value="bug_report">Bug Reports</option>
@@ -203,7 +203,7 @@
             </div>
             <div class="filter-group">
                 <label>Category:</label>
-                <select id="categoryFilter" onchange="applyFilters()">
+                <select id="categoryFilter" data-feedback-filter="category">
                     <option value="">All Categories</option>
                     <option value="ui_ux">UI/UX</option>
                     <option value="performance">Performance</option>
@@ -214,7 +214,7 @@
             </div>
             <div class="filter-group">
                 <label>Priority:</label>
-                <select id="priorityFilter" onchange="applyFilters()">
+                <select id="priorityFilter" data-feedback-filter="priority">
                     <option value="">All Priorities</option>
                     <option value="critical">Critical</option>
                     <option value="high">High</option>
@@ -224,7 +224,7 @@
             </div>
             <div class="filter-group">
                 <label>Status:</label>
-                <select id="statusFilter" onchange="applyFilters()">
+                <select id="statusFilter" data-feedback-filter="status">
                     <option value="">All Status</option>
                     <option value="new">New</option>
                     <option value="acknowledged">Acknowledged</option>
@@ -268,5 +268,32 @@
 
     <script src="src/js/backend-integration.js"></script>
     <script src="admin-feedback.js"></script>
+
+    <!-- Event delegation for feedback actions -->
+    <script>
+        // Click events
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-feedback-action]');
+            if (!target) return;
+
+            const action = target.dataset.feedbackAction;
+            switch (action) {
+                case 'refresh':
+                    if (typeof refreshFeedback === 'function') refreshFeedback();
+                    break;
+                case 'back-to-site':
+                    window.location.href = 'index.html';
+                    break;
+            }
+        });
+
+        // Change events for filters
+        document.addEventListener('change', (e) => {
+            const target = e.target.closest('[data-feedback-filter]');
+            if (target && typeof applyFilters === 'function') {
+                applyFilters();
+            }
+        });
+    </script>
 </body>
 </html>

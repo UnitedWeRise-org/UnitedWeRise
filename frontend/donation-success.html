@@ -217,7 +217,7 @@
         
         <div class="actions">
             <a href="/" class="btn btn-primary">Return Home</a>
-            <button onclick="window.print()" class="btn btn-secondary">Print Receipt</button>
+            <button data-donation-action="print" class="btn btn-secondary">Print Receipt</button>
         </div>
     </div>
     
@@ -272,6 +272,17 @@
             setTimeout(() => {
                 localStorage.removeItem('donationSuccess');
             }, 5000);
+        });
+
+        // Event delegation for donation actions
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-donation-action]');
+            if (!target) return;
+
+            const action = target.dataset.donationAction;
+            if (action === 'print') {
+                window.print();
+            }
         });
     </script>
 </body>
