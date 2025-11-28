@@ -13,10 +13,51 @@ class OfficialsSystemIntegration {
     init() {
         // Wait for DOM to be ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.setup());
+            document.addEventListener('DOMContentLoaded', () => {
+                this.setup();
+                this.setupEventDelegation();
+            });
         } else {
             this.setup();
+            this.setupEventDelegation();
         }
+    }
+
+    /**
+     * Setup event delegation for officials system actions
+     */
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-officials-action]');
+            if (!target) return;
+
+            const action = target.dataset.officialsAction;
+            const officialName = target.dataset.officialName;
+
+            switch (action) {
+                case 'loadOfficials':
+                    this.loadOfficials();
+                    break;
+                case 'showContactOptions':
+                    this.showContactOptions();
+                    break;
+                case 'restoreMainContent':
+                    this.restoreMainContent();
+                    break;
+                case 'openProfileSettings':
+                    this.openProfileSettings();
+                    break;
+                case 'contactOfficial':
+                    this.contactOfficial(officialName);
+                    break;
+                case 'viewOfficialDetails':
+                    this.viewOfficialDetails(officialName);
+                    break;
+                case 'closeModal':
+                    target.closest('.modal-overlay')?.remove();
+                    break;
+            }
+        });
     }
 
     setup() {
@@ -131,13 +172,13 @@ class OfficialsSystemIntegration {
                         <h1>🏛️ My Elected Officials</h1>
                         <p class="subtitle">Connect with your representatives at all levels of government</p>
                         <div class="header-actions">
-                            <button class="header-btn primary" onclick="officialsSystemIntegration.loadOfficials()">
+                            <button class="header-btn primary" data-officials-action="loadOfficials">
                                 🔄 Refresh Officials
                             </button>
-                            <button class="header-btn secondary" onclick="officialsSystemIntegration.showContactOptions()">
+                            <button class="header-btn secondary" data-officials-action="showContactOptions">
                                 📧 Contact Options
                             </button>
-                            <button class="header-btn secondary" onclick="officialsSystemIntegration.restoreMainContent()">
+                            <button class="header-btn secondary" data-officials-action="restoreMainContent">
                                 ← Back to Map
                             </button>
                         </div>
@@ -208,7 +249,7 @@ class OfficialsSystemIntegration {
                                     <h3>Ready to Load Your Officials</h3>
                                     <p>Click "Refresh Officials" to see your current representatives</p>
                                     <p class="address-note">Make sure your address is set in your profile for accurate results</p>
-                                    <button class="placeholder-btn" onclick="officialsSystemIntegration.loadOfficials()">
+                                    <button class="placeholder-btn" data-officials-action="loadOfficials">
                                         Load Officials Now
                                     </button>
                                 </div>
@@ -287,10 +328,10 @@ class OfficialsSystemIntegration {
                     <h3>Unable to Load Officials</h3>
                     <p>${originalHTML.replace(/<[^>]*>/g, '')}</p>
                     <div class="error-actions">
-                        <button class="error-btn" onclick="officialsSystemIntegration.openProfileSettings()">
+                        <button class="error-btn" data-officials-action="openProfileSettings">
                             Update Profile
                         </button>
-                        <button class="error-btn secondary" onclick="officialsSystemIntegration.loadOfficials()">
+                        <button class="error-btn secondary" data-officials-action="loadOfficials">
                             Try Again
                         </button>
                     </div>
@@ -359,10 +400,10 @@ class OfficialsSystemIntegration {
                             ${contact}
                         </div>
                         <div class="official-actions">
-                            <button class="action-btn primary" onclick="officialsSystemIntegration.contactOfficial('${name}')">
+                            <button class="action-btn primary" data-officials-action="contactOfficial" data-official-name="${name}">
                                 📧 Contact
                             </button>
-                            <button class="action-btn secondary" onclick="officialsSystemIntegration.viewOfficialDetails('${name}')">
+                            <button class="action-btn secondary" data-officials-action="viewOfficialDetails" data-official-name="${name}">
                                 📊 Details
                             </button>
                         </div>
@@ -401,7 +442,7 @@ class OfficialsSystemIntegration {
                     <h3>Unable to Load Officials</h3>
                     <p>${message}</p>
                     <div class="error-actions">
-                        <button class="error-btn" onclick="officialsSystemIntegration.loadOfficials()">
+                        <button class="error-btn" data-officials-action="loadOfficials">
                             Try Again
                         </button>
                     </div>
@@ -963,7 +1004,7 @@ class OfficialsSystemIntegration {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>📧 Contact Your Officials</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" data-officials-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="contact-options">

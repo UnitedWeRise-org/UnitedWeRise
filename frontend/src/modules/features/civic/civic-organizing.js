@@ -16,6 +16,41 @@ import { showToast } from '../../utils/toast.js';
 
 console.log('🏛️ Loading civic organizing module...');
 
+// Setup event delegation for civic organizing module
+function setupEventDelegation() {
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-civic-organizing-action]');
+        if (!target) return;
+
+        const action = target.dataset.civicOrganizingAction;
+
+        switch (action) {
+            case 'showDefaultOrganizingView':
+                showDefaultOrganizingView();
+                break;
+            case 'savePetitionDraft':
+                savePetitionDraft();
+                break;
+            case 'saveEventDraft':
+                saveEventDraft();
+                break;
+            case 'showPetitionCreator':
+                showPetitionCreator();
+                break;
+            case 'showEventCreator':
+                showEventCreator();
+                break;
+        }
+    });
+}
+
+// Initialize event delegation when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupEventDelegation);
+} else {
+    setupEventDelegation();
+}
+
 /**
  * Show Petition Creator Form
  * Displays a form for creating a new petition
@@ -36,7 +71,7 @@ function showPetitionCreator() {
         <div class="civic-form-container">
             <div class="form-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #eee;">
                 <h3 style="margin: 0; color: #4b5c09;">📝 Create a Petition</h3>
-                <button onclick="showDefaultOrganizingView()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
+                <button data-civic-organizing-action="showDefaultOrganizingView" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
             </div>
 
             <form id="petitionForm" style="padding: 1.5rem; max-width: 800px; margin: 0 auto;">
@@ -101,7 +136,7 @@ function showPetitionCreator() {
                 <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
                     <button
                         type="button"
-                        onclick="savePetitionDraft()"
+                        data-civic-organizing-action="savePetitionDraft"
                         style="padding: 0.75rem 1.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;"
                     >
                         Save Draft
@@ -246,7 +281,7 @@ function showEventCreator() {
         <div class="civic-form-container">
             <div class="form-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #eee;">
                 <h3 style="margin: 0; color: #1976d2;">📅 Organize an Event</h3>
-                <button onclick="showDefaultOrganizingView()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
+                <button data-civic-organizing-action="showDefaultOrganizingView" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
             </div>
 
             <form id="eventForm" style="padding: 1.5rem; max-width: 800px; margin: 0 auto;">
@@ -341,7 +376,7 @@ function showEventCreator() {
                 <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
                     <button
                         type="button"
-                        onclick="saveEventDraft()"
+                        data-civic-organizing-action="saveEventDraft"
                         style="padding: 0.75rem 1.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;"
                     >
                         Save Draft
@@ -571,14 +606,14 @@ function displayCivicBrowser(petitions, events) {
         <div style="padding: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h3 style="margin: 0; color: #333;">🔍 Browse Civic Activities</h3>
-                <button onclick="showDefaultOrganizingView()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
+                <button data-civic-organizing-action="showDefaultOrganizingView" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h4 style="margin: 0; color: #4b5c09;">📝 Petitions</h4>
-                        <button onclick="showPetitionCreator()" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        <button data-civic-organizing-action="showPetitionCreator" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
                             Create
                         </button>
                     </div>
@@ -588,7 +623,7 @@ function displayCivicBrowser(petitions, events) {
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h4 style="margin: 0; color: #1976d2;">📅 Events</h4>
-                        <button onclick="showEventCreator()" style="padding: 0.5rem 1rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        <button data-civic-organizing-action="showEventCreator" style="padding: 0.5rem 1rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
                             Create
                         </button>
                     </div>
@@ -673,10 +708,10 @@ function displayMyOrganizing(myPetitions, myEvents) {
                 <h3 style="color: #333; margin-bottom: 1rem;">Your Organizing Activities</h3>
                 <p style="color: #666; margin-bottom: 2rem;">You haven't created any petitions or events yet.</p>
                 <div style="display: flex; gap: 1rem; justify-content: center;">
-                    <button onclick="showPetitionCreator()" style="padding: 1rem 2rem; background: #4b5c09; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    <button data-civic-organizing-action="showPetitionCreator" style="padding: 1rem 2rem; background: #4b5c09; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
                         Create Your First Petition
                     </button>
-                    <button onclick="showEventCreator()" style="padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    <button data-civic-organizing-action="showEventCreator" style="padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
                         Organize Your First Event
                     </button>
                 </div>
@@ -726,14 +761,14 @@ function displayMyOrganizing(myPetitions, myEvents) {
         <div style="padding: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h3 style="margin: 0; color: #333;">📊 My Organizing Activities</h3>
-                <button onclick="showDefaultOrganizingView()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
+                <button data-civic-organizing-action="showDefaultOrganizingView" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h4 style="margin: 0; color: #4b5c09;">📝 My Petitions (${myPetitions.length})</h4>
-                        <button onclick="showPetitionCreator()" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        <button data-civic-organizing-action="showPetitionCreator" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
                             Create New
                         </button>
                     </div>
@@ -743,7 +778,7 @@ function displayMyOrganizing(myPetitions, myEvents) {
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h4 style="margin: 0; color: #1976d2;">📅 My Events (${myEvents.length})</h4>
-                        <button onclick="showEventCreator()" style="padding: 0.5rem 1rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        <button data-civic-organizing-action="showEventCreator" style="padding: 0.5rem 1rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
                             Create New
                         </button>
                     </div>
@@ -788,10 +823,10 @@ function showDefaultOrganizingView() {
             <h3>Welcome to Civic Organizing</h3>
             <p>Create petitions, organize events, and mobilize your community for positive change.</p>
             <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
-                <button onclick="showPetitionCreator()" style="padding: 1rem 2rem; background: #4b5c09; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                <button data-civic-organizing-action="showPetitionCreator" style="padding: 1rem 2rem; background: #4b5c09; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
                     Start a Petition
                 </button>
-                <button onclick="showEventCreator()" style="padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                <button data-civic-organizing-action="showEventCreator" style="padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
                     Organize an Event
                 </button>
             </div>

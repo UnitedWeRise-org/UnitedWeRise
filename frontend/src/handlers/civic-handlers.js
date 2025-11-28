@@ -71,6 +71,29 @@ export class CivicHandlers {
                     break;
             }
         });
+
+        // Official profile actions
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-civic-profile-action]');
+            if (!target) return;
+
+            const action = target.dataset.civicProfileAction;
+            const officialId = target.dataset.officialId;
+            const bioguideId = target.dataset.bioguideId;
+            const officialName = target.dataset.officialName;
+
+            switch (action) {
+                case 'contactOfficial':
+                    this.contactOfficial(officialId);
+                    break;
+                case 'viewVotingRecords':
+                    this.viewVotingRecords(bioguideId);
+                    break;
+                case 'viewOfficialNews':
+                    this.viewOfficialNews(officialName);
+                    break;
+            }
+        });
     }
 
     /**
@@ -469,14 +492,14 @@ export class CivicHandlers {
 
                     <div style="display: flex; gap: 1rem; justify-content: center;">
                         ${official.contactInfo ? `
-                            <button onclick="contactOfficial('${official.id}')" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                            <button data-civic-profile-action="contactOfficial" data-official-id="${official.id}" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
                                 Contact ${official.name}
                             </button>
                         ` : ''}
-                        <button onclick="viewVotingRecords('${official.bioguideId || official.id}')" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                        <button data-civic-profile-action="viewVotingRecords" data-bioguide-id="${official.bioguideId || official.id}" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
                             View Voting Records
                         </button>
-                        <button onclick="viewOfficialNews('${official.name}')" style="padding: 0.75rem 1.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                        <button data-civic-profile-action="viewOfficialNews" data-official-name="${official.name}" style="padding: 0.75rem 1.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
                             Recent News
                         </button>
                     </div>
