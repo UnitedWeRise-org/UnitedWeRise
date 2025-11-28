@@ -19,6 +19,43 @@ class VerificationFlow {
         this.createVerificationModal();
         this.loadHCaptcha();
         this.setupMessageListeners();
+        this.setupEventDelegation();
+    }
+
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-verification-action]');
+            if (!target) return;
+
+            const action = target.dataset.verificationAction;
+
+            switch (action) {
+                case 'startVerification':
+                    this.startVerification();
+                    break;
+                case 'checkEmailVerification':
+                    this.checkEmailVerification();
+                    break;
+                case 'resendEmailVerification':
+                    this.resendEmailVerification();
+                    break;
+                case 'sendPhoneVerification':
+                    this.sendPhoneVerification();
+                    break;
+                case 'verifyPhoneCode':
+                    this.verifyPhoneCode();
+                    break;
+                case 'resendPhoneCode':
+                    this.resendPhoneCode();
+                    break;
+                case 'skipPhoneVerification':
+                    this.skipPhoneVerification();
+                    break;
+                case 'completeVerification':
+                    this.completeVerification();
+                    break;
+            }
+        });
     }
     
     setupMessageListeners() {
@@ -72,7 +109,7 @@ class VerificationFlow {
                                 <li>📱 Phone verification (recommended)</li>
                                 <li>🛡️ Security verification</li>
                             </ul>
-                            <button onclick="verificationFlow.startVerification()" class="btn btn-primary">
+                            <button data-verification-action="startVerification" class="btn btn-primary">
                                 Start Verification
                             </button>
                         </div>
@@ -85,10 +122,10 @@ class VerificationFlow {
                             <p>Please check your inbox and click the verification link.</p>
                             
                             <div class="verification-actions">
-                                <button onclick="verificationFlow.checkEmailVerification()" class="btn btn-primary">
+                                <button data-verification-action="checkEmailVerification" class="btn btn-primary">
                                     I've Verified My Email
                                 </button>
-                                <button onclick="verificationFlow.resendEmailVerification()" class="btn btn-secondary">
+                                <button data-verification-action="resendEmailVerification" class="btn btn-secondary">
                                     Resend Email
                                 </button>
                             </div>
@@ -122,7 +159,7 @@ class VerificationFlow {
                                 
                                 <div id="hcaptcha-phone" class="hcaptcha-container"></div>
                                 
-                                <button onclick="verificationFlow.sendPhoneVerification()" class="btn btn-primary" id="sendPhoneBtn">
+                                <button data-verification-action="sendPhoneVerification" class="btn btn-primary" id="sendPhoneBtn">
                                     Send Verification Code
                                 </button>
                             </div>
@@ -132,15 +169,15 @@ class VerificationFlow {
                                 <input type="text" id="phoneCode" maxlength="6" pattern="[0-9]{6}" class="form-input code-input">
                                 <div id="phoneTimer" class="timer"></div>
                                 
-                                <button onclick="verificationFlow.verifyPhoneCode()" class="btn btn-primary">
+                                <button data-verification-action="verifyPhoneCode" class="btn btn-primary">
                                     Verify Code
                                 </button>
-                                <button onclick="verificationFlow.resendPhoneCode()" class="btn btn-secondary" id="resendPhoneBtn" disabled>
+                                <button data-verification-action="resendPhoneCode" class="btn btn-secondary" id="resendPhoneBtn" disabled>
                                     Resend Code
                                 </button>
                             </div>
                             
-                            <button onclick="verificationFlow.skipPhoneVerification()" class="btn btn-text" style="background: #4b5c09; color: white; padding: 12px 24px; font-weight: bold;">
+                            <button data-verification-action="skipPhoneVerification" class="btn btn-text" style="background: #4b5c09; color: white; padding: 12px 24px; font-weight: bold;">
                                 Skip Phone Verification (Recommended)
                             </button>
                         </div>
@@ -171,7 +208,7 @@ class VerificationFlow {
                                 </ul>
                             </div>
                             
-                            <button onclick="verificationFlow.completeVerification()" class="btn btn-primary">
+                            <button data-verification-action="completeVerification" class="btn btn-primary">
                                 Continue to United We Rise
                             </button>
                         </div>

@@ -16,8 +16,37 @@ class TopicNavigation {
         this.activeTopic = null;
         this.trendingTopics = [];
         this.isInitialized = false;
-        
+
         this.init();
+        this.setupEventDelegation();
+    }
+
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-topic-nav-action]');
+            if (!target) return;
+
+            const action = target.dataset.topicNavAction;
+            const topicId = target.dataset.topicId;
+
+            switch (action) {
+                case 'enterTopic':
+                    this.enterTopic(topicId);
+                    break;
+                case 'loadTrendingTopics':
+                    this.loadTrendingTopics();
+                    break;
+                case 'exitTopic':
+                    this.exitTopic();
+                    break;
+                case 'createTopicPost':
+                    this.createTopicPost();
+                    break;
+                case 'loadMoreTopicPosts':
+                    this.loadMoreTopicPosts();
+                    break;
+            }
+        });
     }
 
     async init() {
@@ -114,7 +143,7 @@ class TopicNavigation {
                 </div>
                 
                 <div class="topic-actions">
-                    <button class="btn btn-primary" onclick="window.topicNavigation.enterTopic('${topic.id}')">
+                    <button class="btn btn-primary" data-topic-nav-action="enterTopic" data-topic-id="${topic.id}">
                         Join Discussion
                     </button>
                     <span class="last-activity">Active ${this.getTimeAgo(topic.lastActivity)}</span>
@@ -125,7 +154,7 @@ class TopicNavigation {
         container.innerHTML = `
             <div class="trending-header">
                 <h2>🔥 Trending Topics</h2>
-                <button class="btn-refresh" onclick="window.topicNavigation.loadTrendingTopics()">
+                <button class="btn-refresh" data-topic-nav-action="loadTrendingTopics">
                     🔄 Refresh
                 </button>
             </div>
@@ -179,7 +208,7 @@ class TopicNavigation {
             <div class="topic-mode-container">
                 <!-- Topic Header -->
                 <div class="topic-mode-header">
-                    <button class="btn-back" onclick="window.topicNavigation.exitTopic()">
+                    <button class="btn-back" data-topic-nav-action="exitTopic">
                         ← Back to Feed
                     </button>
                     <div class="active-topic-info">
@@ -217,7 +246,7 @@ class TopicNavigation {
                         rows="3">
                     </textarea>
                     <div class="composer-actions">
-                        <button class="btn btn-primary" onclick="window.topicNavigation.createTopicPost()">
+                        <button class="btn btn-primary" data-topic-nav-action="createTopicPost">
                             Post to Topic
                         </button>
                         <span class="topic-hint">💡 Your post will be part of this topic discussion</span>
@@ -231,7 +260,7 @@ class TopicNavigation {
                 
                 <!-- Load More -->
                 <div class="load-more-container">
-                    <button class="btn btn-secondary" onclick="window.topicNavigation.loadMoreTopicPosts()">
+                    <button class="btn btn-secondary" data-topic-nav-action="loadMoreTopicPosts">
                         Load More Posts
                     </button>
                 </div>
@@ -442,7 +471,7 @@ class TopicNavigation {
                 <div class="nav-indicator topic-mode">
                     <span class="mode-label">Topic:</span>
                     <span class="topic-name">${this.activeTopic.title}</span>
-                    <button class="btn-exit-topic" onclick="window.topicNavigation.exitTopic()">✕</button>
+                    <button class="btn-exit-topic" data-topic-nav-action="exitTopic">✕</button>
                 </div>
             `;
         } else {

@@ -9,6 +9,42 @@ class ContentReporting {
     constructor() {
         this.API_BASE = 'https://api.unitedwerise.org/api';
         this.init();
+        this.setupEventDelegation();
+    }
+
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-report-action]');
+            if (!target) return;
+
+            const action = target.dataset.reportAction;
+
+            switch (action) {
+                case 'closeReportModal':
+                    this.closeReportModal();
+                    break;
+                case 'submitReport':
+                    this.submitReport();
+                    break;
+                case 'showAppealModal':
+                    this.showAppealModal();
+                    break;
+                case 'hideStatusBar':
+                    this.hideStatusBar();
+                    break;
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            const target = e.target.closest('[data-report-change]');
+            if (!target) return;
+
+            const changeAction = target.dataset.reportChange;
+
+            if (changeAction === 'handleReasonChange') {
+                this.handleReasonChange();
+            }
+        });
     }
 
     init() {
@@ -24,7 +60,7 @@ class ContentReporting {
                 <div class="modal-content report-content">
                     <div class="modal-header">
                         <h2>Report Content</h2>
-                        <span class="close" onclick="contentReporting.closeReportModal()">&times;</span>
+                        <span class="close" data-report-action="closeReportModal">&times;</span>
                     </div>
                     <div class="modal-body">
                         <div id="reportMessage" class="message-container"></div>
@@ -37,7 +73,7 @@ class ContentReporting {
                             
                             <div class="form-group">
                                 <label for="reportReason">What's the issue?</label>
-                                <select id="reportReason" class="form-select" onchange="contentReporting.handleReasonChange()">
+                                <select id="reportReason" class="form-select" data-report-change="handleReasonChange">
                                     <option value="">Select a reason...</option>
                                     <option value="SPAM">Spam or misleading content</option>
                                     <option value="HARASSMENT">Harassment or bullying</option>
@@ -73,10 +109,10 @@ class ContentReporting {
                             </div>
                             
                             <div class="report-actions">
-                                <button onclick="contentReporting.closeReportModal()" class="btn btn-secondary">
+                                <button data-report-action="closeReportModal" class="btn btn-secondary">
                                     Cancel
                                 </button>
-                                <button onclick="contentReporting.submitReport()" class="btn btn-primary" id="submitReportBtn">
+                                <button data-report-action="submitReport" class="btn btn-primary" id="submitReportBtn">
                                     Submit Report
                                 </button>
                             </div>
@@ -105,10 +141,10 @@ class ContentReporting {
                         <p id="statusMessage">Your account has restrictions.</p>
                     </div>
                     <div class="status-actions">
-                        <button onclick="contentReporting.showAppealModal()" class="btn btn-sm btn-outline">
+                        <button data-report-action="showAppealModal" class="btn btn-sm btn-outline">
                             Appeal
                         </button>
-                        <button onclick="contentReporting.hideStatusBar()" class="btn btn-sm btn-text">
+                        <button data-report-action="hideStatusBar" class="btn btn-sm btn-text">
                             Dismiss
                         </button>
                     </div>

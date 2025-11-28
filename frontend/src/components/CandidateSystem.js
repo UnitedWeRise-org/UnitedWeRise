@@ -41,18 +41,38 @@ class CandidateSystem {
             this.enhanceElectionDisplay();
         });
 
-        // Candidate comparison functionality
+        // Candidate comparison functionality and data-action handlers
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('compare-candidates-btn')) {
                 this.showCandidateComparison(e.target.dataset.officeId);
             }
-            
+
             if (e.target.classList.contains('contact-candidate-btn')) {
                 this.showContactForm(e.target.dataset.candidateId);
             }
 
             if (e.target.classList.contains('view-qa-btn')) {
                 this.showPublicQA(e.target.dataset.candidateId);
+            }
+
+            // Data-action handlers for CSP compliance
+            const target = e.target.closest('[data-candidate-system-action]');
+            if (target) {
+                const action = target.dataset.candidateSystemAction;
+                switch (action) {
+                    case 'closeModal':
+                        target.closest('.modal, .modal-overlay')?.remove();
+                        break;
+                    case 'printComparison':
+                        window.print();
+                        break;
+                    case 'cancelContact':
+                        target.closest('.modal, .modal-overlay')?.remove();
+                        break;
+                    case 'closeQA':
+                        target.closest('.modal, .modal-overlay')?.remove();
+                        break;
+                }
             }
         });
     }
@@ -305,8 +325,8 @@ class CandidateSystem {
                 </div>
 
                 <div class="comparison-actions">
-                    <button class="btn-primary" onclick="this.closest('.modal').remove()">Close Comparison</button>
-                    <button class="btn-outline" onclick="window.print()">Print Comparison</button>
+                    <button class="btn-primary" data-candidate-system-action="closeModal">Close Comparison</button>
+                    <button class="btn-outline" data-candidate-system-action="printComparison">Print Comparison</button>
                 </div>
             </div>
         `;
@@ -447,7 +467,7 @@ class CandidateSystem {
 
                     <div class="form-actions">
                         <button type="submit" class="btn-primary">Send Inquiry</button>
-                        <button type="button" class="btn-secondary" onclick="this.closest('.modal').remove()">
+                        <button type="button" class="btn-secondary" data-candidate-system-action="cancelContact">
                             Cancel
                         </button>
                     </div>
@@ -499,7 +519,7 @@ class CandidateSystem {
                     <button class="btn-primary contact-candidate-btn" data-candidate-id="${candidate.id}">
                         Ask New Question
                     </button>
-                    <button class="btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+                    <button class="btn-secondary" data-candidate-system-action="closeQA">Close</button>
                 </div>
             </div>
         `;
@@ -590,7 +610,7 @@ class CandidateSystem {
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>${title}</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" data-candidate-system-action="closeModal">×</button>
                 </div>
                 <div class="modal-body">
                     ${content}

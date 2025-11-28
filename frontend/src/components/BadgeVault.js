@@ -19,6 +19,46 @@ class BadgeVault {
         this.isDirty = false; // Track unsaved changes
 
         this.init();
+        this.setupEventDelegation();
+    }
+
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-badge-vault-action]');
+            if (!target) return;
+
+            const action = target.dataset.badgeVaultAction;
+            const badgeId = target.dataset.badgeId;
+
+            switch (action) {
+                case 'closeVault':
+                    this.closeVault(target.closest('.modal-overlay'));
+                    break;
+                case 'moveBadgeUp':
+                    this.moveBadgeUp(badgeId);
+                    break;
+                case 'moveBadgeDown':
+                    this.moveBadgeDown(badgeId);
+                    break;
+                case 'toggleBadgeDisplay':
+                    this.toggleBadgeDisplay(badgeId);
+                    break;
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            const target = e.target.closest('[data-badge-vault-setting]');
+            if (!target) return;
+
+            const setting = target.dataset.badgeVaultSetting;
+            const category = target.dataset.category;
+
+            if (category) {
+                this.updateCategoryPreference(category, target.checked);
+            } else if (setting) {
+                this.updateSetting(setting, target.checked);
+            }
+        });
     }
 
     async init() {
@@ -289,7 +329,7 @@ class BadgeVault {
                     </h2>
                     <div class="header-actions">
                         <div class="save-status"></div>
-                        <button class="close-modal" onclick="badgeVault.closeVault(this.closest('.modal-overlay'))">×</button>
+                        <button class="close-modal" data-badge-vault-action="closeVault">×</button>
                     </div>
                 </div>
 
@@ -428,13 +468,13 @@ class BadgeVault {
                 </div>
                 <div class="badge-controls">
                     <div class="order-controls">
-                        <button class="order-btn" onclick="badgeVault.moveBadgeUp('${userBadge.badgeId}')"
+                        <button class="order-btn" data-badge-vault-action="moveBadgeUp" data-badge-id="${userBadge.badgeId}"
                                 ${userBadge.displayOrder <= 1 ? 'disabled' : ''}>↑</button>
                         <span class="order-number">${userBadge.displayOrder}</span>
-                        <button class="order-btn" onclick="badgeVault.moveBadgeDown('${userBadge.badgeId}')"
+                        <button class="order-btn" data-badge-vault-action="moveBadgeDown" data-badge-id="${userBadge.badgeId}"
                                 ${userBadge.displayOrder >= this.userBadges.filter(b => b.isDisplayed).length ? 'disabled' : ''}>↓</button>
                     </div>
-                    <button class="remove-btn" onclick="badgeVault.toggleBadgeDisplay('${userBadge.badgeId}')">Remove</button>
+                    <button class="remove-btn" data-badge-vault-action="toggleBadgeDisplay" data-badge-id="${userBadge.badgeId}">Remove</button>
                 </div>
             </div>
         `;
@@ -450,7 +490,7 @@ class BadgeVault {
         return `
             <div class="collection-badge-item ${badge.rarity?.toLowerCase()}"
                  data-badge-id="${userBadge.badgeId}"
-                 onclick="badgeVault.toggleBadgeDisplay('${userBadge.badgeId}')"
+                 data-badge-vault-action="toggleBadgeDisplay"
                  title="Click to add to nameplate display">
                 <img src="${badge.imageUrl}" alt="${badge.name}" class="badge-image">
                 <div class="badge-info">
@@ -557,7 +597,7 @@ class BadgeVault {
                         <label class="setting-label">
                             <input type="checkbox"
                                    ${this.vaultSettings.publicVisibility ? 'checked' : ''}
-                                   onchange="badgeVault.updateSetting('publicVisibility', this.checked)">
+                                   data-badge-vault-setting="publicVisibility">
                             <span class="setting-title">Public Badge Vault</span>
                         </label>
                         <p class="setting-description">Allow other users to view your complete badge collection</p>
@@ -567,7 +607,7 @@ class BadgeVault {
                         <label class="setting-label">
                             <input type="checkbox"
                                    ${this.vaultSettings.rarityPriority ? 'checked' : ''}
-                                   onchange="badgeVault.updateSetting('rarityPriority', this.checked)">
+                                   data-badge-vault-setting="rarityPriority">
                             <span class="setting-title">Rarity Priority</span>
                         </label>
                         <p class="setting-description">Automatically prioritize rarer badges in your display</p>
@@ -581,7 +621,8 @@ class BadgeVault {
                                 <label class="category-option">
                                     <input type="checkbox"
                                            ${this.vaultSettings.categoryPreference.includes(category) ? 'checked' : ''}
-                                           onchange="badgeVault.updateCategoryPreference('${category}', this.checked)">
+                                           data-badge-vault-setting="categoryPreference"
+                                           data-category="${category}">
                                     <span>${category.charAt(0) + category.slice(1).toLowerCase()}</span>
                                 </label>
                             `).join('')}

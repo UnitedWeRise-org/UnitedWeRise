@@ -6,6 +6,38 @@ class OnboardingFlow {
         this.stepData = {};
         this.isVisible = false;
         this.init();
+        this.setupEventDelegation();
+    }
+
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-onboarding-action]');
+            if (!target) return;
+
+            const action = target.dataset.onboardingAction;
+            const interest = target.dataset.interest;
+
+            switch (action) {
+                case 'close':
+                    this.close();
+                    break;
+                case 'validateLocation':
+                    this.validateLocation();
+                    break;
+                case 'previousStep':
+                    this.previousStep();
+                    break;
+                case 'skipStep':
+                    this.skipStep();
+                    break;
+                case 'nextStep':
+                    this.nextStep();
+                    break;
+                case 'toggleInterest':
+                    this.toggleInterest(target, interest);
+                    break;
+            }
+        });
     }
 
     async init() {
@@ -27,7 +59,7 @@ class OnboardingFlow {
                                 <span id="currentStepNum">1</span> of <span id="totalSteps">3</span>
                             </div>
                         </div>
-                        <button class="close-btn" onclick="onboardingFlow.close()" title="Exit onboarding">&times;</button>
+                        <button class="close-btn" data-onboarding-action="close" title="Exit onboarding">&times;</button>
                     </div>
                     
                     <div class="onboarding-body">
@@ -131,7 +163,7 @@ class OnboardingFlow {
                                     <small>More precise location helps us find all your representatives</small>
                                 </div>
                                 
-                                <button onclick="onboardingFlow.validateLocation()" class="btn btn-primary" id="validateLocationBtn">
+                                <button data-onboarding-action="validateLocation" class="btn btn-primary" id="validateLocationBtn">
                                     Find My Representatives
                                 </button>
                                 
@@ -168,15 +200,15 @@ class OnboardingFlow {
                     </div>
                     
                     <div class="onboarding-footer">
-                        <button id="backBtn" class="btn btn-secondary" onclick="onboardingFlow.previousStep()" style="display: none;">
+                        <button id="backBtn" class="btn btn-secondary" data-onboarding-action="previousStep" style="display: none;">
                             ← Back
                         </button>
-                        
+
                         <div class="footer-actions">
-                            <button id="skipBtn" class="btn btn-text" onclick="onboardingFlow.skipStep()" style="display: none;">
+                            <button id="skipBtn" class="btn btn-text" data-onboarding-action="skipStep" style="display: none;">
                                 Skip for now
                             </button>
-                            <button id="nextBtn" class="btn btn-primary" onclick="onboardingFlow.nextStep()">
+                            <button id="nextBtn" class="btn btn-primary" data-onboarding-action="nextStep">
                                 Get Started →
                             </button>
                         </div>
@@ -767,7 +799,8 @@ class OnboardingFlow {
             const option = document.createElement('div');
             option.className = 'interest-option';
             option.textContent = interest;
-            option.onclick = () => this.toggleInterest(option, interest);
+            option.dataset.onboardingAction = 'toggleInterest';
+            option.dataset.interest = interest;
             container.appendChild(option);
         });
     }

@@ -12,6 +12,37 @@ class PolicyPlatformManager {
         this.container = null;
         this.editingPositionId = null;
         this.policyPositions = [];
+        this.setupEventDelegation();
+    }
+
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-policy-action]');
+            if (!target) return;
+
+            const action = target.dataset.policyAction;
+            const positionId = target.dataset.positionId;
+            const publish = target.dataset.publish;
+            const keyword = target.dataset.keyword;
+
+            switch (action) {
+                case 'clearEditMode':
+                    this.clearEditMode();
+                    break;
+                case 'editPosition':
+                    this.editPosition(positionId);
+                    break;
+                case 'togglePublish':
+                    this.togglePublish(positionId, publish === 'true');
+                    break;
+                case 'deletePosition':
+                    this.deletePosition(positionId);
+                    break;
+                case 'searchSimilarPositions':
+                    this.searchSimilarPositions(keyword);
+                    break;
+            }
+        });
     }
 
     /**
@@ -111,7 +142,7 @@ class PolicyPlatformManager {
                                 <button type="submit" class="btn primary submit-btn">
                                     Save Position
                                 </button>
-                                <button type="button" class="btn secondary cancel-btn" style="display: none;" onclick="policyPlatformManager.clearEditMode()">
+                                <button type="button" class="btn secondary cancel-btn" style="display: none;" data-policy-action="clearEditMode">
                                     Cancel Edit
                                 </button>
                                 <button type="reset" class="btn outline reset-btn">
@@ -565,18 +596,18 @@ class PolicyPlatformManager {
                 ` : ''}
                 
                 <div class="position-actions">
-                    <button class="action-btn btn-edit" onclick="policyPlatformManager.editPosition('${position.id}')">
+                    <button class="action-btn btn-edit" data-policy-action="editPosition" data-position-id="${position.id}">
                         ✏️ Edit
                     </button>
-                    ${position.isPublished ? 
-                        `<button class="action-btn btn-unpublish" onclick="policyPlatformManager.togglePublish('${position.id}', false)">
+                    ${position.isPublished ?
+                        `<button class="action-btn btn-unpublish" data-policy-action="togglePublish" data-position-id="${position.id}" data-publish="false">
                             📤 Unpublish
                         </button>` :
-                        `<button class="action-btn btn-publish" onclick="policyPlatformManager.togglePublish('${position.id}', true)">
+                        `<button class="action-btn btn-publish" data-policy-action="togglePublish" data-position-id="${position.id}" data-publish="true">
                             📢 Publish
                         </button>`
                     }
-                    <button class="action-btn btn-delete" onclick="policyPlatformManager.deletePosition('${position.id}')">
+                    <button class="action-btn btn-delete" data-policy-action="deletePosition" data-position-id="${position.id}">
                         🗑️ Delete
                     </button>
                 </div>
@@ -734,8 +765,8 @@ class PolicyPlatformManager {
             return '';
         }
 
-        const keywordsHTML = position.aiExtractedKeywords.map(keyword => 
-            `<span class="ai-keyword" onclick="policyPlatformManager.searchSimilarPositions('${this.escapeHtml(keyword)}')" title="Click to find similar positions">
+        const keywordsHTML = position.aiExtractedKeywords.map(keyword =>
+            `<span class="ai-keyword" data-policy-action="searchSimilarPositions" data-keyword="${this.escapeHtml(keyword)}" title="Click to find similar positions">
                 ${this.escapeHtml(keyword)}
             </span>`
         ).join('');
