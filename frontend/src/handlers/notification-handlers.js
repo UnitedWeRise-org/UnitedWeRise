@@ -108,7 +108,7 @@ function displayNotifications() {
         <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f8f9fa; display: flex; justify-content: space-between; align-items: center;">
             <h6 style="margin: 0; font-weight: bold;">Notifications</h6>
             ${hasUnread ? `
-                <button onclick="markAllNotificationsRead()"
+                <button data-notification-action="mark-all-read"
                         style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                     Mark All Read (${unreadNotifications.length})
                 </button>
@@ -123,7 +123,7 @@ function displayNotifications() {
 
         html += `
             <div class="notification-item ${isUnread ? 'unread' : ''}" data-notification-id="${notification.id}"
-                 onclick="handleNotificationClick('${notification.id}', '${notification.type}')"
+                 data-notification-action="handle-click" data-notification-type="${notification.type}"
                  style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; ${isUnread ? 'background: #f0f7ff;' : ''} hover:background: #f5f5f5;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <div style="font-size: 1.5rem;">${getNotificationIcon(notification.type)}</div>
@@ -565,6 +565,27 @@ export {
     getCachedRelationshipStatus,
     refreshFriendStatus
 };
+
+// Event delegation for notification actions
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-notification-action]');
+    if (!target) return;
+
+    const action = target.dataset.notificationAction;
+    const notificationId = target.dataset.notificationId;
+    const notificationType = target.dataset.notificationType;
+
+    switch (action) {
+        case 'mark-all-read':
+            markAllNotificationsRead();
+            break;
+        case 'handle-click':
+            if (notificationId && notificationType) {
+                handleNotificationClick(notificationId, notificationType);
+            }
+            break;
+    }
+});
 
 // Global exposure for compatibility (temporary during migration)
 if (typeof window !== 'undefined') {

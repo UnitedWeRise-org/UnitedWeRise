@@ -173,7 +173,7 @@ class SavedPostsView {
             listContainer.innerHTML = `
                 <div class="saved-posts-error">
                     <p>${message}</p>
-                    <button onclick="window.savedPostsView.loadPosts()" class="btn btn-primary">Retry</button>
+                    <button data-saved-posts-action="retry" class="btn btn-primary">Retry</button>
                 </div>
             `;
         }
@@ -216,6 +216,17 @@ class SavedPostsView {
         this.scrollHandler = null;
     }
 }
+
+// Event delegation for saved posts actions
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-saved-posts-action]');
+    if (!target) return;
+
+    const action = target.dataset.savedPostsAction;
+    if (action === 'retry') {
+        savedPostsView.loadPosts();
+    }
+});
 
 // Initialize and export
 const savedPostsView = new SavedPostsView();

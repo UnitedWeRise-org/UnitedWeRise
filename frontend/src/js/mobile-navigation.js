@@ -49,7 +49,7 @@ function setupMobileInterface() {
             <input type="search" class="mobile-search-input" placeholder="Search..." autocomplete="off" autocapitalize="off" spellcheck="false" />
         </div>
         <div class="mobile-logo-container">
-            <div class="site-title-container" onclick="window.location.href='/'" title="United We Rise - Home">
+            <div class="site-title-container" data-mobile-action="go-home" title="United We Rise - Home">
                 <span class="site-title-left">United</span>
                 <div class="logo">
                     <img src="UWR Logo on Circle.png" alt="United We Rise" class="logo-circle">
@@ -63,35 +63,35 @@ function setupMobileInterface() {
     const mobileSidebar = document.createElement('div');
     mobileSidebar.className = `mobile-sidebar ${mobileSidebarState}`;
     mobileSidebar.innerHTML = `
-        <button class="mobile-sidebar-toggle" onclick="toggleMobileSidebar()">
+        <button class="mobile-sidebar-toggle" data-mobile-action="toggle-sidebar">
             <span id="sidebar-toggle-icon">›</span>
         </button>
         <nav class="mobile-sidebar-nav">
-            <a href="#" class="mobile-sidebar-item active" onclick="switchMobileView('feed')">
+            <a href="#" class="mobile-sidebar-item active" data-mobile-action="switch-view" data-view="feed">
                 <div class="mobile-sidebar-icon">📰</div>
                 <div class="mobile-sidebar-label">Feed</div>
             </a>
-            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('trending')">
+            <a href="#" class="mobile-sidebar-item" data-mobile-action="switch-view" data-view="trending">
                 <div class="mobile-sidebar-icon">📈</div>
                 <div class="mobile-sidebar-label">Trending</div>
             </a>
-            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('messages')">
+            <a href="#" class="mobile-sidebar-item" data-mobile-action="switch-view" data-view="messages">
                 <div class="mobile-sidebar-icon">💬</div>
                 <div class="mobile-sidebar-label">Messages</div>
             </a>
-            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('civic')">
+            <a href="#" class="mobile-sidebar-item" data-mobile-action="switch-view" data-view="civic">
                 <div class="mobile-sidebar-icon">🏛️</div>
                 <div class="mobile-sidebar-label">Civic</div>
             </a>
-            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('map')">
+            <a href="#" class="mobile-sidebar-item" data-mobile-action="switch-view" data-view="map">
                 <div class="mobile-sidebar-icon">🗺️</div>
                 <div class="mobile-sidebar-label">Map</div>
             </a>
-            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('donate')">
+            <a href="#" class="mobile-sidebar-item" data-mobile-action="switch-view" data-view="donate">
                 <div class="mobile-sidebar-icon">💰</div>
                 <div class="mobile-sidebar-label">Donate</div>
             </a>
-            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('profile')">
+            <a href="#" class="mobile-sidebar-item" data-mobile-action="switch-view" data-view="profile">
                 <div class="mobile-sidebar-icon">👤</div>
                 <div class="mobile-sidebar-label">Profile</div>
             </a>
@@ -553,5 +553,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedState = localStorage.getItem('mobileSidebarState');
     if (savedState) {
         mobileSidebarState = savedState;
+    }
+});
+
+// Event delegation for mobile navigation actions
+document.addEventListener('click', function(e) {
+    const target = e.target.closest('[data-mobile-action]');
+    if (!target) return;
+
+    e.preventDefault();
+    const action = target.dataset.mobileAction;
+    const view = target.dataset.view;
+
+    switch (action) {
+        case 'go-home':
+            window.location.href = '/';
+            break;
+        case 'toggle-sidebar':
+            toggleMobileSidebar();
+            break;
+        case 'switch-view':
+            if (view) switchMobileView(view);
+            break;
     }
 });

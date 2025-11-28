@@ -233,10 +233,10 @@ class UsernameRouter {
                             <h3>User Not Found</h3>
                             <p>The user <strong>@${username}</strong> doesn't exist or may have changed their username.</p>
                             <div class="mt-4">
-                                <button class="btn btn-primary" onclick="window.location.href='/'">
+                                <button class="btn btn-primary" data-router-action="go-home">
                                     Return Home
                                 </button>
-                                <button class="btn btn-outline-secondary ml-2" onclick="window.history.back()">
+                                <button class="btn btn-outline-secondary ml-2" data-router-action="go-back">
                                     Go Back
                                 </button>
                             </div>
@@ -291,6 +291,22 @@ if (document.readyState === 'loading') {
 } else {
     new UsernameRouter();
 }
+
+// Event delegation for router actions
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-router-action]');
+    if (!target) return;
+
+    const action = target.dataset.routerAction;
+    switch (action) {
+        case 'go-home':
+            window.location.href = '/';
+            break;
+        case 'go-back':
+            window.history.back();
+            break;
+    }
+});
 
 // Export for ES6 modules
 export default UsernameRouter;

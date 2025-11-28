@@ -570,7 +570,7 @@ export class RelationshipHandlers {
             friends.forEach(friend => {
                 const friendUser = friend.user1Id === window.currentUser?.id ? friend.user2 : friend.user1;
                 html += `
-                    <div class="friend-item" data-conversation-start="${friendUser.id}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 1rem; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='white'">
+                    <div class="friend-item" data-conversation-start="${friendUser.id}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 1rem; transition: background-color 0.2s;" data-hover-effect="list-item">
                         <div class="friend-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                             ${friendUser.firstName ? friendUser.firstName.charAt(0).toUpperCase() : '?'}
                         </div>
@@ -673,6 +673,17 @@ export const createFriendStatusBadge = (userId, status, size) => relationshipHan
 export const addFriendStatusToPost = (postElement, authorId) => relationshipHandlers.addFriendStatusToPost(postElement, authorId);
 export const showFriendsList = () => relationshipHandlers.showFriendsList();
 export const displayFriendsForMessaging = (friends) => relationshipHandlers.displayFriendsForMessaging(friends);
+
+// Hover effects event delegation for relationship handlers
+document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('[data-hover-effect="list-item"]');
+    if (target) target.style.backgroundColor = '#f8f9fa';
+});
+
+document.addEventListener('mouseout', (e) => {
+    const target = e.target.closest('[data-hover-effect="list-item"]');
+    if (target) target.style.backgroundColor = 'white';
+});
 
 // Make functions globally available for backward compatibility
 if (typeof window !== 'undefined') {

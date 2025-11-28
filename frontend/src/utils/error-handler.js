@@ -205,7 +205,7 @@ class ErrorHandler {
                 <div class="error-header">
                     <span class="error-icon">${errorMessage.icon}</span>
                     <h4 class="error-title">${errorMessage.title}</h4>
-                    <button class="error-close" onclick="this.closest('.error-notification').remove()">&times;</button>
+                    <button class="error-close" data-error-action="close">&times;</button>
                 </div>
                 <p class="error-message">${errorMessage.message}</p>
                 <div class="error-actions">
@@ -219,16 +219,14 @@ class ErrorHandler {
             </div>
         `;
 
-        // Add click handlers for actions
+        // Add click handlers for actions using event delegation
         notification.addEventListener('click', (e) => {
             if (e.target.classList.contains('error-action')) {
                 this.handleErrorAction(e.target.dataset.action, errorMessage);
             }
-        });
-
-        // Handle close
-        notification.querySelector('.error-close').addEventListener('click', () => {
-            this.dismissNotification(notification);
+            if (e.target.closest('[data-error-action="close"]')) {
+                this.dismissNotification(notification);
+            }
         });
 
         return notification;

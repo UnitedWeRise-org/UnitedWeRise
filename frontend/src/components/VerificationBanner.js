@@ -23,10 +23,10 @@ class VerificationBanner {
                         <strong>Email verification required</strong>
                         <span id="verificationMessage">Verify your email to secure your account</span>
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="verificationBanner.verify()">
+                    <button class="btn btn-primary btn-sm" data-verification-banner-action="verify">
                         Verify Now
                     </button>
-                    <button class="banner-close" onclick="verificationBanner.dismiss()">×</button>
+                    <button class="banner-close" data-verification-banner-action="dismiss">×</button>
                 </div>
             </div>
         `;
@@ -149,6 +149,22 @@ class VerificationBanner {
         }
     }
 }
+
+// Event delegation for verification banner actions
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-verification-banner-action]');
+    if (!target) return;
+
+    const action = target.dataset.verificationBannerAction;
+    switch (action) {
+        case 'verify':
+            verificationBanner.verify();
+            break;
+        case 'dismiss':
+            verificationBanner.dismiss();
+            break;
+    }
+});
 
 // Initialize verification banner
 const verificationBanner = new VerificationBanner();

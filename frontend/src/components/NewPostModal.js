@@ -87,7 +87,7 @@ export class NewPostModal {
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
                     <div style="flex: 1;">
                         <input type="file" id="modalMediaUpload" multiple accept="image/*,video/*" style="display: none;">
-                        <button onclick="document.getElementById('modalMediaUpload').click()" style="background: #666; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 6px;">
+                        <button data-post-modal-action="add-media" style="background: #666; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 6px;">
                             <span>📷</span>
                             <span>Add Media</span>
                         </button>
@@ -265,6 +265,17 @@ export class NewPostModal {
         }
     }
 }
+
+// Event delegation for post modal actions
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-post-modal-action]');
+    if (!target) return;
+
+    const action = target.dataset.postModalAction;
+    if (action === 'add-media') {
+        document.getElementById('modalMediaUpload')?.click();
+    }
+});
 
 // Initialize
 if (typeof window !== 'undefined') {

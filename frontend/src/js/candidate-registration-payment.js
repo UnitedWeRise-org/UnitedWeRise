@@ -57,7 +57,7 @@ class CandidateRegistrationPayment {
                 <div class="modal-content" style="max-width: 500px; margin: 10% auto; padding: 20px; background: white; border-radius: 8px;">
                     <div class="modal-header" style="text-align: center; margin-bottom: 20px;">
                         <h2>🗳️ Complete Candidate Registration</h2>
-                        <span class="close" onclick="this.closest('.modal').remove()" style="float: right; cursor: pointer; font-size: 24px;">&times;</span>
+                        <span class="close" data-registration-modal-action="close" style="float: right; cursor: pointer; font-size: 24px;">&times;</span>
                     </div>
                     
                     <div class="modal-body">
@@ -117,6 +117,17 @@ class CandidateRegistrationPayment {
         };
     }
 }
+
+// Event delegation for registration modal actions
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-registration-modal-action]');
+    if (!target) return;
+
+    const action = target.dataset.registrationModalAction;
+    if (action === 'close') {
+        target.closest('.modal')?.remove();
+    }
+});
 
 // Initialize the registration payment system
 window.candidateRegistrationPayment = new CandidateRegistrationPayment();

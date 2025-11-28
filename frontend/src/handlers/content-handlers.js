@@ -309,7 +309,7 @@ export class ContentHandlers {
             const timeAgo = this.getTimeAgo(new Date(topic.createdAt || Date.now()));
 
             html += `
-                <div class="trending-topic-card" style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" data-topic-enter="${topic.id}" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none'; this.style.transform='none'">
+                <div class="trending-topic-card" style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" data-topic-enter="${topic.id}" data-hover-effect="card">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
                         <span style="font-size: 1.2rem;">${isFeature ? '🔥' : '🏷️'}</span>
                         <div style="font-weight: bold; font-size: 1rem; flex: 1; color: #333;">${topic.title}</div>
@@ -632,7 +632,7 @@ export class ContentHandlers {
                 const timeAgo = lastMessage ? this.getTimeAgo(new Date(lastMessage.createdAt)) : '';
 
                 html += `
-                    <div class="conversation-item" data-conversation-id="${conversation.id}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='white'">
+                    <div class="conversation-item" data-conversation-id="${conversation.id}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" data-hover-effect="list-item">
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
                             <div style="font-weight: 500; color: #333;">${conversation.otherParticipant?.firstName} ${conversation.otherParticipant?.lastName}</div>
                             <div style="font-size: 0.8rem; color: #999;">${timeAgo}</div>
@@ -716,6 +716,33 @@ export const loadElectedOfficials = (zipCode, state) => contentHandlers.loadElec
 export const updateOfficialsPanel = (representatives) => contentHandlers.updateOfficialsPanel(representatives);
 export const loadConversations = () => contentHandlers.loadConversations();
 export const displayConversations = (conversations) => contentHandlers.displayConversations(conversations);
+
+// Hover effects event delegation
+document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('[data-hover-effect]');
+    if (!target) return;
+
+    const effect = target.dataset.hoverEffect;
+    if (effect === 'card') {
+        target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        target.style.transform = 'translateY(-2px)';
+    } else if (effect === 'list-item') {
+        target.style.backgroundColor = '#f8f9fa';
+    }
+});
+
+document.addEventListener('mouseout', (e) => {
+    const target = e.target.closest('[data-hover-effect]');
+    if (!target) return;
+
+    const effect = target.dataset.hoverEffect;
+    if (effect === 'card') {
+        target.style.boxShadow = 'none';
+        target.style.transform = 'none';
+    } else if (effect === 'list-item') {
+        target.style.backgroundColor = 'white';
+    }
+});
 
 // Make functions globally available for backward compatibility
 if (typeof window !== 'undefined') {
