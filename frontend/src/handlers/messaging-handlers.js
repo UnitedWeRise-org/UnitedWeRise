@@ -51,6 +51,17 @@ class MessagingHandlers {
                         window.sendMessage(conversationId);
                     }
                     break;
+                case 'back-to-conversations':
+                    if (typeof window.backToConversations === 'function') {
+                        window.backToConversations();
+                    }
+                    break;
+                case 'open-search':
+                    document.getElementById('searchInput')?.focus();
+                    if (typeof window.openSearch === 'function') {
+                        window.openSearch();
+                    }
+                    break;
             }
         });
 
@@ -122,7 +133,7 @@ function showNewConversationForm() {
 
     body.innerHTML = `
         <div style="display: flex; align-items: center; padding: 1vh; border-bottom: 1px solid #eee; background: #f9f9f9; min-height: 2vh;">
-            <button onclick="backToConversations()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 0.5rem;">←</button>
+            <button data-messaging-action="back-to-conversations" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 0.5rem;">←</button>
             <span style="font-weight: bold;">New Conversation</span>
         </div>
 
@@ -131,7 +142,7 @@ function showNewConversationForm() {
                 <p>To start a new conversation, use the search bar at the top of the page to find users.</p>
                 <p style="font-size: 0.9rem;">Search results will include options to message, follow, and add as friend.</p>
             </div>
-            <button onclick="document.getElementById('searchInput').focus(); openSearch();" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            <button data-messaging-action="open-search" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
                 Open Search
             </button>
         </div>
@@ -155,7 +166,7 @@ function showConversationView(conversationId, username, messages) {
 
     body.innerHTML = `
         <div style="display: flex; align-items: center; padding: 1vh; border-bottom: 1px solid #eee; background: #f9f9f9; min-height: 2vh;">
-            <button onclick="backToConversations()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 0.5rem;">←</button>
+            <button data-messaging-action="back-to-conversations" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 0.5rem;">←</button>
             <div class="user-avatar" style="margin-right: 0.5rem;">${username[0].toUpperCase()}</div>
             <span style="font-weight: bold;">${username}</span>
         </div>
@@ -189,7 +200,7 @@ function showConversationView(conversationId, username, messages) {
                 onkeypress="handleMessageKeyPress(event, '${conversationId}')"
             >
             <button
-                onclick="sendMessage('${conversationId}')"
+                data-messaging-action="send-message" data-conversation-id="${conversationId}"
                 style="background: #4b5c09; color: white; border: none; padding: 0.5vh 1rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem;"
             >
                 Send

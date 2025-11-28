@@ -27,6 +27,34 @@ class PolicyDisplay {
             'NEUTRAL': { icon: '🟡', color: '#6c757d', label: 'Neutral' },
             'CONDITIONAL': { icon: '🔄', color: '#fd7e14', label: 'Conditional' }
         };
+
+        this.setupEventDelegation();
+    }
+
+    /**
+     * Setup event delegation for policy display actions
+     */
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-policy-display-action]');
+            if (!target) return;
+
+            e.preventDefault();
+            const action = target.dataset.policyDisplayAction;
+            const positionId = target.dataset.positionId;
+
+            switch (action) {
+                case 'toggleDetails':
+                    if (positionId) this.togglePositionDetails(positionId);
+                    break;
+                case 'toggleAIAnalysis':
+                    this.toggleAIAnalysis();
+                    break;
+                case 'showModal':
+                    if (positionId) this.showPositionModal(positionId);
+                    break;
+            }
+        });
     }
 
     /**
@@ -202,7 +230,7 @@ class PolicyDisplay {
                 </div>
 
                 <div class="position-actions">
-                    <button class="expand-button" onclick="window.policyDisplay.togglePositionDetails('${position.id}')">
+                    <button class="expand-button" data-policy-display-action="toggleDetails" data-position-id="${position.id}">
                         Read More
                     </button>
                     <div class="position-priority">
@@ -252,7 +280,7 @@ class PolicyDisplay {
 
                 <!-- AI Analysis Toggle -->
                 <div class="ai-analysis-toggle">
-                    <button onclick="window.policyDisplay.toggleAIAnalysis()" class="ai-toggle-btn" id="aiToggleBtn">
+                    <button data-policy-display-action="toggleAIAnalysis" class="ai-toggle-btn" id="aiToggleBtn">
                         🤖 Show AI Analysis
                     </button>
                     <p class="ai-toggle-description">Use artificial intelligence to analyze policy similarities and differences</p>
@@ -304,7 +332,7 @@ class PolicyDisplay {
                                                 ` : ''}
                                                 <div class="position-title-small">${position.title}</div>
                                                 <div class="position-summary-small">${position.summary}</div>
-                                                <button class="view-details-small" onclick="window.policyDisplay.showPositionModal('${position.id}')">
+                                                <button class="view-details-small" data-policy-display-action="showModal" data-position-id="${position.id}">
                                                     View Details
                                                 </button>
                                             </div>

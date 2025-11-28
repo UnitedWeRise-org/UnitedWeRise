@@ -58,6 +58,10 @@ export class MyFeedHandlers {
             case 'create-post-from-feed':
                 this.createPostFromFeed();
                 break;
+            case 'openPhotoInNewTab':
+                const photoUrl = target.dataset.photoUrl;
+                if (photoUrl) window.open(photoUrl, '_blank');
+                break;
         }
     }
 
@@ -96,7 +100,7 @@ export class MyFeedHandlers {
             document.getElementById('mainContent').innerHTML = `
                 <div style="text-align: center; padding: 3rem;">
                     <h2>Please log in to view your feed</h2>
-                    <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                    <button data-auth-action="openLogin" class="btn">Log In</button>
                 </div>
             `;
             return;
@@ -296,7 +300,7 @@ export class MyFeedHandlers {
             document.getElementById('myFeedPosts').innerHTML = `
                 <div style="text-align: center; padding: 2rem;">
                     <p>Please log in to view your feed.</p>
-                    <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                    <button data-auth-action="openLogin" class="btn">Log In</button>
                 </div>
             `;
             return;
@@ -444,8 +448,9 @@ export class MyFeedHandlers {
                         <div style="margin-bottom: 1rem;">
                             ${post.photos.map(photo => `
                                 <img src="${photo.url}" alt="Post image"
-                                     style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 0.5rem; display: block;"
-                                     onclick="window.open('${photo.url}', '_blank')">
+                                     style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 0.5rem; display: block; cursor: pointer;"
+                                     data-feed-action="openPhotoInNewTab"
+                                     data-photo-url="${photo.url}">
                             `).join('')}
                         </div>
                     ` : ''}

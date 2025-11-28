@@ -111,11 +111,11 @@ class UserRelationshipDisplay {
         const sizeClass = this.options.size === 'sm' ? 'btn-sm' : this.options.size === 'lg' ? 'btn-lg' : '';
         
         return `
-            <button class="btn ${buttonClass} ${sizeClass} friend-btn" 
+            <button class="btn ${buttonClass} ${sizeClass} friend-btn"
                     data-user-id="${this.userId}"
-                    data-action="${action}"
-                    ${disabled ? 'disabled' : ''}
-                    onclick="handleFriendAction('${this.userId}', '${action}')">
+                    data-relationship-action="friend"
+                    data-friend-action="${action}"
+                    ${disabled ? 'disabled' : ''}>
                 ${buttonText}
             </button>
         `;
@@ -128,10 +128,10 @@ class UserRelationshipDisplay {
         const sizeClass = this.options.size === 'sm' ? 'btn-sm' : this.options.size === 'lg' ? 'btn-lg' : '';
         
         return `
-            <button class="btn ${buttonClass} ${sizeClass} follow-btn" 
+            <button class="btn ${buttonClass} ${sizeClass} follow-btn"
                     data-user-id="${this.userId}"
-                    data-following="${isFollowing}"
-                    onclick="handleFollowAction('${this.userId}', ${isFollowing})">
+                    data-relationship-action="follow"
+                    data-is-following="${isFollowing}">
                 ${buttonText}
             </button>
         `;
@@ -141,9 +141,9 @@ class UserRelationshipDisplay {
         const sizeClass = this.options.size === 'sm' ? 'btn-sm' : this.options.size === 'lg' ? 'btn-lg' : '';
         
         return `
-            <button class="btn btn-outline-primary ${sizeClass} message-btn" 
+            <button class="btn btn-outline-primary ${sizeClass} message-btn"
                     data-user-id="${this.userId}"
-                    onclick="openMessageDialog('${this.userId}')">
+                    data-relationship-action="message">
                 💬 Message
             </button>
         `;
@@ -222,6 +222,38 @@ function openMessageDialog(userId) {
     console.log('Opening message dialog for user:', userId);
     window.dispatchEvent(new CustomEvent('openMessage', { detail: { userId } }));
 }
+
+/**
+ * Setup event delegation for relationship actions
+ */
+function setupRelationshipEventDelegation() {
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-relationship-action]');
+        if (!target) return;
+
+        const action = target.dataset.relationshipAction;
+        const userId = target.dataset.userId;
+
+        if (!userId) return;
+
+        switch (action) {
+            case 'friend':
+                const friendAction = target.dataset.friendAction;
+                if (friendAction) handleFriendAction(userId, friendAction);
+                break;
+            case 'follow':
+                const isFollowing = target.dataset.isFollowing === 'true';
+                handleFollowAction(userId, isFollowing);
+                break;
+            case 'message':
+                openMessageDialog(userId);
+                break;
+        }
+    });
+}
+
+// Initialize event delegation
+setupRelationshipEventDelegation();
 
 // Utility function to quickly add relationship display to any element
 function addRelationshipDisplay(userId, containerElement, options = {}) {

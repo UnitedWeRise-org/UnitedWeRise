@@ -98,7 +98,7 @@ export async function loadMyFeedPosts() {
         document.getElementById('myFeedPosts').innerHTML = `
             <div style="text-align: center; padding: 2rem;">
                 <p>Please log in to view your feed.</p>
-                <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                <button data-auth-action="openLogin" class="btn">Log In</button>
             </div>
         `;
         return;
@@ -151,7 +151,7 @@ export async function loadMyFeedPosts() {
                 <div style="text-align: center; padding: 2rem;">
                     <p>Unable to load your feed. Please try again.</p>
                     <p><small>Error: ${error.message}</small></p>
-                    <button onclick="loadMyFeedPosts()" class="btn">Retry</button>
+                    <button data-feed-action="retry-feed" class="btn">Retry</button>
                 </div>
             `;
         }
@@ -261,8 +261,11 @@ async function displayMyFeedPostsFallback(posts, container, appendMode = false) 
                     <div class="post-media-inline single-photo" style="margin-top: 12px; border-radius: 12px; overflow: hidden; position: relative;">
                         <img src="${photo.url}"
                              alt="Post image"
-                             style="width: 100%; height: auto; display: block; max-height: 400px; object-fit: cover;"
-                             onclick="if(window.postComponent) postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                             style="width: 100%; height: auto; display: block; max-height: 400px; object-fit: cover; cursor: pointer;"
+                             data-media-action="openViewer"
+                             data-media-url="${photo.url}"
+                             data-media-type="${photo.mimeType}"
+                             data-media-id="${photo.id}"
                              loading="lazy">
                         ${isGif ? '<div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">GIF</div>' : ''}
                     </div>
@@ -277,8 +280,11 @@ async function displayMyFeedPostsFallback(posts, container, appendMode = false) 
                                 <div style="position: relative;">
                                     <img src="${photo.url}"
                                          alt="Post image ${index + 1}"
-                                         style="width: 100%; height: 200px; object-fit: cover; display: block;"
-                                         onclick="if(window.postComponent) postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                                         style="width: 100%; height: 200px; object-fit: cover; display: block; cursor: pointer;"
+                                         data-media-action="openViewer"
+                                         data-media-url="${photo.url}"
+                                         data-media-type="${photo.mimeType}"
+                                         data-media-id="${photo.id}"
                                          loading="lazy">
                                     ${isGif ? '<div style="position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px;">GIF</div>' : ''}
                                     ${post.photos.length > 4 && index === 3 ? `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold;">+${post.photos.length - 4}</div>` : ''}
@@ -386,7 +392,7 @@ export async function loadMoreMyFeedPosts() {
         errorDiv.style.cssText = 'text-align: center; padding: 1rem;';
         errorDiv.innerHTML = `
             <p style="color: #666; margin-bottom: 0.5rem;">Failed to refresh feed.</p>
-            <button onclick="loadMoreMyFeedPosts()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Retry</button>
+            <button data-feed-action="load-more-posts" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Retry</button>
         `;
         container.appendChild(errorDiv);
     }

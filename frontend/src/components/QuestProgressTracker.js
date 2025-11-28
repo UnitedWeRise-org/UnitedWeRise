@@ -15,8 +15,29 @@ class QuestProgressTracker {
         this.refreshInterval = null;
         this._isAuthenticated = false; // Cache auth state to avoid stale checks
 
+        // Setup event delegation
+        this.setupEventDelegation();
+
         // Initialize on load
         this.init();
+    }
+
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-quest-action]');
+            if (!target) return;
+
+            const action = target.dataset.questAction;
+
+            switch (action) {
+                case 'closeModal':
+                    target.closest('.modal-overlay')?.remove();
+                    break;
+                case 'loadQuestData':
+                    this.loadQuestData();
+                    break;
+            }
+        });
     }
 
     async init() {
@@ -235,7 +256,7 @@ class QuestProgressTracker {
                             ${rewards.specialRecognition ? `<div class="reward"><span class="reward-icon">🎖️</span> ${rewards.specialRecognition}</div>` : ''}
                         </div>
                     </div>
-                    <button class="continue-btn" onclick="this.closest('.modal-overlay').remove()">
+                    <button class="continue-btn" data-quest-action="closeModal">
                         Continue Your Journey
                     </button>
                 </div>
@@ -484,7 +505,7 @@ class QuestProgressTracker {
                 </div>
 
                 <div class="footer-actions">
-                    <button class="refresh-quests-btn" onclick="questProgressTracker.loadQuestData()">
+                    <button class="refresh-quests-btn" data-quest-action="loadQuestData">
                         <span class="btn-icon">🔄</span>
                         Refresh Progress
                     </button>
@@ -522,7 +543,7 @@ class QuestProgressTracker {
                     <div class="error-icon">⚠️</div>
                     <h4>Unable to Load Quests</h4>
                     <p>${message}</p>
-                    <button class="retry-btn" onclick="questProgressTracker.loadQuestData()">
+                    <button class="retry-btn" data-quest-action="loadQuestData">
                         Try Again
                     </button>
                 </div>
