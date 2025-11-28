@@ -106,7 +106,10 @@ class UWRMapLibre {
         
         // Setup responsive behavior
         this.setupResponsiveBehavior();
-        
+
+        // Setup event delegation for map UI
+        this.setupEventDelegation();
+
         // Setup event handlers
         this.setupEventHandlers();
         
@@ -187,6 +190,65 @@ class UWRMapLibre {
         }
 
         this.map.flyTo(enhancedOptions);
+    }
+
+    /**
+     * Setup event delegation for map UI elements
+     */
+    setupEventDelegation() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-map-action]');
+            if (!target) return;
+
+            const action = target.dataset.mapAction;
+
+            switch (action) {
+                case 'closeModal':
+                    target.closest('.insufficient-content-modal, .civic-modal-overlay, .modal-overlay')?.remove();
+                    break;
+                case 'closeOverlay':
+                    target.closest('.insufficient-content-overlay, .civic-modal-overlay')?.remove();
+                    break;
+                case 'stopPropagation':
+                    e.stopPropagation();
+                    break;
+                case 'rsvp':
+                    alert('RSVP feature coming soon!');
+                    break;
+                case 'share':
+                    alert('Share feature coming soon!');
+                    break;
+                case 'joinCommunity':
+                    alert('Full civic group features coming soon!');
+                    target.closest('.civic-modal-overlay')?.remove();
+                    break;
+                case 'trackAction':
+                    alert('Action tracking features coming soon!');
+                    target.closest('.civic-modal-overlay')?.remove();
+                    break;
+                case 'goBackToFeed':
+                    if (typeof goBackToFeed === 'function') goBackToFeed();
+                    break;
+                case 'toggleTrendingPanel':
+                    if (window.toggleTrendingPanel) window.toggleTrendingPanel();
+                    break;
+                case 'trendingBubble': {
+                    const isDummy = target.dataset.isDummy === 'true';
+                    const isAiTopic = target.dataset.isAiTopic === 'true';
+                    const topicId = target.dataset.topicId;
+                    const commentId = target.dataset.commentId;
+
+                    if (isDummy) {
+                        this.showInsufficientContentMessage();
+                    } else if (isAiTopic && topicId) {
+                        if (window.enterTopicMode) window.enterTopicMode(topicId);
+                    } else if (commentId) {
+                        if (window.navigateToComment) window.navigateToComment(commentId);
+                    }
+                    break;
+                }
+            }
+        });
     }
 
     setupResponsiveBehavior() {
@@ -795,7 +857,7 @@ class UWRMapLibre {
                     <p style="margin: 10px 0;">${event.description}</p>
                     <p style="margin: 5px 0;"><strong>👥 Expected Attendees:</strong> ${event.attendees}</p>
                     <div style="margin-top: 15px; display: flex; gap: 10px;">
-                        <button onclick="alert('RSVP feature coming soon!')" style="
+                        <button data-map-action="rsvp" style="
                             background: #4b5c09;
                             color: white;
                             border: none;
@@ -804,7 +866,7 @@ class UWRMapLibre {
                             cursor: pointer;
                             font-weight: bold;
                         ">RSVP</button>
-                        <button onclick="alert('Share feature coming soon!')" style="
+                        <button data-map-action="share" style="
                             background: #6c757d;
                             color: white;
                             border: none;
@@ -963,18 +1025,18 @@ class UWRMapLibre {
         const modal = document.createElement('div');
         modal.className = 'insufficient-content-modal';
         modal.innerHTML = `
-            <div class="insufficient-content-overlay" onclick="this.parentElement.remove()">
-                <div class="insufficient-content-popup" onclick="event.stopPropagation()">
+            <div class="insufficient-content-overlay" data-map-action="closeOverlay">
+                <div class="insufficient-content-popup" data-map-action="stopPropagation">
                     <div class="insufficient-content-header">
                         <h3>💬 Trending Conversations</h3>
-                        <button class="close-btn" onclick="this.closest('.insufficient-content-modal').remove()">&times;</button>
+                        <button class="close-btn" data-map-action="closeModal">&times;</button>
                     </div>
                     <div class="insufficient-content-body">
                         <p><strong>This is a placeholder.</strong> Once users begin posting content, these bubbles will populate with trending posts or summarized discussion topics, and clicking on them will navigate you to that discussion so you can join in.</p>
                         <p>Selecting different levels (National, State, Local) will populate topics trending in those jurisdictions, giving you insight into what's being discussed at each level of government and civic engagement.</p>
                         <p><em>Start the conversation! Share your thoughts on civic issues to help build this community-driven feature.</em></p>
                         <div class="insufficient-content-actions">
-                            <button class="primary-btn" onclick="this.closest('.insufficient-content-modal').remove()">Got it!</button>
+                            <button class="primary-btn" data-map-action="closeModal">Got it!</button>
                         </div>
                     </div>
                 </div>
@@ -1631,22 +1693,20 @@ class UWRMapLibre {
         const isAITopic = comment.topic || (comment.topicId && comment.aiTopic);
         const topicIdentifier = comment.topic || comment.topicId || comment.id;
 
-        let clickHandler, clickTitle;
+        let clickTitle;
         if (isDummyData) {
-            clickHandler = `uwrMap.showInsufficientContentMessage()`;
             clickTitle = "Click to learn more about this feature";
         } else {
-            clickHandler = isAITopic ?
-                `window.enterTopicMode && window.enterTopicMode('${topicIdentifier}')` :
-                `window.navigateToComment && window.navigateToComment('${comment.id}')`;
             clickTitle = isAITopic ?
                 "Click to view posts about this topic" :
                 "Click to view full conversation";
         }
-            
+
         const popupHtml = `
-            <div class="trending-bubble" onclick="${clickHandler}" 
-                 title="${clickTitle}" 
+            <div class="trending-bubble" data-map-action="trendingBubble"
+                 data-is-dummy="${isDummyData}"
+                 data-is-ai-topic="${isAITopic}"
+                 title="${clickTitle}"
                  data-comment-id="${comment.id}" ${isAITopic ? `data-topic-id="${topicIdentifier}"` : ''}>
                 <div class="bubble-content">
                     ${displayText}
@@ -1853,11 +1913,11 @@ class UWRMapLibre {
     showCivicGroupModal(jurisdiction, topic) {
         // Create modal to show civic group information
         const modalHtml = `
-            <div class="civic-modal-overlay" onclick="this.remove()">
-                <div class="civic-modal" onclick="event.stopPropagation()">
+            <div class="civic-modal-overlay" data-map-action="closeOverlay">
+                <div class="civic-modal" data-map-action="stopPropagation">
                     <div class="civic-modal-header">
                         <h3>💬 ${topic} Community</h3>
-                        <span class="civic-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</span>
+                        <span class="civic-modal-close" data-map-action="closeModal">&times;</span>
                     </div>
                     <div class="civic-modal-content">
                         <div class="civic-group-info">
@@ -1890,8 +1950,8 @@ class UWRMapLibre {
                         </div>
                     </div>
                     <div class="civic-modal-footer">
-                        <button class="modal-btn secondary" onclick="this.parentElement.parentElement.parentElement.remove()">Maybe Later</button>
-                        <button class="modal-btn primary" onclick="alert('Full civic group features coming soon!'); this.parentElement.parentElement.parentElement.remove();">Join Community</button>
+                        <button class="modal-btn secondary" data-map-action="closeModal">Maybe Later</button>
+                        <button class="modal-btn primary" data-map-action="joinCommunity">Join Community</button>
                     </div>
                 </div>
             </div>
@@ -1907,11 +1967,11 @@ class UWRMapLibre {
         const actionSteps = this.getActionSteps(actionType);
         
         const modalHtml = `
-            <div class="civic-modal-overlay" onclick="this.remove()">
-                <div class="civic-modal" onclick="event.stopPropagation()">
+            <div class="civic-modal-overlay" data-map-action="closeOverlay">
+                <div class="civic-modal" data-map-action="stopPropagation">
                     <div class="civic-modal-header">
                         <h3>🎯 Take Civic Action</h3>
-                        <span class="civic-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</span>
+                        <span class="civic-modal-close" data-map-action="closeModal">&times;</span>
                     </div>
                     <div class="civic-modal-content">
                         <div class="action-info">
@@ -1927,8 +1987,8 @@ class UWRMapLibre {
                         </div>
                     </div>
                     <div class="civic-modal-footer">
-                        <button class="modal-btn secondary" onclick="this.parentElement.parentElement.parentElement.remove()">Not Now</button>
-                        <button class="modal-btn primary" onclick="alert('Action tracking features coming soon!'); this.parentElement.parentElement.parentElement.remove();">I'll Do This</button>
+                        <button class="modal-btn secondary" data-map-action="closeModal">Not Now</button>
+                        <button class="modal-btn primary" data-map-action="trackAction">I'll Do This</button>
                     </div>
                 </div>
             </div>
@@ -2463,7 +2523,7 @@ window.navigateToComment = async function(commentId) {
             const conversationHtml = `
                 <div class="conversation-view">
                     <div class="conversation-header">
-                        <button onclick="goBackToFeed()" class="back-btn">← Back to Feed</button>
+                        <button data-map-action="goBackToFeed" class="back-btn">← Back to Feed</button>
                         <div class="conversation-meta">
                             <h2 class="conversation-title">${topicData.title}</h2>
                             <div class="conversation-location">
@@ -2576,7 +2636,7 @@ window.navigateToComment = async function(commentId) {
             const generalHtml = `
                 <div class="conversation-view">
                     <div class="conversation-header">
-                        <button onclick="goBackToFeed()" class="back-btn">← Back to Feed</button>
+                        <button data-map-action="goBackToFeed" class="back-btn">← Back to Feed</button>
                         <h2 class="conversation-title">Join the Discussion</h2>
                     </div>
                     
@@ -2588,8 +2648,8 @@ window.navigateToComment = async function(commentId) {
                                    Check out the latest trending topics below or start your own discussion.</p>
                             </div>
                             <div class="post-actions">
-                                <button class="btn" onclick="if(window.toggleTrendingPanel) window.toggleTrendingPanel()">View All Trending 🔥</button>
-                                <button class="btn" onclick="goBackToFeed()">Back to Feed</button>
+                                <button class="btn" data-map-action="toggleTrendingPanel">View All Trending 🔥</button>
+                                <button class="btn" data-map-action="goBackToFeed">Back to Feed</button>
                             </div>
                         </div>
                     </div>
@@ -2608,7 +2668,7 @@ window.navigateToComment = async function(commentId) {
                 <div class="error-message">
                     <h2>Unable to Load Conversation</h2>
                     <p>There was an error loading the discussion. Please try again.</p>
-                    <button class="btn" onclick="goBackToFeed()">Back to Feed</button>
+                    <button class="btn" data-map-action="goBackToFeed">Back to Feed</button>
                 </div>
             `;
         }
@@ -2626,7 +2686,7 @@ window.goBackToFeed = async function() {
             <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #4b5c09;">
                 <h3 style="margin: 0 0 0.5rem 0; color: #4b5c09;">💬 Want to see what's trending?</h3>
                 <p style="margin: 0 0 1rem 0;">Check out the hottest political discussions in your area by clicking the map bubbles or browsing trending topics.</p>
-                <button class="btn" onclick="if(window.toggleTrendingPanel) window.toggleTrendingPanel()" style="background: #4b5c09; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                <button class="btn" data-map-action="toggleTrendingPanel" style="background: #4b5c09; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
                     🔥 View Trending
                 </button>
             </div>

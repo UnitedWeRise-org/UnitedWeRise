@@ -352,16 +352,14 @@ function renderSearchSection(title, results, renderFunction) {
 function renderUserResult(user) {
     const currentUser = window.currentUser;
     return `
-        <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="openUserProfile('${user.id}', '${user.username}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
-            <div class="user-avatar user-card-trigger"
-                 onclick="event.stopPropagation(); showUserCardFromSearch(event, '${user.id}', {context: 'search', username: '${user.username}'})"
+        <div class="search-result-item search-result-hover" data-search-result-action="openUserProfile" data-user-id="${user.id}" data-username="${user.username}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="user-avatar user-card-trigger" data-search-result-action="showUserCard" data-user-id="${user.id}" data-username="${user.username}"
                  style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;"
                  title="Click to view profile card">
                 ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
             </div>
             <div style="flex: 1;">
-                <div class="user-card-trigger"
-                     onclick="event.stopPropagation(); showUserCardFromSearch(event, '${user.id}', {context: 'search', username: '${user.username}'})"
+                <div class="user-card-trigger" data-search-result-action="showUserCard" data-user-id="${user.id}" data-username="${user.username}"
                      style="font-weight: bold; font-size: 1rem; cursor: pointer;"
                      title="Click to view profile card">
                     ${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}
@@ -369,18 +367,18 @@ function renderUserResult(user) {
                 <div style="color: #666; font-size: 0.9rem;">@${user.username}</div>
                 <div style="color: #666; font-size: 0.8rem;">${user.followersCount || 0} followers${user.state ? ` • ${user.state}` : ''}${user.district ? ` • District ${user.district}` : ''}</div>
             </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
+            <div style="display: flex; gap: 0.5rem; align-items: center;" data-search-result-action="stopPropagation">
                 ${user.verified ? '<span style="color: #1d9bf0; margin-right: 0.5rem;">✓</span>' : ''}
                 ${user.id !== currentUser?.id ? `
-                    <button onclick="window.FollowUtils.toggleFollow('${user.id}', ${user.isFollowing || false})"
+                    <button data-search-result-action="toggleFollow" data-user-id="${user.id}" data-is-following="${user.isFollowing || false}"
                         style="padding: 0.25rem 0.5rem; background: ${user.isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
                         ${user.isFollowing ? 'Following' : 'Follow'}
                     </button>
-                    <button onclick="window.FriendUtils.sendFriendRequest('${user.id}')"
+                    <button data-search-result-action="sendFriendRequest" data-user-id="${user.id}"
                         style="padding: 0.25rem 0.5rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
                         Add Friend
                     </button>
-                    <button onclick="startConversationWithUser('${user.id}', '${user.username}')"
+                    <button data-search-result-action="startConversation" data-user-id="${user.id}" data-username="${user.username}"
                         style="padding: 0.25rem 0.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                         Message
                     </button>
@@ -393,7 +391,7 @@ function renderUserResult(user) {
 function renderPostResult(post) {
     const timeAgo = window.getTimeAgo ? window.getTimeAgo(new Date(post.createdAt)) : new Date(post.createdAt).toLocaleDateString();
     return `
-        <div class="search-result-item" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="showPostInFeed('${post.id}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+        <div class="search-result-item search-result-hover" data-search-result-action="showPost" data-post-id="${post.id}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
             <div style="display: flex; align-items: start; gap: 0.75rem;">
                 <div class="user-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
                     ${(post.author?.firstName?.[0] || post.author?.username?.[0] || 'U').toUpperCase()}
@@ -418,8 +416,9 @@ function renderPostResult(post) {
 }
 
 function renderOfficialResult(official) {
+    const isCandidate = official.politicalProfileType === 'CANDIDATE';
     return `
-        <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="${official.politicalProfileType === 'CANDIDATE' ? `openUserProfile('${official.id}', '${official.username}')` : `showOfficialDetails('${official.id}')`}" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+        <div class="search-result-item search-result-hover" data-search-result-action="${isCandidate ? 'openUserProfile' : 'showOfficialDetails'}" data-user-id="${official.id}" data-username="${official.username || ''}" data-official-id="${official.id}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
             <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #1976d2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                 🏛️
             </div>
@@ -431,13 +430,13 @@ function renderOfficialResult(official) {
                     ${official.chamber ? ` • ${official.chamber}` : ''}
                 </div>
             </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
-                <button onclick="viewOfficialProfile('${official.id}')" 
+            <div style="display: flex; gap: 0.5rem; align-items: center;" data-search-result-action="stopPropagation">
+                <button data-search-result-action="viewOfficialProfile" data-official-id="${official.id}"
                     style="padding: 0.25rem 0.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                     View Profile
                 </button>
                 ${official.contactInfo ? `
-                    <button onclick="contactOfficial('${official.id}')" 
+                    <button data-search-result-action="contactOfficial" data-official-id="${official.id}"
                         style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                         Contact
                     </button>
@@ -449,7 +448,7 @@ function renderOfficialResult(official) {
 
 function renderCandidateResult(candidate) {
     return `
-        <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="openUserProfile('${candidate.id}', '${candidate.username}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+        <div class="search-result-item search-result-hover" data-search-result-action="openCandidateProfile" data-candidate-id="${candidate.id}" data-username="${candidate.username}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
             <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                 🗳️
             </div>
@@ -461,8 +460,8 @@ function renderCandidateResult(candidate) {
                     ${candidate.candidateStatus ? ` • ${candidate.candidateStatus}` : ''}
                 </div>
             </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
-                <button onclick="openUserProfile('${candidate.id}', '${candidate.username}')" 
+            <div style="display: flex; gap: 0.5rem; align-items: center;" data-search-result-action="stopPropagation">
+                <button data-search-result-action="viewCandidateProfile" data-candidate-id="${candidate.id}" data-username="${candidate.username}"
                     style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                     View Profile
                 </button>
@@ -478,7 +477,7 @@ function renderCandidateResult(candidate) {
 
 function renderTopicResult(topic) {
     return `
-        <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="enterTopicMode('${topic.id}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+        <div class="search-result-item search-result-hover" data-search-result-action="enterTopic" data-topic-id="${topic.id}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
             <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #ff9800; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                 🏷️
             </div>
@@ -493,8 +492,8 @@ function renderTopicResult(topic) {
                     ${topic.trending ? '<span style="color: #ff9800;">🔥 Trending</span>' : ''}
                 </div>
             </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
-                <button onclick="enterTopicMode('${topic.id}')" 
+            <div style="display: flex; gap: 0.5rem; align-items: center;" data-search-result-action="stopPropagation">
+                <button data-search-result-action="viewTopic" data-topic-id="${topic.id}"
                     style="padding: 0.25rem 0.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                     View Topic
                 </button>
@@ -658,14 +657,14 @@ function displayOfficialProfile(official) {
                 
                 <div style="display: flex; gap: 1rem; justify-content: center;">
                     ${official.contactInfo ? `
-                        <button onclick="contactOfficial('${official.id}')" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                        <button data-search-result-action="contactOfficial" data-official-id="${official.id}" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
                             Contact ${official.name}
                         </button>
                     ` : ''}
-                    <button onclick="viewVotingRecords('${official.bioguideId || official.id}')" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                    <button data-search-result-action="viewVotingRecords" data-bioguide-id="${official.bioguideId || official.id}" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
                         View Voting Records
                     </button>
-                    <button onclick="viewOfficialNews('${official.name}')" style="padding: 0.75rem 1.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                    <button data-search-result-action="viewOfficialNews" data-official-name="${official.name}" style="padding: 0.75rem 1.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
                         Recent News
                     </button>
                 </div>
@@ -784,9 +783,108 @@ async function openUserFeed(userId, username) {
 
 // Setup search input event listener when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupSearchInput);
+    document.addEventListener('DOMContentLoaded', () => {
+        setupSearchInput();
+        setupEventDelegation();
+    });
 } else {
     setupSearchInput();
+    setupEventDelegation();
+}
+
+/**
+ * Setup event delegation for search results
+ */
+function setupEventDelegation() {
+    // Add hover styles for search results
+    if (!document.getElementById('search-result-hover-styles')) {
+        const style = document.createElement('style');
+        style.id = 'search-result-hover-styles';
+        style.textContent = `.search-result-hover:hover { background-color: #f9f9f9 !important; }`;
+        document.head.appendChild(style);
+    }
+
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-search-result-action]');
+        if (!target) return;
+
+        const action = target.dataset.searchResultAction;
+        const userId = target.dataset.userId;
+        const username = target.dataset.username;
+        const postId = target.dataset.postId;
+        const officialId = target.dataset.officialId;
+        const candidateId = target.dataset.candidateId;
+        const topicId = target.dataset.topicId;
+        const bioguideId = target.dataset.bioguideId;
+        const officialName = target.dataset.officialName;
+
+        switch (action) {
+            case 'openUserProfile':
+                openUserProfile(userId, username);
+                break;
+            case 'showUserCard':
+                e.stopPropagation();
+                showUserCardFromSearch(e, userId, { context: 'search', username });
+                break;
+            case 'toggleFollow':
+                e.stopPropagation();
+                if (window.FollowUtils) {
+                    window.FollowUtils.toggleFollow(userId, target.dataset.isFollowing === 'true');
+                }
+                break;
+            case 'sendFriendRequest':
+                e.stopPropagation();
+                if (window.FriendUtils) {
+                    window.FriendUtils.sendFriendRequest(userId);
+                }
+                break;
+            case 'startConversation':
+                e.stopPropagation();
+                if (typeof startConversationWithUser === 'function') {
+                    startConversationWithUser(userId, username);
+                }
+                break;
+            case 'showPost':
+                showPostInFeed(postId);
+                break;
+            case 'showOfficialDetails':
+                showOfficialDetails(officialId);
+                break;
+            case 'viewOfficialProfile':
+                e.stopPropagation();
+                viewOfficialProfile(officialId);
+                break;
+            case 'contactOfficial':
+                e.stopPropagation();
+                contactOfficial(officialId);
+                break;
+            case 'openCandidateProfile':
+                openUserProfile(candidateId, username);
+                break;
+            case 'viewCandidateProfile':
+                e.stopPropagation();
+                openUserProfile(candidateId, username);
+                break;
+            case 'enterTopic':
+                enterTopicMode(topicId);
+                break;
+            case 'viewTopic':
+                e.stopPropagation();
+                enterTopicMode(topicId);
+                break;
+            case 'viewVotingRecords':
+                e.stopPropagation();
+                viewVotingRecords(bioguideId);
+                break;
+            case 'viewOfficialNews':
+                e.stopPropagation();
+                viewOfficialNews(officialName);
+                break;
+            case 'stopPropagation':
+                e.stopPropagation();
+                break;
+        }
+    });
 }
 
 function setupSearchInput() {
