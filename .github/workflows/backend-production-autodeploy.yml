@@ -181,7 +181,7 @@ jobs:
           echo ""
 
           echo "3️⃣ Detecting schema drift..."
-          MIGRATE_STATUS=$(npx prisma migrate status 2>&1)
+          MIGRATE_STATUS=$(npx prisma migrate status 2>&1 || true)
           echo "$MIGRATE_STATUS"
 
           if echo "$MIGRATE_STATUS" | grep -qi "drift"; then
