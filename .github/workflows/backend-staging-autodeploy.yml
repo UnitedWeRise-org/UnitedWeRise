@@ -98,47 +98,61 @@ jobs:
           echo "so we run them separately before Prisma migrations."
           echo ""
 
+          # Install pg module for direct database access
+          npm install pg --no-save
+
           # Create a Node script to add enum values outside transaction
           cat > add-enum-values.js << 'ENUMSCRIPT'
-          const { PrismaClient } = require('@prisma/client');
-          const prisma = new PrismaClient();
+          const { Client } = require('pg');
 
           async function addEnumValues() {
+            const client = new Client({ connectionString: process.env.DATABASE_URL });
+
             try {
-              // Add NEW_POST to NotificationType if not exists
-              await prisma.$executeRawUnsafe(`
-                DO $$
-                BEGIN
-                  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'NEW_POST' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')) THEN
-                    ALTER TYPE "NotificationType" ADD VALUE 'NEW_POST';
-                  END IF;
-                END $$;
-              `).catch(e => console.log('NEW_POST may already exist or error:', e.message));
+              await client.connect();
+              console.log('Connected to database');
 
-              // Add MESSAGE_REQUEST to NotificationType if not exists
-              await prisma.$executeRawUnsafe(`
-                DO $$
-                BEGIN
-                  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'MESSAGE_REQUEST' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')) THEN
-                    ALTER TYPE "NotificationType" ADD VALUE 'MESSAGE_REQUEST';
-                  END IF;
-                END $$;
-              `).catch(e => console.log('MESSAGE_REQUEST may already exist or error:', e.message));
+              // Check and add NEW_POST
+              const checkNewPost = await client.query(`
+                SELECT 1 FROM pg_enum
+                WHERE enumlabel = 'NEW_POST'
+                AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')
+              `);
 
-              console.log('✅ Enum values processed');
+              if (checkNewPost.rows.length === 0) {
+                await client.query(`ALTER TYPE "NotificationType" ADD VALUE 'NEW_POST'`);
+                console.log('✅ Added NEW_POST to NotificationType');
+              } else {
+                console.log('ℹ️  NEW_POST already exists in NotificationType');
+              }
+
+              // Check and add MESSAGE_REQUEST
+              const checkMsgReq = await client.query(`
+                SELECT 1 FROM pg_enum
+                WHERE enumlabel = 'MESSAGE_REQUEST'
+                AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')
+              `);
+
+              if (checkMsgReq.rows.length === 0) {
+                await client.query(`ALTER TYPE "NotificationType" ADD VALUE 'MESSAGE_REQUEST'`);
+                console.log('✅ Added MESSAGE_REQUEST to NotificationType');
+              } else {
+                console.log('ℹ️  MESSAGE_REQUEST already exists in NotificationType');
+              }
+
+              console.log('✅ Enum values processing complete');
             } catch (error) {
-              console.log('Enum processing note:', error.message);
+              console.error('Error processing enum values:', error.message);
+              // Don't fail the build - the values might already exist
             } finally {
-              await prisma.$disconnect();
+              await client.end();
             }
           }
 
-          addEnumValues();
+          addEnumValues().catch(console.error);
           ENUMSCRIPT
 
-          # Generate Prisma client and run the script
-          npx prisma generate
-          node add-enum-values.js || echo "Enum script completed (may have warnings)"
+          node add-enum-values.js
           rm add-enum-values.js
 
           echo ""
