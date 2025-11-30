@@ -5,6 +5,8 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validateMessage } from '../middleware/validation';
 import { messageLimiter } from '../middleware/rateLimiting';
 import { logger } from '../services/logger';
+import { createNotification } from './notifications';
+import { FriendService } from '../services/relationshipService';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -688,12 +690,50 @@ router.post('/conversations/:conversationId/messages', requireAuth, messageLimit
       return res.status(403).json({ error: 'Access denied to this conversation' });
     }
 
-    // Create message
+    // Get the other participant(s) in this conversation
+    const otherParticipants = await prisma.conversationParticipant.findMany({
+      where: {
+        conversationId,
+        userId: { not: userId }
+      },
+      select: { userId: true }
+    });
+
+    // For 1:1 conversations, check friendship status to determine message status
+    let messageStatus: 'PENDING' | 'DELIVERED' = 'DELIVERED';
+    let recipientId: string | null = null;
+
+    if (otherParticipants.length === 1) {
+      recipientId = otherParticipants[0].userId;
+
+      // Check if they are friends
+      const friendStatus = await FriendService.getFriendStatus(userId, recipientId);
+
+      // If not friends, check if there's already an accepted conversation (previous message request accepted)
+      if (!friendStatus.isFriend) {
+        // Check if there are any existing DELIVERED messages in this conversation
+        // If yes, the message request was previously accepted
+        const existingDeliveredMessage = await prisma.message.findFirst({
+          where: {
+            conversationId,
+            status: 'DELIVERED'
+          }
+        });
+
+        if (!existingDeliveredMessage) {
+          // First message from non-friend - set as PENDING
+          messageStatus = 'PENDING';
+        }
+      }
+    }
+
+    // Create message with appropriate status
     const message = await prisma.message.create({
       data: {
         content: content.trim(),
         senderId: userId,
-        conversationId
+        conversationId,
+        status: messageStatus
       },
       include: {
         sender: {
@@ -718,12 +758,295 @@ router.post('/conversations/:conversationId/messages', requireAuth, messageLimit
       }
     });
 
+    // If this is a pending message (DM request), send notification to recipient
+    if (messageStatus === 'PENDING' && recipientId) {
+      const senderName = message.sender.firstName && message.sender.lastName
+        ? `${message.sender.firstName} ${message.sender.lastName}`
+        : message.sender.username;
+
+      createNotification(
+        'MESSAGE_REQUEST',
+        userId,
+        recipientId,
+        `${senderName} wants to message you`,
+        undefined,
+        undefined
+      ).catch(error => logger.error({ error }, 'Failed to create message request notification'));
+    }
+
     res.status(201).json({
-      message: 'Message sent successfully',
-      data: message
+      message: messageStatus === 'PENDING' ? 'Message request sent - awaiting acceptance' : 'Message sent successfully',
+      data: {
+        ...message,
+        isPending: messageStatus === 'PENDING'
+      }
     });
   } catch (error) {
     logger.error({ error, userId: req.user?.id, conversationId: req.params.conversationId }, 'Send message error');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/messages/requests:
+ *   get:
+ *     tags: [Message]
+ *     summary: Get pending message requests
+ *     description: Returns conversations with pending message requests from non-friends
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Message requests retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 requests:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       conversationId:
+ *                         type: string
+ *                       sender:
+ *                         type: object
+ *                       messagePreview:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/requests', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+
+    // Find conversations where this user has received pending messages
+    const pendingMessages = await prisma.message.findMany({
+      where: {
+        status: 'PENDING',
+        conversation: {
+          participants: {
+            some: { userId }
+          }
+        },
+        senderId: { not: userId } // Only messages sent TO this user
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        },
+        conversation: {
+          select: { id: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Group by conversation and get the first message from each
+    const requestsByConversation = new Map();
+    for (const msg of pendingMessages) {
+      if (!requestsByConversation.has(msg.conversationId)) {
+        requestsByConversation.set(msg.conversationId, {
+          conversationId: msg.conversationId,
+          sender: msg.sender,
+          messagePreview: msg.content.substring(0, 100) + (msg.content.length > 100 ? '...' : ''),
+          messageCount: 1,
+          createdAt: msg.createdAt
+        });
+      } else {
+        // Increment count for additional pending messages
+        requestsByConversation.get(msg.conversationId).messageCount++;
+      }
+    }
+
+    res.json({
+      requests: Array.from(requestsByConversation.values()),
+      count: requestsByConversation.size
+    });
+  } catch (error) {
+    logger.error({ error, userId: req.user?.id }, 'Get message requests error');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/messages/requests/{conversationId}/accept:
+ *   put:
+ *     tags: [Message]
+ *     summary: Accept a message request
+ *     description: Accepts pending messages from a conversation, allowing further communication
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: conversationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Message request accepted
+ *       403:
+ *         description: Not authorized to accept this request
+ *       404:
+ *         description: No pending request found
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/requests/:conversationId/accept', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { conversationId } = req.params;
+
+    // Verify user is a participant in this conversation
+    const participant = await prisma.conversationParticipant.findUnique({
+      where: {
+        userId_conversationId: {
+          userId,
+          conversationId
+        }
+      }
+    });
+
+    if (!participant) {
+      return res.status(403).json({ error: 'Not authorized to access this conversation' });
+    }
+
+    // Check if there are pending messages in this conversation (not from this user)
+    const pendingMessages = await prisma.message.findMany({
+      where: {
+        conversationId,
+        status: 'PENDING',
+        senderId: { not: userId }
+      }
+    });
+
+    if (pendingMessages.length === 0) {
+      return res.status(404).json({ error: 'No pending message request found' });
+    }
+
+    // Update all pending messages in this conversation to ACCEPTED
+    await prisma.message.updateMany({
+      where: {
+        conversationId,
+        status: 'PENDING'
+      },
+      data: {
+        status: 'ACCEPTED'
+      }
+    });
+
+    // Also mark future messages as DELIVERED by creating a "delivered" marker
+    // This is handled in the send message logic - if any DELIVERED message exists, future are DELIVERED
+
+    res.json({
+      message: 'Message request accepted',
+      conversationId,
+      acceptedCount: pendingMessages.length
+    });
+  } catch (error) {
+    logger.error({ error, userId: req.user?.id, conversationId: req.params.conversationId }, 'Accept message request error');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/messages/requests/{conversationId}/decline:
+ *   put:
+ *     tags: [Message]
+ *     summary: Decline a message request
+ *     description: Declines pending messages from a conversation. Messages are deleted.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: conversationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Message request declined
+ *       403:
+ *         description: Not authorized to decline this request
+ *       404:
+ *         description: No pending request found
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/requests/:conversationId/decline', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { conversationId } = req.params;
+
+    // Verify user is a participant in this conversation
+    const participant = await prisma.conversationParticipant.findUnique({
+      where: {
+        userId_conversationId: {
+          userId,
+          conversationId
+        }
+      }
+    });
+
+    if (!participant) {
+      return res.status(403).json({ error: 'Not authorized to access this conversation' });
+    }
+
+    // Check if there are pending messages in this conversation (not from this user)
+    const pendingMessages = await prisma.message.findMany({
+      where: {
+        conversationId,
+        status: 'PENDING',
+        senderId: { not: userId }
+      }
+    });
+
+    if (pendingMessages.length === 0) {
+      return res.status(404).json({ error: 'No pending message request found' });
+    }
+
+    // Delete pending messages (decline = remove the request)
+    await prisma.message.deleteMany({
+      where: {
+        conversationId,
+        status: 'PENDING'
+      }
+    });
+
+    // Also delete the conversation if it has no messages left
+    const remainingMessages = await prisma.message.count({
+      where: { conversationId }
+    });
+
+    if (remainingMessages === 0) {
+      await prisma.conversation.delete({
+        where: { id: conversationId }
+      });
+    }
+
+    res.json({
+      message: 'Message request declined',
+      conversationId,
+      deletedCount: pendingMessages.length
+    });
+  } catch (error) {
+    logger.error({ error, userId: req.user?.id, conversationId: req.params.conversationId }, 'Decline message request error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

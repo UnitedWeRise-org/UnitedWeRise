@@ -355,6 +355,79 @@ router.get('/subscription-status/:userId', requireAuth, async (req: AuthRequest,
     }
 });
 
+/**
+ * @swagger
+ * /api/relationships/subscribe/{userId}/notifications:
+ *   put:
+ *     tags: [Relationship]
+ *     summary: Update subscription notification preference
+ *     description: Enable or disable notifications when subscribed user creates new posts. Default is OFF (opt-in).
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user you're subscribed to
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - enabled
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *                 description: Whether to receive notifications for new posts
+ *     responses:
+ *       200:
+ *         description: Notification preference updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notifyOnNewPosts:
+ *                       type: boolean
+ *       400:
+ *         description: Not subscribed to this user or invalid request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/subscribe/:userId/notifications', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user!.id;
+        const { enabled } = req.body;
+
+        if (typeof enabled !== 'boolean') {
+            return res.status(400).json({ error: 'enabled must be a boolean' });
+        }
+
+        const result = await SubscriptionService.updateNotificationPreference(currentUserId, userId, enabled);
+
+        if (result.success) {
+            res.json({ message: result.message, data: result.data });
+        } else {
+            res.status(400).json({ error: result.message });
+        }
+    } catch (error) {
+        logger.error({ err: error, userId: req.params.userId, currentUserId: req.user!.id }, 'Update subscription notification preference error');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get subscribers list
 router.get('/:userId/subscribers', async (req, res) => {
     try {

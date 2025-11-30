@@ -12,6 +12,51 @@ const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
+ * Helper function to filter posts by audience based on friendship status
+ * @param posts Array of posts with audience field
+ * @param friendIds Set of friend user IDs
+ * @returns Filtered posts respecting audience settings
+ */
+function filterPostsByAudience(posts, friendIds) {
+    return posts.filter(post => {
+        const audience = post.audience || 'PUBLIC';
+        // PUBLIC posts are visible to everyone
+        if (audience === 'PUBLIC')
+            return true;
+        // FRIENDS_ONLY posts only visible to friends of the author
+        if (audience === 'FRIENDS_ONLY') {
+            return friendIds.has(post.authorId);
+        }
+        // NON_FRIENDS posts only visible to non-friends
+        if (audience === 'NON_FRIENDS') {
+            return !friendIds.has(post.authorId);
+        }
+        return true; // Default to visible for unknown audience types
+    });
+}
+/**
+ * Get friend IDs for a user (both directions of friendship)
+ */
+async function getFriendIds(userId) {
+    const friendships = await prisma_1.prisma.friendship.findMany({
+        where: {
+            OR: [{ requesterId: userId }, { recipientId: userId }],
+            status: 'ACCEPTED'
+        },
+        select: { requesterId: true, recipientId: true }
+    });
+    const friendIds = new Set();
+    for (const f of friendships) {
+        if (f.requesterId === userId) {
+            friendIds.add(f.recipientId);
+        }
+        else {
+            friendIds.add(f.requesterId);
+        }
+    }
+    return friendIds;
+}
+/**
  * @swagger
  * /api/feed:
  *   get:
@@ -101,12 +146,17 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
         const customWeights = req.query.weights ? JSON.parse(req.query.weights) : undefined;
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
+        // Get friend IDs for audience filtering
+        const friendIds = await getFriendIds(userId);
         // Generate larger feed and slice for pagination
         // We need to fetch more than just limit+offset to ensure randomization
-        const fetchLimit = limitNum + offsetNum + 50; // Get extra posts for proper randomization
-        const feedResult = await probabilityFeedService_1.ProbabilityFeedService.generateFeed(userId, fetchLimit, customWeights);
-        // Apply offset and limit to the generated feed
-        const paginatedPosts = feedResult.posts.slice(offsetNum, offsetNum + limitNum);
+        // Fetch extra posts to account for audience filtering
+        const fetchLimit = (limitNum + offsetNum + 50) * 1.5; // Get extra posts for audience filtering
+        const feedResult = await probabilityFeedService_1.ProbabilityFeedService.generateFeed(userId, Math.ceil(fetchLimit), customWeights);
+        // Apply audience filtering based on friendship status
+        const audienceFilteredPosts = filterPostsByAudience(feedResult.posts, friendIds);
+        // Apply offset and limit to the filtered feed
+        const paginatedPosts = audienceFilteredPosts.slice(offsetNum, offsetNum + limitNum);
         // Add user's like status to each post (use paginated posts)
         const postIds = paginatedPosts.map(p => p.id);
         const userLikes = await prisma_1.prisma.like.findMany({
@@ -156,8 +206,14 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
  * /api/feed/following:
  *   get:
  *     tags: [Feed]
- *     summary: Get posts from followed users only
- *     description: Returns chronological feed of posts only from users the current user follows. Returns empty feed if not following anyone.
+ *     summary: Get posts from followed, subscribed, and friend users with priority boosting
+ *     description: |
+ *       Returns feed of posts from users the current user follows, subscribes to, or is friends with.
+ *       Posts are sorted using a hybrid algorithm combining recency with relationship priority:
+ *       - Subscriptions: 2x priority boost (highest)
+ *       - Friends: 1.5x priority boost
+ *       - Follows: 1.0x (base priority)
+ *       Uses 24-hour half-life decay for recency scoring.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -240,14 +296,32 @@ router.get('/following', auth_1.requireAuth, async (req, res) => {
         const { limit = 50, offset = 0 } = req.query;
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
-        // Get list of users this user follows
-        const follows = await prisma_1.prisma.follow.findMany({
-            where: { followerId: userId },
-            select: { followingId: true }
-        });
-        const followedUserIds = follows.map(f => f.followingId);
-        // If not following anyone, return empty feed
-        if (followedUserIds.length === 0) {
+        // Fetch all relationship types in parallel for efficiency
+        const [follows, subscriptions, friendships] = await Promise.all([
+            prisma_1.prisma.follow.findMany({
+                where: { followerId: userId },
+                select: { followingId: true }
+            }),
+            prisma_1.prisma.subscription.findMany({
+                where: { subscriberId: userId },
+                select: { subscribedId: true }
+            }),
+            prisma_1.prisma.friendship.findMany({
+                where: {
+                    OR: [{ requesterId: userId }, { recipientId: userId }],
+                    status: 'ACCEPTED'
+                },
+                select: { requesterId: true, recipientId: true }
+            })
+        ]);
+        // Create sets for quick lookup
+        const followedIds = new Set(follows.map(f => f.followingId));
+        const subscribedIds = new Set(subscriptions.map(s => s.subscribedId));
+        const friendIds = new Set(friendships.map(f => f.requesterId === userId ? f.recipientId : f.requesterId));
+        // Combine all user IDs (union)
+        const allRelatedIds = new Set([...followedIds, ...subscribedIds, ...friendIds]);
+        // If no relationships, return empty feed with helpful message
+        if (allRelatedIds.size === 0) {
             return res.json({
                 posts: [],
                 pagination: {
@@ -255,13 +329,16 @@ router.get('/following', auth_1.requireAuth, async (req, res) => {
                     offset: offsetNum,
                     count: 0,
                     hasMore: false
-                }
+                },
+                message: 'Follow, subscribe to, or become friends with users to see their posts here!'
             });
         }
-        // Get posts from followed users
+        // Fetch more posts than needed for proper scoring and pagination
+        const fetchLimit = limitNum + offsetNum + 50;
+        // Get posts from all related users
         const posts = await prisma_1.prisma.post.findMany({
             where: {
-                authorId: { in: followedUserIds },
+                authorId: { in: Array.from(allRelatedIds) },
                 isDeleted: false,
                 feedVisible: true
             },
@@ -304,11 +381,42 @@ router.get('/following', auth_1.requireAuth, async (req, res) => {
             orderBy: {
                 createdAt: 'desc'
             },
-            skip: offsetNum,
-            take: limitNum
+            take: fetchLimit
         });
+        // Calculate relationship multiplier for each author
+        const getRelationshipMultiplier = (authorId) => {
+            // Subscriptions get highest priority (2x)
+            if (subscribedIds.has(authorId))
+                return 2.0;
+            // Friends get elevated priority (1.5x)
+            if (friendIds.has(authorId))
+                return 1.5;
+            // Regular follows get base priority (1.0x)
+            return 1.0;
+        };
+        // Calculate recency score with 24-hour half-life decay
+        const calculateRecencyScore = (createdAt) => {
+            const ageInHours = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+            const halfLife = 24; // 24-hour half-life
+            return Math.pow(0.5, ageInHours / halfLife);
+        };
+        // Calculate combined score for each post
+        const postsWithScores = posts.map(post => {
+            const recencyScore = calculateRecencyScore(new Date(post.createdAt));
+            const relationshipMultiplier = getRelationshipMultiplier(post.authorId);
+            const combinedScore = recencyScore * relationshipMultiplier;
+            return {
+                ...post,
+                _feedScore: combinedScore,
+                _relationshipMultiplier: relationshipMultiplier
+            };
+        });
+        // Sort by combined score (descending) and apply pagination
+        const sortedPosts = postsWithScores
+            .sort((a, b) => b._feedScore - a._feedScore)
+            .slice(offsetNum, offsetNum + limitNum);
         // Add user's like status to each post
-        const postIds = posts.map(p => p.id);
+        const postIds = sortedPosts.map(p => p.id);
         const userLikes = await prisma_1.prisma.like.findMany({
             where: {
                 userId,
@@ -317,12 +425,15 @@ router.get('/following', auth_1.requireAuth, async (req, res) => {
             select: { postId: true }
         });
         const likedPostIds = new Set(userLikes.map(like => like.postId));
-        const postsWithLikeStatus = posts.map(post => ({
+        // Format posts for response (remove internal scoring fields)
+        const postsWithLikeStatus = sortedPosts.map(post => ({
             ...post,
             likesCount: post._count.likes,
             commentsCount: post._count.comments,
             isLiked: likedPostIds.has(post.id),
-            _count: undefined
+            _count: undefined,
+            _feedScore: undefined,
+            _relationshipMultiplier: undefined
         }));
         res.json({
             posts: postsWithLikeStatus,

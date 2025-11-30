@@ -167,7 +167,7 @@ export class FeedToggle {
                 <div style="font-size: 24px; margin-bottom: 8px;">👋</div>
                 <div style="font-weight: 600; color: #2e7d32; margin-bottom: 4px;">Welcome to UnitedWeRise!</div>
                 <div style="color: #555; font-size: 14px;">
-                    Start by following people to see their posts in your Following feed.
+                    Follow, subscribe to, or become friends with people to see their posts in your Following feed.
                 </div>
             </div>
         `;
@@ -186,7 +186,7 @@ export class FeedToggle {
                 <div style="font-size: 24px; margin-bottom: 8px;">📭</div>
                 <div style="font-weight: 600; color: #e65100; margin-bottom: 4px;">Following feed is quiet</div>
                 <div style="color: #555; font-size: 14px;">
-                    The people you follow haven't posted recently. Check back later or explore Discover!
+                    Your connections haven't posted recently. Check back later or explore Discover!
                 </div>
             </div>
         `;
@@ -770,8 +770,8 @@ export class FeedToggle {
 
             if (feedType === 'following') {
                 emptyDiv.innerHTML = `
-                    <p>No posts from users you follow yet.</p>
-                    <p><small>Try the Discover feed to find interesting people to follow!</small></p>
+                    <p>No posts from your connections yet.</p>
+                    <p><small>Follow, subscribe to, or become friends with users to see their posts here!</small></p>
                 `;
             } else if (feedType === 'saved') {
                 emptyDiv.innerHTML = `

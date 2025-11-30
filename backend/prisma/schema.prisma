@@ -366,13 +366,17 @@ model Follow {
   @@index([followingId])
 }
 
+/// Subscription model - "Follow+" relationship for enhanced feed priority
+/// Subscribers get 2x priority in Following feed algorithm
 model Subscription {
-  id           String   @id @default(cuid())
-  subscriberId String
-  subscribedId String
-  createdAt    DateTime @default(now())
-  subscribed   User     @relation("Subscribed", fields: [subscribedId], references: [id], onDelete: Cascade)
-  subscriber   User     @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  subscriberId     String
+  subscribedId     String
+  /// User preference to receive notifications when subscribed user posts (opt-in, default OFF)
+  notifyOnNewPosts Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  subscribed       User     @relation("Subscribed", fields: [subscribedId], references: [id], onDelete: Cascade)
+  subscriber       User     @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
 
   @@unique([subscriberId, subscribedId])
   @@index([subscriberId])
@@ -459,6 +463,8 @@ model Post {
   searchable         Boolean           @default(true)
   /// Whether post appears in public feeds (can be hidden by moderators)
   feedVisible        Boolean           @default(true)
+  /// Target audience for this post (PUBLIC, NON_FRIENDS, FRIENDS_ONLY)
+  audience           PostAudience      @default(PUBLIC)
   /// Number of times post has been edited by author
   editCount          Int               @default(0)
   /// Timestamp of most recent edit
@@ -917,19 +923,22 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   content        String
   senderId       String
   conversationId String
-  messageType    MessageType  @default(TEXT)
+  messageType    MessageType   @default(TEXT)
   imageUrl       String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  /// Message status for DM request system (PENDING = awaiting approval, DELIVERED = normal)
+  status         MessageStatus @default(DELIVERED)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User          @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
   @@index([senderId])
+  @@index([status]) /// Index for efficient message request queries
 }
 
 model ApiCache {
@@ -2211,6 +2220,8 @@ enum NotificationType {
   FRIEND_REQUEST
   FRIEND_ACCEPTED
   REACTION
+  NEW_POST         /// Subscription notification when subscribed user posts
+  MESSAGE_REQUEST  /// DM request from non-friend
 }
 
 enum FriendshipStatus {
@@ -2268,6 +2279,20 @@ enum MessageType {
   TEXT
   IMAGE
   SYSTEM
+}
+
+/// Status of a direct message for DM request system
+enum MessageStatus {
+  PENDING    /// Initial message from non-friend, awaiting recipient approval
+  ACCEPTED   /// Recipient accepted the message request, message is delivered
+  DELIVERED  /// Normal delivered message (friends or after acceptance)
+}
+
+/// Post audience visibility setting
+enum PostAudience {
+  PUBLIC       /// Visible to everyone
+  NON_FRIENDS  /// Visible to everyone except friends (separating professional/public from personal)
+  FRIENDS_ONLY /// Only visible to friends
 }
 
 enum ReportTargetType {

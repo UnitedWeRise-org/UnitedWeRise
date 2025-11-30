@@ -664,15 +664,20 @@ class SubscriptionUtils {
     /**
      * Get subscription status between current user and target user
      * @param {string} userId - ID of target user
+     * @returns {Object} { isSubscribed: boolean, subscribedAt?: Date, notifyOnNewPosts: boolean }
      */
     static async getSubscriptionStatus(userId) {
         try {
             const response = await apiCall(`/relationships/subscription-status/${userId}`);
 
             if (response.ok) {
-                return response.data;
+                return {
+                    isSubscribed: response.data?.isSubscribed || false,
+                    subscribedAt: response.data?.subscribedAt,
+                    notifyOnNewPosts: response.data?.notifyOnNewPosts || false
+                };
             } else {
-                return { isSubscribed: false };
+                return { isSubscribed: false, notifyOnNewPosts: false };
             }
 
         } catch (error) {
@@ -680,8 +685,76 @@ class SubscriptionUtils {
             if (!error.message?.includes('404')) {
                 console.error('Get subscription status error:', error);
             }
-            return { isSubscribed: false };
+            return { isSubscribed: false, notifyOnNewPosts: false };
         }
+    }
+
+    /**
+     * Update notification preference for a subscription
+     * @param {string} userId - ID of subscribed user
+     * @param {boolean} enabled - Whether to enable notifications
+     * @param {Function} onSuccess - Callback on success
+     * @param {Function} onError - Callback on error
+     */
+    static async updateNotificationPreference(userId, enabled, onSuccess = null, onError = null) {
+        try {
+            const response = await apiCall(`/relationships/subscribe/${userId}/notifications`, {
+                method: 'PUT',
+                body: JSON.stringify({ enabled })
+            });
+
+            if (response.ok) {
+                // Update UI state
+                this.updateNotificationToggleUI(userId, enabled);
+
+                // Show success notification
+                this.showNotification(
+                    enabled ? 'You will be notified when this user posts' : 'Post notifications disabled',
+                    'success'
+                );
+
+                if (onSuccess) onSuccess(userId, enabled);
+                return { success: true, data: response.data };
+            } else {
+                throw new Error(response.data?.error || 'Failed to update notification preference');
+            }
+
+        } catch (error) {
+            console.error('Update notification preference error:', error);
+            this.showNotification(error.message, 'error');
+            if (onError) onError(error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Update notification toggle UI elements
+     * @param {string} userId - User ID
+     * @param {boolean} notifyEnabled - New notification state
+     */
+    static updateNotificationToggleUI(userId, notifyEnabled) {
+        // Update all notification toggles for this subscription
+        const toggles = document.querySelectorAll(`[data-subscription-notify="${userId}"]`);
+
+        toggles.forEach(toggle => {
+            toggle.setAttribute('data-notify-enabled', notifyEnabled.toString());
+
+            // Update icon (bell)
+            if (notifyEnabled) {
+                toggle.innerHTML = '🔔';
+                toggle.title = 'Notifications ON - Click to disable';
+                toggle.classList.add('notify-active');
+            } else {
+                toggle.innerHTML = '🔕';
+                toggle.title = 'Notifications OFF - Click to enable';
+                toggle.classList.remove('notify-active');
+            }
+        });
+
+        // Dispatch custom event
+        window.dispatchEvent(new CustomEvent('subscriptionNotifyChanged', {
+            detail: { userId, notifyEnabled }
+        }));
     }
 
     /**
@@ -760,6 +833,90 @@ class SubscriptionUtils {
         });
 
         return button;
+    }
+
+    /**
+     * Create a notification toggle button for a subscription
+     * @param {string} userId - User ID
+     * @param {boolean} notifyEnabled - Current notification state
+     * @returns {HTMLElement} Notification toggle button
+     */
+    static createNotificationToggle(userId, notifyEnabled = false) {
+        const toggle = document.createElement('button');
+        toggle.className = 'btn btn-sm subscription-notify-toggle';
+        toggle.setAttribute('data-subscription-notify', userId);
+        toggle.setAttribute('data-notify-enabled', notifyEnabled.toString());
+        toggle.innerHTML = notifyEnabled ? '🔔' : '🔕';
+        toggle.title = notifyEnabled ? 'Notifications ON - Click to disable' : 'Notifications OFF - Click to enable';
+
+        if (notifyEnabled) {
+            toggle.classList.add('notify-active');
+        }
+
+        // Style the button
+        toggle.style.cssText = `
+            padding: 4px 8px;
+            margin-left: 4px;
+            font-size: 14px;
+            background: ${notifyEnabled ? '#ffc107' : '#e9ecef'};
+            border: 1px solid ${notifyEnabled ? '#ffc107' : '#ced4da'};
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
+
+        // Add click handler
+        toggle.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const currentlyEnabled = toggle.getAttribute('data-notify-enabled') === 'true';
+
+            // Disable button during request
+            toggle.disabled = true;
+            toggle.innerHTML = '⏳';
+
+            try {
+                await this.updateNotificationPreference(userId, !currentlyEnabled);
+            } finally {
+                toggle.disabled = false;
+                // UI will be updated by updateNotificationToggleUI
+            }
+        });
+
+        return toggle;
+    }
+
+    /**
+     * Create subscription button with integrated notification toggle
+     * @param {string} userId - User ID
+     * @param {boolean} isSubscribed - Current subscription status
+     * @param {boolean} notifyEnabled - Current notification status
+     * @param {string} size - Button size
+     * @returns {HTMLElement} Container with subscription button and notification toggle
+     */
+    static createSubscriptionButtonWithNotify(userId, isSubscribed = false, notifyEnabled = false, size = 'md') {
+        const container = document.createElement('div');
+        container.className = 'subscription-container';
+        container.style.cssText = 'display: inline-flex; align-items: center; gap: 4px;';
+
+        // Add subscription button
+        const subButton = this.createSubscriptionButton(userId, isSubscribed, size);
+        container.appendChild(subButton);
+
+        // Add notification toggle (only visible when subscribed)
+        const notifyToggle = this.createNotificationToggle(userId, notifyEnabled);
+        notifyToggle.style.display = isSubscribed ? 'inline-block' : 'none';
+        container.appendChild(notifyToggle);
+
+        // Listen for subscription changes to show/hide notification toggle
+        window.addEventListener('subscriptionStatusChanged', (e) => {
+            if (e.detail.userId === userId) {
+                notifyToggle.style.display = e.detail.isSubscribed ? 'inline-block' : 'none';
+            }
+        });
+
+        return container;
     }
 
     /**
@@ -858,6 +1015,7 @@ window.rejectFriendRequest = (userId) => FriendUtils.rejectFriendRequest(userId)
 window.toggleUserSubscription = (userId, isSubscribed) => SubscriptionUtils.toggleSubscription(userId, isSubscribed);
 window.subscribeToUser = (userId) => SubscriptionUtils.subscribeToUser(userId);
 window.unsubscribeFromUser = (userId) => SubscriptionUtils.unsubscribeFromUser(userId);
+window.updateSubscriptionNotifications = (userId, enabled) => SubscriptionUtils.updateNotificationPreference(userId, enabled);
 
 // ES6 Module Exports
 export { FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils };

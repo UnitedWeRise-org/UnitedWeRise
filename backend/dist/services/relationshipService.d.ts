@@ -28,6 +28,8 @@ export interface FriendStatus {
 export interface SubscriptionStatus {
     isSubscribed: boolean;
     subscribedAt?: Date;
+    /** Whether to receive notifications when subscribed user posts (opt-in) */
+    notifyOnNewPosts: boolean;
 }
 /**
  * FOLLOW SYSTEM - Reusable Functions
@@ -122,8 +124,14 @@ export declare class SubscriptionService {
     static unsubscribeFromUser(subscriberId: string, subscribedId: string): Promise<RelationshipResult>;
     /**
      * Get subscription status between two users
+     * Returns subscription status and notification preference
      */
     static getSubscriptionStatus(subscriberId: string, subscribedId: string): Promise<SubscriptionStatus>;
+    /**
+     * Update notification preference for a subscription
+     * Enables or disables NEW_POST notifications when subscribed user creates posts
+     */
+    static updateNotificationPreference(subscriberId: string, subscribedId: string, enabled: boolean): Promise<RelationshipResult>;
     /**
      * Get subscribers list for a user
      */

@@ -151,11 +151,26 @@ function displayNotifications() {
 /**
  * Get notification icon based on type
  * Returns appropriate emoji icon for each notification type
+ * Supports both lowercase (legacy) and uppercase (backend) type formats
  * @param {string} type - The notification type
  * @return {string} - Emoji icon for the notification type
  */
 function getNotificationIcon(type) {
     const icons = {
+        // Backend format (uppercase)
+        'FRIEND_REQUEST': '👥',
+        'FRIEND_ACCEPTED': '✅',
+        'LIKE': '❤️',
+        'COMMENT': '💬',
+        'MENTION': '🏷️',
+        'FOLLOW': '👤',
+        'REACTION': '👍',
+        'VERIFICATION_APPROVED': '✅',
+        'VERIFICATION_DENIED': '❌',
+        'NEW_POST': '📝',
+        'MESSAGE_REQUEST': '💬',
+        'ADMIN_MESSAGE': '🛡️',
+        // Legacy format (lowercase) for backwards compatibility
         'friend_request': '👥',
         'friend_accepted': '✅',
         'post_like': '❤️',
@@ -163,8 +178,7 @@ function getNotificationIcon(type) {
         'mention': '🏷️',
         'follow': '👤',
         'system': '⚙️',
-        'admin_message': '🛡️',
-        'ADMIN_MESSAGE': '🛡️'
+        'admin_message': '🛡️'
     };
     return icons[type] || '🔔';
 }
@@ -172,30 +186,73 @@ function getNotificationIcon(type) {
 /**
  * Get notification title based on type and content
  * Creates a user-friendly title for each notification type
+ * Supports backend format (sender object) and legacy format (data object)
  * @param {Object} notification - The notification object
  * @return {string} - Formatted notification title
  */
 function getNotificationTitle(notification) {
+    // Get sender name from backend format (sender object) or legacy format (data object)
+    const sender = notification.sender;
     const data = notification.data || {};
 
+    // Build sender display name from backend format
+    const getSenderName = () => {
+        if (sender) {
+            if (sender.firstName && sender.lastName) {
+                return `${sender.firstName} ${sender.lastName}`;
+            }
+            return sender.username || 'Someone';
+        }
+        // Fallback to legacy data format
+        return data.senderName || data.likerName || data.commenterName ||
+               data.followerName || data.mentionerName || data.accepterName || 'Someone';
+    };
+
+    const senderName = getSenderName();
+
     switch (notification.type) {
-        case 'friend_request':
-            return `Friend request from ${data.senderName || 'someone'}`;
-        case 'friend_accepted':
-            return `${data.accepterName || 'Someone'} accepted your friend request`;
-        case 'post_like':
-            return `${data.likerName || 'Someone'} liked your post`;
-        case 'post_comment':
-            return `${data.commenterName || 'Someone'} commented on your post`;
-        case 'follow':
-            return `${data.followerName || 'Someone'} started following you`;
-        case 'mention':
-            return `${data.mentionerName || 'Someone'} mentioned you`;
-        case 'admin_message':
+        // Backend format (uppercase)
+        case 'FRIEND_REQUEST':
+            return `Friend request from ${senderName}`;
+        case 'FRIEND_ACCEPTED':
+            return `${senderName} accepted your friend request`;
+        case 'LIKE':
+            return `${senderName} liked your post`;
+        case 'COMMENT':
+            return `${senderName} commented on your post`;
+        case 'FOLLOW':
+            return `${senderName} started following you`;
+        case 'MENTION':
+            return `${senderName} mentioned you`;
+        case 'REACTION':
+            return `${senderName} reacted to your post`;
+        case 'VERIFICATION_APPROVED':
+            return `Your verification has been approved`;
+        case 'VERIFICATION_DENIED':
+            return `Your verification request was denied`;
+        case 'NEW_POST':
+            return `${senderName} posted something new`;
+        case 'MESSAGE_REQUEST':
+            return `${senderName} wants to message you`;
         case 'ADMIN_MESSAGE':
             return `New message from site administrator`;
+        // Legacy format (lowercase) for backwards compatibility
+        case 'friend_request':
+            return `Friend request from ${senderName}`;
+        case 'friend_accepted':
+            return `${senderName} accepted your friend request`;
+        case 'post_like':
+            return `${senderName} liked your post`;
+        case 'post_comment':
+            return `${senderName} commented on your post`;
+        case 'follow':
+            return `${senderName} started following you`;
+        case 'mention':
+            return `${senderName} mentioned you`;
+        case 'admin_message':
+            return `New message from site administrator`;
         default:
-            return notification.title || 'New notification';
+            return notification.message || notification.title || 'New notification';
     }
 }
 
@@ -350,8 +407,9 @@ async function openNotifications() {
  */
 async function markAllNotificationsRead() {
     try {
-        const response = await apiCall('/notifications/mark-all-read', {
-            method: 'POST'
+        // Backend endpoint is PUT /notifications/read-all
+        const response = await apiCall('/notifications/read-all', {
+            method: 'PUT'
         });
 
         if (response.ok) {
@@ -379,9 +437,9 @@ async function markAllNotificationsRead() {
  */
 async function handleNotificationClick(notificationId, notificationType) {
     try {
-        // Mark single notification as read
+        // Mark single notification as read - backend expects PUT
         const response = await apiCall(`/notifications/${notificationId}/read`, {
-            method: 'POST'
+            method: 'PUT'
         });
 
         if (response.ok) {
@@ -396,8 +454,14 @@ async function handleNotificationClick(notificationId, notificationType) {
             displayNotifications();
         }
 
-        // Handle navigation based on notification type
+        // Get notification for navigation data
+        const notification = notificationsCache.find(n => n.id === notificationId);
+        // Support both backend format (postId) and legacy format (data.postId)
+        const postId = notification?.postId || notification?.data?.postId;
+
+        // Handle navigation based on notification type (support both uppercase and lowercase)
         switch (notificationType) {
+            case 'FRIEND_REQUEST':
             case 'friend_request':
                 closeNotifications();
                 // Navigate to friends/requests page
@@ -406,18 +470,47 @@ async function handleNotificationClick(notificationId, notificationType) {
                 }
                 break;
 
+            case 'LIKE':
+            case 'COMMENT':
+            case 'REACTION':
+            case 'MENTION':
             case 'post_like':
             case 'post_comment':
+            case 'mention':
                 closeNotifications();
                 // Navigate to the specific post
-                const notification = notificationsCache.find(n => n.id === notificationId);
-                if (notification?.data?.postId && typeof window.showPostInFeed === 'function') {
-                    window.showPostInFeed(notification.data.postId);
+                if (postId && typeof window.showPostInFeed === 'function') {
+                    window.showPostInFeed(postId);
                 }
                 break;
 
-            case 'admin_message':
+            case 'FOLLOW':
+            case 'follow':
+                closeNotifications();
+                // Navigate to follower's profile
+                if (notification?.sender?.id && typeof window.showUserProfile === 'function') {
+                    window.showUserProfile(notification.sender.id);
+                }
+                break;
+
+            case 'NEW_POST':
+                closeNotifications();
+                // Navigate to the new post
+                if (postId && typeof window.showPostInFeed === 'function') {
+                    window.showPostInFeed(postId);
+                }
+                break;
+
+            case 'MESSAGE_REQUEST':
+                closeNotifications();
+                // Navigate to message requests
+                if (typeof window.openMessagesPanel === 'function') {
+                    window.openMessagesPanel();
+                }
+                break;
+
             case 'ADMIN_MESSAGE':
+            case 'admin_message':
                 closeNotifications();
                 // Navigate to admin messages or announcements
                 break;
@@ -563,11 +656,54 @@ export {
     triggerAdminRefresh,
     triggerCandidateRefresh,
     getCachedRelationshipStatus,
-    refreshFriendStatus
+    refreshFriendStatus,
+    // Bell visibility functions
+    showNotificationBell,
+    hideNotificationBell
 };
+
+// ============================================================================
+// NOTIFICATION BELL VISIBILITY & CLICK HANDLERS
+// ============================================================================
+
+/**
+ * Show the notification bell (call on login)
+ */
+function showNotificationBell() {
+    const notificationSection = document.getElementById('notificationSection');
+    if (notificationSection) {
+        notificationSection.style.display = 'flex';
+        console.log('🔔 Notification bell shown');
+    }
+}
+
+/**
+ * Hide the notification bell (call on logout)
+ */
+function hideNotificationBell() {
+    const notificationSection = document.getElementById('notificationSection');
+    if (notificationSection) {
+        notificationSection.style.display = 'none';
+    }
+    // Also close dropdown if open
+    closeNotifications();
+    // Clear cache
+    notificationsCache = [];
+    console.log('🔔 Notification bell hidden');
+}
 
 // Event delegation for notification actions
 document.addEventListener('click', (e) => {
+    // Handle notification bell toggle
+    const toggleBtn = e.target.closest('[data-action="toggle-notifications"]');
+    if (toggleBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleNotifications();
+        return;
+    }
+
+    // Handle notification-specific actions
     const target = e.target.closest('[data-notification-action]');
     if (!target) return;
 
@@ -585,6 +721,32 @@ document.addEventListener('click', (e) => {
             }
             break;
     }
+});
+
+// Close notifications when clicking outside
+document.addEventListener('click', (e) => {
+    if (!notificationDropdownOpen) return;
+
+    const dropdown = document.getElementById('notificationDropdown');
+    const notificationSection = document.getElementById('notificationSection');
+
+    // Check if click is outside notification section
+    if (dropdown && notificationSection &&
+        !notificationSection.contains(e.target)) {
+        closeNotifications();
+    }
+});
+
+// Listen for auth state changes to show/hide bell
+window.addEventListener('userLoggedIn', (e) => {
+    console.log('🔔 User logged in - initializing notifications');
+    showNotificationBell();
+    initializeNotifications();
+});
+
+window.addEventListener('userLoggedOut', () => {
+    console.log('🔔 User logged out - hiding notifications');
+    hideNotificationBell();
 });
 
 // Global exposure for compatibility (temporary during migration)
@@ -610,7 +772,28 @@ if (typeof window !== 'undefined') {
     window.getCachedRelationshipStatus = getCachedRelationshipStatus;
     window.refreshFriendStatus = refreshFriendStatus;
 
+    // Bell visibility functions
+    window.showNotificationBell = showNotificationBell;
+    window.hideNotificationBell = hideNotificationBell;
+
     // Expose state variables for compatibility
     window.notificationsCache = notificationsCache;
     window.notificationDropdownOpen = notificationDropdownOpen;
+
+    // Initialize notification bell visibility on page load
+    // If user is already logged in (page refresh), show the bell
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.currentUser) {
+                showNotificationBell();
+                initializeNotifications();
+            }
+        });
+    } else {
+        // DOM already loaded
+        if (window.currentUser) {
+            showNotificationBell();
+            initializeNotifications();
+        }
+    }
 }

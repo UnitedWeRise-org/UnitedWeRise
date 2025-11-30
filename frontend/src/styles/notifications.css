@@ -1,0 +1,266 @@
+/**
+ * Notification System Styles
+ * Handles notification dropdown, items, and animations
+ */
+
+/* ============================================================================
+   NOTIFICATION DROPDOWN CONTAINER
+   ============================================================================ */
+
+.notification-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    width: 350px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    animation: fadeInDown 0.2s ease-out;
+}
+
+/* Dropdown header */
+.notification-dropdown-header {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    background: #f8f9fa;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.notification-dropdown-header h6 {
+    margin: 0;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Mark all read button */
+.notification-mark-all-btn {
+    padding: 0.25rem 0.5rem;
+    background: #4b5c09;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.notification-mark-all-btn:hover {
+    background: #3a4807;
+}
+
+/* ============================================================================
+   NOTIFICATION ITEMS
+   ============================================================================ */
+
+.notification-item {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.notification-item:hover {
+    background: #f5f5f5;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+/* Unread state */
+.notification-item.unread {
+    background: #f0f7ff;
+}
+
+.notification-item.unread:hover {
+    background: #e3f0ff;
+}
+
+/* Notification icon */
+.notification-item-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+/* Notification content */
+.notification-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-item-title {
+    font-weight: normal;
+    margin-bottom: 0.25rem;
+    color: #333;
+}
+
+.notification-item.unread .notification-item-title {
+    font-weight: bold;
+}
+
+.notification-item-message {
+    font-size: 0.85rem;
+    color: #666;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.notification-item-time {
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: 0.25rem;
+}
+
+/* Unread indicator dot */
+.notification-unread-dot {
+    width: 8px;
+    height: 8px;
+    background: #1976d2;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ============================================================================
+   EMPTY STATE
+   ============================================================================ */
+
+.notification-empty {
+    padding: 2rem;
+    text-align: center;
+    color: #666;
+}
+
+.notification-empty-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.notification-empty-text {
+    margin: 0;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ============================================================================
+   NOTIFICATION SECTION (BELL CONTAINER)
+   ============================================================================ */
+
+.notification-section {
+    position: relative;
+    display: none; /* Hidden by default, shown on login */
+}
+
+.notification-section.visible {
+    display: flex;
+}
+
+/* ============================================================================
+   MOBILE RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .notification-dropdown {
+        position: fixed;
+        top: 60px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: none;
+        max-height: calc(100vh - 120px);
+    }
+
+    .notification-item {
+        padding: 0.75rem;
+    }
+
+    .notification-item-icon {
+        font-size: 1.25rem;
+    }
+}
+
+/* ============================================================================
+   TOAST NOTIFICATIONS
+   ============================================================================ */
+
+.notification-toast {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: #4b5c09;
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    max-width: 300px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.notification-toast-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.notification-toast-icon {
+    font-size: 1.2rem;
+}
+
+.notification-toast-body {
+    flex: 1;
+}
+
+.notification-toast-title {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.notification-toast-message {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+    .notification-toast {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}

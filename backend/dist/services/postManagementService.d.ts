@@ -81,6 +81,7 @@ export declare class PostManagementService {
             deletedReason: string | null;
             searchable: boolean;
             feedVisible: boolean;
+            audience: import(".prisma/client").$Enums.PostAudience;
             editHistory: import("@prisma/client/runtime/library").JsonValue | null;
             latitude: number | null;
             longitude: number | null;

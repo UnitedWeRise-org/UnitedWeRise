@@ -176,12 +176,16 @@ router.get('/map-data', requireAuth, async (req: AuthRequest, res) => {
  */
 router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, validatePost, moderateContent('POST'), async (req: AuthRequest, res) => {
     try {
-        const { content, imageUrl, mediaId, tags } = req.body;
+        const { content, imageUrl, mediaId, tags, audience } = req.body;
         const userId = req.user!.id;
 
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ error: 'Post content is required' });
         }
+
+        // Validate audience if provided (default is PUBLIC)
+        const validAudiences = ['PUBLIC', 'NON_FRIENDS', 'FRIENDS_ONLY'];
+        const postAudience = audience && validAudiences.includes(audience) ? audience : 'PUBLIC';
 
         // Handle photo attachments - accept both singular mediaId and array mediaIds
         const photoIds: string[] = [];
@@ -294,6 +298,7 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                 embedding,
                 authorReputation: userReputation.current,
                 tags: requestedTags,
+                audience: postAudience,
                 ...feedbackData,
                 // Include geographic data if available (null values are handled gracefully)
                 ...(geographicData && {
@@ -403,6 +408,42 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                     logger.error({ err: error, postId: post.id }, 'Async feedback analysis failed');
                 });
         }
+
+        // Notify subscribers who have opted into new post notifications (async, don't block response)
+        (async () => {
+            try {
+                // Find all subscribers who want notifications when this user posts
+                const subscribersToNotify = await prisma.subscription.findMany({
+                    where: {
+                        subscribedId: userId,
+                        notifyOnNewPosts: true
+                    },
+                    select: { subscriberId: true }
+                });
+
+                if (subscribersToNotify.length > 0) {
+                    const authorName = post.author.firstName && post.author.lastName
+                        ? `${post.author.firstName} ${post.author.lastName}`
+                        : post.author.username;
+
+                    // Create notifications for each subscriber (batch notification)
+                    const notificationPromises = subscribersToNotify.map(sub =>
+                        createNotification(
+                            'NEW_POST',
+                            userId,
+                            sub.subscriberId,
+                            `${authorName} posted something new`,
+                            post.id
+                        )
+                    );
+
+                    await Promise.allSettled(notificationPromises);
+                    logger.info({ postId: post.id, notifiedCount: subscribersToNotify.length }, 'Subscription notifications sent');
+                }
+            } catch (error) {
+                logger.error({ err: error, postId: post.id }, 'Failed to send subscription notifications');
+            }
+        })();
 
         res.status(201).json({
             message: 'Post created successfully',

@@ -47,6 +47,8 @@ export interface FriendStatus {
 export interface SubscriptionStatus {
     isSubscribed: boolean;
     subscribedAt?: Date;
+    /** Whether to receive notifications when subscribed user posts (opt-in) */
+    notifyOnNewPosts: boolean;
 }
 
 /**
@@ -423,6 +425,7 @@ export class SubscriptionService {
 
     /**
      * Get subscription status between two users
+     * Returns subscription status and notification preference
      */
     static async getSubscriptionStatus(subscriberId: string, subscribedId: string): Promise<SubscriptionStatus> {
         try {
@@ -433,17 +436,64 @@ export class SubscriptionService {
                         subscribedId
                     }
                 },
-                select: { createdAt: true }
+                select: { createdAt: true, notifyOnNewPosts: true }
             });
 
             return {
                 isSubscribed: !!subscription,
-                subscribedAt: subscription?.createdAt
+                subscribedAt: subscription?.createdAt,
+                notifyOnNewPosts: subscription?.notifyOnNewPosts ?? false
             };
 
         } catch (error) {
             logger.error({ error, subscriberId, subscribedId }, 'Get subscription status error');
-            return { isSubscribed: false };
+            return { isSubscribed: false, notifyOnNewPosts: false };
+        }
+    }
+
+    /**
+     * Update notification preference for a subscription
+     * Enables or disables NEW_POST notifications when subscribed user creates posts
+     */
+    static async updateNotificationPreference(subscriberId: string, subscribedId: string, enabled: boolean): Promise<RelationshipResult> {
+        try {
+            // Check if subscription exists
+            const subscription = await prisma.subscription.findUnique({
+                where: {
+                    subscriberId_subscribedId: {
+                        subscriberId,
+                        subscribedId
+                    }
+                }
+            });
+
+            if (!subscription) {
+                return { success: false, message: 'Not subscribed to this user' };
+            }
+
+            // Update the notification preference
+            const updated = await prisma.subscription.update({
+                where: {
+                    subscriberId_subscribedId: {
+                        subscriberId,
+                        subscribedId
+                    }
+                },
+                data: {
+                    notifyOnNewPosts: enabled
+                },
+                select: { notifyOnNewPosts: true }
+            });
+
+            return {
+                success: true,
+                message: enabled ? 'Notifications enabled for this subscription' : 'Notifications disabled for this subscription',
+                data: { notifyOnNewPosts: updated.notifyOnNewPosts }
+            };
+
+        } catch (error) {
+            logger.error({ error, subscriberId, subscribedId, enabled }, 'Update subscription notification preference error');
+            return { success: false, message: 'Failed to update notification preference', error: error.message };
         }
     }
 
