@@ -239,12 +239,6 @@ jobs:
               RELEASE_DIGEST=$DIGEST \
             --no-wait
 
-          echo "🔄 Setting revision mode to Single..."
-          az containerapp update \
-            --name $AZURE_CONTAINER_APP \
-            --resource-group $AZURE_RESOURCE_GROUP \
-            --revision-mode Single
-
           echo "⏳ Waiting for container to fully provision..."
           sleep 60
 
