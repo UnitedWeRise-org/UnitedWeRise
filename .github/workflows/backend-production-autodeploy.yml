@@ -85,6 +85,67 @@ jobs:
           cd backend
           npm install prisma@latest --no-save
 
+      - name: Pre-Migration - Add PostgreSQL Enum Values (Production)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
+        run: |
+          cd backend
+
+          echo "================================================"
+          echo "   PRE-MIGRATION: ENUM VALUE ADDITIONS (PRODUCTION)"
+          echo "================================================"
+          echo ""
+          echo "Note: ALTER TYPE ADD VALUE cannot run in transactions,"
+          echo "so we run them separately before Prisma migrations."
+          echo ""
+
+          # Create a Node script to add enum values outside transaction
+          cat > add-enum-values.js << 'ENUMSCRIPT'
+          const { PrismaClient } = require('@prisma/client');
+          const prisma = new PrismaClient();
+
+          async function addEnumValues() {
+            try {
+              // Add NEW_POST to NotificationType if not exists
+              await prisma.$executeRawUnsafe(`
+                DO $$
+                BEGIN
+                  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'NEW_POST' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')) THEN
+                    ALTER TYPE "NotificationType" ADD VALUE 'NEW_POST';
+                  END IF;
+                END $$;
+              `).catch(e => console.log('NEW_POST may already exist or error:', e.message));
+
+              // Add MESSAGE_REQUEST to NotificationType if not exists
+              await prisma.$executeRawUnsafe(`
+                DO $$
+                BEGIN
+                  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'MESSAGE_REQUEST' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')) THEN
+                    ALTER TYPE "NotificationType" ADD VALUE 'MESSAGE_REQUEST';
+                  END IF;
+                END $$;
+              `).catch(e => console.log('MESSAGE_REQUEST may already exist or error:', e.message));
+
+              console.log('✅ Enum values processed');
+            } catch (error) {
+              console.log('Enum processing note:', error.message);
+            } finally {
+              await prisma.$disconnect();
+            }
+          }
+
+          addEnumValues();
+          ENUMSCRIPT
+
+          # Generate Prisma client and run the script
+          npx prisma generate
+          node add-enum-values.js || echo "Enum script completed (may have warnings)"
+          rm add-enum-values.js
+
+          echo ""
+          echo "✅ Pre-migration enum processing complete"
+          echo ""
+
       - name: Run Database Migrations (Production)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}

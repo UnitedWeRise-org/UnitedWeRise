@@ -10,21 +10,8 @@ BEGIN
     END IF;
 END $$;
 
--- Add NEW_POST to NotificationType enum (idempotent)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'NEW_POST' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')) THEN
-        ALTER TYPE "NotificationType" ADD VALUE 'NEW_POST';
-    END IF;
-END $$;
-
--- Add MESSAGE_REQUEST to NotificationType enum (idempotent)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'MESSAGE_REQUEST' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')) THEN
-        ALTER TYPE "NotificationType" ADD VALUE 'MESSAGE_REQUEST';
-    END IF;
-END $$;
+-- NOTE: NEW_POST and MESSAGE_REQUEST enum values are added via pre-migration script
+-- in the GitHub Actions workflow due to PostgreSQL transaction limitations.
 
 -- Phase 4: DM Request System
 -- Create MessageStatus enum (idempotent)
