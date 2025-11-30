@@ -117,6 +117,8 @@ Backend implements environment-aware auth: Production allows regular users, Stag
 2. **Read protocol's "When to Use" section** (lightweight check)
 3. **If relevant, load and follow complete protocol**
 
+**Protocol Loading:** Before executing any action governed by a protocol, READ the protocol file - even if read earlier. Stale context causes failures.
+
 ### Protocol Index:
 
 **Deployment Operations**
