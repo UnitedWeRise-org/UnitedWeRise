@@ -149,22 +149,163 @@ function extractDatabaseHost(): string {
   }
 }
 
-// Basic health endpoint (existing) - enhanced with deployment info
+/**
+ * Get replica identification info for multi-replica environments
+ * Azure Container Apps sets CONTAINER_APP_REPLICA_NAME for each replica instance
+ *
+ * @returns {object} Replica identification and timing info
+ */
+function getReplicaInfo() {
+  const uptimeSeconds = process.uptime();
+  const replicaStartedAt = new Date(Date.now() - (uptimeSeconds * 1000));
+
+  // Azure Container Apps provides these environment variables
+  const replicaName = process.env.CONTAINER_APP_REPLICA_NAME || 'unknown';
+  const revision = process.env.CONTAINER_APP_REVISION || 'unknown';
+
+  // Parse deployment timestamp from revision name if possible
+  // Revision format: unitedwerise-backend-staging--stg-33c76bf-175152
+  // The suffix (175152) is typically MMDDYY or similar
+  let deploymentTimestamp: string | null = null;
+  if (revision !== 'unknown') {
+    // Extract the timestamp portion from revision for display
+    const revisionParts = revision.split('--');
+    if (revisionParts.length > 1) {
+      deploymentTimestamp = revisionParts[revisionParts.length - 1];
+    }
+  }
+
+  return {
+    replicaId: replicaName,
+    replicaStartedAt: replicaStartedAt.toISOString(),
+    replicaUptime: uptimeSeconds,
+    revisionSuffix: deploymentTimestamp
+  };
+}
+
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     tags: [Health]
+ *     summary: Get backend health status
+ *     description: |
+ *       Returns comprehensive health status including database connectivity,
+ *       environment info, deployment details, and container replica identification.
+ *
+ *       **Note on Replicas**: Azure Container Apps may run multiple replicas for
+ *       high availability. Each replica has its own uptime. The `replica` object
+ *       identifies which specific instance responded to this request.
+ *     responses:
+ *       200:
+ *         description: Backend is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [healthy]
+ *                   description: Overall health status
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Response timestamp
+ *                 uptime:
+ *                   type: number
+ *                   description: Replica uptime in seconds (legacy field, use replica.uptime)
+ *                 replica:
+ *                   type: object
+ *                   description: Container replica identification
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Unique replica identifier from Azure Container Apps
+ *                     startedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: When this specific replica started
+ *                     uptime:
+ *                       type: number
+ *                       description: This replica's uptime in seconds
+ *                 database:
+ *                   type: string
+ *                   enum: [connected, disconnected]
+ *                   description: Database connection status
+ *                 databaseHost:
+ *                   type: string
+ *                   description: Database hostname
+ *                 environment:
+ *                   type: string
+ *                   enum: [development, staging, production]
+ *                   description: Application environment
+ *                 nodeEnv:
+ *                   type: string
+ *                   description: NODE_ENV value
+ *                 releaseSha:
+ *                   type: string
+ *                   description: Git commit SHA of deployed code
+ *                 releaseDigest:
+ *                   type: string
+ *                   description: Docker image digest
+ *                 revision:
+ *                   type: string
+ *                   description: Azure Container Apps revision name
+ *                 revisionSuffix:
+ *                   type: string
+ *                   description: Deployment revision suffix for identification
+ *                 deployedTag:
+ *                   type: string
+ *                   description: Docker image tag
+ *                 githubBranch:
+ *                   type: string
+ *                   description: Git branch (main for production, development for staging)
+ *       500:
+ *         description: Backend is unhealthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [unhealthy]
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 database:
+ *                   type: string
+ *                   enum: [disconnected]
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ */
 router.get('/', async (req, res) => {
   try {
     await prisma.$connect();
-    
+
+    // Get replica-specific information
+    const replicaInfo = getReplicaInfo();
+
     // Set no-cache headers to avoid deployment verification confusion
     res.set({
       'Cache-Control': 'no-store, no-cache, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0'
     });
-    
+
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
+      // Legacy uptime field (per-replica, kept for backward compatibility)
+      uptime: replicaInfo.replicaUptime,
+      // New replica identification fields
+      replica: {
+        id: replicaInfo.replicaId,
+        startedAt: replicaInfo.replicaStartedAt,
+        uptime: replicaInfo.replicaUptime
+      },
       database: 'connected',
       databaseHost: extractDatabaseHost(),
       environment: getEnvironment(),
@@ -173,6 +314,7 @@ router.get('/', async (req, res) => {
       releaseSha: process.env.RELEASE_SHA || process.env.GITHUB_SHA || 'unknown',
       releaseDigest: process.env.RELEASE_DIGEST || 'unknown',
       revision: process.env.CONTAINER_APP_REVISION || 'unknown',
+      revisionSuffix: replicaInfo.revisionSuffix,
       deployedTag: process.env.DOCKER_TAG || 'unknown',
       githubBranch: isProduction() ? 'main' : 'development'
     });

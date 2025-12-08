@@ -1,179 +1,148 @@
 # Claude Code Protocol Library
 
-**Purpose**: This directory contains detailed step-by-step procedures extracted from CLAUDE.md files to reduce context bloat while maintaining comprehensive guidance.
-
-**Philosophy**: CLAUDE.md contains WHAT/WHY/WHEN (principles, triggers). Protocol files contain HOW (procedures, checklists).
-
----
-
-## Protocol Index
-
-### Core Protocols (Apply to Most Development Work)
-
-**[systematic-development-protocol.md](./systematic-development-protocol.md)**
-- **When**: ALL complex development (bug fixes, features, refactoring, architectural changes)
-- **Purpose**: Audit → Plan → Execute → Test → Document methodology to prevent "2 steps forward, 3 steps back"
-- **Triggers**: non-trivial bugs, new features, uncertain about current code, changes impact multiple systems, previous attempts failed
-- **Philosophy**: Understand before changing. Full system understanding (frontend + backend + database + middleware + timing) required before coding.
+**Version 4.0 - Phase-Based Protocol System**
+**Last Updated**: 2025-12-08
 
 ---
-
-### Global Protocols
-
-**[verification-checklists.md](./verification-checklists.md)**
-- **When**: After deployment or code changes
-- **Purpose**: Detailed verification steps to ensure changes are properly deployed and working
-- **Triggers**: completion of deployment, code changes, verification needed
-
-**[decision-frameworks.md](./decision-frameworks.md)**
-- **When**: Complex tasks, architectural changes, risk assessment needed
-- **Purpose**: Frameworks for complexity scoring, documentation, testing, rollback planning
-- **Triggers**: architectural change, complex refactor, security-critical work, uncertain task scope
-
-**[es6-modularization.md](./es6-modularization.md)** 🔒 PROTECTED
-- **When**: Migrating non-module JavaScript to ES6 modules
-- **Purpose**: 6-phase procedure to prevent incomplete migrations that cause bugs
-- **Triggers**: `<script>` tags, inline code, module migration, non-module scripts
-- **Protection**: This protocol is PROTECTED and must not be modified without explicit approval
-
----
-
-### Project Protocols
-
-**[documentation-templates.md](./documentation-templates.md)**
-- **When**: Creating/updating endpoints, services, schemas
-- **Purpose**: Standard templates for Swagger, JSDoc, Prisma documentation
-- **Triggers**: new endpoints, API changes, schema changes, service functions
-
-**[environment-auth-guide.md](./environment-auth-guide.md)**
-- **When**: Implementing authentication-protected features
-- **Purpose**: Middleware patterns and usage guidelines for environment-aware authentication
-- **Triggers**: admin endpoints, auth middleware, `requireAuth`, `requireStagingAuth`, environment-aware auth
-
-**[deployment-procedures.md](./deployment-procedures.md)** 🔒 PROTECTED
-- **When**: Deploying to staging or production
-- **Purpose**: Complete deployment procedures including validation, execution, verification
-- **Triggers**: deploy, push to production, merge to main, staging deployment
-- **Protection**: This protocol is PROTECTED and must not be modified without explicit approval
-
-**[deployment-troubleshooting.md](./deployment-troubleshooting.md)**
-- **When**: Deployment issues or verification failures
-- **Purpose**: 9-step diagnostic protocol for deployment problems
-- **Triggers**: deployment stuck, wrong SHA, changes not visible, health check fails
-
----
-
-## How to Use Protocols
-
-### 1. Check for Relevance (Lightweight)
-When you encounter trigger keywords or situations, check the protocol's "When to Use" section first.
-
-### 2. Load If Relevant
-If the "When to Use" section indicates relevance, read and follow the complete protocol.
-
-### 3. Follow Systematically
-Protocols are designed to be followed step-by-step. Don't skip phases unless explicitly indicated.
-
----
-
-## Protocol File Structure
-
-All protocol files follow this standard structure:
-
-```markdown
-# Protocol Name
-
-**Protection Status**: [🔒 PROTECTED | Standard]
-**Created**: [Date]
-**Last Updated**: [Date]
-
-## 🎯 When to Use This Protocol
-
-**USE THIS PROTOCOL if**:
-- [Specific conditions]
-
-**SKIP THIS PROTOCOL if**:
-- [Exclusions]
-
-**UNCERTAIN?** Ask yourself:
-- [Relevance questions]
 
 ## Overview
-[Summary]
 
-## Prerequisites
-[Required before starting]
+This directory contains detailed step-by-step procedures for development work. Protocols are organized into two categories:
 
-## Procedure
-[Detailed steps by phase]
+1. **Phase Protocols** (5) - Triggered automatically for all code changes
+2. **Special Protocols** (4) - Triggered by specific keywords/situations
 
-## Verification
-[Checklist]
+**Philosophy**: CLAUDE.md contains WHAT/WHY/WHEN (principles, triggers). Protocol files contain HOW (procedures, checklists). Each protocol has internal STOP criteria for when detailed procedures can be skipped.
 
-## Troubleshooting
-[Common issues]
+---
 
-## Examples
-[Real-world scenarios]
+## Phase Protocols
 
-## Related Resources
-[Cross-references]
-```
+All code changes follow these 5 phases. Each protocol has STOP criteria for when its detailed procedures aren't needed.
+
+| Phase | Protocol | Purpose |
+|-------|----------|---------|
+| 1. Audit | `audit_protocol.md` | Understand before changing |
+| 2. Plan | `plan_protocol.md` | Complexity scoring, approach design |
+| 3. Execute | `execute_protocol.md` | Code quality, execution standards |
+| 4. Test | `test_protocol.md` | Verification, testing matrix |
+| 5. Document | `document_protocol.md` | Required documentation |
+
+### audit_protocol.md
+- **Phase**: 1 of 5
+- **Purpose**: System investigation before code changes
+- **Contains**: Investigation commands, 10-point audit checklist, special case audits
+- **STOP Criteria**: Single file change, exact solution known, no cross-system impact
+
+### plan_protocol.md
+- **Phase**: 2 of 5
+- **Purpose**: Complexity scoring, risk assessment, approach design
+- **Contains**: Complexity scoring (0-12 points), auto-escalate categories, risk matrix, rollback protocol
+- **STOP Criteria**: Complexity score 0-8, not auto-escalate category, simple pattern exists
+
+### execute_protocol.md
+- **Phase**: 3 of 5
+- **Purpose**: Code quality standards, execution standards
+- **Contains**: Pre-implementation checklist, code quality requirements, security requirements, change sequencing
+- **STOP Criteria**: Always applies (no skip)
+
+### test_protocol.md
+- **Phase**: 4 of 5
+- **Purpose**: Testing matrix, verification requirements
+- **Contains**: Testing matrix by task type, testing workflow, comprehensive checklists
+- **STOP Criteria**: Single file, no integration points, build passes, smoke test passes
+
+### document_protocol.md
+- **Phase**: 5 of 5
+- **Purpose**: Documentation requirements and templates
+- **Contains**: Documentation templates (Swagger, JSDoc, Prisma), CHANGELOG format, MASTER_DOCUMENTATION section map
+- **STOP Criteria**: Cannot skip (scope varies by change type)
+
+---
+
+## Special Protocols
+
+Trigger by keyword or situation. Read "When to Use" section as lightweight check.
+
+### deployment_protocol.md (🔒 PROTECTED)
+- **Keywords**: deploy, push to production, merge to main, staging deployment
+- **Purpose**: Complete deployment procedures including validation, execution, verification
+- **Contains**: Automated + manual deployment, database migration safety, rollback procedures
+
+### deployment_troubleshooting_protocol.md
+- **Keywords**: deployment stuck, wrong SHA, changes not visible, health check fails
+- **Purpose**: 9-step diagnostic protocol for deployment problems
+- **Contains**: Step-by-step troubleshooting from commits to nuclear option
+
+### es6_protocol.md (🔒 PROTECTED)
+- **Keywords**: `<script>`, inline code, ES6, module, modularize, non-module script
+- **Purpose**: 6-phase procedure to prevent incomplete migrations
+- **Contains**: Detection, analysis, creation, testing, cleanup, documentation phases
+
+### auth_protocol.md
+- **Keywords**: admin endpoint, auth middleware, requireAuth, requireStagingAuth
+- **Purpose**: Environment-aware authentication middleware patterns
+- **Contains**: Middleware selection guide, testing checklist, implementation examples
+
+---
+
+## How to Use
+
+### Phase Protocols (Automatic)
+1. All code changes trigger the 5-phase system
+2. Read each protocol when entering that phase
+3. Follow STOP criteria to determine if detailed procedures needed
+
+### Special Protocols (By Keyword)
+1. Identify trigger keywords from protocol descriptions
+2. Read "When to Use" section (lightweight check)
+3. If relevant, load and follow complete protocol
 
 ---
 
 ## Protected Protocols 🔒
 
-Some protocols are marked as PROTECTED. These contain critical procedures developed through real incidents and must not be modified without explicit user approval.
+Some protocols are PROTECTED. These contain critical procedures developed through real incidents.
 
 **Protected protocols**:
-- `es6-modularization.md` - Prevents incomplete migrations
-- `deployment-procedures.md` - Critical deployment safety
+- `deployment_protocol.md` - Critical deployment safety
+- `es6_protocol.md` - Prevents incomplete migrations
 
 **Protection rules**:
 - Cannot be reworded, consolidated, or modified without explicit approval
 - Can be enhanced with additional context if it doesn't change core procedure
-- Protection status is inherited from CLAUDE.md sections
-
----
-
-## Maintenance
-
-**Adding new protocols**:
-1. Create protocol file following standard structure
-2. Add entry to this README.md index
-3. Add trigger keywords to CLAUDE.md Protocol Reference System
-4. Update related protocols' "Related Resources" sections
-
-**Updating existing protocols**:
-1. Check protection status first
-2. Update "Last Updated" date
-3. Maintain backward compatibility where possible
-4. Update CHANGELOG.md if significant changes
-
-**Archiving obsolete protocols**:
-1. Move to `.claude/protocols/archive/`
-2. Update index to note archived status
-3. Remove trigger references from CLAUDE.md
-4. Document reason for archival
 
 ---
 
 ## Quick Reference
 
-| Protocol | Protected | Lines | Use Case |
-|----------|-----------|-------|----------|
-| **systematic-development-protocol** | **No** | **~607** | **CORE: All complex development work** |
-| verification-checklists | No | ~448 | Post-deployment/change verification |
-| decision-frameworks | No | ~419 | Complex task planning |
-| es6-modularization | 🔒 Yes | ~313 | JavaScript module migration |
-| documentation-templates | No | ~532 | API/code documentation |
-| environment-auth-guide | No | ~459 | Authentication implementation |
-| deployment-procedures | 🔒 Yes | ~611 | Staging/production deployment |
-| deployment-troubleshooting | No | ~611 | Deployment issue diagnosis |
+| Protocol | Type | Protected |
+|----------|------|-----------|
+| audit_protocol.md | Phase 1 | No |
+| plan_protocol.md | Phase 2 | No |
+| execute_protocol.md | Phase 3 | No |
+| test_protocol.md | Phase 4 | No |
+| document_protocol.md | Phase 5 | No |
+| deployment_protocol.md | Special | 🔒 Yes |
+| deployment_troubleshooting_protocol.md | Special | No |
+| es6_protocol.md | Special | 🔒 Yes |
+| auth_protocol.md | Special | No |
+
+**Total Protocols**: 9 (2 protected)
 
 ---
 
-**Last Updated**: 2025-10-31
-**Total Protocols**: 8 (2 protected)
-**Context Saved**: Significant - protocols loaded on-demand instead of always in context
+## Archived Protocols
+
+Previous protocol versions are archived in `.claude/archive/protocols-v3/`:
+- audit-checklist.md → merged into audit_protocol.md
+- decision-frameworks.md → merged into plan_protocol.md
+- risk-assessment-framework.md → merged into plan_protocol.md
+- testing-checklist.md → merged into test_protocol.md
+- verification-checklists.md → merged into test_protocol.md
+- documentation-requirements.md → merged into document_protocol.md
+- documentation-templates.md → merged into document_protocol.md
+- deployment-procedures.md → renamed to deployment_protocol.md
+- deployment-troubleshooting.md → renamed to deployment_troubleshooting_protocol.md
+- es6-modularization.md → renamed to es6_protocol.md
+- environment-auth-guide.md → renamed to auth_protocol.md

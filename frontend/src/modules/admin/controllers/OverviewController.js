@@ -346,8 +346,22 @@ class OverviewController {
                 return;
             }
 
-            const uptimeFormatted = this.formatUptime(healthData.uptime || 0);
+            // Get replica info (new structure) or fall back to legacy uptime
+            const replicaInfo = healthData.replica || {};
+            const replicaUptime = replicaInfo.uptime || healthData.uptime || 0;
+            const replicaId = replicaInfo.id || 'unknown';
+            const replicaStartedAt = replicaInfo.startedAt ? new Date(replicaInfo.startedAt) : null;
+
+            const uptimeFormatted = this.formatUptime(replicaUptime);
+            const startedAtFormatted = replicaStartedAt
+                ? replicaStartedAt.toLocaleString()
+                : 'Unknown';
             const apiBase = window.API_CONFIG?.BASE_URL || 'Unknown';
+
+            // Format replica ID for display (truncate if too long)
+            const replicaIdDisplay = replicaId !== 'unknown'
+                ? (replicaId.length > 20 ? replicaId.substring(0, 20) + '...' : replicaId)
+                : 'Single instance';
 
             let html = `
                 <div class="environment-health">
@@ -382,16 +396,35 @@ class OverviewController {
                             <span class="env-value status-${healthData.status}">${healthData.status || 'Unknown'}</span>
                         </div>
                         <div class="env-detail">
-                            <span class="env-label">Uptime:</span>
-                            <span class="env-value">${uptimeFormatted}</span>
-                        </div>
-                        <div class="env-detail">
                             <span class="env-label">Branch:</span>
                             <span class="env-value">${healthData.githubBranch || 'Unknown'}</span>
                         </div>
                         <div class="env-detail">
                             <span class="env-label">SHA:</span>
                             <span class="env-value" style="font-family: monospace; font-size: 0.9em;">${healthData.releaseSha || 'Unknown'}</span>
+                        </div>
+                        <div class="env-detail">
+                            <span class="env-label">Revision:</span>
+                            <span class="env-value" style="font-family: monospace; font-size: 0.85em;">${healthData.revisionSuffix || healthData.revision || 'Unknown'}</span>
+                        </div>
+                    </div>
+
+                    <div class="env-section">
+                        <h4>Container Replica</h4>
+                        <div class="env-detail">
+                            <span class="env-label">Replica ID:</span>
+                            <span class="env-value" style="font-family: monospace; font-size: 0.85em;" title="${replicaId}">${replicaIdDisplay}</span>
+                        </div>
+                        <div class="env-detail">
+                            <span class="env-label">Started At:</span>
+                            <span class="env-value">${startedAtFormatted}</span>
+                        </div>
+                        <div class="env-detail">
+                            <span class="env-label">Instance Uptime:</span>
+                            <span class="env-value">${uptimeFormatted}</span>
+                        </div>
+                        <div class="env-detail env-note">
+                            <small>Note: Multiple replicas may be running for high availability. Each has its own uptime.</small>
                         </div>
                     </div>
 

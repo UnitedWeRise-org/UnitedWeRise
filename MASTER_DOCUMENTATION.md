@@ -4261,13 +4261,31 @@ Stripe webhook endpoint (internal use)
 ### Health & Monitoring Endpoints
 
 #### GET /health
-Basic health check
+Comprehensive health check with container replica identification.
+
+**Note on Replicas**: Azure Container Apps runs multiple replicas for high availability. Each replica has its own uptime. The `replica` object identifies which specific instance responded.
+
 ```javascript
 Response:
 {
-  status: "ok",
+  status: "healthy",
   timestamp: Date,
-  uptime: number
+  uptime: number,              // Legacy: replica uptime in seconds
+  replica: {                   // New: replica identification
+    id: string,                // Container replica ID from Azure
+    startedAt: Date,           // When this replica started
+    uptime: number             // This replica's uptime in seconds
+  },
+  database: "connected" | "disconnected",
+  databaseHost: string,
+  environment: "development" | "staging" | "production",
+  nodeEnv: string,
+  releaseSha: string,          // Git commit SHA
+  releaseDigest: string,       // Docker image digest
+  revision: string,            // Azure Container Apps revision
+  revisionSuffix: string,      // Deployment identifier
+  deployedTag: string,         // Docker image tag
+  githubBranch: string         // Git branch name
 }
 ```
 

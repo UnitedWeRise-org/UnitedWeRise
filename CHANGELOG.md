@@ -1,6 +1,6 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: November 11, 2025
+**Last Updated**: December 8, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
@@ -8,7 +8,40 @@
 
 ---
 
-## [Unreleased] - 2025-11-11
+## [Unreleased] - 2025-12-08
+
+### Admin Dashboard - Container Replica Identification
+
+Added replica identification to health endpoint and admin dashboard to resolve confusing uptime fluctuations when multiple container replicas are running.
+
+**Problem Solved**: Azure Container Apps runs multiple replicas for high availability. Previously, health checks hitting different replicas showed wildly different uptimes (e.g., 6 minutes vs 8 days), causing confusion.
+
+**Changes Made**:
+
+1. **Backend Health Endpoint** (`backend/src/routes/health.ts`)
+   - Added `replica` object with `id`, `startedAt`, and `uptime` fields
+   - Added `revisionSuffix` for deployment identification
+   - Added Swagger documentation for `/health` endpoint
+   - Legacy `uptime` field preserved for backward compatibility
+
+2. **Admin Dashboard** (`frontend/src/modules/admin/controllers/OverviewController.js`)
+   - New "Container Replica" section showing replica ID, start time, and uptime
+   - Added explanatory note about multiple replicas
+   - Moved uptime from "Backend Environment" to dedicated replica section
+
+3. **Topic Navigation Retry Logic** (`frontend/src/components/TopicNavigation.js`)
+   - Added retry with exponential backoff (1s, 2s, 4s delays) for transient failures
+   - Graceful degradation: shows placeholder instead of error flash
+   - Up to 3 retry attempts before showing error
+
+**Files Modified**:
+- `backend/src/routes/health.ts` - Replica info + Swagger docs
+- `frontend/src/modules/admin/controllers/OverviewController.js` - Display changes
+- `frontend/src/components/TopicNavigation.js` - Retry logic
+
+---
+
+## [Previous] - 2025-11-11
 
 ### Security - 🔒 Comprehensive Security Hardening (P1/P2 Issues Resolved)
 

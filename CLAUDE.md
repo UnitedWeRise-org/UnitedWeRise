@@ -1,7 +1,9 @@
 # UnitedWeRise Development Reference
-**Version 3.0 - Modularized with Protocol System**
+**Version 4.0 - Phase-Based Protocol System**
 
 > **Protection System**: Sections marked with 🔒 are PROTECTED and must not be modified without explicit user approval. See Global CLAUDE.md for priority hierarchy.
+
+> **Development Protocol Phases**: All code changes follow the 5-phase system defined in Global CLAUDE.md (Audit → Plan → Execute → Test → Document). Each phase has a protocol with internal STOP criteria.
 
 ---
 
@@ -13,7 +15,7 @@
 
 **Main** = main branch = production = www site/server
 **Dev** = development branch = staging = dev site/server
-- "Merge to main/dev" or "Deploy to main/dev" = initialize & use `.claude/protocols/deployment-procedures.md`
+- "Merge to main/dev" or "Deploy to main/dev" = initialize & use `.claude/protocols/deployment_protocol.md`
 
 - **Development branch** === **Staging environment** (dev.unitedwerise.org / dev-api.unitedwerise.org)
   - Staging ONLY EVER runs development branch code
@@ -62,7 +64,7 @@ If on `main` for hotfixes or at user direction, stay on main. Otherwise prompt t
 
 **Process:** READ implementation → FIND similar documented code → VERIFY match → CHECK consistency.
 
-**For templates and requirements**: See `.claude/protocols/documentation-requirements.md`
+**For templates and requirements**: See `.claude/protocols/document_protocol.md`
 
 ---
 
@@ -104,53 +106,41 @@ Backend implements environment-aware auth: Production allows regular users, Stag
 
 **Usage:** Admin features use `requireStagingAuth`, security-critical use `requireAdmin`, user features use `requireAuth`.
 
-**For implementation details and testing**: See `.claude/protocols/environment-auth-guide.md`
+**For implementation details and testing**: See `.claude/protocols/auth_protocol.md`
 
 ---
 
-## 📚 Protocol Reference System
+## 📚 Project Protocol Reference
 
-**Before starting ANY tasks**: Check if relevant protocol exists.
-
-### Protocol Check Workflow:
-1. **Identify keywords/situation** from list below
-2. **Read protocol's "When to Use" section** (lightweight check)
-3. **If relevant, load and follow complete protocol**
+Phase protocols (audit, plan, execute, test, document) are defined in Global CLAUDE.md and trigger automatically for all code changes. Below are project-specific special protocols.
 
 **Protocol Loading:** Before executing any action governed by a protocol, READ the protocol file - even if read earlier. Stale context causes failures.
 
-### Protocol Index:
+### Special Protocol Index:
 
-**Deployment Operations**
+**Deployment Operations** (🔒 PROTECTED)
 - **Keywords**: deploy, push to production, merge to main, staging deployment
-- **Protocol**: `.claude/protocols/deployment-procedures.md` (🔒 PROTECTED)
+- **Protocol**: `.claude/protocols/deployment_protocol.md`
 - **Use when**: Deploying to staging or production environments
 
 **Deployment Problems/Issues**
 - **Keywords**: deployment stuck, wrong SHA, changes not visible, health check fails
-- **Protocol**: `.claude/protocols/deployment-troubleshooting.md`
+- **Protocol**: `.claude/protocols/deployment_troubleshooting_protocol.md`
 - **Use when**: Deployment completed but something is wrong
 
 **Authentication & Authorization**
 - **Keywords**: admin endpoint, auth middleware, `requireAuth`, `requireStagingAuth`, environment-aware auth
-- **Protocol**: `.claude/protocols/environment-auth-guide.md`
+- **Protocol**: `.claude/protocols/auth_protocol.md`
 - **Use when**: Implementing admin features or auth-protected endpoints
 
-**Code Documentation**
-- **Keywords**: Swagger, JSDoc, endpoint documentation, Prisma comments, API docs, CHANGELOG, MASTER_DOCUMENTATION updates
-- **Protocol**: `.claude/protocols/documentation-requirements.md`
-- **Use when**: Documenting new endpoints, services, schema changes, or any code changes requiring documentation
-
-**Verification & Quality Control**
-- **Keywords**: verify deployment, test after changes, post-deployment checks
-- **Protocol**: `.claude/protocols/verification-checklists.md`
-- **Use when**: After any deployment or code change
+**ES6 Modularization** (🔒 PROTECTED)
+- **Keywords**: `<script>`, inline code, ES6, module, modularize, non-module script
+- **Protocol**: `.claude/protocols/es6_protocol.md`
+- **Use when**: Migrating non-module JavaScript to ES6 modules
 
 ---
 
 **When uncertain if protocol applies**: Check it anyway. Reading "When to Use" section is lightweight.
-
-**Global protocols**: See Global CLAUDE.md Protocol Reference System for additional protocols (ES6 modularization, decision frameworks, etc.)
 
 ---
 

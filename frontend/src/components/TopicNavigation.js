@@ -68,9 +68,14 @@ class TopicNavigation {
     }
 
     /**
-     * Load and display trending topics
+     * Load and display trending topics with retry logic for transient failures
+     * @param {number} retryCount - Current retry attempt (internal use)
+     * @param {boolean} silent - Whether to suppress error notifications (for retries)
      */
-    async loadTrendingTopics() {
+    async loadTrendingTopics(retryCount = 0, silent = false) {
+        const maxRetries = 3;
+        const baseDelay = 1000; // 1 second base delay
+
         try {
             const response = await apiCall('/topic-navigation/trending', {
                 method: 'GET'
@@ -82,13 +87,51 @@ class TopicNavigation {
 
             this.trendingTopics = response.topics;
             this.renderTrendingTopics();
-            
+
             console.log(`📈 Loaded ${this.trendingTopics.length} trending topics`);
 
         } catch (error) {
             console.error('Failed to load trending topics:', error);
-            this.showError('Unable to load trending topics at this time');
+
+            // Retry with exponential backoff for transient failures
+            if (retryCount < maxRetries) {
+                const delay = baseDelay * Math.pow(2, retryCount); // 1s, 2s, 4s
+                console.log(`🔄 Retrying trending topics in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+
+                setTimeout(() => {
+                    this.loadTrendingTopics(retryCount + 1, true);
+                }, delay);
+                return;
+            }
+
+            // All retries exhausted - show graceful degradation
+            if (!silent) {
+                this.showError('Unable to load trending topics at this time');
+            }
+
+            // Render placeholder instead of leaving empty
+            this.renderTrendingTopicsPlaceholder();
         }
+    }
+
+    /**
+     * Render placeholder when trending topics fail to load
+     */
+    renderTrendingTopicsPlaceholder() {
+        const container = document.getElementById('trendingTopicsContainer');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="trending-topics-placeholder">
+                <div class="placeholder-content">
+                    <span class="placeholder-icon">📊</span>
+                    <p>Trending topics temporarily unavailable</p>
+                    <button class="btn btn-secondary btn-sm" data-topic-nav-action="loadTrendingTopics">
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        `;
     }
 
     /**
