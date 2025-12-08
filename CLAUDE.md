@@ -112,11 +112,11 @@ Backend implements environment-aware auth: Production allows regular users, Stag
 
 ## 📚 Project Protocol Reference
 
-Phase protocols (audit, plan, execute, test, document) are defined in Global CLAUDE.md and trigger automatically for all code changes. Below are project-specific special protocols.
+Phase protocols (audit, plan, execute, test, document) are in `~/.claude/protocols/` and trigger automatically for all code changes. Below are project-specific special protocols.
 
 **Protocol Loading:** Before executing any action governed by a protocol, READ the protocol file - even if read earlier. Stale context causes failures.
 
-### Special Protocol Index:
+### Project-Specific Protocols:
 
 **Deployment Operations** (🔒 PROTECTED)
 - **Keywords**: deploy, push to production, merge to main, staging deployment
@@ -133,12 +133,9 @@ Phase protocols (audit, plan, execute, test, document) are defined in Global CLA
 - **Protocol**: `.claude/protocols/auth_protocol.md`
 - **Use when**: Implementing admin features or auth-protected endpoints
 
-**ES6 Modularization** (🔒 PROTECTED)
-- **Keywords**: `<script>`, inline code, ES6, module, modularize, non-module script
-- **Protocol**: `.claude/protocols/es6_protocol.md`
-- **Use when**: Migrating non-module JavaScript to ES6 modules
-
 ---
+
+**Global protocols** (ES6, etc.): See `~/.claude/protocols/`
 
 **When uncertain if protocol applies**: Check it anyway. Reading "When to Use" section is lightweight.
 
