@@ -169,8 +169,8 @@
     position: absolute;
     top: 5.5vh;
     right: 0;
+    bottom: 0;
     width: 100%;
-    height: calc(100vh - 60px);
     transition: all 0.3s ease;
     z-index: 5;
 }
