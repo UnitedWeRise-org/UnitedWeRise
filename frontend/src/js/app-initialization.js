@@ -553,7 +553,29 @@ export { AppInitializer };
 
 // Auto-initialize when module loads
 export async function initializeApp() {
-    return window.appInitializer.initialize();
+    const result = await window.appInitializer.initialize();
+
+    // Show auth modal for non-authenticated users to encourage sign-up
+    if (!result.authenticated) {
+        AppInitializer.log('🔓 User not authenticated - showing auth modal to encourage sign-up');
+
+        // Small delay to ensure DOM is fully ready and other modals (MOTD) have loaded
+        // MOTD has z-index 9999, auth modal has z-index 10000, so auth modal appears on top
+        setTimeout(() => {
+            if (typeof window.openAuthModal === 'function') {
+                window.openAuthModal('register'); // Default to register to encourage sign-ups
+            } else {
+                // Fallback: try to import and use the modal module
+                import('../modules/core/auth/modal.js').then(({ openAuthModal }) => {
+                    openAuthModal('register');
+                }).catch(err => {
+                    console.warn('Could not load auth modal:', err);
+                });
+            }
+        }, 500); // 500ms delay allows MOTD to load first, appearing behind auth modal
+    }
+
+    return result;
 }
 
 // Auto-initialization when DOM is ready

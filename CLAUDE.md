@@ -34,6 +34,8 @@ If backend health endpoint or any monitoring shows a mismatch (e.g., staging sho
 
 **Always assume staging = development and production = main. Period.**
 
+**A change is not testable by the user until it is committed and deployed.**
+
 ---
 
 ## Project-Specific Core Rules
