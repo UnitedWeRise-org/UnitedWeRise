@@ -24,6 +24,7 @@ import { prisma } from '../lib/prisma';
 import { ProbabilityFeedService } from './probabilityFeedService';
 import { EngagementScoringService } from './engagementScoringService';
 import { reputationService } from './reputationService';
+import { UserInterestService, UserInterestProfile } from './userInterestService';
 import { logger } from './logger';
 
 type PoolType = 'random' | 'trending' | 'personalized';
@@ -369,15 +370,64 @@ export class SlotRollService {
 
     /**
      * Get PERSONALIZED pool candidates
-     * Uses full ProbabilityFeedService algorithm
+     * Uses UserInterestService for enhanced scoring with:
+     * - Social graph relationship weights (Subscribe 2x, Friend 1.5x, Follow 1x)
+     * - Content similarity via aggregate interest vector
+     * - Mute/block filtering
      */
     private static async getPersonalizedPool(userId: string): Promise<any[]> {
         try {
-            const result = await ProbabilityFeedService.generateFeed(userId, 100);
-            return result.posts.map((post: any) => ({
-                ...post,
-                _personalizedScore: post.finalScore || 1
-            }));
+            // Build user interest profile
+            const profile = await UserInterestService.buildProfile(userId);
+
+            // Get base candidates from ProbabilityFeedService
+            const result = await ProbabilityFeedService.generateFeed(userId, 150);
+
+            // Enhance with UserInterestService scoring
+            const enhancedPosts = result.posts
+                // Filter out muted/blocked authors
+                .filter((post: any) => !UserInterestService.shouldExcludeAuthor(post.authorId, profile))
+                // Apply enhanced scoring
+                .map((post: any) => {
+                    const relationshipWeight = UserInterestService.getRelationshipWeight(
+                        post.authorId,
+                        profile
+                    );
+                    const relevanceScore = UserInterestService.calculatePostRelevance(
+                        {
+                            id: post.id,
+                            authorId: post.authorId,
+                            embedding: post.embedding || [],
+                            tags: post.tags
+                        },
+                        profile
+                    );
+                    const geoBoost = UserInterestService.calculateGeoBoost(
+                        post.h3Index || null,
+                        profile
+                    );
+
+                    // Combine scores: base score * relationship weight * relevance boost * geo boost
+                    const baseScore = post.finalScore || 1;
+                    const enhancedScore = baseScore * relationshipWeight * (1 + relevanceScore) * geoBoost;
+
+                    return {
+                        ...post,
+                        _personalizedScore: enhancedScore,
+                        _relationshipWeight: relationshipWeight,
+                        _relevanceScore: relevanceScore,
+                        _geoBoost: geoBoost
+                    };
+                });
+
+            logger.debug({
+                userId,
+                originalCount: result.posts.length,
+                filteredCount: enhancedPosts.length,
+                excludedByMuteBlock: result.posts.length - enhancedPosts.length
+            }, 'Personalized pool enhanced');
+
+            return enhancedPosts;
         } catch (error) {
             logger.error({ error, userId }, 'Failed to get personalized pool, falling back to trending');
             return []; // Empty triggers fallback to trending

@@ -10,6 +10,46 @@
 
 ## [Unreleased] - 2025-12-09
 
+### Feed Algorithm - Enhanced Personalization (Phase 3)
+
+Implemented UserInterestService for comprehensive user interest profiling and enhanced feed personalization.
+
+**UserInterestService Features**:
+
+1. **Social Graph Signals** (weighted by relationship type)
+   - Subscriptions: 2.0x priority (highest - explicit strong interest)
+   - Friends: 1.5x priority (mutual relationship)
+   - Follows: 1.0x priority (one-way interest)
+
+2. **Behavioral Signals**
+   - Last 50 liked posts with embeddings
+   - Last 20 user's own posts
+   - Aggregate interest vector computed from weighted embeddings
+
+3. **Explicit Preferences**
+   - User.interests[] array (explicit topic subscriptions)
+   - User.h3Index for geographic relevance
+
+4. **Geographic Filtering**
+   - H3 index prefix matching for proximity calculation
+   - Proximity boosts: 1.5x (same cell) → 1.3x → 1.15x → 1.05x → 1.0x
+
+5. **Negative Signals** (placeholder until schema migration)
+   - Mute/block filtering prepared (tables not yet created)
+
+**Enhanced Scoring Formula**:
+```
+enhancedScore = baseScore × relationshipWeight × (1 + relevanceScore) × geoBoost
+```
+
+**Files Created**:
+- `backend/src/services/userInterestService.ts` - User interest profile building and scoring
+
+**Files Modified**:
+- `backend/src/services/slotRollService.ts` - Integrated UserInterestService for PERSONALIZED pool
+
+---
+
 ### Feed Algorithm - Per-Slot Roll System (Phase 2)
 
 Implemented probability-based feed population where each slot independently rolls 0-99 to determine which algorithm pool to use. Designed for anti-echo-chamber cross-sectionality while respecting user preferences.
