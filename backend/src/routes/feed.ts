@@ -3,6 +3,7 @@ import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { ProbabilityFeedService } from '../services/probabilityFeedService';
 import { EngagementScoringService } from '../services/engagementScoringService';
+import { SlotRollService } from '../services/slotRollService';
 import { logger } from '../services/logger';
 
 const router = express.Router();
@@ -794,6 +795,184 @@ router.post('/filters', requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to create filter'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/feed/public:
+ *   get:
+ *     tags: [Feed]
+ *     summary: Get public feed for logged-out users using slot-roll algorithm
+ *     description: |
+ *       Returns a public feed using per-slot probability-based selection:
+ *       - Each slot rolls 0-99 independently
+ *       - 0-29 (30%) = RANDOM pool (time decay + reputation only)
+ *       - 30-99 (70%) = TRENDING pool (engagement + time decay + reputation)
+ *
+ *       This ensures diverse content exposure while favoring engaging posts.
+ *       Nothing is guaranteed - variance is intentional for organic discovery.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 15
+ *         description: Number of posts to return (max 50)
+ *     responses:
+ *       200:
+ *         description: Public feed generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 posts:
+ *                   type: array
+ *                 algorithm:
+ *                   type: string
+ *                   example: slot-roll-public
+ *                 stats:
+ *                   type: object
+ *                   properties:
+ *                     poolDistribution:
+ *                       type: object
+ *                     expectedDistribution:
+ *                       type: object
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/public', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit?.toString() || '15'), 50);
+
+    const feedResult = await SlotRollService.generateFeed(null, { slots: limit });
+
+    // Transform posts for response (remove internal scoring fields)
+    const posts = feedResult.posts.map(({ post, pool }) => ({
+      id: post.id,
+      content: post.content,
+      author: post.author,
+      photos: post.photos,
+      likesCount: post._count?.likes || 0,
+      commentsCount: post._count?.comments || 0,
+      sharesCount: post._count?.shares || 0,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      _pool: pool // Include pool type for debugging/analytics
+    }));
+
+    res.json({
+      success: true,
+      posts,
+      algorithm: 'slot-roll-public',
+      stats: {
+        totalSlots: feedResult.stats.totalSlots,
+        filledSlots: feedResult.stats.filledSlots,
+        poolDistribution: feedResult.stats.poolDistribution,
+        expectedDistribution: feedResult.stats.expectedDistribution
+      }
+    });
+  } catch (error) {
+    logger.error({ error }, 'Public feed error');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate public feed'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/feed/slot-roll:
+ *   get:
+ *     tags: [Feed]
+ *     summary: Get personalized feed using slot-roll algorithm (authenticated)
+ *     description: |
+ *       Returns a personalized feed using per-slot probability-based selection:
+ *       - Each slot rolls 0-99 independently
+ *       - 0-9 (10%) = RANDOM pool (anti-echo-chamber)
+ *       - 10-19 (10%) = TRENDING pool (cross-sectional content)
+ *       - 20-99 (80%) = PERSONALIZED pool (vector matching + social graph)
+ *
+ *       This ensures diverse content exposure while heavily favoring personalized content.
+ *       Nothing is guaranteed - variance is intentional for organic discovery.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 15
+ *         description: Number of posts to return (max 50)
+ *     responses:
+ *       200:
+ *         description: Personalized feed generated successfully
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/slot-roll', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const limit = Math.min(parseInt(req.query.limit?.toString() || '15'), 50);
+
+    // Get friend IDs for audience filtering
+    const friendIds = await getFriendIds(userId);
+
+    const feedResult = await SlotRollService.generateFeed(userId, { slots: limit });
+
+    // Filter by audience and add like status
+    const audienceFilteredPosts = feedResult.posts.filter(({ post }) => {
+      const audience = post.audience || 'PUBLIC';
+      if (audience === 'PUBLIC') return true;
+      if (audience === 'FRIENDS_ONLY') return friendIds.has(post.authorId);
+      if (audience === 'NON_FRIENDS') return !friendIds.has(post.authorId);
+      return true;
+    });
+
+    const postIds = audienceFilteredPosts.map(({ post }) => post.id);
+    const userLikes = await prisma.like.findMany({
+      where: { userId, postId: { in: postIds } },
+      select: { postId: true }
+    });
+    const likedPostIds = new Set(userLikes.map(like => like.postId));
+
+    const posts = audienceFilteredPosts.map(({ post, pool }) => ({
+      id: post.id,
+      content: post.content,
+      author: post.author,
+      photos: post.photos,
+      likesCount: post._count?.likes || 0,
+      commentsCount: post._count?.comments || 0,
+      sharesCount: post._count?.shares || 0,
+      isLiked: likedPostIds.has(post.id),
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      _pool: pool
+    }));
+
+    res.json({
+      success: true,
+      posts,
+      algorithm: 'slot-roll-personalized',
+      stats: {
+        totalSlots: feedResult.stats.totalSlots,
+        filledSlots: feedResult.stats.filledSlots,
+        poolDistribution: feedResult.stats.poolDistribution,
+        expectedDistribution: feedResult.stats.expectedDistribution
+      }
+    });
+  } catch (error) {
+    logger.error({ error, userId: req.user?.id }, 'Slot-roll feed error');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate feed'
     });
   }
 });
