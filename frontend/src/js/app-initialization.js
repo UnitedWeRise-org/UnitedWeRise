@@ -556,7 +556,7 @@ export async function initializeApp() {
     const result = await window.appInitializer.initialize();
 
     // Show auth modal for non-authenticated users to encourage sign-up
-    if (!result.authenticated) {
+    if (!result?.authenticated) {
         AppInitializer.log('🔓 User not authenticated - showing auth modal to encourage sign-up');
 
         // Small delay to ensure DOM is fully ready and other modals (MOTD) have loaded

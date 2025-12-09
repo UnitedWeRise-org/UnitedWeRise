@@ -81,11 +81,11 @@ class TopicNavigation {
                 method: 'GET'
             });
 
-            if (!response.success) {
-                throw new Error(response.error || 'Failed to load trending topics');
+            if (!response.ok || !response.data?.success) {
+                throw new Error(response.data?.error || response.error || 'Failed to load trending topics');
             }
 
-            this.trendingTopics = response.topics;
+            this.trendingTopics = response.data.topics;
             this.renderTrendingTopics();
 
             console.log(`📈 Loaded ${this.trendingTopics.length} trending topics`);
