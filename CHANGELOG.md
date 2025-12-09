@@ -8,7 +8,66 @@
 
 ---
 
-## [Unreleased] - 2025-12-08
+## [Unreleased] - 2025-12-09
+
+### Feed Algorithm - Per-Slot Roll System (Phase 2)
+
+Implemented probability-based feed population where each slot independently rolls 0-99 to determine which algorithm pool to use. Designed for anti-echo-chamber cross-sectionality while respecting user preferences.
+
+**Architecture**:
+
+| User State | Roll Range | Pool | Selection Method |
+|------------|------------|------|------------------|
+| Logged IN | 0-9 (10%) | RANDOM | Time decay + reputation only |
+| Logged IN | 10-19 (10%) | TRENDING | Engagement + time decay + reputation |
+| Logged IN | 20-99 (80%) | PERSONALIZED | Full vector matching + social graph |
+| Logged OUT | 0-29 (30%) | RANDOM | Time decay + reputation only |
+| Logged OUT | 30-99 (70%) | TRENDING | Engagement + time decay + reputation |
+
+**Key Design Principles**:
+- Nothing is guaranteed - each slot is an independent roll
+- Variance is intentional (keeps feed organic and unpredictable)
+- Within each pool, selection is also weighted random (not top-N ranking)
+- Deduplication with graceful fallback chain
+
+**New Endpoints**:
+- `GET /api/feed/public` - Public feed for logged-out users (no auth required)
+- `GET /api/feed/slot-roll` - Personalized slot-roll feed (authenticated)
+
+**Files Created**:
+- `backend/src/services/slotRollService.ts` - Core per-slot roll logic with pool selection
+
+**Files Modified**:
+- `backend/src/routes/feed.ts` - Added new endpoints with Swagger docs
+
+---
+
+### Bug Fixes - CSS/JS Issues from Auth Modal Changes
+
+Fixed three bugs introduced by commit `8cf0bd3`:
+
+1. **Map Gap** - Map not extending to full viewport height
+   - Root cause: `#mapContainer` used `height: calc(100vh - 60px)` but top bar is `5.5vh`
+   - Fix: Changed to `bottom: 0` for proper edge-to-edge coverage
+   - File: `frontend/src/styles/map.css`
+
+2. **JS Crash on Unauthenticated Users** - `result.authenticated` crashed when result undefined
+   - Root cause: `initialize()` returns undefined when API fails for unauthenticated users
+   - Fix: Added optional chaining `result?.authenticated`
+   - File: `frontend/src/js/app-initialization.js`
+
+3. **Trending Topics Error** - Response format mismatch
+   - Root cause: `apiCall` returns `{ok, data}` but code checked `response.success`
+   - Fix: Changed to `response.ok && response.data?.success`
+   - File: `frontend/src/components/TopicNavigation.js`
+
+4. **Auth Modal Default** - Changed from register to login
+   - User preference: Login should be default, users can switch to register
+   - File: `frontend/src/js/app-initialization.js`
+
+---
+
+## [Previous] - 2025-12-08
 
 ### Admin Dashboard - Container Replica Identification
 
