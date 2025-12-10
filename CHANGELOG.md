@@ -1,6 +1,6 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: December 8, 2025
+**Last Updated**: December 9, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
@@ -34,19 +34,47 @@ Implemented UserInterestService for comprehensive user interest profiling and en
    - H3 index prefix matching for proximity calculation
    - Proximity boosts: 1.5x (same cell) → 1.3x → 1.15x → 1.05x → 1.0x
 
-5. **Negative Signals** (placeholder until schema migration)
-   - Mute/block filtering prepared (tables not yet created)
+5. **Negative Signals**
+   - Mute table created (with optional expiration via expiresAt)
+   - Block table created (permanent blocking)
+   - UserInterestService filters out muted/blocked users from feed
 
 **Enhanced Scoring Formula**:
 ```
 enhancedScore = baseScore × relationshipWeight × (1 + relevanceScore) × geoBoost
 ```
 
+**Schema Changes**:
+- Added `Mute` model with muterId, mutedId, expiresAt, reason
+- Added `Block` model with blockerId, blockedId, reason
+- Added relations to User model (muting, mutedBy, blocking, blockedBy)
+
 **Files Created**:
 - `backend/src/services/userInterestService.ts` - User interest profile building and scoring
+- `backend/prisma/migrations/20251209223126_add_mute_block_tables/migration.sql`
 
 **Files Modified**:
 - `backend/src/services/slotRollService.ts` - Integrated UserInterestService for PERSONALIZED pool
+- `backend/prisma/schema.prisma` - Added Mute and Block models
+
+---
+
+### Database Migration Fixes
+
+Fixed Prisma shadow database validation errors that prevented `prisma migrate dev` from working.
+
+**Root Cause**: Several migrations contained data migration SQL (INSERT, UPDATE, DELETE statements) that fail on an empty shadow database because they reference tables/columns that don't exist yet.
+
+**Fixes Applied**:
+1. **20250809010000_add_unified_messaging** - Renamed from `001_add_unified_messaging` for proper timestamp ordering. Removed data migration INSERTs that referenced Message and CandidateAdminMessage tables.
+2. **20251002_nuclear_photo_removal** - Removed invalid COMMENT ON TABLE statements (can't comment on dropped tables). Removed UPDATE/DELETE data cleanup statements.
+3. **20251008_add_feed_filter_system** - Added missing CREATE TYPE statements for IssueCategory and GeographicScope enums (were created via db push but never had migrations).
+
+**Why This Matters**:
+- `prisma migrate deploy` (used by CI/CD) only applies pending migrations
+- `prisma migrate dev` replays ALL migrations on shadow database for validation
+- Data migration SQL fails on empty shadow database
+- Removing the data migration SQL is safe because it was already executed on production/staging
 
 ---
 
