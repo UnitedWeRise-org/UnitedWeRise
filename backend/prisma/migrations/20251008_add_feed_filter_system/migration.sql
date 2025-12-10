@@ -1,3 +1,9 @@
+-- CreateEnum (missing enums added Dec 2025 - these were created via db push but never had migrations)
+CREATE TYPE "public"."IssueCategory" AS ENUM ('HEALTHCARE', 'EDUCATION', 'ENVIRONMENT', 'ECONOMY', 'INFRASTRUCTURE', 'PUBLIC_SAFETY', 'HOUSING', 'TRANSPORTATION', 'TECHNOLOGY', 'CIVIL_RIGHTS', 'IMMIGRATION', 'ENERGY', 'AGRICULTURE', 'VETERANS', 'SENIORS', 'YOUTH', 'LABOR', 'GOVERNMENT_REFORM', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "public"."GeographicScope" AS ENUM ('LOCAL', 'COUNTY', 'STATE', 'NATIONAL', 'REGIONAL');
+
 -- CreateEnum
 CREATE TYPE "public"."FilterType" AS ENUM ('QUICK_FILTER', 'CUSTOM', 'SMART');
 

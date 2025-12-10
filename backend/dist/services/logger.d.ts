@@ -9,12 +9,12 @@ import pino from 'pino';
 /**
  * Main application logger
  */
-export declare const logger: pino.Logger<never, boolean>;
+export declare const logger: any;
 /**
  * Security-specific logger
  * Child logger with component tag for security events
  */
-export declare const securityLogger: pino.Logger<never, boolean>;
+export declare const securityLogger: any;
 /**
  * Create a request-scoped logger with contextual information
  * @param requestId - Unique request identifier

@@ -264,6 +264,14 @@ model User {
   subscribers                 Subscription[]            @relation("Subscribed")
   /// Subscriptions by this user to other users (CASCADE: deletes subscriptions)
   subscriptions               Subscription[]            @relation("Subscriber")
+  /// Users this user has muted (CASCADE: deletes mute records)
+  muting                      Mute[]                    @relation("Muter")
+  /// Users who have muted this user (CASCADE: deletes mute records)
+  mutedBy                     Mute[]                    @relation("Muted")
+  /// Users this user has blocked (CASCADE: deletes block records)
+  blocking                    Block[]                   @relation("Blocker")
+  /// Users who have blocked this user (CASCADE: deletes block records)
+  blockedBy                   Block[]                   @relation("Blocked")
   /// Comments on discussion topics by this user (CASCADE: deletes comments)
   topicComments               TopicComment[]
   /// Activity log entries for this user (CASCADE: deletes activity history)
@@ -397,6 +405,51 @@ model Friendship {
   @@index([requesterId])
   @@index([recipientId])
   @@index([status])
+}
+
+/// Mute relationship - hides content from muted user without notifying them
+/// Muted users' posts won't appear in feed, but they can still see muter's content
+model Mute {
+  id        String   @id @default(cuid())
+  /// User who initiated the mute
+  muterId   String
+  /// User being muted
+  mutedId   String
+  /// When the mute was created
+  createdAt DateTime @default(now())
+  /// Optional expiration (null = permanent)
+  expiresAt DateTime?
+  /// Reason for muting (optional, for user's reference)
+  reason    String?
+
+  muter     User     @relation("Muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muted     User     @relation("Muted", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@unique([muterId, mutedId])
+  @@index([muterId])
+  @@index([mutedId])
+  @@index([expiresAt])
+}
+
+/// Block relationship - prevents all interaction between users
+/// Blocked users cannot see blocker's content, send messages, or interact
+model Block {
+  id        String   @id @default(cuid())
+  /// User who initiated the block
+  blockerId String
+  /// User being blocked
+  blockedId String
+  /// When the block was created
+  createdAt DateTime @default(now())
+  /// Reason for blocking (optional, for admin review if needed)
+  reason    String?
+
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
 }
 
 /// Post content in the social feed

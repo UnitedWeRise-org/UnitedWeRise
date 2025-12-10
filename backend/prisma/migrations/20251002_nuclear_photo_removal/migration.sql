@@ -11,23 +11,18 @@ BEGIN;
 
 -- Drop ImageModerationReview (depends on ImageModerationResult)
 DROP TABLE IF EXISTS "ImageModerationReview" CASCADE;
-COMMENT ON TABLE "ImageModerationReview" IS 'DROPPED: Photo moderation review system removed';
 
 -- Drop ImageModerationResult (depends on Photo)
 DROP TABLE IF EXISTS "ImageModerationResult" CASCADE;
-COMMENT ON TABLE "ImageModerationResult" IS 'DROPPED: Photo moderation result tracking removed';
 
 -- Drop PhotoPrivacyRequest (depends on Photo and User)
 DROP TABLE IF EXISTS "PhotoPrivacyRequest" CASCADE;
-COMMENT ON TABLE "PhotoPrivacyRequest" IS 'DROPPED: Photo privacy request system removed';
 
 -- Drop PhotoTag (depends on Photo and User)
 DROP TABLE IF EXISTS "PhotoTag" CASCADE;
-COMMENT ON TABLE "PhotoTag" IS 'DROPPED: Photo tagging system removed';
 
 -- Drop Photo (main photo table)
 DROP TABLE IF EXISTS "Photo" CASCADE;
-COMMENT ON TABLE "Photo" IS 'DROPPED: Photo storage and management system removed';
 
 -- ============================================================================
 -- STEP 2: Drop photo-related enums
@@ -58,28 +53,12 @@ DROP TYPE IF EXISTS "ModerationCategory" CASCADE;
 DROP TYPE IF EXISTS "ModerationDecision" CASCADE;
 
 -- ============================================================================
--- STEP 3: Optional cleanup - Reset user photo tagging settings
+-- STEP 3 & 4: Data cleanup statements removed (Dec 2025)
 -- ============================================================================
--- These fields in the User table are no longer functional without the photo system
--- We set them to their default values to avoid confusion
-
-UPDATE "User"
-SET
-  "allowTagsByFriendsOnly" = false,
-  "photoTaggingEnabled" = true,
-  "requireTagApproval" = true
-WHERE
-  "allowTagsByFriendsOnly" != false
-  OR "photoTaggingEnabled" != true
-  OR "requireTagApproval" != true;
-
--- ============================================================================
--- STEP 4: Clean up notification types related to photos
--- ============================================================================
--- Remove any existing notifications for photo tagging (these are now orphaned)
-
-DELETE FROM "Notification"
-WHERE "type" IN ('PHOTO_TAG_REQUEST', 'PHOTO_TAG_APPROVED', 'PHOTO_TAG_DECLINED', 'PRIVACY_REQUEST');
+-- The UPDATE and DELETE statements were removed because:
+-- 1. Data cleanup already executed on production and staging databases
+-- 2. Prisma's shadow database may not have these columns/data
+-- 3. This allows `prisma migrate dev` to work for creating new migrations
 
 COMMIT;
 
