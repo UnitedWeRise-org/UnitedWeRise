@@ -21,7 +21,7 @@ export class MyFeedHandlers {
         // Variables for infinite scroll functionality (migrated from global scope)
         this.isLoadingMorePosts = false;
         this.hasMorePosts = true;
-        this.currentFeedOffset = 0; // Track total posts loaded
+        this.seenPostIds = []; // Track seen post IDs for excludeIds pagination
 
         this.setupEventListeners();
     }
@@ -307,8 +307,8 @@ export class MyFeedHandlers {
         }
 
         try {
-            console.log('🌐 Making API call to /feed/');
-            const response = await apiCall('/feed/?limit=15', {
+            console.log('🌐 Making API call to /feed/slot-roll');
+            const response = await apiCall('/feed/slot-roll?limit=15', {
                 method: 'GET'
             });
 
@@ -329,8 +329,8 @@ export class MyFeedHandlers {
 
             if (posts && Array.isArray(posts) && posts.length > 0) {
                 console.log(`✅ Found ${posts.length} posts for My Feed`);
-                // Reset offset for initial load
-                this.currentFeedOffset = posts.length;
+                // Reset seen post IDs for initial load and track new ones
+                this.seenPostIds = posts.map(p => p.id);
                 this.hasMorePosts = true; // Reset for new feed
                 this.displayMyFeedPosts(posts);
             } else {
@@ -485,9 +485,10 @@ export class MyFeedHandlers {
         container.appendChild(loadingDiv);
 
         try {
-            // Use offset-based pagination
-            console.log(`🔄 Loading more My Feed posts... (offset: ${this.currentFeedOffset})`);
-            const response = await apiCall(`/feed/?limit=15&offset=${this.currentFeedOffset}`, {
+            // Use excludeIds-based pagination (slot-roll feed algorithm)
+            const excludeIds = this.seenPostIds.join(',');
+            console.log(`🔄 Loading more My Feed posts... (excluding ${this.seenPostIds.length} seen posts)`);
+            const response = await apiCall(`/feed/slot-roll?limit=15&excludeIds=${excludeIds}`, {
                 method: 'GET'
             });
 
@@ -516,10 +517,11 @@ export class MyFeedHandlers {
                 return;
             }
 
-            // Append new posts to existing feed (pagination now supported)
-            console.log(`✅ Appending ${posts.length} more posts (total offset: ${this.currentFeedOffset})`);
+            // Append new posts to existing feed and track their IDs
+            const newIds = posts.map(p => p.id);
+            this.seenPostIds = [...this.seenPostIds, ...newIds];
+            console.log(`✅ Appending ${posts.length} more posts (total seen: ${this.seenPostIds.length})`);
             this.displayMyFeedPosts(posts, true); // true = append mode
-            this.currentFeedOffset += posts.length; // Increment offset by number of posts loaded
 
             // Check if backend indicates more posts available
             if (response.pagination && response.pagination.hasMore === false) {
@@ -620,7 +622,7 @@ if (typeof window !== 'undefined') {
     // Backward compatibility for global variables
     window.isLoadingMorePosts = false;
     window.hasMorePosts = true;
-    window.currentFeedOffset = 0;
+    window.seenPostIds = [];
 }
 
 // My Feed handlers module loaded (Feed Management System)

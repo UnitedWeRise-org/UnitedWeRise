@@ -646,11 +646,11 @@ export class FeedToggle {
             return [];
         }
 
-        // Backend endpoint is /feed/ (default discover)
+        // Backend endpoint is /feed/slot-roll (slot-roll algorithm for discover feed)
         // Add timestamp to bust performance cache when needed
         const url = bypassCache
-            ? `/feed/?limit=15&_=${Date.now()}`
-            : '/feed/?limit=15';
+            ? `/feed/slot-roll?limit=15&_=${Date.now()}`
+            : '/feed/slot-roll?limit=15';
 
         const response = await apiCall(url, {
             method: 'GET'

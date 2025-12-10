@@ -237,6 +237,8 @@ class Profile {
                 case 'viewDeletedContent': this.viewDeletedContent(param1, param2); break;
                 case 'navigateToComment': this.navigateToComment(param1, param2); break;
                 case 'navigateToUser': this.navigateToUser(param1); break;
+                case 'showMutedList': this.showMutedList(); break;
+                case 'showBlockedList': this.showBlockedList(); break;
                 case 'openAuthModal':
                     if (typeof openAuthModal === 'function') {
                         openAuthModal(param1);
@@ -1247,6 +1249,28 @@ class Profile {
                         </div>
                     </div>
 
+                    <div class="settings-group">
+                        <h4>Muted & Blocked Users</h4>
+                        <p class="setting-description">Manage users you've muted or blocked.</p>
+
+                        <div class="muted-blocked-tabs">
+                            <button class="muted-blocked-tab active" data-action="showMutedList">
+                                🔇 Muted Users
+                            </button>
+                            <button class="muted-blocked-tab" data-action="showBlockedList">
+                                🚫 Blocked Users
+                            </button>
+                        </div>
+
+                        <div id="mutedUsersList" class="muted-blocked-list">
+                            <div class="loading-spinner">Loading muted users...</div>
+                        </div>
+
+                        <div id="blockedUsersList" class="muted-blocked-list" style="display: none;">
+                            <div class="loading-spinner">Loading blocked users...</div>
+                        </div>
+                    </div>
+
                     <div class="settings-group danger">
                         <h4>Danger Zone</h4>
                         <button data-action="deactivateAccount" class="btn-danger">Deactivate Account</button>
@@ -1650,6 +1674,127 @@ class Profile {
 
     downloadData() {
         alert('Data download coming soon!');
+    }
+
+    async showMutedList() {
+        // Update tab UI
+        document.querySelectorAll('.muted-blocked-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector('[data-action="showMutedList"]')?.classList.add('active');
+
+        // Show/hide lists
+        const mutedList = document.getElementById('mutedUsersList');
+        const blockedList = document.getElementById('blockedUsersList');
+        if (mutedList) mutedList.style.display = 'block';
+        if (blockedList) blockedList.style.display = 'none';
+
+        // Load muted users
+        if (mutedList) {
+            mutedList.innerHTML = '<div class="loading-spinner">Loading muted users...</div>';
+
+            try {
+                const users = window.muteBlockService
+                    ? await window.muteBlockService.getMutedUsers()
+                    : [];
+
+                if (users.length === 0) {
+                    mutedList.innerHTML = `
+                        <div class="empty-list">
+                            <p>🔇 You haven't muted anyone yet.</p>
+                            <p class="text-muted">Muted users won't appear in your feed.</p>
+                        </div>
+                    `;
+                } else {
+                    mutedList.innerHTML = users.map(user => this.renderMutedUserItem(user)).join('');
+                }
+            } catch (error) {
+                console.error('Error loading muted users:', error);
+                mutedList.innerHTML = '<div class="error-state">Failed to load muted users. Please try again.</div>';
+            }
+        }
+    }
+
+    async showBlockedList() {
+        // Update tab UI
+        document.querySelectorAll('.muted-blocked-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector('[data-action="showBlockedList"]')?.classList.add('active');
+
+        // Show/hide lists
+        const mutedList = document.getElementById('mutedUsersList');
+        const blockedList = document.getElementById('blockedUsersList');
+        if (mutedList) mutedList.style.display = 'none';
+        if (blockedList) blockedList.style.display = 'block';
+
+        // Load blocked users
+        if (blockedList) {
+            blockedList.innerHTML = '<div class="loading-spinner">Loading blocked users...</div>';
+
+            try {
+                const users = window.muteBlockService
+                    ? await window.muteBlockService.getBlockedUsers()
+                    : [];
+
+                if (users.length === 0) {
+                    blockedList.innerHTML = `
+                        <div class="empty-list">
+                            <p>🚫 You haven't blocked anyone yet.</p>
+                            <p class="text-muted">Blocked users can't see your content or interact with you.</p>
+                        </div>
+                    `;
+                } else {
+                    blockedList.innerHTML = users.map(user => this.renderBlockedUserItem(user)).join('');
+                }
+            } catch (error) {
+                console.error('Error loading blocked users:', error);
+                blockedList.innerHTML = '<div class="error-state">Failed to load blocked users. Please try again.</div>';
+            }
+        }
+    }
+
+    renderMutedUserItem(user) {
+        const expiresText = user.expiresAt
+            ? `Expires: ${new Date(user.expiresAt).toLocaleDateString()}`
+            : 'Permanent';
+
+        return `
+            <div class="muted-blocked-item" data-user-id="${user.id}">
+                <div class="user-info">
+                    <img src="${user.avatar || '/assets/default-avatar.png'}" alt="${user.username}" class="user-avatar-small">
+                    <div class="user-details">
+                        <span class="username">@${user.username}</span>
+                        <span class="name">${user.firstName || ''} ${user.lastName || ''}</span>
+                        <span class="expiry-info">${expiresText}</span>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-secondary"
+                        data-mute-action="unmuteUser"
+                        data-user-id="${user.id}">
+                    Unmute
+                </button>
+            </div>
+        `;
+    }
+
+    renderBlockedUserItem(user) {
+        return `
+            <div class="muted-blocked-item" data-user-id="${user.id}">
+                <div class="user-info">
+                    <img src="${user.avatar || '/assets/default-avatar.png'}" alt="${user.username}" class="user-avatar-small">
+                    <div class="user-details">
+                        <span class="username">@${user.username}</span>
+                        <span class="name">${user.firstName || ''} ${user.lastName || ''}</span>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-secondary"
+                        data-mute-action="unblockUser"
+                        data-user-id="${user.id}">
+                    Unblock
+                </button>
+            </div>
+        `;
     }
 
     openAdminDashboard() {

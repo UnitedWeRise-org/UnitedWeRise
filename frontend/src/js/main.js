@@ -101,6 +101,7 @@ import '../js/reputation-badges.js';  // Reputation & badge display
 // Phase 5d: Medium Components (Batch 6)
 import '../components/VerificationFlow.js';  // User verification workflow
 import '../components/ContentReporting.js';  // Content moderation reporting
+import '../components/MuteBlockService.js';  // User mute/block functionality
 import '../components/UserCard.js';  // User profile card popup
 
 // Phase 5e: Heavy Component (Batch 7)

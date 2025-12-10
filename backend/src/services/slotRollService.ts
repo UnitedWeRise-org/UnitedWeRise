@@ -39,6 +39,7 @@ interface FeedConfig {
     slots: number;
     loggedInThresholds: { random: number; trending: number };
     loggedOutThresholds: { random: number };
+    excludeIds: string[];  // Post IDs to exclude (for pagination/infinite scroll)
 }
 
 const DEFAULT_CONFIG: FeedConfig = {
@@ -49,7 +50,8 @@ const DEFAULT_CONFIG: FeedConfig = {
     },
     loggedOutThresholds: {
         random: 30     // 0-29 = random (30%), 30-99 = trending (70%)
-    }
+    },
+    excludeIds: []
 };
 
 export class SlotRollService {
@@ -67,7 +69,8 @@ export class SlotRollService {
         const cfg = { ...DEFAULT_CONFIG, ...config };
         const isLoggedIn = userId !== null;
 
-        const selectedIds = new Set<string>();
+        // Initialize with excludeIds to skip previously-seen posts (for infinite scroll)
+        const selectedIds = new Set<string>(cfg.excludeIds);
         const posts: SlotResult[] = [];
         const poolCounts = { random: 0, trending: 0, personalized: 0 };
         const rolls: number[] = [];

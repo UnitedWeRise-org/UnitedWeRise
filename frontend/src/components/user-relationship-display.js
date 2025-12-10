@@ -14,8 +14,10 @@ class UserRelationshipDisplay {
             showFollowButton: true,
             showFriendButton: true,
             showMessageButton: true,
+            showMuteBlockButtons: true, // Show mute/block options
             showCounts: true,
             inline: false, // horizontal layout vs vertical
+            username: '', // For mute/block display
             ...options
         };
         
@@ -75,7 +77,12 @@ class UserRelationshipDisplay {
         if (this.options.showCounts) {
             html += this.renderCounts();
         }
-        
+
+        // Mute/Block buttons (shown as a separate row/section)
+        if (this.options.showMuteBlockButtons) {
+            html += this.renderMuteBlockButtons();
+        }
+
         html += '</div>';
         this.container.innerHTML = html;
     }
@@ -156,6 +163,30 @@ class UserRelationshipDisplay {
                 <span class="followers-count" data-follower-count="${this.userId}">
                     <i class="fas fa-users"></i> ${this.relationshipStatus.followerCount || 0} followers
                 </span>
+            </div>
+        `;
+    }
+
+    renderMuteBlockButtons() {
+        const sizeClass = this.options.size === 'sm' ? 'btn-sm' : this.options.size === 'lg' ? 'btn-lg' : '';
+        const username = this.options.username || 'user';
+
+        return `
+            <div class="mute-block-buttons d-flex gap-2 mt-2 pt-2" style="border-top: 1px solid #eee;">
+                <button class="btn btn-outline-secondary ${sizeClass} mute-btn"
+                        data-mute-action="muteUser"
+                        data-user-id="${this.userId}"
+                        data-username="${username}"
+                        title="Mute this user">
+                    🔇 Mute
+                </button>
+                <button class="btn btn-outline-danger ${sizeClass} block-btn"
+                        data-mute-action="blockUser"
+                        data-user-id="${this.userId}"
+                        data-username="${username}"
+                        title="Block this user">
+                    🚫 Block
+                </button>
             </div>
         `;
     }

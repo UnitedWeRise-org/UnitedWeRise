@@ -813,6 +813,8 @@ router.post('/filters', requireAuth, async (req: AuthRequest, res) => {
  *
  *       This ensures diverse content exposure while favoring engaging posts.
  *       Nothing is guaranteed - variance is intentional for organic discovery.
+ *
+ *       For infinite scroll, pass excludeIds to avoid duplicate posts.
  *     parameters:
  *       - in: query
  *         name: limit
@@ -820,6 +822,11 @@ router.post('/filters', requireAuth, async (req: AuthRequest, res) => {
  *           type: integer
  *           default: 15
  *         description: Number of posts to return (max 50)
+ *       - in: query
+ *         name: excludeIds
+ *         schema:
+ *           type: string
+ *         description: Comma-separated post IDs to exclude (for infinite scroll pagination)
  *     responses:
  *       200:
  *         description: Public feed generated successfully
@@ -849,7 +856,12 @@ router.get('/public', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit?.toString() || '15'), 50);
 
-    const feedResult = await SlotRollService.generateFeed(null, { slots: limit });
+    // Parse excludeIds for infinite scroll pagination
+    const excludeIds = req.query.excludeIds
+      ? (req.query.excludeIds as string).split(',').filter(id => id.trim())
+      : [];
+
+    const feedResult = await SlotRollService.generateFeed(null, { slots: limit, excludeIds });
 
     // Transform posts for response (remove internal scoring fields)
     const posts = feedResult.posts.map(({ post, pool }) => ({
@@ -900,6 +912,8 @@ router.get('/public', async (req, res) => {
  *
  *       This ensures diverse content exposure while heavily favoring personalized content.
  *       Nothing is guaranteed - variance is intentional for organic discovery.
+ *
+ *       For infinite scroll, pass excludeIds to avoid duplicate posts.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -909,6 +923,11 @@ router.get('/public', async (req, res) => {
  *           type: integer
  *           default: 15
  *         description: Number of posts to return (max 50)
+ *       - in: query
+ *         name: excludeIds
+ *         schema:
+ *           type: string
+ *         description: Comma-separated post IDs to exclude (for infinite scroll pagination)
  *     responses:
  *       200:
  *         description: Personalized feed generated successfully
@@ -922,10 +941,15 @@ router.get('/slot-roll', requireAuth, async (req: AuthRequest, res) => {
     const userId = req.user!.id;
     const limit = Math.min(parseInt(req.query.limit?.toString() || '15'), 50);
 
+    // Parse excludeIds for infinite scroll pagination
+    const excludeIds = req.query.excludeIds
+      ? (req.query.excludeIds as string).split(',').filter(id => id.trim())
+      : [];
+
     // Get friend IDs for audience filtering
     const friendIds = await getFriendIds(userId);
 
-    const feedResult = await SlotRollService.generateFeed(userId, { slots: limit });
+    const feedResult = await SlotRollService.generateFeed(userId, { slots: limit, excludeIds });
 
     // Filter by audience and add like status
     const audienceFilteredPosts = feedResult.posts.filter(({ post }) => {

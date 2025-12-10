@@ -1481,8 +1481,80 @@ class PostComponent {
 
     /**
      * Show post menu (edit, delete, etc.)
+     * Shows different options based on whether it's user's own post or another user's post
      */
     showPostMenu(postId) {
+        const post = this.findPostById(postId);
+        const currentUser = window.currentUser;
+        const isOwnPost = currentUser && post?.author?.id === currentUser.id;
+
+        // Get author info for mute/block
+        const authorId = post?.author?.id || post?.authorId;
+        const authorUsername = post?.author?.username || 'user';
+
+        // Build menu options based on ownership
+        let menuOptionsHtml = '';
+
+        if (isOwnPost) {
+            // Owner options: Edit, History, Delete
+            menuOptionsHtml = `
+                <button class="menu-option edit-option" data-action="editPost" data-post-id="${postId}">
+                    <span class="option-icon">✏️</span>
+                    <div class="option-text">
+                        <span class="option-title">Edit Post</span>
+                        <span class="option-desc">Make changes to your post</span>
+                    </div>
+                </button>
+
+                <button class="menu-option history-option" data-action="viewPostHistory" data-post-id="${postId}">
+                    <span class="option-icon">📜</span>
+                    <div class="option-text">
+                        <span class="option-title">View Edit History</span>
+                        <span class="option-desc">See all changes made to this post</span>
+                    </div>
+                </button>
+
+                <hr class="menu-divider">
+
+                <button class="menu-option delete-option danger" data-action="deletePost" data-post-id="${postId}">
+                    <span class="option-icon">🗑️</span>
+                    <div class="option-text">
+                        <span class="option-title">Delete Post</span>
+                        <span class="option-desc">Permanently remove this post</span>
+                    </div>
+                </button>
+            `;
+        } else {
+            // Other user's post: Mute, Block, Report
+            menuOptionsHtml = `
+                <button class="menu-option mute-option" data-mute-action="muteUser" data-user-id="${authorId}" data-username="${authorUsername}">
+                    <span class="option-icon">🔇</span>
+                    <div class="option-text">
+                        <span class="option-title">Mute @${authorUsername}</span>
+                        <span class="option-desc">Hide their posts from your feed</span>
+                    </div>
+                </button>
+
+                <button class="menu-option block-option danger" data-mute-action="blockUser" data-user-id="${authorId}" data-username="${authorUsername}">
+                    <span class="option-icon">🚫</span>
+                    <div class="option-text">
+                        <span class="option-title">Block @${authorUsername}</span>
+                        <span class="option-desc">Prevent all interaction</span>
+                    </div>
+                </button>
+
+                <hr class="menu-divider">
+
+                <button class="menu-option report-option" data-action="reportPost" data-post-id="${postId}">
+                    <span class="option-icon">⚠️</span>
+                    <div class="option-text">
+                        <span class="option-title">Report Post</span>
+                        <span class="option-desc">Report inappropriate content</span>
+                    </div>
+                </button>
+            `;
+        }
+
         // Create and show post menu modal
         const modalHtml = `
             <div class="modal post-menu-modal" id="postMenu-${postId}">
@@ -1493,31 +1565,7 @@ class PostComponent {
                     </div>
                     <div class="modal-body">
                         <div class="post-menu-options">
-                            <button class="menu-option edit-option" data-action="editPost" data-post-id="${postId}">
-                                <span class="option-icon">✏️</span>
-                                <div class="option-text">
-                                    <span class="option-title">Edit Post</span>
-                                    <span class="option-desc">Make changes to your post</span>
-                                </div>
-                            </button>
-
-                            <button class="menu-option history-option" data-action="viewPostHistory" data-post-id="${postId}">
-                                <span class="option-icon">📜</span>
-                                <div class="option-text">
-                                    <span class="option-title">View Edit History</span>
-                                    <span class="option-desc">See all changes made to this post</span>
-                                </div>
-                            </button>
-
-                            <hr class="menu-divider">
-
-                            <button class="menu-option delete-option danger" data-action="deletePost" data-post-id="${postId}">
-                                <span class="option-icon">🗑️</span>
-                                <div class="option-text">
-                                    <span class="option-title">Delete Post</span>
-                                    <span class="option-desc">Permanently remove this post</span>
-                                </div>
-                            </button>
+                            ${menuOptionsHtml}
                         </div>
                     </div>
                 </div>
