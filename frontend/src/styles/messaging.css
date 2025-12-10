@@ -201,27 +201,4 @@
     padding-bottom: 0.25rem;
 }
 
-/* ========================================
-   NOTIFICATION BADGE
-======================================== */
-
-.notification-badge {
-    position: relative;
-}
-
-.notification-badge::after {
-    content: attr(data-count);
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: #d32f2f;
-    color: white;
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    font-size: 0.7rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-}
+/* Notification badge styles are defined in main.css */
