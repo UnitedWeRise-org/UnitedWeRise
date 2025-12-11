@@ -26,6 +26,7 @@ Phase protocols trigger automatically for all code changes:
 | 3. Execute | `execute_protocol.md` | Code quality, execution standards |
 | 4. Test | `test_protocol.md` | Verification, testing matrix |
 | 5. Document | `document_protocol.md` | Required documentation |
+| 6. Deploy | `deploy_protocol.md` | Commit, push, verify deployment |
 
 Plus: `es6_protocol.md` (🔒 PROTECTED) - ES6 module migration
 
@@ -56,7 +57,7 @@ Plus: `es6_protocol.md` (🔒 PROTECTED) - ES6 module migration
 ## Protocol Descriptions
 
 ### deployment_protocol.md (🔒 PROTECTED)
-- **Keywords**: deploy, push to production, merge to main, staging deployment
+- **Keywords**: deploy, push to production, merge to main, staging deployment, push to development, commit and push, implementation complete
 - **Purpose**: Azure Container Apps deployment with GitHub Actions
 - **Contains**: Automated deployment, manual fallback, migration safety, rollback
 
