@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: October 7, 2025
-**Version**: 5.8.1 (Authentication Race Condition Fix & UI Polish)
+**Last Updated**: December 10, 2025
+**Version**: 5.9.0 (@RiseAI Agent System & Community Notes)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
 > **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
@@ -112,6 +112,7 @@ git push origin main          # Production auto-deploys
 15. [☁️ DEPLOYMENT & INFRASTRUCTURE](#deployment-infrastructure)
 16. [📊 MONITORING & ADMIN](#monitoring-admin)
 17. [🤖 AI & SEMANTIC FEATURES](#ai-semantic-features)
+    - [@RiseAI Agent System](#riseai-agent-system)
 18. [🗺️ MAP & CIVIC FEATURES](#map-civic-features)
 19. [🔐 GEOGRAPHIC PRIVACY PROTECTION](#geographic-privacy-protection)
 20. [📱 SOCIAL FEATURES](#social-features)
@@ -10467,7 +10468,7 @@ See **Developer & Admin Tools** in the [🔮 FUTURE ROADMAP](#future-roadmap) se
 **Status**: ✅ Production Ready
 **Last Updated**: 2025-10-09
 **AI Services**: Azure OpenAI (embeddings, content moderation, topic analysis), Qdrant vector database
-**Related Systems**: [System Architecture](#system-architecture), [Reputation System](#reputation-system), [AI Trending Topics](#ai-trending-topics-system)
+**Related Systems**: [System Architecture](#system-architecture), [Reputation System](#reputation-system), [AI Trending Topics](#ai-trending-topics-system), [@RiseAI Agent System](#riseai-agent-system)
 
 ### Azure OpenAI Integration
 
@@ -10647,6 +10648,163 @@ embeddings = model.encode(texts)
 - **Content Moderation** ↔ **Reputation System** ↔ **Community Health**
 - **Semantic Search** ↔ **Content Discovery** ↔ **User Engagement**
 - **Trend Analysis** ↔ **Geographic Relevance** ↔ **Civic Engagement**
+
+### @RiseAI Agent System {#riseai-agent-system}
+
+**Status**: 🟢 Production Ready (v1.0)
+**Last Updated**: 2025-12-10
+**Purpose**: AI-powered analysis agent that users can tag to evaluate arguments using objective moral reasoning
+
+#### Overview
+
+@RiseAI is an Agentic Logic & Stability Analysis system that applies objective ethical frameworks to user arguments. Unlike opinion-based moderation, RiseAI uses established international humanitarian law (IHL), jus cogens norms, and logical analysis to evaluate claims.
+
+**Key Principles**:
+- **Entropy/Homeostasis Framework**: Scores 0-10 where 10 = promotes peace/stability, 0 = promotes chaos/harm
+- **Dynamic Argument Repository**: Arguments extracted organically from user discourse
+- **Confidence Propagation**: Changes cascade to semantically similar arguments (cosine > 0.85)
+- **Fact + Argument Dependency**: `effectiveConfidence = own_confidence × fact_confidence`
+- **Community Notes**: User-contributed corrections with reputation-weighted voting
+
+#### How Users Interact
+
+```
+# Tag @RiseAI in a comment to trigger analysis
+@RiseAI please analyze this claim
+
+# RiseAI responds publicly with:
+- Entropy/Homeostasis score (0-10)
+- Logical validity assessment
+- Evidence quality rating
+- Ethical framework alignment
+- Related arguments from the ledger
+```
+
+#### Core Components
+
+**1. Mention Detection Service** (`riseAIMentionService.ts`)
+- Detects @RiseAI, @rise-ai, @rise_ai mentions
+- Enforces rate limits (default 10/day for non-admin)
+- Creates interaction records for tracking
+
+**2. Agent Service** (`riseAIAgentService.ts`)
+- Processes interactions using Azure OpenAI
+- Applies entropy/homeostasis scoring framework
+- Detects logical fallacies (strawman, ad hominem, false dichotomy, etc.)
+- Extracts arguments and facts for the ledger
+
+**3. Argument Ledger Service** (`argumentLedgerService.ts`)
+- Stores arguments with 1536-dim embeddings for semantic search
+- Manages confidence propagation to similar arguments
+- Handles clustering of near-identical arguments (>0.95 similarity)
+- Links arguments to supporting facts
+
+**4. Fact Claim Service** (`factClaimService.ts`)
+- Manages factual claims underlying arguments
+- Cascades confidence changes to dependent arguments
+- Tracks citations and challenges
+
+**5. Community Notes Service** (`communityNotesService.ts`)
+- Twitter/X-style community corrections
+- Reputation-weighted voting system
+- Auto-display at 70% threshold
+- Appeals system with admin resolution
+
+#### API Endpoints
+
+**RiseAI Core** (`/api/riseai/*`):
+```
+POST /api/riseai/analyze              - Trigger analysis on a post
+GET  /api/riseai/interaction/:id      - Get interaction status/result
+GET  /api/riseai/my-interactions      - User's analysis history
+GET  /api/riseai/rate-limit           - Check rate limit status
+GET  /api/riseai/settings             - Public settings
+PUT  /api/riseai/admin/settings       - Update settings (admin)
+GET  /api/riseai/admin/settings       - Full admin settings
+```
+
+**Argument Ledger** (`/api/riseai/arguments/*`):
+```
+GET  /api/riseai/arguments            - Get top arguments
+GET  /api/riseai/arguments/:id        - Get argument details
+GET  /api/riseai/posts/:postId/arguments - Arguments for a post
+POST /api/riseai/arguments/:id/support   - Support an argument
+POST /api/riseai/arguments/:id/refute    - Refute an argument
+```
+
+**Fact Claims** (`/api/riseai/facts/*`):
+```
+GET  /api/riseai/facts                - Search/list facts
+GET  /api/riseai/facts/:id            - Get fact details
+POST /api/riseai/facts/:id/challenge  - Challenge a fact
+POST /api/riseai/facts/:id/cite       - Cite a fact
+```
+
+**Community Notes** (`/api/community-notes/*`):
+```
+POST /api/community-notes             - Create a note
+GET  /api/community-notes/:id         - Get note by ID
+GET  /api/community-notes/post/:postId - Get notes for a post
+GET  /api/community-notes/fact/:factClaimId - Get notes for a fact
+POST /api/community-notes/:id/vote    - Vote on a note
+POST /api/community-notes/:id/appeal  - Appeal a note (OP only)
+POST /api/community-notes/:id/resolve-appeal - Resolve appeal (admin)
+GET  /api/community-notes/admin/pending-appeals - Pending appeals
+GET  /api/community-notes/user/notes  - User's authored notes
+GET  /api/community-notes/user/votes  - User's vote history
+```
+
+#### Database Models
+
+**Core Models**:
+- `RiseAIInteraction` - Records of @RiseAI mentions and responses
+- `ArgumentEntry` - Arguments with embeddings and confidence scores
+- `FactClaim` - Factual claims underlying arguments
+- `ArgumentFactLink` - Links arguments to their fact dependencies
+- `ConfidenceUpdate` - Audit log of confidence changes
+
+**Community Notes Models**:
+- `CommunityNote` - User-contributed notes/corrections
+- `CommunityNoteVote` - Reputation-weighted votes on notes
+
+**Configuration Models**:
+- `RiseAISettings` - Admin-configurable settings
+- `RiseAIUsage` - Daily usage tracking for rate limiting
+
+#### Entropy/Homeostasis Scoring
+
+The scoring framework evaluates claims based on their impact on social stability:
+
+| Score | Interpretation |
+|-------|----------------|
+| 9-10 | Strongly promotes peace, stability, and cooperation |
+| 7-8 | Generally constructive, minor concerns |
+| 5-6 | Neutral or mixed impact |
+| 3-4 | Potentially destabilizing elements |
+| 1-2 | Significant harm potential |
+| 0 | Directly promotes violence or chaos |
+
+**Ethical Framework Alignment** (IHL/jus cogens):
+- Proportionality principles
+- Distinction between combatants/civilians
+- Prohibition of collective punishment
+- Protection of fundamental human rights
+
+#### Rate Limiting
+
+| User Type | Daily Limit | Configurable |
+|-----------|-------------|--------------|
+| Non-Admin | 10 | Yes (via admin settings) |
+| Admin | Unlimited | Yes |
+
+Rate limits reset at midnight UTC.
+
+#### Integration Notes
+
+- Uses existing `EmbeddingService` for semantic embeddings
+- Integrates with `AzureOpenAIService` for analysis
+- Creates `@RiseAI` system user automatically on first use
+- Responses posted as comments from system user
 
 ---
 

@@ -305,6 +305,18 @@ model User {
   /// Refresh tokens for this user (CASCADE: deletes tokens when user deleted)
   refreshTokens               RefreshToken[]            @relation("RefreshTokens")
 
+  // RiseAI & Community Notes relationships
+  /// Arguments authored by this user in RiseAI discourse
+  authoredArguments           ArgumentEntry[]           @relation("ArgumentAuthor")
+  /// Community Notes authored by this user
+  communityNotes              CommunityNote[]           @relation("NoteAuthor")
+  /// Community Note votes cast by this user
+  communityNoteVotes          CommunityNoteVote[]       @relation("NoteVoter")
+  /// RiseAI interactions triggered by this user
+  riseAIInteractions          RiseAIInteraction[]       @relation("RiseAITrigger")
+  /// RiseAI daily usage tracking for this user
+  riseAIUsage                 RiseAIUsage[]
+
   @@index([username]) /// Fast lookup for @username mentions and profile pages
   @@index([createdAt]) /// Chronological sorting for admin user lists
   @@index([h3Index]) /// Geospatial queries for local content discovery
@@ -559,6 +571,14 @@ model Post {
   topics             TopicPost[]
   /// Users who saved this post (CASCADE: deletes saved post records)
   savedBy            SavedPost[]
+
+  // RiseAI & Community Notes relationships
+  /// Community Notes attached to this post
+  communityNotes     CommunityNote[]
+  /// RiseAI interactions triggered on this post
+  riseAIInteractions RiseAIInteraction[]
+  /// Arguments extracted from this post
+  arguments          ArgumentEntry[]
 
   @@index([authorId]) /// Fast lookup of all posts by a user
   @@index([createdAt]) /// Chronological feed sorting
@@ -3433,4 +3453,343 @@ model AnalyticsConfig {
   trackingEnabled       Boolean  @default(true)
   /// Last configuration update timestamp
   updatedAt             DateTime @updatedAt
+}
+
+// ============================================================================
+// RiseAI & Community Notes System
+// ============================================================================
+
+/// Factual claims that can be challenged via Community Notes
+/// @description Stores distinct factual assertions extracted from posts.
+/// Facts have their own confidence scores (affected by Community Notes) that cascade
+/// to arguments depending on them. If a fact is debunked, all dependent arguments become dubious.
+model FactClaim {
+  /// Unique identifier for this factual claim
+  id                 String              @id @default(cuid())
+  /// The factual assertion text
+  claim              String
+  /// Post where this claim was originally extracted from
+  sourcePostId       String?
+  /// User who made the claim
+  sourceUserId       String?
+  /// Vector embedding for semantic matching (1536-dim from Azure OpenAI)
+  embedding          Float[]             @default([])
+
+  /// Confidence score (0-1) - updated by Community Notes
+  confidence         Float               @default(0.5)
+  /// History of confidence changes with timestamps and reasons
+  /// @description Format: [{ timestamp: DateTime, oldScore: number, newScore: number, reason: string }]
+  confidenceHistory  Json                @default("[]")
+
+  /// Number of times this fact is referenced in arguments
+  citationCount      Int                 @default(0)
+  /// Number of Community Notes challenging this fact
+  challengeCount     Int                 @default(0)
+
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  /// Arguments that depend on this fact
+  dependentArguments ArgumentFactLink[]
+  /// Community Notes challenging or supporting this fact
+  communityNotes     CommunityNote[]
+
+  @@index([embedding])
+  @@index([confidence])
+  @@index([createdAt])
+}
+
+/// Community Notes - User-submitted corrections/context (like Twitter/X Community Notes)
+/// @description Allows users to add context, corrections, or sources to posts and factual claims.
+/// Notes are displayed based on reputation-weighted voting. Original posters can appeal.
+model CommunityNote {
+  /// Unique identifier for this note
+  id                 String              @id @default(cuid())
+  /// FactClaim this note is attached to (null if attached to post directly)
+  factClaimId        String?
+  /// Post this note is attached to (null if attached to FactClaim)
+  postId             String?
+  /// User who authored this note
+  authorId           String
+
+  /// The note content (markdown supported)
+  content            String
+  /// Type of note: "correction", "context", "source", "disputed"
+  noteType           String
+
+  /// Reputation-weighted helpful score (sum of vote × voter.reputationScore)
+  helpfulScore       Float               @default(0)
+  /// Reputation-weighted not-helpful score
+  notHelpfulScore    Float               @default(0)
+  /// Total number of votes on this note
+  voteCount          Int                 @default(0)
+
+  /// Whether this note is displayed publicly (auto-set when threshold reached)
+  isDisplayed        Boolean             @default(false)
+  /// Threshold ratio for auto-display (helpfulScore / total > threshold)
+  displayThreshold   Float               @default(0.7)
+  /// Whether original poster has appealed this note
+  isAppealed         Boolean             @default(false)
+  /// Whether admin has resolved the appeal
+  appealResolved     Boolean             @default(false)
+  /// Outcome of appeal: "upheld", "removed", or null
+  appealOutcome      String?
+
+  /// Impact on fact confidence when this note is displayed (-0.5 to +0.5)
+  confidenceImpact   Float?
+
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  /// FactClaim this note is attached to
+  factClaim          FactClaim?          @relation(fields: [factClaimId], references: [id], onDelete: Cascade)
+  /// Post this note is attached to
+  post               Post?               @relation(fields: [postId], references: [id], onDelete: Cascade)
+  /// User who authored this note
+  author             User                @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  /// Individual votes on this note
+  votes              CommunityNoteVote[]
+
+  @@index([factClaimId])
+  @@index([postId])
+  @@index([isDisplayed])
+  @@index([authorId])
+}
+
+/// Individual votes on Community Notes with voter reputation
+/// @description Tracks each vote with the voter's reputation score at time of voting.
+/// This allows recalculating note scores if reputation system changes.
+model CommunityNoteVote {
+  /// Unique identifier for this vote
+  id                 String              @id @default(cuid())
+  /// Note being voted on
+  noteId             String
+  /// User casting the vote
+  voterId            String
+  /// Whether the voter found this note helpful
+  isHelpful          Boolean
+  /// Snapshot of voter's reputation score at time of vote
+  voterReputation    Float
+
+  createdAt          DateTime            @default(now())
+
+  /// The note being voted on
+  note               CommunityNote       @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  /// The user who voted
+  voter              User                @relation("NoteVoter", fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, voterId])
+  @@index([noteId])
+  @@index([voterId])
+}
+
+/// Link table connecting arguments to the facts they depend on
+/// @description When a fact's confidence drops, dependent arguments' effective confidence
+/// is calculated as: own_confidence × avg(dependentFacts.confidence)
+model ArgumentFactLink {
+  /// Unique identifier for this link
+  id                 String              @id @default(cuid())
+  /// Argument that depends on the fact
+  argumentId         String
+  /// Fact that the argument depends on
+  factClaimId        String
+  /// How strongly this argument depends on the fact (0-1, default 1.0)
+  dependencyStrength Float               @default(1.0)
+
+  /// The dependent argument
+  argument           ArgumentEntry       @relation(fields: [argumentId], references: [id], onDelete: Cascade)
+  /// The underlying fact
+  factClaim          FactClaim           @relation(fields: [factClaimId], references: [id], onDelete: Cascade)
+
+  @@unique([argumentId, factClaimId])
+  @@index([factClaimId])
+  @@index([argumentId])
+}
+
+/// Dynamic arguments crowdsourced from user discourse
+/// @description Core of the RiseAI system. Arguments are extracted from posts,
+/// embedded for semantic matching, and have confidence scores that evolve through discourse.
+/// Confidence propagates to semantically similar arguments.
+model ArgumentEntry {
+  /// Unique identifier for this argument
+  id                 String              @id @default(cuid())
+  /// The argument text content
+  content            String
+  /// AI-generated summary of the argument
+  summary            String?
+  /// Post this argument was extracted from
+  sourcePostId       String
+  /// User who made this argument
+  sourceUserId       String
+  /// Vector embedding for semantic matching (1536-dim)
+  embedding          Float[]             @default([])
+
+  /// Own confidence score (0-1), starts neutral at 0.5
+  confidence         Float               @default(0.5)
+  /// History of confidence changes
+  /// @description Format: [{ timestamp: DateTime, oldScore: number, newScore: number, reason: string }]
+  confidenceHistory  Json                @default("[]")
+
+  /// AI-assessed logical validity (0-1): Does conclusion follow from premises?
+  logicalValidity    Float?
+  /// AI-assessed evidence quality (0-1): Quality of cited evidence
+  evidenceQuality    Float?
+  /// AI-assessed coherence (0-1): Internal consistency
+  coherence          Float?
+
+  /// Entropy/stability assessment (0-10): 10 = promotes stability, 0 = increases chaos
+  entropyScore       Float?
+
+  /// Count of arguments that support this one
+  supportCount       Int                 @default(0)
+  /// Count of arguments that refute this one
+  refuteCount        Int                 @default(0)
+  /// Times this argument was referenced by RiseAI in responses
+  citationCount      Int                 @default(0)
+
+  /// Semantic cluster this argument belongs to (for consolidation)
+  clusterId          String?
+  /// Whether this is the representative argument for its cluster
+  isClusterHead      Boolean             @default(false)
+
+  /// Effective confidence = confidence × avg(dependentFacts.confidence)
+  /// @description Automatically reduced if underlying facts are disputed
+  effectiveConfidence Float?
+
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  /// Post this argument was extracted from
+  sourcePost         Post                @relation(fields: [sourcePostId], references: [id], onDelete: Cascade)
+  /// User who made this argument
+  sourceUser         User                @relation("ArgumentAuthor", fields: [sourceUserId], references: [id], onDelete: Cascade)
+  /// Facts this argument depends on
+  factDependencies   ArgumentFactLink[]
+
+  @@index([embedding])
+  @@index([clusterId])
+  @@index([confidence])
+  @@index([entropyScore])
+  @@index([sourcePostId])
+  @@index([sourceUserId])
+}
+
+/// RiseAI interaction sessions - tracks each @RiseAI analysis
+/// @description Records each time a user invokes @RiseAI, the analysis performed,
+/// arguments referenced, and the response posted.
+model RiseAIInteraction {
+  /// Unique identifier for this interaction
+  id                   String              @id @default(cuid())
+  /// Comment that tagged @RiseAI (null if triggered from post body)
+  triggerCommentId     String?
+  /// Post being analyzed
+  triggerPostId        String
+  /// User who triggered the analysis
+  triggerUserId        String
+  /// Content that was analyzed
+  targetContent        String
+
+  /// Full structured analysis result (JSON)
+  /// @description Contains argumentValidity, factCheck, fallacyDetection, entropyScore, legalFramework
+  analysisResult       Json?
+  /// Entropy/stability score (0-10)
+  entropyScore         Float?
+  /// Fallacies detected in the content
+  fallaciesFound       String[]            @default([])
+  /// ArgumentEntry IDs that were used in synthesizing the response
+  argumentsUsed        String[]            @default([])
+  /// ArgumentEntry IDs that were surfaced/referenced in the response
+  argumentsReferenced  String[]            @default([])
+
+  /// Comment ID where RiseAI posted its response
+  responseCommentId    String?
+  /// The actual response text posted
+  responseContent      String?
+
+  /// Interaction status: "pending", "analyzing", "complete", "challenged"
+  status               String              @default("pending")
+  /// Number of follow-up interactions in this thread
+  followUpCount        Int                 @default(0)
+
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  /// Post being analyzed
+  triggerPost          Post                @relation(fields: [triggerPostId], references: [id], onDelete: Cascade)
+  /// User who triggered the analysis
+  triggerUser          User                @relation("RiseAITrigger", fields: [triggerUserId], references: [id], onDelete: Cascade)
+
+  @@index([triggerPostId])
+  @@index([triggerUserId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Confidence update audit log
+/// @description Tracks all changes to argument confidence scores for transparency
+/// and debugging. Records why confidence changed and how it propagated.
+model ConfidenceUpdate {
+  /// Unique identifier for this update record
+  id                 String              @id @default(cuid())
+  /// Argument that was updated
+  argumentId         String
+  /// RiseAI interaction that triggered this update (null if from propagation)
+  interactionId      String?
+  /// Confidence score before update
+  oldConfidence      Float
+  /// Confidence score after update
+  newConfidence      Float
+  /// Reason for update: "supported_by_discourse", "refuted", "propagated_from_similar", "fact_debunked"
+  reason             String
+  /// If propagated, the source argument ID
+  propagatedFrom     String?
+  /// Cosine similarity to source (for propagation auditing)
+  cosineSimilarity   Float?
+
+  createdAt          DateTime            @default(now())
+
+  @@index([argumentId])
+  @@index([interactionId])
+  @@index([createdAt])
+}
+
+/// Admin-configurable RiseAI settings
+/// @description Single-row configuration table for RiseAI system settings.
+/// Admins can adjust rate limits, thresholds, and enable/disable the system.
+model RiseAISettings {
+  /// Fixed ID for singleton pattern (always "default")
+  id                    String              @id @default("default")
+  /// Daily invocation limit for non-admin users
+  dailyLimitNonAdmin    Int                 @default(10)
+  /// Daily invocation limit for admin users (-1 = unlimited)
+  dailyLimitAdmin       Int                 @default(-1)
+  /// Cosine similarity threshold for confidence propagation (0-1)
+  confidenceThreshold   Float               @default(0.85)
+  /// Kill switch to disable RiseAI system
+  isEnabled             Boolean             @default(true)
+
+  updatedAt             DateTime            @updatedAt
+  /// Admin who last updated these settings
+  updatedById           String?
+}
+
+/// Daily usage tracking for RiseAI rate limiting
+/// @description Tracks how many times each user has invoked @RiseAI per day.
+/// Used to enforce daily rate limits.
+model RiseAIUsage {
+  /// Unique identifier for this usage record
+  id                 String              @id @default(cuid())
+  /// User being tracked
+  userId             String
+  /// Date (without time) for grouping
+  date               DateTime            @db.Date
+  /// Number of invocations on this date
+  count              Int                 @default(0)
+
+  /// User this usage record belongs to
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
 }

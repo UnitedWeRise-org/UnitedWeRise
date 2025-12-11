@@ -46,6 +46,8 @@ import badgeRoutes from './routes/badges';
 import badgeClaimCodesRoutes from './routes/badgeClaimCodes';
 import questRoutes from './routes/quests';
 import photosRoutes from './routes/photos';
+import riseaiRoutes from './routes/riseai';
+import communityNotesRoutes from './routes/communityNotes';
 import WebSocketService from './services/WebSocketService';
 import analyticsCleanupJob from './jobs/analyticsCleanup';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
@@ -275,6 +277,8 @@ app.use('/api/motd', motdRoutes);
 app.use('/api/badges', badgeRoutes);
 app.use('/api/badges', badgeClaimCodesRoutes);
 app.use('/api/quests', questRoutes);
+app.use('/api/riseai', riseaiRoutes);
+app.use('/api/community-notes', communityNotesRoutes);
 app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically
