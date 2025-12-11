@@ -184,6 +184,7 @@ export class RiseAIAgentService {
   static async processInteraction(interactionId: string): Promise<{
     success: boolean;
     responseContent?: string;
+    responseCommentId?: string;
     error?: string;
   }> {
     try {
@@ -204,13 +205,23 @@ export class RiseAIAgentService {
       // Format response
       const responseContent = this.formatResponse(analysis);
 
-      // Store result
+      // Create the reply comment from RiseAI system user
+      const systemUser = await this.ensureSystemUser();
+      const replyComment = await this.createReplyComment({
+        postId: interaction.triggerPostId,
+        parentCommentId: interaction.triggerCommentId || undefined,
+        systemUserId: systemUser.id,
+        content: responseContent
+      });
+
+      // Store result with response comment ID
       await RiseAIMentionService.updateInteraction(interactionId, {
         analysisResult: analysis as unknown as Prisma.InputJsonValue,
         entropyScore: analysis.entropyScore,
         fallaciesFound: analysis.fallaciesFound,
         argumentsReferenced: analysis.relatedArguments.map(a => a.id),
         responseContent,
+        responseCommentId: replyComment.id,
         status: 'completed'
       });
 
@@ -222,11 +233,12 @@ export class RiseAIAgentService {
         analysis
       );
 
-      logger.info({ interactionId }, 'Completed RiseAI interaction');
+      logger.info({ interactionId, responseCommentId: replyComment.id }, 'Completed RiseAI interaction with reply');
 
       return {
         success: true,
-        responseContent
+        responseContent,
+        responseCommentId: replyComment.id
       };
     } catch (error) {
       logger.error({ error, interactionId }, 'Failed to process interaction');
@@ -240,6 +252,51 @@ export class RiseAIAgentService {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  }
+
+  /**
+   * Create a reply comment from RiseAI system user
+   */
+  private static async createReplyComment(params: {
+    postId: string;
+    parentCommentId?: string;
+    systemUserId: string;
+    content: string;
+  }) {
+    // Calculate depth based on parent
+    let depth = 0;
+    if (params.parentCommentId) {
+      const parentComment = await prisma.comment.findUnique({
+        where: { id: params.parentCommentId },
+        select: { depth: true }
+      });
+      if (parentComment) {
+        depth = Math.min(parentComment.depth + 1, 3); // Max depth of 3
+      }
+    }
+
+    // Create comment and update post comment count in transaction
+    const comment = await prisma.$transaction(async (tx) => {
+      const newComment = await tx.comment.create({
+        data: {
+          content: params.content,
+          userId: params.systemUserId,
+          postId: params.postId,
+          parentId: params.parentCommentId || null,
+          depth
+        }
+      });
+
+      await tx.post.update({
+        where: { id: params.postId },
+        data: { commentsCount: { increment: 1 } }
+      });
+
+      return newComment;
+    });
+
+    logger.info({ commentId: comment.id, postId: params.postId }, 'Created RiseAI reply comment');
+    return comment;
   }
 
   /**

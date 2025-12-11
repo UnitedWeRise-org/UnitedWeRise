@@ -12,6 +12,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const relationshipService_1 = require("../services/relationshipService");
 const logger_1 = require("../services/logger");
+const prisma_1 = require("../lib/prisma");
 const router = express_1.default.Router();
 /**
  * FOLLOW ENDPOINTS
@@ -912,6 +913,467 @@ router.post('/bulk/subscription-status', auth_1.requireAuth, async (req, res) =>
     }
     catch (error) {
         logger_1.logger.error({ err: error, userCount: req.body.userIds?.length, currentUserId: req.user.id }, 'Bulk subscription status route error');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+/**
+ * MUTE ENDPOINTS
+ */
+/**
+ * @swagger
+ * /api/relationships/mute/{userId}:
+ *   post:
+ *     tags: [Relationship]
+ *     summary: Mute a user
+ *     description: Mutes a user to hide their posts from your feed. Optionally set expiration.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               duration:
+ *                 type: string
+ *                 enum: ['24h', '7d', '30d', null]
+ *                 description: Mute duration. null = permanent
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for muting
+ *     responses:
+ *       200:
+ *         description: User muted successfully
+ *       400:
+ *         description: Cannot mute self or user not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/mute/:userId', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+        const { duration, reason } = req.body;
+        if (currentUserId === userId) {
+            return res.status(400).json({ error: 'Cannot mute yourself' });
+        }
+        // Check if target user exists
+        const targetUser = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
+        if (!targetUser) {
+            return res.status(400).json({ error: 'User not found' });
+        }
+        // Calculate expiration
+        let expiresAt = null;
+        if (duration) {
+            const now = new Date();
+            switch (duration) {
+                case '24h':
+                    expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                    break;
+                case '7d':
+                    expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case '30d':
+                    expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                    break;
+            }
+        }
+        // Upsert mute (update if exists, create if not)
+        const mute = await prisma_1.prisma.mute.upsert({
+            where: {
+                muterId_mutedId: { muterId: currentUserId, mutedId: userId }
+            },
+            update: {
+                expiresAt,
+                reason,
+                createdAt: new Date()
+            },
+            create: {
+                muterId: currentUserId,
+                mutedId: userId,
+                expiresAt,
+                reason
+            },
+            include: {
+                muted: {
+                    select: { id: true, username: true, avatar: true }
+                }
+            }
+        });
+        res.json({
+            message: 'User muted successfully',
+            data: {
+                mutedUser: mute.muted,
+                expiresAt: mute.expiresAt
+            }
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Mute user route error');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+/**
+ * @swagger
+ * /api/relationships/mute/{userId}:
+ *   delete:
+ *     tags: [Relationship]
+ *     summary: Unmute a user
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User unmuted successfully
+ *       400:
+ *         description: User not muted
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/mute/:userId', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+        const deleted = await prisma_1.prisma.mute.deleteMany({
+            where: { muterId: currentUserId, mutedId: userId }
+        });
+        if (deleted.count === 0) {
+            return res.status(400).json({ error: 'User is not muted' });
+        }
+        res.json({ message: 'User unmuted successfully' });
+    }
+    catch (error) {
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Unmute user route error');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+/**
+ * @swagger
+ * /api/relationships/muted:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get list of muted users
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Muted users list
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/muted', auth_1.requireAuth, async (req, res) => {
+    try {
+        const currentUserId = req.user.id;
+        const mutes = await prisma_1.prisma.mute.findMany({
+            where: {
+                muterId: currentUserId,
+                OR: [
+                    { expiresAt: null },
+                    { expiresAt: { gt: new Date() } }
+                ]
+            },
+            include: {
+                muted: {
+                    select: { id: true, username: true, avatar: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json({
+            mutedUsers: mutes.map(m => ({
+                user: m.muted,
+                mutedAt: m.createdAt,
+                expiresAt: m.expiresAt,
+                reason: m.reason
+            }))
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ err: error, currentUserId: req.user.id }, 'Get muted users route error');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+/**
+ * @swagger
+ * /api/relationships/mute-status/{userId}:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get mute status for a user
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Mute status
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/mute-status/:userId', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+        const mute = await prisma_1.prisma.mute.findFirst({
+            where: {
+                muterId: currentUserId,
+                mutedId: userId,
+                OR: [
+                    { expiresAt: null },
+                    { expiresAt: { gt: new Date() } }
+                ]
+            }
+        });
+        res.json({
+            isMuted: !!mute,
+            expiresAt: mute?.expiresAt || null
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Get mute status route error');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+/**
+ * BLOCK ENDPOINTS
+ */
+/**
+ * @swagger
+ * /api/relationships/block/{userId}:
+ *   post:
+ *     tags: [Relationship]
+ *     summary: Block a user
+ *     description: Blocks a user. Blocked users cannot see your content or interact with you.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for blocking
+ *     responses:
+ *       200:
+ *         description: User blocked successfully
+ *       400:
+ *         description: Cannot block self or user not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/block/:userId', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+        const { reason } = req.body;
+        if (currentUserId === userId) {
+            return res.status(400).json({ error: 'Cannot block yourself' });
+        }
+        // Check if target user exists
+        const targetUser = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
+        if (!targetUser) {
+            return res.status(400).json({ error: 'User not found' });
+        }
+        // Upsert block
+        const block = await prisma_1.prisma.block.upsert({
+            where: {
+                blockerId_blockedId: { blockerId: currentUserId, blockedId: userId }
+            },
+            update: {
+                reason,
+                createdAt: new Date()
+            },
+            create: {
+                blockerId: currentUserId,
+                blockedId: userId,
+                reason
+            },
+            include: {
+                blocked: {
+                    select: { id: true, username: true, avatar: true }
+                }
+            }
+        });
+        // Also remove any existing relationship (follow, friend, subscription)
+        await Promise.all([
+            prisma_1.prisma.follow.deleteMany({ where: { OR: [
+                        { followerId: currentUserId, followingId: userId },
+                        { followerId: userId, followingId: currentUserId }
+                    ] } }),
+            prisma_1.prisma.friendship.deleteMany({ where: { OR: [
+                        { requesterId: currentUserId, recipientId: userId },
+                        { requesterId: userId, recipientId: currentUserId }
+                    ] } }),
+            prisma_1.prisma.subscription.deleteMany({ where: { OR: [
+                        { subscriberId: currentUserId, subscribedId: userId },
+                        { subscriberId: userId, subscribedId: currentUserId }
+                    ] } })
+        ]);
+        res.json({
+            message: 'User blocked successfully',
+            data: { blockedUser: block.blocked }
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Block user route error');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+/**
+ * @swagger
+ * /api/relationships/block/{userId}:
+ *   delete:
+ *     tags: [Relationship]
+ *     summary: Unblock a user
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User unblocked successfully
+ *       400:
+ *         description: User not blocked
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/block/:userId', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+        const deleted = await prisma_1.prisma.block.deleteMany({
+            where: { blockerId: currentUserId, blockedId: userId }
+        });
+        if (deleted.count === 0) {
+            return res.status(400).json({ error: 'User is not blocked' });
+        }
+        res.json({ message: 'User unblocked successfully' });
+    }
+    catch (error) {
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Unblock user route error');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+/**
+ * @swagger
+ * /api/relationships/blocked:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get list of blocked users
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Blocked users list
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/blocked', auth_1.requireAuth, async (req, res) => {
+    try {
+        const currentUserId = req.user.id;
+        const blocks = await prisma_1.prisma.block.findMany({
+            where: { blockerId: currentUserId },
+            include: {
+                blocked: {
+                    select: { id: true, username: true, avatar: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json({
+            blockedUsers: blocks.map(b => ({
+                user: b.blocked,
+                blockedAt: b.createdAt,
+                reason: b.reason
+            }))
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ err: error, currentUserId: req.user.id }, 'Get blocked users route error');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+/**
+ * @swagger
+ * /api/relationships/block-status/{userId}:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get block status for a user
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Block status
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/block-status/:userId', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+        const [iBlocked, theyBlocked] = await Promise.all([
+            prisma_1.prisma.block.findFirst({
+                where: { blockerId: currentUserId, blockedId: userId }
+            }),
+            prisma_1.prisma.block.findFirst({
+                where: { blockerId: userId, blockedId: currentUserId }
+            })
+        ]);
+        res.json({
+            isBlocked: !!iBlocked,
+            isBlockedBy: !!theyBlocked
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ err: error, userId: req.params.userId, currentUserId: req.user.id }, 'Get block status route error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });

@@ -36,7 +36,8 @@ const DEFAULT_CONFIG = {
     },
     loggedOutThresholds: {
         random: 30 // 0-29 = random (30%), 30-99 = trending (70%)
-    }
+    },
+    excludeIds: []
 };
 class SlotRollService {
     /**
@@ -49,7 +50,8 @@ class SlotRollService {
     static async generateFeed(userId, config = {}) {
         const cfg = { ...DEFAULT_CONFIG, ...config };
         const isLoggedIn = userId !== null;
-        const selectedIds = new Set();
+        // Initialize with excludeIds to skip previously-seen posts (for infinite scroll)
+        const selectedIds = new Set(cfg.excludeIds);
         const posts = [];
         const poolCounts = { random: 0, trending: 0, personalized: 0 };
         const rolls = [];

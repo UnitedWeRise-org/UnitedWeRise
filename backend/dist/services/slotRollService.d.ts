@@ -34,6 +34,7 @@ interface FeedConfig {
     loggedOutThresholds: {
         random: number;
     };
+    excludeIds: string[];
 }
 export declare class SlotRollService {
     /**

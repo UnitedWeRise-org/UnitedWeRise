@@ -111,11 +111,11 @@ export declare class TopicService {
         title: string;
         description: string | null;
         category: string | null;
+        evidenceQuality: number;
         argumentsFor: string[];
         argumentsAgainst: string[];
         neutralSummary: string | null;
         complexityScore: number;
-        evidenceQuality: number;
         controversyScore: number;
         postCount: number;
         participantCount: number;
@@ -344,11 +344,11 @@ export declare class TopicService {
         title: string;
         description: string | null;
         category: string | null;
+        evidenceQuality: number;
         argumentsFor: string[];
         argumentsAgainst: string[];
         neutralSummary: string | null;
         complexityScore: number;
-        evidenceQuality: number;
         controversyScore: number;
         postCount: number;
         participantCount: number;

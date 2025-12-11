@@ -52,6 +52,8 @@ const badges_1 = __importDefault(require("./routes/badges"));
 const badgeClaimCodes_1 = __importDefault(require("./routes/badgeClaimCodes"));
 const quests_1 = __importDefault(require("./routes/quests"));
 const photos_1 = __importDefault(require("./routes/photos"));
+const riseai_1 = __importDefault(require("./routes/riseai"));
+const communityNotes_1 = __importDefault(require("./routes/communityNotes"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
 const analyticsCleanup_1 = __importDefault(require("./jobs/analyticsCleanup"));
 const rateLimiting_1 = require("./middleware/rateLimiting");
@@ -250,6 +252,8 @@ app.use('/api/motd', motd_1.default);
 app.use('/api/badges', badges_1.default);
 app.use('/api/badges', badgeClaimCodes_1.default);
 app.use('/api/quests', quests_1.default);
+app.use('/api/riseai', riseai_1.default);
+app.use('/api/community-notes', communityNotes_1.default);
 app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));

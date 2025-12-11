@@ -12,6 +12,7 @@
  */
 
 import { apiClient } from '../../core/api/client.js';
+import { hasRiseAIMention, triggerRiseAIAnalysis } from '../../../services/riseAIService.js';
 
 class UnifiedPostCreator {
     constructor() {
@@ -121,6 +122,9 @@ class UnifiedPostCreator {
             // PHASE 5: Handle success
             if (result.success) {
                 console.log('✅ Post/comment created successfully:', result.data);
+
+                // PHASE 5.5: Check for @RiseAI mention and trigger analysis
+                await this._checkForRiseAIMention(content, result.data, options.type);
 
                 // Clear form if requested
                 if (options.clearAfterSuccess !== false) {
@@ -431,6 +435,64 @@ class UnifiedPostCreator {
         }
 
         return result;
+    }
+
+    /**
+     * Check for @RiseAI mention and trigger analysis
+     * @private
+     */
+    async _checkForRiseAIMention(content, responseData, type) {
+        try {
+            // Check if content has @RiseAI mention
+            if (!hasRiseAIMention(content)) {
+                return;
+            }
+
+            console.log('🤖 @RiseAI mention detected, triggering analysis...');
+
+            // Get the post ID - for posts it's in the response, for comments we need the postId
+            let postId, commentId;
+
+            if (type === 'post') {
+                // Response data is the created post
+                postId = responseData?.id || responseData?.post?.id;
+            } else if (type === 'comment') {
+                // Response data is the created comment
+                postId = responseData?.postId;
+                commentId = responseData?.id || responseData?.comment?.id;
+            }
+
+            if (!postId) {
+                console.warn('⚠️ Could not determine postId for RiseAI analysis');
+                return;
+            }
+
+            // Trigger RiseAI analysis (runs asynchronously - will post reply when done)
+            const result = await triggerRiseAIAnalysis({
+                postId,
+                commentId,
+                content
+            });
+
+            if (result.success) {
+                console.log('✅ RiseAI analysis triggered:', result.interactionId);
+                // Optionally show a toast notification
+                if (typeof window.showToast === 'function') {
+                    window.showToast('RiseAI is analyzing your post and will reply shortly.', 'info');
+                }
+            } else if (result.error?.includes('Rate limit')) {
+                console.warn('⚠️ RiseAI rate limit reached');
+                if (typeof window.showToast === 'function') {
+                    window.showToast('RiseAI rate limit reached. Try again later.', 'warning');
+                }
+            } else {
+                console.warn('⚠️ RiseAI analysis not triggered:', result.error);
+            }
+
+        } catch (error) {
+            // Don't fail the post creation if RiseAI fails
+            console.error('❌ RiseAI check error (non-fatal):', error);
+        }
     }
 
     /**
