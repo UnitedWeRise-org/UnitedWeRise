@@ -383,7 +383,7 @@ Focus on:
   /**
    * Tier 1: Mission-critical political reasoning
    * Use for: Stance detection, News accountability summaries
-   * Model: gpt-4o (highest quality)
+   * Model: o1 reasoning model (highest quality)
    */
   async generateTier1Completion(
     prompt: string,
@@ -394,18 +394,41 @@ Focus on:
     }
 
     try {
-      const response = await this.client.chat.completions.create({
-        model: this.tier1Reasoning,
-        messages: [
-          {
-            role: "system",
-            content: options.systemMessage || "You are a political analyst providing objective, nuanced analysis."
-          },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: options.maxTokens || 500,
-        temperature: options.temperature ?? 0.3
-      });
+      // Check if using o-series reasoning model (o1, o3, o4, etc.)
+      const isReasoningModel = /^o[1-9]/.test(this.tier1Reasoning);
+
+      let response;
+      if (isReasoningModel) {
+        // o-series models have different API requirements:
+        // - No temperature parameter (fixed to 1)
+        // - Use max_completion_tokens instead of max_tokens
+        // - No system role (use developer role or combine with user message)
+        const systemContext = options.systemMessage || "You are a political analyst providing objective, nuanced analysis.";
+        response = await this.client.chat.completions.create({
+          model: this.tier1Reasoning,
+          messages: [
+            {
+              role: 'user',
+              content: `[SYSTEM CONTEXT: ${systemContext}]\n\n${prompt}`
+            }
+          ],
+          max_completion_tokens: options.maxTokens || 1000
+        } as any); // Type assertion needed for o-series specific params
+      } else {
+        // Standard GPT models
+        response = await this.client.chat.completions.create({
+          model: this.tier1Reasoning,
+          messages: [
+            {
+              role: "system",
+              content: options.systemMessage || "You are a political analyst providing objective, nuanced analysis."
+            },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: options.maxTokens || 500,
+          temperature: options.temperature ?? 0.3
+        });
+      }
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
@@ -414,6 +437,7 @@ Focus on:
 
       logger.debug('Tier 1 completion generated', {
         model: this.tier1Reasoning,
+        isReasoningModel,
         tokens: response.usage?.total_tokens
       });
 
@@ -427,7 +451,7 @@ Focus on:
   /**
    * Tier 2: Complex reasoning tasks
    * Use for: Topic discovery, Semantic classification
-   * Model: gpt-4o (high quality)
+   * Model: o4-mini reasoning model
    */
   async generateTier2Completion(
     prompt: string,
@@ -438,18 +462,38 @@ Focus on:
     }
 
     try {
-      const response = await this.client.chat.completions.create({
-        model: this.tier2Reasoning,
-        messages: [
-          {
-            role: "system",
-            content: options.systemMessage || "You are a helpful AI assistant."
-          },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: options.maxTokens || 500,
-        temperature: options.temperature ?? 0.3
-      });
+      // Check if using o-series reasoning model (o1, o3, o4, etc.)
+      const isReasoningModel = /^o[1-9]/.test(this.tier2Reasoning);
+
+      let response;
+      if (isReasoningModel) {
+        // o-series models have different API requirements
+        const systemContext = options.systemMessage || "You are a helpful AI assistant.";
+        response = await this.client.chat.completions.create({
+          model: this.tier2Reasoning,
+          messages: [
+            {
+              role: 'user',
+              content: `[SYSTEM CONTEXT: ${systemContext}]\n\n${prompt}`
+            }
+          ],
+          max_completion_tokens: options.maxTokens || 500
+        } as any);
+      } else {
+        // Standard GPT models
+        response = await this.client.chat.completions.create({
+          model: this.tier2Reasoning,
+          messages: [
+            {
+              role: "system",
+              content: options.systemMessage || "You are a helpful AI assistant."
+            },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: options.maxTokens || 500,
+          temperature: options.temperature ?? 0.3
+        });
+      }
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
