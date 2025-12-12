@@ -16,11 +16,11 @@ class AzureOpenAIService {
     constructor() {
         const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
         const apiKey = process.env.AZURE_OPENAI_API_KEY;
-        // Tier-based deployments (future-proof architecture)
-        this.tier1Reasoning = process.env.AZURE_OPENAI_TIER1_REASONING || 'gpt-4o';
-        this.tier2Reasoning = process.env.AZURE_OPENAI_TIER2_REASONING || 'gpt-4o';
-        this.generalChat = process.env.AZURE_OPENAI_GENERAL_CHAT || 'gpt-4o-mini';
-        this.vision = process.env.AZURE_OPENAI_VISION || 'gpt-4o-mini';
+        // Tier-based deployments (GPT-5 upgrade - December 2024)
+        this.tier1Reasoning = process.env.AZURE_OPENAI_TIER1_REASONING || 'gpt-5.2-chat';
+        this.tier2Reasoning = process.env.AZURE_OPENAI_TIER2_REASONING || 'gpt-5.1';
+        this.generalChat = process.env.AZURE_OPENAI_GENERAL_CHAT || 'gpt-5.1';
+        this.vision = process.env.AZURE_OPENAI_VISION || 'gpt-5.2-chat';
         // Embeddings (unchanged)
         this.embeddingDeployment = process.env.AZURE_OPENAI_EMBEDDINGS ||
             process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT ||
