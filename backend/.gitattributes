@@ -1,0 +1,2 @@
+# Prisma migration files - enforce LF line endings to prevent checksum drift
+prisma/migrations/**/*.sql text eol=lf

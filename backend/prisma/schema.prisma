@@ -316,6 +316,8 @@ model User {
   riseAIInteractions          RiseAIInteraction[]       @relation("RiseAITrigger")
   /// RiseAI daily usage tracking for this user
   riseAIUsage                 RiseAIUsage[]
+  /// Application errors associated with this user (for debugging and support)
+  applicationErrors           ApplicationError[]
 
   @@index([username]) /// Fast lookup for @username mentions and profile pages
   @@index([createdAt]) /// Chronological sorting for admin user lists
@@ -3794,4 +3796,46 @@ model RiseAIUsage {
   @@unique([userId, date])
   @@index([userId])
   @@index([date])
+}
+
+/// Application-wide error logging table
+/// @description Centralized error logging for all backend services.
+/// Stores detailed error information for debugging, monitoring, and support.
+/// Unlike container logs that roll over, these errors persist indefinitely.
+model ApplicationError {
+  /// Unique identifier for this error record
+  id          String   @id @default(cuid())
+  /// Service that generated the error (riseai, azure-openai, auth, feed, etc.)
+  service     String
+  /// Specific operation that failed (generateTier1Completion, processInteraction, etc.)
+  operation   String
+  /// Error type/class name (AzureOpenAIError, NetworkError, ValidationError, etc.)
+  errorType   String
+  /// Human-readable error message
+  message     String
+  /// Full error object including status codes, response body, etc.
+  details     Json?
+  /// Stack trace if available
+  stack       String?  @db.Text
+  /// User who triggered the error (if applicable, null for system errors)
+  userId      String?
+  /// Request ID for correlation with Pino logs
+  requestId   String?
+  /// Whether the error has been investigated and resolved
+  resolved    Boolean  @default(false)
+  /// Notes from investigation or resolution steps taken
+  resolution  String?  @db.Text
+  /// Error creation timestamp
+  createdAt   DateTime @default(now())
+  /// Last update timestamp (for resolution updates)
+  updatedAt   DateTime @updatedAt
+
+  /// Optional relation to User (SetNull: keeps error record if user deleted)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([service, createdAt])
+  @@index([errorType])
+  @@index([userId])
+  @@index([resolved])
+  @@index([createdAt])
 }

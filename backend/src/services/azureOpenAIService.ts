@@ -7,6 +7,7 @@
 
 import OpenAI from "openai";
 import logger from '../utils/logger';
+import { ErrorLoggingService } from './errorLoggingService';
 
 interface EmbeddingResult {
   embedding: number[];
@@ -444,6 +445,12 @@ Focus on:
 
       return content;
     } catch (error) {
+      await ErrorLoggingService.logError({
+        service: 'azure-openai',
+        operation: 'generateTier1Completion',
+        error,
+        additionalContext: { model: this.tier1Reasoning }
+      });
       logger.error('Tier 1 completion failed', { error, model: this.tier1Reasoning });
       throw error;
     }
@@ -503,6 +510,12 @@ Focus on:
 
       return content;
     } catch (error) {
+      await ErrorLoggingService.logError({
+        service: 'azure-openai',
+        operation: 'generateTier2Completion',
+        error,
+        additionalContext: { model: this.tier2Reasoning }
+      });
       logger.error('Tier 2 completion failed', { error, model: this.tier2Reasoning });
       throw error;
     }
@@ -542,6 +555,12 @@ Focus on:
 
       return content;
     } catch (error) {
+      await ErrorLoggingService.logError({
+        service: 'azure-openai',
+        operation: 'generateGeneralCompletion',
+        error,
+        additionalContext: { model: this.generalChat }
+      });
       logger.error('General completion failed', { error, model: this.generalChat });
       throw error;
     }
@@ -575,6 +594,12 @@ Focus on:
 
       return content;
     } catch (error) {
+      await ErrorLoggingService.logError({
+        service: 'azure-openai',
+        operation: 'generateVisionCompletion',
+        error,
+        additionalContext: { model: this.vision }
+      });
       logger.error('Vision completion failed', { error, model: this.vision });
       throw error;
     }

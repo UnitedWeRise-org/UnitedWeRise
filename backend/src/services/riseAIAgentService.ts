@@ -12,6 +12,7 @@ import { EmbeddingService } from './embeddingService';
 import { ArgumentLedgerService } from './argumentLedgerService';
 import { FactClaimService } from './factClaimService';
 import { RiseAIMentionService } from './riseAIMentionService';
+import { ErrorLoggingService } from './errorLoggingService';
 import { logger } from './logger';
 
 // Constants for analysis
@@ -723,6 +724,15 @@ Please provide a thoughtful, balanced response to the user's message. If they as
       return response.trim();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Log to database for visibility - this captures the actual Azure error
+      await ErrorLoggingService.logError({
+        service: 'riseai',
+        operation: 'generateConversationalResponse',
+        error,
+        additionalContext: { contentLength: fullContent.length }
+      });
+
       logger.error({ error, errorMessage, contentLength: fullContent.length }, 'Conversational response generation failed');
 
       // Provide more specific error feedback
