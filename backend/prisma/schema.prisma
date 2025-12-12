@@ -3686,8 +3686,10 @@ model RiseAIInteraction {
   triggerPostId        String
   /// User who triggered the analysis
   triggerUserId        String
-  /// Content that was analyzed
+  /// Content that was analyzed (stripped of @RiseAI mention)
   targetContent        String
+  /// Full original content including @RiseAI mention
+  fullContent          String?
 
   /// Full structured analysis result (JSON)
   /// @description Contains argumentValidity, factCheck, fallacyDetection, entropyScore, legalFramework

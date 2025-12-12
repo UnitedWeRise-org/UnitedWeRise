@@ -248,11 +248,34 @@ export class RiseAIAgentService {
         status: 'processing'
       });
 
-      // Perform analysis
+      // Use fullContent if available, fallback to targetContent for backwards compatibility
+      const contentToAnalyze = (interaction as { fullContent?: string }).fullContent || interaction.targetContent;
+
+      // Perform heuristic analysis for internal metrics (still useful for argument storage)
       const analysis = await this.analyzeContent(interaction.targetContent, interactionId);
 
-      // Format response
-      const responseContent = this.formatResponse(analysis);
+      // Search for related facts to include in context
+      let relatedFacts: Array<{ id: string; claim: string; confidence: number }> = [];
+      try {
+        const facts = await FactClaimService.searchFacts(interaction.targetContent.substring(0, 200), 5);
+        relatedFacts = facts.map(f => ({
+          id: f.id,
+          claim: f.claim,
+          confidence: f.confidence
+        }));
+      } catch (error) {
+        logger.warn({ error }, 'Failed to search related facts, continuing without');
+      }
+
+      // Generate conversational response using the full content
+      const responseContent = await this.generateConversationalResponse(contentToAnalyze, {
+        relatedArguments: analysis.relatedArguments.map(a => ({
+          id: a.id,
+          content: a.content,
+          similarity: a.similarity
+        })),
+        relatedFacts
+      });
 
       // Create the reply comment from RiseAI system user
       const systemUser = await this.ensureSystemUser();
@@ -263,7 +286,7 @@ export class RiseAIAgentService {
         content: responseContent
       });
 
-      // Store result with response comment ID
+      // Store result with response comment ID (keep analysis for internal metrics)
       await RiseAIMentionService.updateInteraction(interactionId, {
         analysisResult: analysis as unknown as Prisma.InputJsonValue,
         entropyScore: analysis.entropyScore,
@@ -633,6 +656,75 @@ Respond in JSON format:
     }
 
     return null;
+  }
+
+  /**
+   * Generate a conversational response using Azure OpenAI
+   * This replaces the scorecard-based formatResponse for user-facing output
+   */
+  static async generateConversationalResponse(
+    fullContent: string,
+    context: {
+      relatedArguments: Array<{ id: string; content: string; similarity: number }>;
+      relatedFacts: Array<{ id: string; claim: string; confidence: number }>;
+    }
+  ): Promise<string> {
+    const systemPrompt = `You are RiseAI, the logical analysis assistant for UnitedWeRise, a civic engagement platform.
+
+CORE FRAMEWORK:
+- Entropy/Homeostasis: Favor arguments that promote stability and constructive dialogue over chaos and division
+- IHL Principles: Proportionality, Necessity, Distinction, Humanity - assess whether arguments respect these principles
+- Political Neutrality: Assess reasoning quality and evidence, not political stance. Present multiple perspectives fairly.
+- Evidence-Based: Prioritize claims backed by verifiable facts and credible sources
+
+RESPONSE GUIDELINES:
+- Provide thoughtful, balanced analysis that directly addresses the user's question or statement
+- Present multiple perspectives fairly when discussing controversial topics
+- Cite facts or evidence when available from the provided context
+- Be intellectually rigorous but accessible - avoid jargon
+- Length: 2-3 paragraphs typically, but adapt as needed to fully address the inquiry
+- Do NOT output scores, metrics, or templated assessments
+- Respond conversationally as if having a thoughtful discussion`;
+
+    // Build context from related arguments and facts
+    let contextStr = '';
+
+    if (context.relatedArguments.length > 0) {
+      contextStr += '\n\nRELATED ARGUMENTS FROM THE PLATFORM:\n';
+      contextStr += context.relatedArguments.slice(0, 5).map(arg =>
+        `- ${arg.content.substring(0, 200)}${arg.content.length > 200 ? '...' : ''}`
+      ).join('\n');
+    }
+
+    if (context.relatedFacts.length > 0) {
+      contextStr += '\n\nRELEVANT FACTS/EVIDENCE:\n';
+      contextStr += context.relatedFacts.slice(0, 5).map(fact =>
+        `- ${fact.claim} (confidence: ${(fact.confidence * 100).toFixed(0)}%)`
+      ).join('\n');
+    }
+
+    // Strip @RiseAI mention from the user's message for cleaner prompt
+    const userMessage = fullContent.replace(/@rise[-_]?ai\b/gi, '').trim();
+
+    const userPrompt = `USER'S MESSAGE:
+${userMessage}
+${contextStr}
+
+Please provide a thoughtful, balanced response to the user's message. If they asked a question, answer it directly. If they made an argument, analyze its strengths and weaknesses constructively.`;
+
+    try {
+      const response = await azureOpenAI.generateCompletion(userPrompt, {
+        systemMessage: systemPrompt,
+        maxTokens: 1000,
+        temperature: 0.7
+      });
+
+      return response.trim();
+    } catch (error) {
+      logger.error({ error }, 'Conversational response generation failed');
+      // Fallback to a generic response rather than crashing
+      return 'I apologize, but I encountered an issue analyzing your message. Please try again, or rephrase your question.';
+    }
   }
 
   /**

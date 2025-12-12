@@ -217,6 +217,7 @@ export class RiseAIMentionService {
     triggerUserId: string;
     triggerCommentId?: string;
     targetContent: string;
+    fullContent: string;
   }) {
     return prisma.riseAIInteraction.create({
       data: {
@@ -224,6 +225,7 @@ export class RiseAIMentionService {
         triggerUserId: params.triggerUserId,
         triggerCommentId: params.triggerCommentId,
         targetContent: params.targetContent,
+        fullContent: params.fullContent,
         status: 'pending'
       }
     });
@@ -341,12 +343,13 @@ export class RiseAIMentionService {
       // Get target content from first mention context
       const context = detection.contexts[0];
 
-      // Create interaction record
+      // Create interaction record with both targetContent and fullContent
       const interaction = await this.createInteraction({
         triggerPostId: params.postId,
         triggerUserId: params.userId,
         triggerCommentId: params.commentId,
-        targetContent: context.targetContent
+        targetContent: context.targetContent,
+        fullContent: params.content // Store the original full content
       });
 
       // Increment usage
