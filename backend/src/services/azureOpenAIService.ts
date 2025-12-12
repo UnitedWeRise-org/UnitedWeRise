@@ -39,9 +39,13 @@ export class AzureOpenAIService {
     const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
     const apiKey = process.env.AZURE_OPENAI_API_KEY;
 
-    // Tier-based deployments (GPT-4.1 upgrade - December 2024)
-    this.tier1Reasoning = process.env.AZURE_OPENAI_TIER1_REASONING || 'gpt-4.1';
-    this.tier2Reasoning = process.env.AZURE_OPENAI_TIER2_REASONING || 'gpt-4.1';
+    // Tier-based deployments (o1/o4-mini reasoning upgrade - December 2024)
+    // Tier 1: o1 reasoning model for RiseAI political analysis
+    // Tier 2: o4-mini reasoning model for complex tasks
+    // General: gpt-4.1-mini for pattern matching/classification
+    // Vision: gpt-4o for image analysis
+    this.tier1Reasoning = process.env.AZURE_OPENAI_TIER1_REASONING || 'o1';
+    this.tier2Reasoning = process.env.AZURE_OPENAI_TIER2_REASONING || 'o4-mini';
     this.generalChat = process.env.AZURE_OPENAI_GENERAL_CHAT || 'gpt-4.1-mini';
     this.vision = process.env.AZURE_OPENAI_VISION || 'gpt-4o';
 
