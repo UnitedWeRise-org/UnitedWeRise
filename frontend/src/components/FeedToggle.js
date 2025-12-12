@@ -383,9 +383,9 @@ export class FeedToggle {
                 try {
                     // Use UnifiedPostCreator if available (handles two-step upload)
                     let postResult;
-                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.createPost === 'function') {
-                        console.log('📝 Using UnifiedPostCreator.createPost()');
-                        postResult = await window.unifiedPostCreator.createPost({
+                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.create === 'function') {
+                        console.log('📝 Using UnifiedPostCreator.create()');
+                        postResult = await window.unifiedPostCreator.create({
                             content: content,
                             mediaFiles: selectedFiles.length > 0 ? selectedFiles : null,
                             type: 'post'
