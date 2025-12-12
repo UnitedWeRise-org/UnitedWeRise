@@ -422,6 +422,8 @@ Focus on:
         // - No temperature parameter (fixed to 1)
         // - Use max_completion_tokens instead of max_tokens
         // - No system role (use developer role or combine with user message)
+        // - max_completion_tokens includes BOTH reasoning tokens AND output tokens
+        //   o1 uses many tokens for internal reasoning, so we need a high limit (16000+)
         const systemContext = options.systemMessage || "You are a political analyst providing objective, nuanced analysis.";
         response = await client.chat.completions.create({
           model: this.tier1Reasoning,
@@ -431,7 +433,7 @@ Focus on:
               content: `[SYSTEM CONTEXT: ${systemContext}]\n\n${prompt}`
             }
           ],
-          max_completion_tokens: options.maxTokens || 1000
+          max_completion_tokens: options.maxTokens || 16000
         } as any); // Type assertion needed for o-series specific params
       } else {
         // Standard GPT models
@@ -494,6 +496,8 @@ Focus on:
       let response;
       if (isReasoningModel) {
         // o-series models have different API requirements
+        // max_completion_tokens includes BOTH reasoning tokens AND output tokens
+        // o4-mini uses fewer tokens than o1 but still needs room for reasoning (8000+)
         const systemContext = options.systemMessage || "You are a helpful AI assistant.";
         response = await client.chat.completions.create({
           model: this.tier2Reasoning,
@@ -503,7 +507,7 @@ Focus on:
               content: `[SYSTEM CONTEXT: ${systemContext}]\n\n${prompt}`
             }
           ],
-          max_completion_tokens: options.maxTokens || 500
+          max_completion_tokens: options.maxTokens || 8000
         } as any);
       } else {
         // Standard GPT models
