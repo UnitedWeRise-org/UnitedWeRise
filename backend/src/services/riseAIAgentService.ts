@@ -59,18 +59,47 @@ interface AnalysisResult {
 export class RiseAIAgentService {
   /**
    * Ensure RiseAI system user exists
+   * Uses upsert to handle race conditions and existing users with matching email/username
    */
   static async ensureSystemUser() {
-    let systemUser = await prisma.user.findUnique({
-      where: { id: RISEAI_SYSTEM_USER_ID }
-    });
+    const RISEAI_EMAIL = 'riseai@unitedwerise.org';
+    const RISEAI_USERNAME = 'RiseAI';
 
-    if (!systemUser) {
+    try {
+      // First try to find by ID (fastest path)
+      let systemUser = await prisma.user.findUnique({
+        where: { id: RISEAI_SYSTEM_USER_ID }
+      });
+
+      if (systemUser) {
+        return systemUser;
+      }
+
+      // Check if user exists with this email or username (different ID)
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email: RISEAI_EMAIL }
+      });
+
+      if (existingByEmail) {
+        logger.info({ userId: existingByEmail.id }, 'Found existing user with RiseAI email, using as system user');
+        return existingByEmail;
+      }
+
+      const existingByUsername = await prisma.user.findUnique({
+        where: { username: RISEAI_USERNAME }
+      });
+
+      if (existingByUsername) {
+        logger.info({ userId: existingByUsername.id }, 'Found existing user with RiseAI username, using as system user');
+        return existingByUsername;
+      }
+
+      // No existing user found, create new one
       systemUser = await prisma.user.create({
         data: {
           id: RISEAI_SYSTEM_USER_ID,
-          email: 'riseai@unitedwerise.org',
-          username: 'RiseAI',
+          email: RISEAI_EMAIL,
+          username: RISEAI_USERNAME,
           password: '', // System user, no login
           displayName: 'RiseAI',
           bio: 'Agentic Logic & Stability Analysis System',
@@ -80,9 +109,29 @@ export class RiseAIAgentService {
         }
       });
       logger.info('Created RiseAI system user');
-    }
+      return systemUser;
 
-    return systemUser;
+    } catch (error) {
+      // Handle race condition where user was created between checks
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        logger.warn('RiseAI user creation race condition, retrying lookup');
+        // Retry finding the user
+        const retryUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { id: RISEAI_SYSTEM_USER_ID },
+              { email: RISEAI_EMAIL },
+              { username: RISEAI_USERNAME }
+            ]
+          }
+        });
+        if (retryUser) {
+          return retryUser;
+        }
+      }
+      logger.error({ error }, 'Failed to ensure RiseAI system user');
+      throw error;
+    }
   }
 
   /**
