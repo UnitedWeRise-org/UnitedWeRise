@@ -27,7 +27,9 @@ interface TopicSummary {
 }
 
 export class AzureOpenAIService {
-  private client: OpenAI;
+  private clients: Map<string, OpenAI> = new Map();
+  private endpoint: string;
+  private apiKey: string;
   private embeddingDeployment: string;
   private chatDeployment: string;
   private tier1Reasoning: string;
@@ -59,19 +61,12 @@ export class AzureOpenAIService {
     this.chatDeployment = process.env.AZURE_OPENAI_CHAT_DEPLOYMENT || this.generalChat;
 
     this.isConfigured = !!(endpoint && apiKey);
+    this.endpoint = endpoint?.replace(/\/+$/, '') || '';
+    this.apiKey = apiKey || '';
 
     if (this.isConfigured) {
-      this.client = new OpenAI({
-        apiKey: apiKey!,
-        baseURL: `${endpoint!.replace(/\/+$/, '')}/openai/deployments`,
-        // o1/o4-mini models require 2024-12-01-preview or later
-        defaultQuery: { 'api-version': '2024-12-01-preview' },
-        defaultHeaders: {
-          'api-key': apiKey!,
-        },
-      });
       logger.info('🤖 Azure OpenAI 4-Tier Architecture Initialized', {
-        endpoint: endpoint!.replace(/\/+$/, ''),
+        endpoint: this.endpoint,
         tier1Reasoning: this.tier1Reasoning,
         tier2Reasoning: this.tier2Reasoning,
         generalChat: this.generalChat,
@@ -81,6 +76,24 @@ export class AzureOpenAIService {
     } else {
       logger.warn('Azure OpenAI Service not configured - missing endpoint or API key');
     }
+  }
+
+  /**
+   * Get or create an OpenAI client for a specific deployment
+   * Azure OpenAI routes requests based on URL path, not model parameter
+   * Each deployment needs its own client with deployment name in baseURL
+   */
+  private getClient(deploymentName: string): OpenAI {
+    if (!this.clients.has(deploymentName)) {
+      this.clients.set(deploymentName, new OpenAI({
+        apiKey: this.apiKey,
+        baseURL: `${this.endpoint}/openai/deployments/${deploymentName}`,
+        defaultQuery: { 'api-version': '2024-12-01-preview' },
+        defaultHeaders: { 'api-key': this.apiKey },
+      }));
+      logger.debug(`Created OpenAI client for deployment: ${deploymentName}`);
+    }
+    return this.clients.get(deploymentName)!;
   }
   
   /**
@@ -109,8 +122,9 @@ export class AzureOpenAIService {
       
       // Clean and truncate text for embeddings
       const cleanText = this.cleanText(text).slice(0, 8000); // Stay within token limits
-      
-      const response = await this.client.embeddings.create({
+
+      const client = this.getClient(this.embeddingDeployment);
+      const response = await client.embeddings.create({
         model: this.embeddingDeployment,
         input: [cleanText]
       });
@@ -182,8 +196,9 @@ export class AzureOpenAIService {
       }
       
       const prompt = this.buildTopicAnalysisPrompt(posts);
-      
-      const response = await this.client.chat.completions.create({
+
+      const client = this.getClient(this.chatDeployment);
+      const response = await client.chat.completions.create({
         model: this.chatDeployment,
         messages: [
           {
@@ -358,7 +373,8 @@ Focus on:
       throw new Error('Azure OpenAI not configured');
     }
 
-    const response = await this.client.chat.completions.create({
+    const client = this.getClient(this.chatDeployment);
+    const response = await client.chat.completions.create({
       model: this.chatDeployment,
       messages: [
         {
@@ -398,6 +414,7 @@ Focus on:
     try {
       // Check if using o-series reasoning model (o1, o3, o4, etc.)
       const isReasoningModel = /^o[1-9]/.test(this.tier1Reasoning);
+      const client = this.getClient(this.tier1Reasoning);
 
       let response;
       if (isReasoningModel) {
@@ -406,7 +423,7 @@ Focus on:
         // - Use max_completion_tokens instead of max_tokens
         // - No system role (use developer role or combine with user message)
         const systemContext = options.systemMessage || "You are a political analyst providing objective, nuanced analysis.";
-        response = await this.client.chat.completions.create({
+        response = await client.chat.completions.create({
           model: this.tier1Reasoning,
           messages: [
             {
@@ -418,7 +435,7 @@ Focus on:
         } as any); // Type assertion needed for o-series specific params
       } else {
         // Standard GPT models
-        response = await this.client.chat.completions.create({
+        response = await client.chat.completions.create({
           model: this.tier1Reasoning,
           messages: [
             {
@@ -472,12 +489,13 @@ Focus on:
     try {
       // Check if using o-series reasoning model (o1, o3, o4, etc.)
       const isReasoningModel = /^o[1-9]/.test(this.tier2Reasoning);
+      const client = this.getClient(this.tier2Reasoning);
 
       let response;
       if (isReasoningModel) {
         // o-series models have different API requirements
         const systemContext = options.systemMessage || "You are a helpful AI assistant.";
-        response = await this.client.chat.completions.create({
+        response = await client.chat.completions.create({
           model: this.tier2Reasoning,
           messages: [
             {
@@ -489,7 +507,7 @@ Focus on:
         } as any);
       } else {
         // Standard GPT models
-        response = await this.client.chat.completions.create({
+        response = await client.chat.completions.create({
           model: this.tier2Reasoning,
           messages: [
             {
@@ -535,7 +553,8 @@ Focus on:
     }
 
     try {
-      const response = await this.client.chat.completions.create({
+      const client = this.getClient(this.generalChat);
+      const response = await client.chat.completions.create({
         model: this.generalChat,
         messages: [
           {
@@ -580,7 +599,8 @@ Focus on:
     }
 
     try {
-      const response = await this.client.chat.completions.create({
+      const client = this.getClient(this.vision);
+      const response = await client.chat.completions.create({
         model: this.vision,
         messages,
         max_tokens: options.maxTokens || 500,
