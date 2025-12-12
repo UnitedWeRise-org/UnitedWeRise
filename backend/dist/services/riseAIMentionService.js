@@ -163,6 +163,7 @@ class RiseAIMentionService {
                 triggerUserId: params.triggerUserId,
                 triggerCommentId: params.triggerCommentId,
                 targetContent: params.targetContent,
+                fullContent: params.fullContent,
                 status: 'pending'
             }
         });
@@ -250,12 +251,13 @@ class RiseAIMentionService {
             }
             // Get target content from first mention context
             const context = detection.contexts[0];
-            // Create interaction record
+            // Create interaction record with both targetContent and fullContent
             const interaction = await this.createInteraction({
                 triggerPostId: params.postId,
                 triggerUserId: params.userId,
                 triggerCommentId: params.commentId,
-                targetContent: context.targetContent
+                targetContent: context.targetContent,
+                fullContent: params.content // Store the original full content
             });
             // Increment usage
             await this.incrementUsage(params.userId);

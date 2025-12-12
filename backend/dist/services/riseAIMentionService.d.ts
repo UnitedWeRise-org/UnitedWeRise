@@ -56,6 +56,7 @@ export declare class RiseAIMentionService {
         triggerUserId: string;
         triggerCommentId?: string;
         targetContent: string;
+        fullContent: string;
     }): Promise<{
         id: string;
         createdAt: Date;
@@ -66,6 +67,7 @@ export declare class RiseAIMentionService {
         triggerPostId: string;
         triggerUserId: string;
         targetContent: string;
+        fullContent: string | null;
         analysisResult: Prisma.JsonValue | null;
         fallaciesFound: string[];
         argumentsUsed: string[];
@@ -96,6 +98,7 @@ export declare class RiseAIMentionService {
         triggerPostId: string;
         triggerUserId: string;
         targetContent: string;
+        fullContent: string | null;
         analysisResult: Prisma.JsonValue | null;
         fallaciesFound: string[];
         argumentsUsed: string[];
@@ -122,6 +125,7 @@ export declare class RiseAIMentionService {
         triggerPostId: string;
         triggerUserId: string;
         targetContent: string;
+        fullContent: string | null;
         analysisResult: Prisma.JsonValue | null;
         fallaciesFound: string[];
         argumentsUsed: string[];
@@ -158,6 +162,7 @@ export declare class RiseAIMentionService {
         triggerPostId: string;
         triggerUserId: string;
         targetContent: string;
+        fullContent: string | null;
         analysisResult: Prisma.JsonValue | null;
         fallaciesFound: string[];
         argumentsUsed: string[];

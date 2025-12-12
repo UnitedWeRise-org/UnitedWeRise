@@ -24,6 +24,7 @@ interface AnalysisResult {
 export declare class RiseAIAgentService {
     /**
      * Ensure RiseAI system user exists
+     * Uses upsert to handle race conditions and existing users with matching email/username
      */
     static ensureSystemUser(): Promise<{
         id: string;
@@ -149,6 +150,22 @@ export declare class RiseAIAgentService {
      * Use Azure OpenAI for deeper analysis
      */
     private static performAIAnalysis;
+    /**
+     * Generate a conversational response using Azure OpenAI
+     * This replaces the scorecard-based formatResponse for user-facing output
+     */
+    static generateConversationalResponse(fullContent: string, context: {
+        relatedArguments: Array<{
+            id: string;
+            content: string;
+            similarity: number;
+        }>;
+        relatedFacts: Array<{
+            id: string;
+            claim: string;
+            confidence: number;
+        }>;
+    }): Promise<string>;
     /**
      * Extract arguments from analyzed content and store in ledger
      */

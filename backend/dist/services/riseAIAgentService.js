@@ -8,9 +8,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RiseAIAgentService = void 0;
 const prisma_1 = require("../lib/prisma");
+const client_1 = require("@prisma/client");
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const embeddingService_1 = require("./embeddingService");
 const argumentLedgerService_1 = require("./argumentLedgerService");
+const factClaimService_1 = require("./factClaimService");
 const riseAIMentionService_1 = require("./riseAIMentionService");
 const logger_1 = require("./logger");
 // Constants for analysis
@@ -38,17 +40,40 @@ const ETHICAL_FRAMEWORK_KEYWORDS = {
 class RiseAIAgentService {
     /**
      * Ensure RiseAI system user exists
+     * Uses upsert to handle race conditions and existing users with matching email/username
      */
     static async ensureSystemUser() {
-        let systemUser = await prisma_1.prisma.user.findUnique({
-            where: { id: RISEAI_SYSTEM_USER_ID }
-        });
-        if (!systemUser) {
+        const RISEAI_EMAIL = 'riseai@unitedwerise.org';
+        const RISEAI_USERNAME = 'RiseAI';
+        try {
+            // First try to find by ID (fastest path)
+            let systemUser = await prisma_1.prisma.user.findUnique({
+                where: { id: RISEAI_SYSTEM_USER_ID }
+            });
+            if (systemUser) {
+                return systemUser;
+            }
+            // Check if user exists with this email or username (different ID)
+            const existingByEmail = await prisma_1.prisma.user.findUnique({
+                where: { email: RISEAI_EMAIL }
+            });
+            if (existingByEmail) {
+                logger_1.logger.info({ userId: existingByEmail.id }, 'Found existing user with RiseAI email, using as system user');
+                return existingByEmail;
+            }
+            const existingByUsername = await prisma_1.prisma.user.findUnique({
+                where: { username: RISEAI_USERNAME }
+            });
+            if (existingByUsername) {
+                logger_1.logger.info({ userId: existingByUsername.id }, 'Found existing user with RiseAI username, using as system user');
+                return existingByUsername;
+            }
+            // No existing user found, create new one
             systemUser = await prisma_1.prisma.user.create({
                 data: {
                     id: RISEAI_SYSTEM_USER_ID,
-                    email: 'riseai@unitedwerise.org',
-                    username: 'RiseAI',
+                    email: RISEAI_EMAIL,
+                    username: RISEAI_USERNAME,
                     password: '', // System user, no login
                     displayName: 'RiseAI',
                     bio: 'Agentic Logic & Stability Analysis System',
@@ -58,8 +83,29 @@ class RiseAIAgentService {
                 }
             });
             logger_1.logger.info('Created RiseAI system user');
+            return systemUser;
         }
-        return systemUser;
+        catch (error) {
+            // Handle race condition where user was created between checks
+            if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                logger_1.logger.warn('RiseAI user creation race condition, retrying lookup');
+                // Retry finding the user
+                const retryUser = await prisma_1.prisma.user.findFirst({
+                    where: {
+                        OR: [
+                            { id: RISEAI_SYSTEM_USER_ID },
+                            { email: RISEAI_EMAIL },
+                            { username: RISEAI_USERNAME }
+                        ]
+                    }
+                });
+                if (retryUser) {
+                    return retryUser;
+                }
+            }
+            logger_1.logger.error({ error }, 'Failed to ensure RiseAI system user');
+            throw error;
+        }
     }
     /**
      * Analyze content using the Entropy/Homeostasis Framework
@@ -139,10 +185,32 @@ class RiseAIAgentService {
             await riseAIMentionService_1.RiseAIMentionService.updateInteraction(interactionId, {
                 status: 'processing'
             });
-            // Perform analysis
+            // Use fullContent if available, fallback to targetContent for backwards compatibility
+            const contentToAnalyze = interaction.fullContent || interaction.targetContent;
+            // Perform heuristic analysis for internal metrics (still useful for argument storage)
             const analysis = await this.analyzeContent(interaction.targetContent, interactionId);
-            // Format response
-            const responseContent = this.formatResponse(analysis);
+            // Search for related facts to include in context
+            let relatedFacts = [];
+            try {
+                const facts = await factClaimService_1.FactClaimService.searchFacts(interaction.targetContent.substring(0, 200), 5);
+                relatedFacts = facts.map(f => ({
+                    id: f.id,
+                    claim: f.claim,
+                    confidence: f.confidence
+                }));
+            }
+            catch (error) {
+                logger_1.logger.warn({ error }, 'Failed to search related facts, continuing without');
+            }
+            // Generate conversational response using the full content
+            const responseContent = await this.generateConversationalResponse(contentToAnalyze, {
+                relatedArguments: analysis.relatedArguments.map(a => ({
+                    id: a.id,
+                    content: a.content,
+                    similarity: a.similarity
+                })),
+                relatedFacts
+            });
             // Create the reply comment from RiseAI system user
             const systemUser = await this.ensureSystemUser();
             const replyComment = await this.createReplyComment({
@@ -151,7 +219,7 @@ class RiseAIAgentService {
                 systemUserId: systemUser.id,
                 content: responseContent
             });
-            // Store result with response comment ID
+            // Store result with response comment ID (keep analysis for internal metrics)
             await riseAIMentionService_1.RiseAIMentionService.updateInteraction(interactionId, {
                 analysisResult: analysis,
                 entropyScore: analysis.entropyScore,
@@ -436,6 +504,67 @@ Respond in JSON format:
             logger_1.logger.warn({ error }, 'AI analysis parsing failed');
         }
         return null;
+    }
+    /**
+     * Generate a conversational response using Azure OpenAI
+     * This replaces the scorecard-based formatResponse for user-facing output
+     */
+    static async generateConversationalResponse(fullContent, context) {
+        const systemPrompt = `You are RiseAI, the logical analysis assistant for UnitedWeRise, a civic engagement platform.
+
+CORE FRAMEWORK:
+- Entropy/Homeostasis: Favor arguments that promote stability and constructive dialogue over chaos and division
+- IHL Principles: Proportionality, Necessity, Distinction, Humanity - assess whether arguments respect these principles
+- Political Neutrality: Assess reasoning quality and evidence, not political stance. Present multiple perspectives fairly.
+- Evidence-Based: Prioritize claims backed by verifiable facts and credible sources
+
+RESPONSE GUIDELINES:
+- Provide thoughtful, balanced analysis that directly addresses the user's question or statement
+- Present multiple perspectives fairly when discussing controversial topics
+- Cite facts or evidence when available from the provided context
+- Be intellectually rigorous but accessible - avoid jargon
+- Length: 2-3 paragraphs typically, but adapt as needed to fully address the inquiry
+- Do NOT output scores, metrics, or templated assessments
+- Respond conversationally as if having a thoughtful discussion`;
+        // Build context from related arguments and facts
+        let contextStr = '';
+        if (context.relatedArguments.length > 0) {
+            contextStr += '\n\nRELATED ARGUMENTS FROM THE PLATFORM:\n';
+            contextStr += context.relatedArguments.slice(0, 5).map(arg => `- ${arg.content.substring(0, 200)}${arg.content.length > 200 ? '...' : ''}`).join('\n');
+        }
+        if (context.relatedFacts.length > 0) {
+            contextStr += '\n\nRELEVANT FACTS/EVIDENCE:\n';
+            contextStr += context.relatedFacts.slice(0, 5).map(fact => `- ${fact.claim} (confidence: ${(fact.confidence * 100).toFixed(0)}%)`).join('\n');
+        }
+        // Strip @RiseAI mention from the user's message for cleaner prompt
+        const userMessage = fullContent.replace(/@rise[-_]?ai\b/gi, '').trim();
+        const userPrompt = `USER'S MESSAGE:
+${userMessage}
+${contextStr}
+
+Please provide a thoughtful, balanced response to the user's message. If they asked a question, answer it directly. If they made an argument, analyze its strengths and weaknesses constructively.`;
+        try {
+            // Use Tier 1 (gpt-4o) for political analysis quality
+            const response = await azureOpenAIService_1.azureOpenAI.generateTier1Completion(userPrompt, {
+                systemMessage: systemPrompt,
+                maxTokens: 1000,
+                temperature: 0.7
+            });
+            return response.trim();
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            logger_1.logger.error({ error, errorMessage, contentLength: fullContent.length }, 'Conversational response generation failed');
+            // Provide more specific error feedback
+            if (errorMessage.includes('not configured')) {
+                return 'RiseAI is temporarily unavailable due to a configuration issue. Please try again later.';
+            }
+            if (errorMessage.includes('content filter') || errorMessage.includes('content_filter')) {
+                return 'I was unable to analyze this content. Please try rephrasing your message.';
+            }
+            // Generic fallback
+            return 'I encountered an issue analyzing your message. This has been logged and will be investigated. Please try again.';
+        }
     }
     /**
      * Extract arguments from analyzed content and store in ledger

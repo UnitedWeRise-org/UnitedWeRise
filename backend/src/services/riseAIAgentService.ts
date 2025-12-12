@@ -713,7 +713,8 @@ ${contextStr}
 Please provide a thoughtful, balanced response to the user's message. If they asked a question, answer it directly. If they made an argument, analyze its strengths and weaknesses constructively.`;
 
     try {
-      const response = await azureOpenAI.generateCompletion(userPrompt, {
+      // Use Tier 1 (gpt-4o) for political analysis quality
+      const response = await azureOpenAI.generateTier1Completion(userPrompt, {
         systemMessage: systemPrompt,
         maxTokens: 1000,
         temperature: 0.7
@@ -721,9 +722,18 @@ Please provide a thoughtful, balanced response to the user's message. If they as
 
       return response.trim();
     } catch (error) {
-      logger.error({ error }, 'Conversational response generation failed');
-      // Fallback to a generic response rather than crashing
-      return 'I apologize, but I encountered an issue analyzing your message. Please try again, or rephrase your question.';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error({ error, errorMessage, contentLength: fullContent.length }, 'Conversational response generation failed');
+
+      // Provide more specific error feedback
+      if (errorMessage.includes('not configured')) {
+        return 'RiseAI is temporarily unavailable due to a configuration issue. Please try again later.';
+      }
+      if (errorMessage.includes('content filter') || errorMessage.includes('content_filter')) {
+        return 'I was unable to analyze this content. Please try rephrasing your message.';
+      }
+      // Generic fallback
+      return 'I encountered an issue analyzing your message. This has been logged and will be investigated. Please try again.';
     }
   }
 

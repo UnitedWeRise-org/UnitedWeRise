@@ -124,7 +124,7 @@ class UnifiedPostCreator {
                 console.log('✅ Post/comment created successfully:', result.data);
 
                 // PHASE 5.5: Check for @RiseAI mention and trigger analysis
-                await this._checkForRiseAIMention(content, result.data, options.type);
+                await this._checkForRiseAIMention(content, result.data, options.type, options.postId);
 
                 // Clear form if requested
                 if (options.clearAfterSuccess !== false) {
@@ -440,8 +440,12 @@ class UnifiedPostCreator {
     /**
      * Check for @RiseAI mention and trigger analysis
      * @private
+     * @param {string} content - The content to check for mentions
+     * @param {Object} responseData - The API response data
+     * @param {string} type - 'post' or 'comment'
+     * @param {string} [originalPostId] - The original postId from options (for comments)
      */
-    async _checkForRiseAIMention(content, responseData, type) {
+    async _checkForRiseAIMention(content, responseData, type, originalPostId = null) {
         try {
             // Check if content has @RiseAI mention
             if (!hasRiseAIMention(content)) {
@@ -450,15 +454,16 @@ class UnifiedPostCreator {
 
             console.log('🤖 @RiseAI mention detected, triggering analysis...');
 
-            // Get the post ID - for posts it's in the response, for comments we need the postId
+            // Get the post ID - for posts it's in the response, for comments we use originalPostId
             let postId, commentId;
 
             if (type === 'post') {
                 // Response data is the created post
                 postId = responseData?.id || responseData?.post?.id;
             } else if (type === 'comment') {
-                // Response data is the created comment
-                postId = responseData?.postId;
+                // For comments, use originalPostId (from options) as primary source
+                // Fall back to responseData.postId if available
+                postId = originalPostId || responseData?.postId;
                 commentId = responseData?.id || responseData?.comment?.id;
             }
 
