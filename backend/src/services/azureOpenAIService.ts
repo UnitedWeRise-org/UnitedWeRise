@@ -63,7 +63,8 @@ export class AzureOpenAIService {
       this.client = new OpenAI({
         apiKey: apiKey!,
         baseURL: `${endpoint!.replace(/\/+$/, '')}/openai/deployments`,
-        defaultQuery: { 'api-version': '2024-08-01-preview' },
+        // o1/o4-mini models require 2024-12-01-preview or later
+        defaultQuery: { 'api-version': '2024-12-01-preview' },
         defaultHeaders: {
           'api-key': apiKey!,
         },
