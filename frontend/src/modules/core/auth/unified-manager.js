@@ -32,6 +32,7 @@ class UnifiedAuthManager {
         this._isLoggingOut = false; // Prevent re-auth during logout
         this._isRefreshingToken = false; // Flag to prevent concurrent refreshes
         this._visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
+        this._proactiveRefreshTimer = null; // Timer for proactive token refresh (14-min interval)
         this._currentAuthState = {
             isAuthenticated: false,
             user: null,
@@ -113,6 +114,10 @@ class UnifiedAuthManager {
 
                 console.log('✅ Token refreshed successfully');
                 this._isRefreshingToken = false;
+
+                // Reset proactive refresh timer to prevent redundant refreshes
+                this._startProactiveRefreshTimer();
+
                 return true;
             } else {
                 console.warn('⚠️ Token refresh failed - refresh token expired');
@@ -155,6 +160,40 @@ class UnifiedAuthManager {
         }, 1000); // 1 second debounce
     }
 
+    /**
+     * Starts a proactive refresh timer to prevent session expiration
+     * for users who stay on the same tab without triggering visibility changes.
+     * Timer is set to 14 minutes (half of 30-minute JWT expiration).
+     */
+    _startProactiveRefreshTimer() {
+        // Clear any existing timer
+        if (this._proactiveRefreshTimer) {
+            clearInterval(this._proactiveRefreshTimer);
+        }
+
+        // 14 minutes = 840000ms (half of 30-minute expiration)
+        const REFRESH_INTERVAL = 14 * 60 * 1000;
+
+        this._proactiveRefreshTimer = setInterval(() => {
+            if (this.isAuthenticated() && !document.hidden) {
+                console.log('🔄 Proactive token refresh (14-min timer)');
+                this.refreshToken(true);
+            }
+        }, REFRESH_INTERVAL);
+
+        console.log('⏱️ Proactive refresh timer started (14-min interval)');
+    }
+
+    /**
+     * Stops the proactive refresh timer
+     */
+    _stopProactiveRefreshTimer() {
+        if (this._proactiveRefreshTimer) {
+            clearInterval(this._proactiveRefreshTimer);
+            this._proactiveRefreshTimer = null;
+            console.log('⏱️ Proactive refresh timer stopped');
+        }
+    }
 
     /**
      * Perform login with COMPLETE system synchronization
@@ -217,6 +256,9 @@ class UnifiedAuthManager {
 
         // SYNCHRONIZE ALL SYSTEMS
         await this._syncAllSystems(user, csrfToken);
+
+        // Start proactive refresh timer for new session
+        this._startProactiveRefreshTimer();
 
         // Notify all subscribers
         this._notifySubscribers();
@@ -410,6 +452,9 @@ class UnifiedAuthManager {
     async logout() {
         await adminDebugLog('UnifiedAuthManager', 'Unified logout starting...');
 
+        // Stop proactive refresh timer
+        this._stopProactiveRefreshTimer();
+
         // Set logout flag to prevent re-authentication
         this._isLoggingOut = true;
 
@@ -494,6 +539,9 @@ class UnifiedAuthManager {
             clearTimeout(this._visibilityChangeDebounceTimer);
             this._visibilityChangeDebounceTimer = null;
         }
+
+        // Clear proactive refresh timer
+        this._stopProactiveRefreshTimer();
 
         // Clear user state module
         if (window.userState) {
@@ -587,6 +635,9 @@ class UnifiedAuthManager {
             // Note: Can't await here since _syncFromExistingSystems is not async
             // But we need to sync immediately to prevent race conditions
             this._syncAllSystemsSync(existingUser, existingToken);
+
+            // Start proactive refresh timer for existing session
+            this._startProactiveRefreshTimer();
         }
     }
 
