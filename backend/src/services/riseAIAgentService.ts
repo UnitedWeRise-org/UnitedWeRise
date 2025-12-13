@@ -714,10 +714,11 @@ ${contextStr}
 Please provide a thoughtful, balanced response to the user's message. If they asked a question, answer it directly. If they made an argument, analyze its strengths and weaknesses constructively.`;
 
     try {
-      // Use Tier 1 (gpt-4o) for political analysis quality
+      // Use Tier 1 (o1) for political analysis quality
+      // o-series models need high max_completion_tokens as it includes BOTH reasoning + output
       const response = await azureOpenAI.generateTier1Completion(userPrompt, {
         systemMessage: systemPrompt,
-        maxTokens: 1000,
+        maxTokens: 8000,
         temperature: 0.7
       });
 
