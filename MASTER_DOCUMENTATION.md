@@ -1,5 +1,5 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: December 10, 2025
+**Last Updated**: December 12, 2025
 **Version**: 5.9.0 (@RiseAI Agent System & Community Notes)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
@@ -10286,6 +10286,63 @@ deploymentStatus = {
   requestId: "uuid"
 }
 ```
+
+#### Database Error Logging Service
+
+**Status**: ✅ Production Ready (December 2025)
+**File**: `backend/src/services/errorLoggingService.ts`
+**Purpose**: Centralized persistent error logging for debugging services like RiseAI
+
+Unlike ephemeral container logs that disappear on restart, this service stores errors in the database for persistent debugging and analysis.
+
+**Key Methods**:
+```typescript
+// Log an error to the database
+await ErrorLoggingService.logError({
+  service: 'RiseAIAgentService',
+  operation: 'analyzeContent',
+  errorType: 'API_ERROR',
+  errorMessage: 'Azure OpenAI timeout',
+  errorStack: error.stack,
+  context: { postId, userId },
+  severity: 'high'
+});
+
+// Retrieve errors for debugging
+const errors = await ErrorLoggingService.getErrors({
+  service: 'RiseAIAgentService',
+  resolved: false,
+  limit: 50
+});
+
+// Mark errors as resolved
+await ErrorLoggingService.resolveError(errorId);
+
+// Get error counts by service
+const counts = await ErrorLoggingService.getErrorCounts();
+
+// Cleanup old resolved errors
+await ErrorLoggingService.cleanupOldErrors(30); // 30 days
+```
+
+**Database Model** (`ApplicationError`):
+- `id` - Unique identifier
+- `service` - Service name (e.g., 'RiseAIAgentService')
+- `operation` - Specific operation that failed
+- `errorType` - Error category
+- `errorMessage` - Human-readable message
+- `errorStack` - Full stack trace
+- `context` - JSON metadata (postId, userId, etc.)
+- `severity` - low, medium, high, critical
+- `resolved` - Whether the error has been addressed
+- `resolvedAt` - When resolved
+- `createdAt` - When error occurred
+
+**Use Cases**:
+- RiseAI agent analysis failures
+- Azure OpenAI API errors
+- Database query failures
+- Any service requiring persistent error tracking
 
 ### Performance Metrics
 

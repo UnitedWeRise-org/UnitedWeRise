@@ -1,6 +1,6 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: December 9, 2025
+**Last Updated**: December 12, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
@@ -8,7 +8,66 @@
 
 ---
 
-## [Unreleased] - 2025-12-09
+## [Unreleased] - 2025-12-12
+
+### @RiseAI Agent System - v1.0
+
+Launched AI-powered analysis agent that users can tag to evaluate arguments using objective moral reasoning based on the Entropy/Homeostasis Framework.
+
+**Core Features**:
+
+1. **Mention Detection** (`riseAIMentionService.ts`)
+   - Detects @RiseAI, @rise-ai, @rise_ai mentions (case-insensitive)
+   - Rate limiting: 10 calls/day for non-admin, unlimited for admin
+   - Creates interaction records for tracking and audit
+
+2. **Agent Analysis** (`riseAIAgentService.ts`)
+   - Entropy/Homeostasis scoring (0-10 scale for social stability impact)
+   - Logical fallacy detection (ad hominem, straw man, false dichotomy, etc.)
+   - IHL ethical framework alignment assessment
+   - Related argument and fact discovery via semantic embeddings
+   - Automatic reply generation as @RiseAI system user
+
+3. **Argument Ledger** (`argumentLedgerService.ts`)
+   - Dynamic repository of arguments extracted from user discourse
+   - 1536-dimension embeddings for semantic similarity matching
+   - Confidence propagation to similar arguments (cosine > 0.85)
+   - Support/refute voting with citation tracking
+
+4. **Fact Claims** (`factClaimService.ts`)
+   - Factual claims underlying arguments
+   - Confidence cascade to dependent arguments
+   - Challenge and debunk tracking
+
+5. **Community Notes** (`communityNotesService.ts`)
+   - Twitter/X-style user-contributed corrections
+   - Reputation-weighted voting system
+   - Auto-display at 70% threshold
+   - Appeals system with admin resolution
+
+6. **Error Logging** (`errorLoggingService.ts`)
+   - Centralized database error logging for debugging
+   - Persistent storage (unlike ephemeral container logs)
+   - Error retrieval by service/operation
+   - Resolution tracking and cleanup
+
+**Azure OpenAI Integration**:
+- Tier 1: o1 reasoning model for conversational analysis
+- Tier 2: o4-mini for complex reasoning tasks
+- General: gpt-4.1-mini for classification
+- Vision: gpt-4o for image analysis
+
+**API Endpoints**:
+- `/api/riseai/*` - Core analysis and interaction endpoints
+- `/api/riseai/arguments/*` - Argument ledger CRUD
+- `/api/riseai/facts/*` - Fact claim management
+- `/api/community-notes/*` - Community notes system
+
+**Database Models**: RiseAIInteraction, ArgumentEntry, FactClaim, ArgumentFactLink, ConfidenceUpdate, CommunityNote, CommunityNoteVote, RiseAISettings, RiseAIUsage, ApplicationError
+
+**Frontend Integration**: UnifiedPostCreator (Phase 5.5) automatically detects @RiseAI mentions and triggers backend analysis asynchronously.
+
+---
 
 ### Feed Algorithm - Enhanced Personalization (Phase 3)
 
