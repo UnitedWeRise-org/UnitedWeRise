@@ -24,7 +24,7 @@
     -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;
-        script-src 'self' 'unsafe-eval' 'unsafe-hashes' 'sha256-6zwuiTKyvKeDDyc2WFz/yvJy3ZnaDzTdvxEwfqyewlU='
+        script-src 'self' 'unsafe-eval' 'unsafe-hashes' blob: 'sha256-6zwuiTKyvKeDDyc2WFz/yvJy3ZnaDzTdvxEwfqyewlU='
             https://www.googletagmanager.com
             https://www.google-analytics.com
             https://googleads.g.doubleclick.net
@@ -40,6 +40,7 @@
         worker-src 'self' blob: data:;
         frame-src 'self'
             https://js.stripe.com
+            https://m.stripe.network
             https://newassets.hcaptcha.com
             https://www.googletagmanager.com
             https://accounts.google.com;
@@ -55,6 +56,7 @@
             https://accounts.google.com
             https://api.hcaptcha.com
             https://hcaptcha.com
+            https://m.stripe.network
             https://*.cartocdn.com;
         img-src 'self' data: blob:
             https://uwrstorage2425.blob.core.windows.net
