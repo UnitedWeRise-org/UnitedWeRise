@@ -169,11 +169,40 @@ Every migration step includes verification:
    - "We're in a hurry" (creates MORE urgency when things break)
    - "I'll do it later" (you won't, and production will break)
 
-2. **Never use `db push` for production:**
+2. **Never use `db push` for production OR staging:**
    - Bypasses migration system
    - Loses migration history
    - Cannot be verified in CI/CD
-   - Causes drift between environments
+   - **Causes schema drift** on next `migrate deploy`
+   - Creates a cyclical problem that gets worse over time
+
+---
+
+## PostgreSQL Enum Handling
+
+PostgreSQL has a fundamental limitation: `ALTER TYPE ADD VALUE` cannot run inside transactions. Since Prisma runs migrations in transactions, this causes issues when adding new enum values.
+
+### How We Handle This
+
+Our GitHub workflows include a **dynamic enum sync script** that runs BEFORE migrations:
+
+1. Reads all enum definitions from `schema.prisma`
+2. Compares against existing enum values in the database
+3. Adds any missing values outside of transactions
+4. Then `prisma migrate deploy` runs safely
+
+This means:
+- **You don't need to manually update the workflow** when adding new enum values
+- All enums are automatically synced from the schema
+- No more drift from enum mismatches
+
+### What NOT To Do
+
+If migrations fail due to enum issues:
+- **DON'T** use `prisma db push` - this bypasses migrations and causes drift
+- **DO** check the GitHub Actions logs for the actual error
+- **DO** verify the enum exists in the schema file
+- **DO** ensure the migration SQL is idempotent (if manually written)
 
 ---
 

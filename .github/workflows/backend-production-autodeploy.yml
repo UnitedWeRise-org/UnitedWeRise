@@ -102,59 +102,91 @@ jobs:
           # Install pg module for direct database access
           npm install pg --no-save
 
-          # Create a Node script to add enum values outside transaction
-          cat > add-enum-values.js << 'ENUMSCRIPT'
+          # Create a Node script to DYNAMICALLY sync ALL enum values from schema.prisma
+          # This prevents drift by ensuring all enum values exist before migrations run
+          cat > sync-enum-values.js << 'ENUMSCRIPT'
           const { Client } = require('pg');
+          const fs = require('fs');
 
-          async function addEnumValues() {
+          async function syncEnumValues() {
+            const schema = fs.readFileSync('prisma/schema.prisma', 'utf8');
             const client = new Client({ connectionString: process.env.DATABASE_URL });
 
             try {
               await client.connect();
-              console.log('Connected to database');
+              console.log('🔄 Syncing enum values from schema.prisma to database...\n');
 
-              // Check and add NEW_POST
-              const checkNewPost = await client.query(`
-                SELECT 1 FROM pg_enum
-                WHERE enumlabel = 'NEW_POST'
-                AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')
-              `);
+              // Parse all enums from schema using regex
+              const enumRegex = /enum\s+(\w+)\s*\{([^}]+)\}/g;
+              let match;
+              let totalAdded = 0;
+              let enumsProcessed = 0;
 
-              if (checkNewPost.rows.length === 0) {
-                await client.query(`ALTER TYPE "NotificationType" ADD VALUE 'NEW_POST'`);
-                console.log('✅ Added NEW_POST to NotificationType');
-              } else {
-                console.log('ℹ️  NEW_POST already exists in NotificationType');
+              while ((match = enumRegex.exec(schema)) !== null) {
+                const enumName = match[1];
+                // Extract enum values (handles comments and whitespace)
+                const enumBody = match[2];
+                const values = enumBody
+                  .split('\n')
+                  .map(line => line.replace(/\/\/.*$/, '').trim()) // Remove comments
+                  .filter(line => line && !line.startsWith('//'))
+                  .map(line => line.replace(/,?\s*$/, '')); // Remove trailing commas
+
+                // Check if enum type exists in database
+                const typeExists = await client.query(
+                  `SELECT 1 FROM pg_type WHERE typname = $1`,
+                  [enumName]
+                );
+
+                if (typeExists.rows.length === 0) {
+                  // Enum doesn't exist yet - will be created by migration
+                  continue;
+                }
+
+                enumsProcessed++;
+
+                for (const value of values) {
+                  if (!value) continue;
+
+                  // Check if value exists in PostgreSQL enum
+                  const valueExists = await client.query(`
+                    SELECT 1 FROM pg_enum
+                    WHERE enumlabel = $1
+                    AND enumtypid = (SELECT oid FROM pg_type WHERE typname = $2)
+                  `, [value, enumName]);
+
+                  if (valueExists.rows.length === 0) {
+                    try {
+                      await client.query(`ALTER TYPE "${enumName}" ADD VALUE '${value}'`);
+                      console.log(`✅ Added ${value} to ${enumName}`);
+                      totalAdded++;
+                    } catch (e) {
+                      // Value might already exist or have casing issues
+                      console.log(`⚠️  Could not add ${value} to ${enumName}: ${e.message}`);
+                    }
+                  }
+                }
               }
 
-              // Check and add MESSAGE_REQUEST
-              const checkMsgReq = await client.query(`
-                SELECT 1 FROM pg_enum
-                WHERE enumlabel = 'MESSAGE_REQUEST'
-                AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'NotificationType')
-              `);
-
-              if (checkMsgReq.rows.length === 0) {
-                await client.query(`ALTER TYPE "NotificationType" ADD VALUE 'MESSAGE_REQUEST'`);
-                console.log('✅ Added MESSAGE_REQUEST to NotificationType');
-              } else {
-                console.log('ℹ️  MESSAGE_REQUEST already exists in NotificationType');
-              }
-
-              console.log('✅ Enum values processing complete');
+              console.log(`\n✅ Enum sync complete.`);
+              console.log(`   Enums checked: ${enumsProcessed}`);
+              console.log(`   Values added: ${totalAdded}`);
             } catch (error) {
-              console.error('Error processing enum values:', error.message);
-              // Don't fail the build - the values might already exist
+              console.error('Error syncing enum values:', error.message);
+              // Don't fail the build - migrations might create the enums
             } finally {
               await client.end();
             }
           }
 
-          addEnumValues().catch(console.error);
+          syncEnumValues().catch(e => {
+            console.error('Error:', e);
+            process.exit(0); // Don't fail build
+          });
           ENUMSCRIPT
 
-          node add-enum-values.js
-          rm add-enum-values.js
+          node sync-enum-values.js
+          rm sync-enum-values.js
 
           echo ""
           echo "✅ Pre-migration enum processing complete"
