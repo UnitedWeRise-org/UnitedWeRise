@@ -31,7 +31,7 @@ class UnifiedPostCreator {
             maxVideoSize: 50 * 1024 * 1024, // 50MB
             // Thread-specific limits
             threadHeadMaxLength: 500,       // Initial post max chars
-            threadContinuationMaxLength: 1000, // Continuation max chars
+            threadContinuationMaxLength: 500, // Continuation max chars (unified with head posts)
             threadPromptThreshold: 300      // Show "Continue in thread" prompt at this char count
         };
 

@@ -220,9 +220,9 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             threadPosition = headPost._count.threadPosts + 1;
             isThreadContinuation = true;
 
-            // Enforce continuation character limit (1000 chars)
-            if (content.trim().length > 1000) {
-                return res.status(400).json({ error: 'Thread continuation posts are limited to 1000 characters' });
+            // Enforce continuation character limit (500 chars, unified with head posts)
+            if (content.trim().length > 500) {
+                return res.status(400).json({ error: 'Thread continuation posts are limited to 500 characters' });
             }
         } else {
             // Enforce initial post character limit (500 chars)

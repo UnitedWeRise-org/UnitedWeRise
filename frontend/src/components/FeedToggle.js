@@ -260,7 +260,7 @@ export class FeedToggle {
         // Get thread config from UnifiedPostCreator
         const threadConfig = window.unifiedPostCreator?.getThreadConfig?.() || {
             headMaxLength: 500,
-            continuationMaxLength: 1000,
+            continuationMaxLength: 500,
             promptThreshold: 300
         };
 
