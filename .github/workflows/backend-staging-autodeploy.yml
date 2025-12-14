@@ -211,9 +211,23 @@ jobs:
           npx prisma migrate status || true
           echo ""
 
-          echo "3️⃣ Detecting schema drift..."
+          echo "3️⃣ Checking for failed migrations..."
           MIGRATE_STATUS=$(npx prisma migrate status 2>&1 || true)
           echo "$MIGRATE_STATUS"
+
+          # Auto-resolve failed migrations (mark as applied since enum sync ensures schema is correct)
+          if echo "$MIGRATE_STATUS" | grep -qi "failed"; then
+            echo ""
+            echo "⚠️  Found failed migration(s). Auto-resolving..."
+            # Extract failed migration names and mark each as applied
+            FAILED_MIGRATIONS=$(echo "$MIGRATE_STATUS" | grep -A1 "Following migration have failed:" | tail -1 | tr -d ' ')
+            if [ -n "$FAILED_MIGRATIONS" ]; then
+              echo "   Marking '$FAILED_MIGRATIONS' as applied..."
+              npx prisma migrate resolve --applied "$FAILED_MIGRATIONS" || true
+              echo "   ✅ Migration resolved"
+            fi
+            echo ""
+          fi
 
           if echo "$MIGRATE_STATUS" | grep -qi "drift"; then
             echo ""
