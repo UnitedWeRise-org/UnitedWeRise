@@ -990,6 +990,19 @@ router.get('/:postId/thread', async (req, res) => {
             !threadPosts[0].threadHeadId &&
             threadPosts[0]._count.threadPosts === 0;
 
+        // Debug logging for thread loading
+        logger.info({
+            postId,
+            headPostId,
+            threadPostCount: threadPosts.length,
+            isStandalone,
+            posts: threadPosts.map(p => ({
+                id: p.id,
+                threadHeadId: p.threadHeadId,
+                threadPosition: p.threadPosition
+            }))
+        }, 'Thread load debug');
+
         return res.json({
             isThread: !isStandalone,
             headPostId: isStandalone ? null : headPostId,
