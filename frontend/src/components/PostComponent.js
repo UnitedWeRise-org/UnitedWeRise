@@ -1244,12 +1244,12 @@ class PostComponent {
             // Fetch thread posts from API
             const response = await apiCall(`/posts/${postId}/thread`);
 
-            if (!response || !response.posts) {
+            if (!response?.ok || !response?.data?.posts) {
                 throw new Error('Failed to load thread');
             }
 
             // Render continuation posts (skip the head post which is already showing)
-            const continuations = response.posts.filter(p => p.isContinuation);
+            const continuations = response.data.posts.filter(p => p.isContinuation);
 
             if (continuations.length === 0) {
                 threadPostsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: #666;">No continuation posts found.</div>';
