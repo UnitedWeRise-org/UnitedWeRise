@@ -19,6 +19,7 @@ class Profile {
             POST_CREATED: true,
             POST_EDITED: true,
             POST_DELETED: true,
+            THREAD_DELETED: true,
             COMMENT_CREATED: true,
             COMMENT_EDITED: true,
             COMMENT_DELETED: true,
@@ -592,6 +593,12 @@ class Profile {
                                                data-change-action="toggleActivityFilter" data-param1="POST_DELETED"
                                                style="width: 16px; height: 16px; accent-color: #007bff;">
                                         <span style="font-size: 0.85rem; color: #333;">🗑️ Posts Deleted</span>
+                                    </label>
+                                    <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
+                                        <input type="checkbox" ${this.activityFilters.THREAD_DELETED ? 'checked' : ''}
+                                               data-change-action="toggleActivityFilter" data-param1="THREAD_DELETED"
+                                               style="width: 16px; height: 16px; accent-color: #007bff;">
+                                        <span style="font-size: 0.85rem; color: #333;">🧵 Threads Deleted</span>
                                     </label>
                                     <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
                                         <input type="checkbox" ${this.activityFilters.COMMENT_CREATED ? 'checked' : ''}
@@ -4439,6 +4446,29 @@ class Profile {
                             <button data-action="viewDeletedContent" data-param1="post" data-param2="${activity.targetId}"
                                     style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                                 View Deleted Content
+                            </button>
+                            <div class="activity-time" style="color: #999; font-size: 0.8em; margin-top: 0.5rem;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            case 'THREAD_DELETED':
+                return `
+                    <div class="activity-item deleted" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; background: #fff3cd;">
+                        <div class="activity-icon" style="font-size: 1.5rem;">🧵</div>
+                        <div class="activity-content" style="flex: 1;">
+                            <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
+                                Deleted a thread
+                                ${metadata.continuationCount ? `<span style="color: #666; font-weight: normal;"> (${metadata.continuationCount} continuation${metadata.continuationCount > 1 ? 's' : ''})</span>` : ''}
+                            </div>
+                            <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
+                                "${metadata.contentPreview || 'Thread preview not available'}"
+                            </div>
+                            <button data-action="viewDeletedContent" data-param1="thread" data-param2="${activity.targetId}"
+                                    style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #856404; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+                                View Deleted Thread
                             </button>
                             <div class="activity-time" style="color: #999; font-size: 0.8em; margin-top: 0.5rem;">
                                 ${timeAgo}

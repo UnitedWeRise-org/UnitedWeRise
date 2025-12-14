@@ -257,10 +257,26 @@ export class FeedToggle {
         // Show composer mount
         mount.style.display = 'block';
 
-        // Create simple inline composer HTML
+        // Get thread config from UnifiedPostCreator
+        const threadConfig = window.unifiedPostCreator?.getThreadConfig?.() || {
+            headMaxLength: 500,
+            continuationMaxLength: 1000,
+            promptThreshold: 300
+        };
+
+        // Create inline composer with thread support
         mount.innerHTML = `
             <div class="inline-composer-content" style="width: 100%; box-sizing: border-box;">
-                <textarea id="inlinePostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box; margin-bottom: 8px;"></textarea>
+                <div class="thread-head-section">
+                    <textarea id="inlinePostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box; margin-bottom: 4px;" maxlength="${threadConfig.headMaxLength}"></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span id="headCharCount" style="font-size: 12px; color: #666;">0/${threadConfig.headMaxLength}</span>
+                        <button id="addContinuationBtn" style="display: none; background: none; border: none; color: #0d6efd; cursor: pointer; font-size: 13px; padding: 4px 8px;">
+                            🧵 Continue in thread...
+                        </button>
+                    </div>
+                </div>
+                <div id="threadContinuationsContainer"></div>
                 <input type="file" id="inlineFileInput" accept="image/*,video/*" multiple style="display: none;" />
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
                     <div style="display: flex; gap: 8px;">
@@ -284,9 +300,51 @@ export class FeedToggle {
         // Store selected files
         let selectedFiles = [];
 
+        // Thread state
+        let continuations = [];
+        let continuationCounter = 0;
+
+        // Get UI elements for thread
+        const headCharCount = mount.querySelector('#headCharCount');
+        const addContinuationBtn = mount.querySelector('#addContinuationBtn');
+        const continuationsContainer = mount.querySelector('#threadContinuationsContainer');
+
         // Focus textarea
         if (textarea) {
             textarea.focus();
+        }
+
+        // Character counter and thread prompt on textarea input
+        if (textarea && headCharCount && addContinuationBtn) {
+            textarea.addEventListener('input', () => {
+                const len = textarea.value.length;
+                headCharCount.textContent = `${len}/${threadConfig.headMaxLength}`;
+
+                // Change color based on limit
+                if (len > threadConfig.headMaxLength - 50) {
+                    headCharCount.style.color = '#dc3545'; // Red when close to limit
+                } else if (len > threadConfig.promptThreshold) {
+                    headCharCount.style.color = '#fd7e14'; // Orange when past prompt threshold
+                } else {
+                    headCharCount.style.color = '#666';
+                }
+
+                // Show "Continue in thread" button when past threshold
+                if (len >= threadConfig.promptThreshold && continuations.length === 0) {
+                    addContinuationBtn.style.display = 'inline-block';
+                } else if (len < threadConfig.promptThreshold && continuations.length === 0) {
+                    addContinuationBtn.style.display = 'none';
+                }
+            });
+        }
+
+        // Add continuation button handler
+        if (addContinuationBtn && continuationsContainer) {
+            addContinuationBtn.addEventListener('click', () => {
+                this.addContinuationTextarea(continuationsContainer, continuations, continuationCounter++, threadConfig);
+                // Hide the button after first continuation is added (user can add more via the continuation UI)
+                addContinuationBtn.style.display = 'none';
+            });
         }
 
         // Attach button - trigger file input
@@ -366,7 +424,7 @@ export class FeedToggle {
             });
         }
 
-        // Post button - create post
+        // Post button - create post (or thread if continuations exist)
         if (postBtn) {
             postBtn.addEventListener('click', async () => {
                 const content = textarea?.value?.trim();
@@ -376,14 +434,49 @@ export class FeedToggle {
                     return;
                 }
 
+                // Collect continuation content from all continuation textareas
+                const continuationContent = [];
+                const continuationTextareas = continuationsContainer?.querySelectorAll('.continuation-textarea');
+                if (continuationTextareas) {
+                    continuationTextareas.forEach(ta => {
+                        const val = ta.value?.trim();
+                        if (val) {
+                            continuationContent.push(val);
+                        }
+                    });
+                }
+
                 // Disable button during posting
                 postBtn.disabled = true;
-                postBtn.textContent = 'Posting...';
+                const isThread = continuationContent.length > 0;
+                postBtn.textContent = isThread ? 'Creating thread...' : 'Posting...';
 
                 try {
-                    // Use UnifiedPostCreator if available (handles two-step upload)
                     let postResult;
-                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.create === 'function') {
+
+                    // If we have continuations, create a thread
+                    if (isThread && window.unifiedPostCreator?.createThread) {
+                        console.log('🧵 Creating thread with', continuationContent.length, 'continuation(s)');
+                        postResult = await window.unifiedPostCreator.createThread({
+                            headContent: content,
+                            continuations: continuationContent,
+                            mediaFiles: selectedFiles.length > 0 ? selectedFiles : null,
+                            onProgress: ({ step, total, message }) => {
+                                postBtn.textContent = message;
+                            }
+                        });
+
+                        // For thread, extract head post for display
+                        if (postResult.success && postResult.headPost) {
+                            postResult.data = postResult.headPost;
+                            // Add threadPosts count for UI
+                            postResult.data._count = {
+                                ...postResult.data._count,
+                                threadPosts: postResult.continuationPosts?.length || 0
+                            };
+                        }
+                    } else if (window.unifiedPostCreator && typeof window.unifiedPostCreator.create === 'function') {
+                        // Use UnifiedPostCreator if available (handles two-step upload)
                         console.log('📝 Using UnifiedPostCreator.create()');
                         postResult = await window.unifiedPostCreator.create({
                             content: content,
@@ -470,6 +563,80 @@ export class FeedToggle {
                 }
             });
         }
+    }
+
+    /**
+     * Add a continuation textarea for thread creation
+     * @param {HTMLElement} container - Container to add the textarea to
+     * @param {Array} continuations - Array to track continuation refs
+     * @param {number} index - Index of this continuation
+     * @param {Object} threadConfig - Thread configuration
+     */
+    addContinuationTextarea(container, continuations, index, threadConfig) {
+        const continuationDiv = document.createElement('div');
+        continuationDiv.className = 'thread-continuation-input';
+        continuationDiv.dataset.index = index;
+        continuationDiv.style.cssText = 'margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #0d6efd;';
+
+        continuationDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 13px; color: #0d6efd; font-weight: 500;">🧵 Continuation ${index + 1}</span>
+                <button class="remove-continuation-btn" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 18px; padding: 0 4px;">×</button>
+            </div>
+            <textarea class="continuation-textarea" placeholder="Continue your thread..." style="width: 100%; min-height: 60px; border: 1px solid #dee2e6; border-radius: 6px; padding: 10px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box; margin-bottom: 4px;" maxlength="${threadConfig.continuationMaxLength}"></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="continuation-char-count" style="font-size: 12px; color: #666;">0/${threadConfig.continuationMaxLength}</span>
+                <button class="add-another-continuation-btn" style="background: none; border: none; color: #0d6efd; cursor: pointer; font-size: 13px; padding: 4px 8px;">
+                    + Add another continuation
+                </button>
+            </div>
+        `;
+
+        container.appendChild(continuationDiv);
+        continuations.push(index);
+
+        // Get elements
+        const textarea = continuationDiv.querySelector('.continuation-textarea');
+        const charCount = continuationDiv.querySelector('.continuation-char-count');
+        const removeBtn = continuationDiv.querySelector('.remove-continuation-btn');
+        const addAnotherBtn = continuationDiv.querySelector('.add-another-continuation-btn');
+
+        // Focus the new textarea
+        textarea?.focus();
+
+        // Character counter
+        textarea?.addEventListener('input', () => {
+            const len = textarea.value.length;
+            charCount.textContent = `${len}/${threadConfig.continuationMaxLength}`;
+
+            if (len > threadConfig.continuationMaxLength - 100) {
+                charCount.style.color = '#dc3545';
+            } else {
+                charCount.style.color = '#666';
+            }
+        });
+
+        // Remove button
+        removeBtn?.addEventListener('click', () => {
+            continuationDiv.remove();
+            const idx = continuations.indexOf(index);
+            if (idx > -1) continuations.splice(idx, 1);
+
+            // Re-show the "Continue in thread" button if no continuations left
+            if (continuations.length === 0) {
+                const addBtn = document.querySelector('#addContinuationBtn');
+                const headTextarea = document.querySelector('#inlinePostContent');
+                if (addBtn && headTextarea && headTextarea.value.length >= threadConfig.promptThreshold) {
+                    addBtn.style.display = 'inline-block';
+                }
+            }
+        });
+
+        // Add another button
+        addAnotherBtn?.addEventListener('click', () => {
+            const newIndex = Math.max(...continuations, -1) + 1;
+            this.addContinuationTextarea(container, continuations, newIndex, threadConfig);
+        });
     }
 
     updateToggleState() {

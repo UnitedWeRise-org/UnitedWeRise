@@ -28,8 +28,142 @@ class UnifiedPostCreator {
             allowedMediaTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'],
             maxImageSize: 10 * 1024 * 1024, // 10MB
             maxGifSize: 5 * 1024 * 1024,    // 5MB
-            maxVideoSize: 50 * 1024 * 1024  // 50MB
+            maxVideoSize: 50 * 1024 * 1024, // 50MB
+            // Thread-specific limits
+            threadHeadMaxLength: 500,       // Initial post max chars
+            threadContinuationMaxLength: 1000, // Continuation max chars
+            threadPromptThreshold: 300      // Show "Continue in thread" prompt at this char count
         };
+
+        // Thread state for multi-post threads
+        this.threadState = {
+            isThreadMode: false,
+            continuations: []  // Array of continuation content strings
+        };
+    }
+
+    /**
+     * Get thread configuration for UI components
+     * @returns {Object} Thread config values
+     */
+    getThreadConfig() {
+        return {
+            headMaxLength: this.config.threadHeadMaxLength,
+            continuationMaxLength: this.config.threadContinuationMaxLength,
+            promptThreshold: this.config.threadPromptThreshold
+        };
+    }
+
+    /**
+     * Create a thread (head post + continuation posts)
+     * @param {Object} options - Thread creation options
+     * @param {string} options.headContent - Content for the head post (max 500 chars)
+     * @param {string[]} options.continuations - Array of continuation content strings (max 1000 chars each)
+     * @param {string[]} [options.tags] - Post tags
+     * @param {File[]} [options.mediaFiles] - Files to upload (attached to head post only)
+     * @param {Function} [options.onProgress] - Progress callback (called with { step, total, message })
+     * @param {Function} [options.onSuccess] - Success callback
+     * @param {Function} [options.onError] - Error callback
+     * @returns {Promise<Object>} - { success, headPost, continuationPosts, error }
+     */
+    async createThread(options) {
+        console.log('🧵 UnifiedPostCreator.createThread() called with:', {
+            headLength: options.headContent?.length,
+            continuationCount: options.continuations?.length
+        });
+
+        const { headContent, continuations = [], tags = ['Public Post'], mediaFiles, onProgress, onSuccess, onError } = options;
+
+        try {
+            // Validate head content
+            if (!headContent || headContent.trim().length === 0) {
+                return this._handleError('Please enter content for your post', onError);
+            }
+
+            if (headContent.length > this.config.threadHeadMaxLength) {
+                return this._handleError(`First post exceeds ${this.config.threadHeadMaxLength} characters. Please shorten it or move content to a continuation.`, onError);
+            }
+
+            // Validate continuations
+            for (let i = 0; i < continuations.length; i++) {
+                if (continuations[i].length > this.config.threadContinuationMaxLength) {
+                    return this._handleError(`Continuation ${i + 1} exceeds ${this.config.threadContinuationMaxLength} characters. Please shorten it.`, onError);
+                }
+            }
+
+            const totalSteps = 1 + continuations.length;
+            let currentStep = 0;
+
+            // Step 1: Upload media if present (attached to head post)
+            let mediaIds = [];
+            if (mediaFiles && mediaFiles.length > 0) {
+                onProgress?.({ step: 0, total: totalSteps, message: 'Uploading media...' });
+                const uploadResult = await this._uploadMedia(mediaFiles);
+                if (!uploadResult.success) {
+                    return this._handleError(uploadResult.error, onError);
+                }
+                mediaIds = uploadResult.mediaIds;
+            }
+
+            // Step 2: Create head post
+            currentStep = 1;
+            onProgress?.({ step: currentStep, total: totalSteps, message: 'Creating post...' });
+
+            const headResult = await this._createPost({
+                content: headContent.trim(),
+                tags,
+                mediaIds
+            });
+
+            if (!headResult.success) {
+                return this._handleError(headResult.error || 'Failed to create head post', onError);
+            }
+
+            const headPost = headResult.data;
+            const threadHeadId = headPost.id;
+            console.log('✅ Head post created:', threadHeadId);
+
+            // Check for RiseAI mention in head post
+            await this._checkForRiseAIMention(headContent, headPost, 'post', null);
+
+            // Step 3+: Create continuation posts
+            const continuationPosts = [];
+            for (let i = 0; i < continuations.length; i++) {
+                currentStep = 2 + i;
+                onProgress?.({ step: currentStep, total: totalSteps, message: `Creating continuation ${i + 1}/${continuations.length}...` });
+
+                const contResult = await this._createPost({
+                    content: continuations[i].trim(),
+                    tags,
+                    threadHeadId  // Link to head post
+                });
+
+                if (!contResult.success) {
+                    console.error(`❌ Failed to create continuation ${i + 1}:`, contResult.error);
+                    // Continue anyway - partial thread is better than nothing
+                } else {
+                    continuationPosts.push(contResult.data);
+                    console.log(`✅ Continuation ${i + 1} created`);
+
+                    // Check for RiseAI mention in continuation
+                    await this._checkForRiseAIMention(continuations[i], contResult.data, 'post', null);
+                }
+            }
+
+            const result = {
+                success: true,
+                headPost,
+                continuationPosts,
+                totalPosts: 1 + continuationPosts.length
+            };
+
+            onSuccess?.(result);
+            return result;
+
+        } catch (error) {
+            console.error('❌ Thread creation error:', error);
+            return this._handleError(error.message || 'Failed to create thread', onError);
+        }
     }
 
     /**
