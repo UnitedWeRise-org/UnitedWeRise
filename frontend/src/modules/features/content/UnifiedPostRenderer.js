@@ -155,7 +155,10 @@ class UnifiedPostRenderer {
 
                 <div class="post-content ${shouldShowWarning ? 'content-hidden' : ''}" data-action="openPostFocus" data-post-id="${post.id}" style="cursor: pointer;">
                     ${this.renderPostContent(post.content, settings)}
+                    ${this.renderThreadIndicator(post)}
                 </div>
+
+                ${this.renderThreadExpansion(post)}
 
                 ${post.imageUrl ? this.renderLegacyImage(post.imageUrl) : ''}
 
@@ -332,6 +335,51 @@ class UnifiedPostRenderer {
         return `
             <div class="post-image">
                 <img src="${imageUrl}" alt="Post image" loading="lazy" style="max-width: 100%; height: auto; border-radius: 8px;">
+            </div>
+        `;
+    }
+
+    /**
+     * Render thread indicator inline after content
+     * Shows "... Thread (N more)" link for posts with continuations
+     * @private
+     */
+    renderThreadIndicator(post) {
+        const threadCount = post._count?.threadPosts || 0;
+        if (threadCount === 0) return '';
+
+        return `
+            <span class="thread-indicator"
+                  data-action="toggleThreadExpansion"
+                  data-post-id="${post.id}"
+                  style="color: var(--accent-color, #0d6efd); cursor: pointer; font-weight: 500; margin-left: 4px;">
+                ... Thread (${threadCount} more)
+            </span>
+        `;
+    }
+
+    /**
+     * Render thread expansion container (initially hidden)
+     * Shows all continuation posts when expanded
+     * @private
+     */
+    renderThreadExpansion(post) {
+        const threadCount = post._count?.threadPosts || 0;
+        if (threadCount === 0) return '';
+
+        return `
+            <div class="thread-expansion" id="thread-expansion-${post.id}" style="display: none;">
+                <div class="thread-posts" id="thread-posts-${post.id}">
+                    <div class="thread-loading" style="padding: 1rem; text-align: center; color: #666;">
+                        Loading thread...
+                    </div>
+                </div>
+                <button class="thread-collapse-btn"
+                        data-action="collapseThread"
+                        data-post-id="${post.id}"
+                        style="display: block; width: 100%; padding: 0.5rem; margin-top: 0.5rem; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer; color: #666; font-size: 0.9rem;">
+                    Hide thread
+                </button>
             </div>
         `;
     }

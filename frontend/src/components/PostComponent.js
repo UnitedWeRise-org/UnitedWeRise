@@ -1211,6 +1211,90 @@ class PostComponent {
     }
 
     /**
+     * Toggle thread expansion - load and show all continuation posts
+     */
+    async toggleThreadExpansion(postId) {
+        console.log('🧵 Toggling thread expansion for post:', postId);
+
+        const expansionContainer = document.getElementById(`thread-expansion-${postId}`);
+        const threadPostsContainer = document.getElementById(`thread-posts-${postId}`);
+        const indicator = document.querySelector(`[data-action="toggleThreadExpansion"][data-post-id="${postId}"]`);
+
+        if (!expansionContainer || !threadPostsContainer) {
+            console.warn('Thread expansion containers not found');
+            return;
+        }
+
+        // If already visible, collapse it
+        if (expansionContainer.style.display !== 'none') {
+            this.collapseThread(postId);
+            return;
+        }
+
+        // Show loading state
+        expansionContainer.style.display = 'block';
+        threadPostsContainer.innerHTML = '<div class="thread-loading" style="padding: 1rem; text-align: center; color: #666;">Loading thread...</div>';
+
+        // Hide the indicator
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+
+        try {
+            // Fetch thread posts from API
+            const response = await apiCall(`/posts/${postId}/thread`);
+
+            if (!response || !response.posts) {
+                throw new Error('Failed to load thread');
+            }
+
+            // Render continuation posts (skip the head post which is already showing)
+            const continuations = response.posts.filter(p => p.isContinuation);
+
+            if (continuations.length === 0) {
+                threadPostsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: #666;">No continuation posts found.</div>';
+                return;
+            }
+
+            // Render each continuation post
+            threadPostsContainer.innerHTML = continuations.map((post, index) => `
+                <div class="thread-continuation" style="padding: 0.75rem 0; border-top: 1px solid #e9ecef; margin-left: 20px;">
+                    <div class="thread-connector" style="color: #6c757d; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                        ${index + 1}/${continuations.length}
+                    </div>
+                    <div class="continuation-content">${post.content}</div>
+                    ${post.photos?.length ? this.renderPostMedia(post.photos) : ''}
+                </div>
+            `).join('');
+
+            console.log('✅ Thread loaded with', continuations.length, 'continuations');
+
+        } catch (error) {
+            console.error('❌ Failed to load thread:', error);
+            threadPostsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: #dc3545;">Failed to load thread. Please try again.</div>';
+        }
+    }
+
+    /**
+     * Collapse an expanded thread
+     */
+    collapseThread(postId) {
+        console.log('🧵 Collapsing thread for post:', postId);
+
+        const expansionContainer = document.getElementById(`thread-expansion-${postId}`);
+        const indicator = document.querySelector(`[data-action="toggleThreadExpansion"][data-post-id="${postId}"]`);
+
+        if (expansionContainer) {
+            expansionContainer.style.display = 'none';
+        }
+
+        // Show the indicator again
+        if (indicator) {
+            indicator.style.display = 'inline';
+        }
+    }
+
+    /**
      * Show share options modal
      */
     async sharePost(postId) {
@@ -2493,6 +2577,14 @@ class PostComponent {
                         break;
                     case 'toggleReplies':
                         this.toggleReplies(commentId);
+                        break;
+
+                    // Thread actions
+                    case 'toggleThreadExpansion':
+                        this.toggleThreadExpansion(postId);
+                        break;
+                    case 'collapseThread':
+                        this.collapseThread(postId);
                         break;
 
                     // Share actions
