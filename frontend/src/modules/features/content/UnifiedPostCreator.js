@@ -455,7 +455,10 @@ class UnifiedPostCreator {
                 const response = await window.createPostWithTag(
                     data.content,
                     data.tags || ['Public Post'],
-                    { mediaId: data.mediaIds?.[0] } // Use first media ID
+                    {
+                        mediaId: data.mediaIds?.[0],
+                        threadHeadId: data.threadHeadId  // Pass thread head ID for continuations
+                    }
                 );
 
                 if (response.success) {
