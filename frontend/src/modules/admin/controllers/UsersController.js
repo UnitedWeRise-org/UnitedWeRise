@@ -877,7 +877,8 @@ class UsersController {
             `;
 
             modal.className = 'modal';
-            document.body.appendChild(modal);
+            // Append to section so event delegation works (listener is on #users section)
+            this.section.appendChild(modal);
 
             // Reset activity state for this user
             this.activityOffset = 0;
