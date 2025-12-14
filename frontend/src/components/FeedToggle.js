@@ -525,6 +525,18 @@ export class FeedToggle {
 
                     console.log('📝 Post result:', postResult);
 
+                    // Check for failure (handle both response formats: apiCall returns {ok}, unifiedPostCreator returns {success})
+                    const isFailure = (postResult.ok === false) || (postResult.success === false);
+                    if (isFailure) {
+                        const errorMessage = postResult.error || 'Failed to create post. Please try again.';
+                        console.error('❌ Post creation failed:', errorMessage);
+                        alert(errorMessage);
+                        // Re-enable button so user can try again
+                        postBtn.disabled = false;
+                        postBtn.textContent = 'Post';
+                        return;  // DON'T hide composer - let user fix and retry
+                    }
+
                     // Success - hide composer, show button
                     mount.style.display = 'none';
                     mount.innerHTML = '';
