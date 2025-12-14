@@ -1244,6 +1244,19 @@ class PostComponent {
             // Fetch thread posts from API
             const response = await apiCall(`/posts/${postId}/thread`);
 
+            console.log('🧵 Thread API response:', {
+                ok: response?.ok,
+                hasData: !!response?.data,
+                hasPosts: !!response?.data?.posts,
+                postCount: response?.data?.posts?.length,
+                posts: response?.data?.posts?.map(p => ({
+                    id: p.id,
+                    isHead: p.isHead,
+                    isContinuation: p.isContinuation,
+                    threadHeadId: p.threadHeadId
+                }))
+            });
+
             if (!response?.ok || !response?.data?.posts) {
                 throw new Error('Failed to load thread');
             }
