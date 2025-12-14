@@ -369,8 +369,8 @@ router.get('/batch/dashboard-init', requireStagingAuth, requireAdmin, async (req
     // Format posts to match frontend expectations
     const formattedPosts = recentPosts.map(post => ({
       ...post,
-      likesCount: post._count.likes,
-      commentsCount: post._count.comments,
+      likesCount: post._count?.likes ?? 0,
+      commentsCount: post._count?.comments ?? 0,
       _count: undefined
     }));
 

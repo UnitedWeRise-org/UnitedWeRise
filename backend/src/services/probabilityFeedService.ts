@@ -196,6 +196,8 @@ export class ProbabilityFeedService {
             where: {
                 createdAt: { gte: thirtyDaysAgo },
                 authorId: { not: userId }, // Don't include user's own posts
+                deletedAt: null, // Only non-deleted posts
+                threadHeadId: null, // Exclude thread continuations (only show thread heads)
                 tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
             },
             include: {
