@@ -758,7 +758,8 @@ export class TrendingHandlers {
 
         try {
             const response = await apiCall(`/posts/${postId}/comments`, {
-                method: 'POST'
+                method: 'POST',
+                body: JSON.stringify({ content })
             });
 
             if (response.ok) {

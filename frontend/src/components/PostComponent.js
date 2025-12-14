@@ -772,15 +772,16 @@ class PostComponent {
 
     /**
      * Render simple comment with visual depth capping
+     * Supports 4 visual layers: 0=top-level, 1=nested, 2=deeper, 3=flattened
      */
     renderSimpleComment(comment, postId) {
         const user = comment.author || comment.user;
         const displayName = user?.firstName || user?.username || 'Anonymous';
-        
-        // Cap visual depth at 2 (40px indent maximum)
-        const visualDepth = Math.min(comment.depth, 2);
+
+        // Cap visual depth at 3 (60px indent maximum for 4 layers)
+        const visualDepth = Math.min(comment.depth, 3);
         const marginLeft = visualDepth * 20;
-        const isFlattened = comment.depth >= 2;
+        const isFlattened = comment.depth >= 3;
         
         // Check if this comment has replies (children at next depth level)
         const hasReplies = comment.hasReplies || false;
@@ -838,13 +839,13 @@ class PostComponent {
         
         // DEBUG: Log what depths we're working with
         console.log(`🔍 Comment ${comment.id.slice(-4)}: backend depth=${comment.depth}, passed depth=${depth}, actualDepth=${actualDepth}`);
-        
-        // SIMPLE FRONTEND-ONLY SOLUTION: Cap visual depth at 2
-        const visualDepth = Math.min(actualDepth, 2); // Never show more than 3 visual layers (0, 1, 2)
-        const marginLeft = visualDepth * 20; // 0px, 20px, or 40px max
-        
-        // Show flattened indicator for any comment at visual depth 2 (which includes all actual depths 2+)
-        const isFlattened = visualDepth >= 2;
+
+        // Cap visual depth at 3 for 4 visual layers (0=top-level, 1=nested, 2=deeper, 3=flattened)
+        const visualDepth = Math.min(actualDepth, 3); // Never show more than 4 visual layers (0, 1, 2, 3)
+        const marginLeft = visualDepth * 20; // 0px, 20px, 40px, or 60px max
+
+        // Show flattened indicator for any comment at visual depth 3 (which includes all actual depths 3+)
+        const isFlattened = visualDepth >= 3;
         const flattenedClass = isFlattened ? ' flattened-comment' : '';
         
         console.log(`   → visualDepth=${visualDepth}, marginLeft=${marginLeft}px, flattened=${isFlattened}`);
@@ -1111,8 +1112,11 @@ class PostComponent {
 
     /**
      * Submit a reply to a comment
+     * Uses UnifiedPostCreator for RiseAI detection support
      */
     async submitReply(parentId, postId) {
+        console.log('🎯 PostComponent.submitReply called for parentId:', parentId, 'postId:', postId);
+
         const currentUser = window.currentUser;
         if (!currentUser) {
             alert('Please log in to reply');
@@ -1122,37 +1126,51 @@ class PostComponent {
         const input = document.getElementById(`reply-input-${parentId}`);
         if (!input || !input.value.trim()) return;
 
-        const content = input.value.trim();
         input.disabled = true;
 
         try {
-            const response = await apiCall(`/posts/${postId}/comments`, {
-                method: 'POST',
-                body: JSON.stringify({ content, parentId })
+            const result = await window.unifiedPostCreator.create({
+                type: 'comment',
+                textareaId: `reply-input-${parentId}`,
+                postId: postId,
+                additionalData: { parentId },
+                onSuccess: (response) => {
+                    console.log('✅ Reply created successfully:', response);
+
+                    this.toggleReplyBox(parentId, postId); // Hide reply box
+
+                    // Reload comments after successful creation
+                    setTimeout(async () => {
+                        await this.loadComments(postId, true); // Force cache bypass
+                    }, 300);
+
+                    // Update comment count in UI
+                    const commentBtn = document.querySelector(`[data-post-id="${postId}"] .comment-btn .action-count`);
+                    if (commentBtn) {
+                        const currentCount = parseInt(commentBtn.textContent) || 0;
+                        commentBtn.textContent = currentCount + 1;
+                    }
+
+                    this.showToast('Reply added successfully!');
+                },
+                onError: (error) => {
+                    console.error('❌ Reply creation failed:', error);
+
+                    // Handle staging environment restriction
+                    if (error.error?.includes('staging') || error.error?.includes('admin')) {
+                        this.showToast('Staging environment: Admin access required for replies');
+                    } else {
+                        const errorMsg = error.error || 'Failed to add reply';
+                        alert(`Failed to add reply: ${errorMsg}`);
+                    }
+                },
+                clearAfterSuccess: true
             });
 
-            if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
-                input.value = '';
-                this.toggleReplyBox(parentId, postId); // Hide reply box
-                
-                console.log('Reply added successfully, reloading comments...');
-                setTimeout(async () => {
-                    await this.loadComments(postId);
-                }, 200);
-                
-                // Update comment count
-                const commentBtn = document.querySelector(`[data-post-id="${postId}"] .comment-btn .action-count`);
-                if (commentBtn) {
-                    const currentCount = parseInt(commentBtn.textContent) || 0;
-                    commentBtn.textContent = currentCount + 1;
-                }
-                
-                this.showToast('Reply added successfully!');
-            } else {
-                console.error('Reply submission failed:', response);
-                const errorMsg = response.error || response.message || 'Failed to add reply';
-                alert(`Failed to add reply: ${errorMsg}`);
+            if (!result.success) {
+                console.warn('🚨 UnifiedPostCreator returned failure for reply:', result);
             }
+
         } catch (error) {
             console.error('Error adding reply:', error);
             alert('Error adding reply');

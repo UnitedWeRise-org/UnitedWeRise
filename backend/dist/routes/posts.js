@@ -1617,13 +1617,13 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
                 depth = 0; // Keep at layer 0 (same as continuation)
             }
             else {
-                // Calculate depth - allow 3 visual layers (0=top-level, 1=nested, 2=flattened)
-                // If parent is already at flattened level (depth 2+), keep replies at depth 2
-                if (parentComment.depth >= 2) {
-                    depth = 2; // Keep all flattened replies at depth 2
+                // Calculate depth - allow 4 visual layers (0=top-level, 1=nested, 2=deeper, 3=flattened)
+                // If parent is already at flattened level (depth 3+), keep replies at depth 3
+                if (parentComment.depth >= 3) {
+                    depth = 3; // Keep all flattened replies at depth 3
                 }
                 else {
-                    depth = parentComment.depth + 1; // Normal increment for depth 0→1, 1→2
+                    depth = parentComment.depth + 1; // Normal increment for depth 0→1, 1→2, 2→3
                 }
             }
         }
