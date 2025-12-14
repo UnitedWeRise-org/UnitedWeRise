@@ -20,7 +20,9 @@ interface TopicSummary {
     confidence: number;
 }
 export declare class AzureOpenAIService {
-    private client;
+    private clients;
+    private endpoint;
+    private apiKey;
     private embeddingDeployment;
     private chatDeployment;
     private tier1Reasoning;
@@ -29,6 +31,12 @@ export declare class AzureOpenAIService {
     private vision;
     private isConfigured;
     constructor();
+    /**
+     * Get or create an OpenAI client for a specific deployment
+     * Azure OpenAI routes requests based on URL path, not model parameter
+     * Each deployment needs its own client with deployment name in baseURL
+     */
+    private getClient;
     /**
      * Generate embedding for text using Azure OpenAI
      */
@@ -75,7 +83,7 @@ export declare class AzureOpenAIService {
     /**
      * Tier 1: Mission-critical political reasoning
      * Use for: Stance detection, News accountability summaries
-     * Model: gpt-4o (highest quality)
+     * Model: o1 reasoning model (highest quality)
      */
     generateTier1Completion(prompt: string, options?: {
         maxTokens?: number;
@@ -85,7 +93,7 @@ export declare class AzureOpenAIService {
     /**
      * Tier 2: Complex reasoning tasks
      * Use for: Topic discovery, Semantic classification
-     * Model: gpt-4o (high quality)
+     * Model: o4-mini reasoning model
      */
     generateTier2Completion(prompt: string, options?: {
         maxTokens?: number;

@@ -553,6 +553,13 @@ model Post {
   /// Whether location has been offset for privacy protection
   privacyDisplaced   Boolean           @default(true)
 
+  // Thread linking (for multi-post threads, Twitter-style)
+  /// Thread head post ID for thread continuations (null = standalone or is head)
+  /// @description All continuations in a thread point to the same head post. Head posts have null.
+  threadHeadId       String?           @map("thread_head_id")
+  /// Position in thread (0 = head/standalone, 1+ = continuations in order)
+  threadPosition     Int               @default(0) @map("thread_position")
+
   // Relationships
   /// Comments on this post (CASCADE: deleting post deletes all comments)
   comments           Comment[]
@@ -582,6 +589,12 @@ model Post {
   /// Arguments extracted from this post
   arguments          ArgumentEntry[]
 
+  // Thread relationships (self-referential)
+  /// Relationship to thread head post (for continuations)
+  threadHead         Post?             @relation("ThreadPosts", fields: [threadHeadId], references: [id], onDelete: SetNull)
+  /// Thread continuation posts (for head posts)
+  threadPosts        Post[]            @relation("ThreadPosts")
+
   @@index([authorId]) /// Fast lookup of all posts by a user
   @@index([createdAt]) /// Chronological feed sorting
   @@index([h3Index]) /// Geospatial queries for local content
@@ -590,6 +603,7 @@ model Post {
   @@index([likesCount]) /// Sorting by popularity
   @@index([isPolitical]) /// Filtering political vs non-political content
   @@index([containsFeedback, feedbackType, feedbackPriority]) /// Feedback management dashboard queries
+  @@index([threadHeadId, threadPosition]) /// Thread queries - get all posts in a thread
 }
 
 model Like {
@@ -2258,6 +2272,7 @@ enum ActivityType {
   POST_CREATED
   POST_EDITED
   POST_DELETED
+  THREAD_DELETED
   COMMENT_CREATED
   COMMENT_EDITED
   COMMENT_DELETED

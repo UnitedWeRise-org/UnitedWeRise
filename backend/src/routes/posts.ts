@@ -176,11 +176,59 @@ router.get('/map-data', requireAuth, async (req: AuthRequest, res) => {
  */
 router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, validatePost, moderateContent('POST'), async (req: AuthRequest, res) => {
     try {
-        const { content, imageUrl, mediaId, tags, audience } = req.body;
+        const { content, imageUrl, mediaId, tags, audience, threadHeadId } = req.body;
         const userId = req.user!.id;
 
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ error: 'Post content is required' });
+        }
+
+        // Thread continuation handling
+        let threadPosition = 0;
+        let isThreadContinuation = false;
+
+        if (threadHeadId) {
+            // Validate the thread head exists and belongs to the same user
+            const headPost = await prisma.post.findUnique({
+                where: { id: threadHeadId },
+                select: {
+                    id: true,
+                    authorId: true,
+                    threadHeadId: true,
+                    isDeleted: true,
+                    _count: { select: { threadPosts: true } }
+                }
+            });
+
+            if (!headPost) {
+                return res.status(404).json({ error: 'Thread head post not found' });
+            }
+
+            if (headPost.authorId !== userId) {
+                return res.status(403).json({ error: 'You can only continue your own threads' });
+            }
+
+            if (headPost.threadHeadId !== null) {
+                return res.status(400).json({ error: 'Cannot continue from a continuation post. Use the thread head ID.' });
+            }
+
+            if (headPost.isDeleted) {
+                return res.status(400).json({ error: 'Cannot continue a deleted thread' });
+            }
+
+            // Calculate the next position
+            threadPosition = headPost._count.threadPosts + 1;
+            isThreadContinuation = true;
+
+            // Enforce continuation character limit (1000 chars)
+            if (content.trim().length > 1000) {
+                return res.status(400).json({ error: 'Thread continuation posts are limited to 1000 characters' });
+            }
+        } else {
+            // Enforce initial post character limit (500 chars)
+            if (content.trim().length > 500) {
+                return res.status(400).json({ error: 'Initial posts are limited to 500 characters. Use thread continuations for longer content.' });
+            }
         }
 
         // Validate audience if provided (default is PUBLIC)
@@ -196,39 +244,10 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             photoIds.push(...req.body.mediaIds);
         }
 
-        // Handle content length - split into content and extendedContent if needed
-        let mainContent = content.trim();
-        let extendedContent = null;
-        
-        if (content.length > 500) {
-            // Find a good break point near 500 characters (prefer sentence or word boundaries)
-            let breakPoint = 500;
-            
-            // Look for sentence endings near 500 chars
-            for (let i = 450; i < Math.min(500, content.length); i++) {
-                if (content[i] === '.' || content[i] === '!' || content[i] === '?') {
-                    if (i + 1 < content.length && content[i + 1] === ' ') {
-                        breakPoint = i + 1;
-                        break;
-                    }
-                }
-            }
-            
-            // If no sentence break found, look for word boundaries
-            if (breakPoint === 500) {
-                for (let i = 480; i < Math.min(500, content.length); i++) {
-                    if (content[i] === ' ') {
-                        breakPoint = i;
-                        break;
-                    }
-                }
-            }
-            
-            mainContent = content.substring(0, breakPoint).trim();
-            extendedContent = content.substring(breakPoint).trim();
-        }
+        // Use content as-is (character limits enforced above for threads)
+        const mainContent = content.trim();
 
-        // Generate embedding for AI topic clustering using Azure OpenAI (use full original content)
+        // Generate embedding for AI topic clustering using Azure OpenAI
         let embedding: number[] = [];
         try {
             const embeddingResult = await azureOpenAI.generateEmbedding(content.trim());
@@ -292,13 +311,15 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
         const post = await prisma.post.create({
             data: {
                 content: mainContent,
-                extendedContent,
                 imageUrl,
                 authorId: userId,
                 embedding,
                 authorReputation: userReputation.current,
                 tags: requestedTags,
                 audience: postAudience,
+                // Thread linking (null for standalone/head posts, set for continuations)
+                threadHeadId: threadHeadId || null,
+                threadPosition: threadPosition,
                 ...feedbackData,
                 // Include geographic data if available (null values are handled gracefully)
                 ...(geographicData && {
@@ -324,7 +345,8 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                 _count: {
                     select: {
                         likes: true,
-                        comments: true
+                        comments: true,
+                        threadPosts: true
                     }
                 }
             }
@@ -876,6 +898,115 @@ router.get('/:postId', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /api/posts/{postId}/thread:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get all posts in a thread
+ *     description: Returns the full thread including head post and all continuations, ordered by position.
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Any post ID in the thread (head or continuation)
+ *       - in: query
+ *         name: includeDeleted
+ *         schema:
+ *           type: boolean
+ *         description: Include soft-deleted posts (for archive view)
+ *     responses:
+ *       200:
+ *         description: Thread retrieved successfully
+ *       404:
+ *         description: Post not found
+ */
+router.get('/:postId/thread', async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const includeDeleted = req.query.includeDeleted === 'true';
+
+        // Find the post to determine if it's a head or continuation
+        const post = await prisma.post.findUnique({
+            where: { id: postId },
+            select: {
+                id: true,
+                threadHeadId: true,
+                threadPosition: true,
+                isDeleted: true
+            }
+        });
+
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
+        // Determine the head post ID
+        const headPostId = post.threadHeadId || post.id;
+
+        // Build the where clause
+        const whereClause: any = {
+            OR: [
+                { id: headPostId },
+                { threadHeadId: headPostId }
+            ]
+        };
+
+        if (!includeDeleted) {
+            whereClause.isDeleted = false;
+        }
+
+        // Get all posts in the thread
+        const threadPosts = await prisma.post.findMany({
+            where: whereClause,
+            orderBy: { threadPosition: 'asc' },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        verified: true
+                    }
+                },
+                photos: true,
+                _count: {
+                    select: {
+                        likes: true,
+                        comments: true,
+                        threadPosts: true
+                    }
+                }
+            }
+        });
+
+        // If only one post and it's standalone (no threadHeadId and no continuations), return as standalone
+        const isStandalone = threadPosts.length === 1 &&
+            !threadPosts[0].threadHeadId &&
+            threadPosts[0]._count.threadPosts === 0;
+
+        return res.json({
+            isThread: !isStandalone,
+            headPostId: isStandalone ? null : headPostId,
+            totalPosts: threadPosts.length,
+            posts: threadPosts.map(p => ({
+                ...p,
+                isHead: p.threadHeadId === null && !isStandalone,
+                isContinuation: p.threadHeadId !== null
+            }))
+        });
+
+    } catch (error) {
+        logger.error({ err: error, postId: req.params.postId }, 'Get thread error');
+        return res.status(500).json({ error: 'Failed to retrieve thread' });
+    }
+});
+
 router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
@@ -2605,6 +2736,7 @@ router.delete('/:postId', requireAuth, async (req: AuthRequest, res) => {
         const { postId } = req.params;
         const userId = req.user!.id;
         const { deleteReason } = req.body;
+        const deleteThread = req.query.deleteThread === 'true';
 
         // Check permissions
         const canDelete = await PostManagementService.canDeletePost(postId, userId);
@@ -2615,19 +2747,79 @@ router.delete('/:postId', requireAuth, async (req: AuthRequest, res) => {
             });
         }
 
-        // Perform the deletion
+        // Check if this is a thread head with continuations
+        const post = await prisma.post.findUnique({
+            where: { id: postId },
+            select: {
+                id: true,
+                threadHeadId: true,
+                _count: { select: { threadPosts: true } }
+            }
+        });
+
+        if (!post) {
+            return res.status(404).json({ success: false, error: 'Post not found' });
+        }
+
+        const isThreadHead = post.threadHeadId === null && post._count.threadPosts > 0;
+
+        // If this is a thread head and deleteThread wasn't confirmed, return thread info for confirmation
+        if (isThreadHead && !deleteThread) {
+            return res.status(200).json({
+                success: false,
+                requiresConfirmation: true,
+                isThreadHead: true,
+                continuationCount: post._count.threadPosts,
+                message: `This post is the start of a thread with ${post._count.threadPosts} continuation(s). Confirm to delete entire thread.`
+            });
+        }
+
+        // If deleting entire thread, delete all continuations first
+        if (isThreadHead && deleteThread) {
+            const continuations = await prisma.post.findMany({
+                where: { threadHeadId: postId },
+                select: { id: true }
+            });
+
+            // Soft-delete all continuations
+            for (const continuation of continuations) {
+                await PostManagementService.deletePost(continuation.id, userId, {
+                    deleteReason: `Thread deleted: ${deleteReason || 'No reason provided'}`
+                });
+            }
+
+            // Track thread deletion activity
+            await prisma.userActivity.create({
+                data: {
+                    userId,
+                    activityType: 'THREAD_DELETED',
+                    targetType: 'POST',
+                    targetId: postId,
+                    metadata: {
+                        continuationCount: post._count.threadPosts,
+                        deleteReason
+                    }
+                }
+            });
+
+            logger.info({ userId, postId, continuationCount: post._count.threadPosts }, 'Thread deleted');
+        }
+
+        // Perform the deletion of the main post
         const result = await PostManagementService.deletePost(postId, userId, {
             deleteReason: deleteReason?.trim()
         });
 
         res.json({
             success: true,
-            message: 'Post deleted successfully',
+            message: isThreadHead && deleteThread ? 'Thread deleted successfully' : 'Post deleted successfully',
             data: {
                 postId,
                 deleteReason: result.deleteReason,
                 softDelete: result.softDelete,
-                archiveCreated: true
+                archiveCreated: true,
+                threadDeleted: isThreadHead && deleteThread,
+                continuationsDeleted: isThreadHead && deleteThread ? post._count.threadPosts : 0
             }
         });
 

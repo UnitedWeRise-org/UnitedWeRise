@@ -12,15 +12,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.azureOpenAI = exports.AzureOpenAIService = void 0;
 const openai_1 = __importDefault(require("openai"));
 const logger_1 = __importDefault(require("../utils/logger"));
+const errorLoggingService_1 = require("./errorLoggingService");
 class AzureOpenAIService {
     constructor() {
+        this.clients = new Map();
         const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
         const apiKey = process.env.AZURE_OPENAI_API_KEY;
-        // Tier-based deployments (GPT-5 upgrade - December 2024)
-        this.tier1Reasoning = process.env.AZURE_OPENAI_TIER1_REASONING || 'gpt-5.2-chat';
-        this.tier2Reasoning = process.env.AZURE_OPENAI_TIER2_REASONING || 'gpt-5.1';
-        this.generalChat = process.env.AZURE_OPENAI_GENERAL_CHAT || 'gpt-5.1';
-        this.vision = process.env.AZURE_OPENAI_VISION || 'gpt-5.2-chat';
+        // Tier-based deployments (o1/o4-mini reasoning upgrade - December 2024)
+        // Tier 1: o1 reasoning model for RiseAI political analysis
+        // Tier 2: o4-mini reasoning model for complex tasks
+        // General: gpt-4.1-mini for pattern matching/classification
+        // Vision: gpt-4o for image analysis
+        this.tier1Reasoning = process.env.AZURE_OPENAI_TIER1_REASONING || 'o1';
+        this.tier2Reasoning = process.env.AZURE_OPENAI_TIER2_REASONING || 'o4-mini';
+        this.generalChat = process.env.AZURE_OPENAI_GENERAL_CHAT || 'gpt-4.1-mini';
+        this.vision = process.env.AZURE_OPENAI_VISION || 'gpt-4o';
         // Embeddings (unchanged)
         this.embeddingDeployment = process.env.AZURE_OPENAI_EMBEDDINGS ||
             process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT ||
@@ -28,17 +34,11 @@ class AzureOpenAIService {
         // SAFETY NET: Backwards compatibility for old environment variables
         this.chatDeployment = process.env.AZURE_OPENAI_CHAT_DEPLOYMENT || this.generalChat;
         this.isConfigured = !!(endpoint && apiKey);
+        this.endpoint = endpoint?.replace(/\/+$/, '') || '';
+        this.apiKey = apiKey || '';
         if (this.isConfigured) {
-            this.client = new openai_1.default({
-                apiKey: apiKey,
-                baseURL: `${endpoint.replace(/\/+$/, '')}/openai/deployments`,
-                defaultQuery: { 'api-version': '2024-08-01-preview' },
-                defaultHeaders: {
-                    'api-key': apiKey,
-                },
-            });
             logger_1.default.info('🤖 Azure OpenAI 4-Tier Architecture Initialized', {
-                endpoint: endpoint.replace(/\/+$/, ''),
+                endpoint: this.endpoint,
                 tier1Reasoning: this.tier1Reasoning,
                 tier2Reasoning: this.tier2Reasoning,
                 generalChat: this.generalChat,
@@ -49,6 +49,23 @@ class AzureOpenAIService {
         else {
             logger_1.default.warn('Azure OpenAI Service not configured - missing endpoint or API key');
         }
+    }
+    /**
+     * Get or create an OpenAI client for a specific deployment
+     * Azure OpenAI routes requests based on URL path, not model parameter
+     * Each deployment needs its own client with deployment name in baseURL
+     */
+    getClient(deploymentName) {
+        if (!this.clients.has(deploymentName)) {
+            this.clients.set(deploymentName, new openai_1.default({
+                apiKey: this.apiKey,
+                baseURL: `${this.endpoint}/openai/deployments/${deploymentName}`,
+                defaultQuery: { 'api-version': '2024-12-01-preview' },
+                defaultHeaders: { 'api-key': this.apiKey },
+            }));
+            logger_1.default.debug(`Created OpenAI client for deployment: ${deploymentName}`);
+        }
+        return this.clients.get(deploymentName);
     }
     /**
      * Generate embedding for text using Azure OpenAI
@@ -73,7 +90,8 @@ class AzureOpenAIService {
             }
             // Clean and truncate text for embeddings
             const cleanText = this.cleanText(text).slice(0, 8000); // Stay within token limits
-            const response = await this.client.embeddings.create({
+            const client = this.getClient(this.embeddingDeployment);
+            const response = await client.embeddings.create({
                 model: this.embeddingDeployment,
                 input: [cleanText]
             });
@@ -132,7 +150,8 @@ class AzureOpenAIService {
                 };
             }
             const prompt = this.buildTopicAnalysisPrompt(posts);
-            const response = await this.client.chat.completions.create({
+            const client = this.getClient(this.chatDeployment);
+            const response = await client.chat.completions.create({
                 model: this.chatDeployment,
                 messages: [
                     {
@@ -282,7 +301,8 @@ Focus on:
         if (!this.isConfigured) {
             throw new Error('Azure OpenAI not configured');
         }
-        const response = await this.client.chat.completions.create({
+        const client = this.getClient(this.chatDeployment);
+        const response = await client.chat.completions.create({
             model: this.chatDeployment,
             messages: [
                 {
@@ -306,36 +326,69 @@ Focus on:
     /**
      * Tier 1: Mission-critical political reasoning
      * Use for: Stance detection, News accountability summaries
-     * Model: gpt-4o (highest quality)
+     * Model: o1 reasoning model (highest quality)
      */
     async generateTier1Completion(prompt, options = {}) {
         if (!this.isConfigured) {
             throw new Error('Azure OpenAI not configured');
         }
         try {
-            const response = await this.client.chat.completions.create({
-                model: this.tier1Reasoning,
-                messages: [
-                    {
-                        role: "system",
-                        content: options.systemMessage || "You are a political analyst providing objective, nuanced analysis."
-                    },
-                    { role: 'user', content: prompt }
-                ],
-                max_tokens: options.maxTokens || 500,
-                temperature: options.temperature ?? 0.3
-            });
+            // Check if using o-series reasoning model (o1, o3, o4, etc.)
+            const isReasoningModel = /^o[1-9]/.test(this.tier1Reasoning);
+            const client = this.getClient(this.tier1Reasoning);
+            let response;
+            if (isReasoningModel) {
+                // o-series models have different API requirements:
+                // - No temperature parameter (fixed to 1)
+                // - Use max_completion_tokens instead of max_tokens
+                // - No system role (use developer role or combine with user message)
+                // - max_completion_tokens includes BOTH reasoning tokens AND output tokens
+                //   o1 uses many tokens for internal reasoning, so we need a high limit (16000+)
+                const systemContext = options.systemMessage || "You are a political analyst providing objective, nuanced analysis.";
+                response = await client.chat.completions.create({
+                    model: this.tier1Reasoning,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: `[SYSTEM CONTEXT: ${systemContext}]\n\n${prompt}`
+                        }
+                    ],
+                    max_completion_tokens: options.maxTokens || 16000
+                }); // Type assertion needed for o-series specific params
+            }
+            else {
+                // Standard GPT models
+                response = await client.chat.completions.create({
+                    model: this.tier1Reasoning,
+                    messages: [
+                        {
+                            role: "system",
+                            content: options.systemMessage || "You are a political analyst providing objective, nuanced analysis."
+                        },
+                        { role: 'user', content: prompt }
+                    ],
+                    max_tokens: options.maxTokens || 500,
+                    temperature: options.temperature ?? 0.3
+                });
+            }
             const content = response.choices[0]?.message?.content;
             if (!content) {
                 throw new Error('No response from Tier 1 AI');
             }
             logger_1.default.debug('Tier 1 completion generated', {
                 model: this.tier1Reasoning,
+                isReasoningModel,
                 tokens: response.usage?.total_tokens
             });
             return content;
         }
         catch (error) {
+            await errorLoggingService_1.ErrorLoggingService.logError({
+                service: 'azure-openai',
+                operation: 'generateTier1Completion',
+                error,
+                additionalContext: { model: this.tier1Reasoning }
+            });
             logger_1.default.error('Tier 1 completion failed', { error, model: this.tier1Reasoning });
             throw error;
         }
@@ -343,25 +396,48 @@ Focus on:
     /**
      * Tier 2: Complex reasoning tasks
      * Use for: Topic discovery, Semantic classification
-     * Model: gpt-4o (high quality)
+     * Model: o4-mini reasoning model
      */
     async generateTier2Completion(prompt, options = {}) {
         if (!this.isConfigured) {
             throw new Error('Azure OpenAI not configured');
         }
         try {
-            const response = await this.client.chat.completions.create({
-                model: this.tier2Reasoning,
-                messages: [
-                    {
-                        role: "system",
-                        content: options.systemMessage || "You are a helpful AI assistant."
-                    },
-                    { role: 'user', content: prompt }
-                ],
-                max_tokens: options.maxTokens || 500,
-                temperature: options.temperature ?? 0.3
-            });
+            // Check if using o-series reasoning model (o1, o3, o4, etc.)
+            const isReasoningModel = /^o[1-9]/.test(this.tier2Reasoning);
+            const client = this.getClient(this.tier2Reasoning);
+            let response;
+            if (isReasoningModel) {
+                // o-series models have different API requirements
+                // max_completion_tokens includes BOTH reasoning tokens AND output tokens
+                // o4-mini uses fewer tokens than o1 but still needs room for reasoning (8000+)
+                const systemContext = options.systemMessage || "You are a helpful AI assistant.";
+                response = await client.chat.completions.create({
+                    model: this.tier2Reasoning,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: `[SYSTEM CONTEXT: ${systemContext}]\n\n${prompt}`
+                        }
+                    ],
+                    max_completion_tokens: options.maxTokens || 8000
+                });
+            }
+            else {
+                // Standard GPT models
+                response = await client.chat.completions.create({
+                    model: this.tier2Reasoning,
+                    messages: [
+                        {
+                            role: "system",
+                            content: options.systemMessage || "You are a helpful AI assistant."
+                        },
+                        { role: 'user', content: prompt }
+                    ],
+                    max_tokens: options.maxTokens || 500,
+                    temperature: options.temperature ?? 0.3
+                });
+            }
             const content = response.choices[0]?.message?.content;
             if (!content) {
                 throw new Error('No response from Tier 2 AI');
@@ -369,6 +445,12 @@ Focus on:
             return content;
         }
         catch (error) {
+            await errorLoggingService_1.ErrorLoggingService.logError({
+                service: 'azure-openai',
+                operation: 'generateTier2Completion',
+                error,
+                additionalContext: { model: this.tier2Reasoning }
+            });
             logger_1.default.error('Tier 2 completion failed', { error, model: this.tier2Reasoning });
             throw error;
         }
@@ -383,7 +465,8 @@ Focus on:
             throw new Error('Azure OpenAI not configured');
         }
         try {
-            const response = await this.client.chat.completions.create({
+            const client = this.getClient(this.generalChat);
+            const response = await client.chat.completions.create({
                 model: this.generalChat,
                 messages: [
                     {
@@ -402,6 +485,12 @@ Focus on:
             return content;
         }
         catch (error) {
+            await errorLoggingService_1.ErrorLoggingService.logError({
+                service: 'azure-openai',
+                operation: 'generateGeneralCompletion',
+                error,
+                additionalContext: { model: this.generalChat }
+            });
             logger_1.default.error('General completion failed', { error, model: this.generalChat });
             throw error;
         }
@@ -416,7 +505,8 @@ Focus on:
             throw new Error('Azure OpenAI not configured');
         }
         try {
-            const response = await this.client.chat.completions.create({
+            const client = this.getClient(this.vision);
+            const response = await client.chat.completions.create({
                 model: this.vision,
                 messages,
                 max_tokens: options.maxTokens || 500,
@@ -429,6 +519,12 @@ Focus on:
             return content;
         }
         catch (error) {
+            await errorLoggingService_1.ErrorLoggingService.logError({
+                service: 'azure-openai',
+                operation: 'generateVisionCompletion',
+                error,
+                additionalContext: { model: this.vision }
+            });
             logger_1.default.error('Vision completion failed', { error, model: this.vision });
             throw error;
         }

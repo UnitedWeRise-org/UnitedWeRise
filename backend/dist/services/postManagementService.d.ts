@@ -87,6 +87,8 @@ export declare class PostManagementService {
             longitude: number | null;
             originalH3Index: string | null;
             privacyDisplaced: boolean;
+            threadHeadId: string | null;
+            threadPosition: number;
         };
         previousContent: string;
         editReason: string;

@@ -336,12 +336,13 @@ router.get('/following', auth_1.requireAuth, async (req, res) => {
         }
         // Fetch more posts than needed for proper scoring and pagination
         const fetchLimit = limitNum + offsetNum + 50;
-        // Get posts from all related users
+        // Get posts from all related users (exclude thread continuations - only show heads/standalone)
         const posts = await prisma_1.prisma.post.findMany({
             where: {
                 authorId: { in: Array.from(allRelatedIds) },
                 isDeleted: false,
-                feedVisible: true
+                feedVisible: true,
+                threadHeadId: null // Only show thread heads and standalone posts
             },
             include: {
                 author: {
@@ -375,7 +376,8 @@ router.get('/following', auth_1.requireAuth, async (req, res) => {
                 _count: {
                     select: {
                         likes: true,
-                        comments: true
+                        comments: true,
+                        threadPosts: true // Count for "Thread (N more)" indicator
                     }
                 }
             },
@@ -549,7 +551,9 @@ router.get('/trending', async (req, res) => {
                 createdAt: {
                     gte: oneDayAgo
                 },
-                tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
+                tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] },
+                threadHeadId: null, // Only show thread heads and standalone posts
+                isDeleted: false
             },
             include: {
                 author: {

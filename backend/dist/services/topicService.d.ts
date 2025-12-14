@@ -81,6 +81,8 @@ export declare class TopicService {
                 longitude: number | null;
                 originalH3Index: string | null;
                 privacyDisplaced: boolean;
+                threadHeadId: string | null;
+                threadPosition: number;
             };
         } & {
             id: string;
@@ -211,6 +213,8 @@ export declare class TopicService {
                 longitude: number | null;
                 originalH3Index: string | null;
                 privacyDisplaced: boolean;
+                threadHeadId: string | null;
+                threadPosition: number;
             };
         } & {
             id: string;

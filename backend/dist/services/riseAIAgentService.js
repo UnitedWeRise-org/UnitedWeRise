@@ -14,6 +14,7 @@ const embeddingService_1 = require("./embeddingService");
 const argumentLedgerService_1 = require("./argumentLedgerService");
 const factClaimService_1 = require("./factClaimService");
 const riseAIMentionService_1 = require("./riseAIMentionService");
+const errorLoggingService_1 = require("./errorLoggingService");
 const logger_1 = require("./logger");
 // Constants for analysis
 const RISEAI_SYSTEM_USER_ID = 'riseai-system'; // Will be created on first run
@@ -544,16 +545,24 @@ ${contextStr}
 
 Please provide a thoughtful, balanced response to the user's message. If they asked a question, answer it directly. If they made an argument, analyze its strengths and weaknesses constructively.`;
         try {
-            // Use Tier 1 (gpt-4o) for political analysis quality
+            // Use Tier 1 (o1) for political analysis quality
+            // o-series models need high max_completion_tokens as it includes BOTH reasoning + output
             const response = await azureOpenAIService_1.azureOpenAI.generateTier1Completion(userPrompt, {
                 systemMessage: systemPrompt,
-                maxTokens: 1000,
+                maxTokens: 8000,
                 temperature: 0.7
             });
             return response.trim();
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            // Log to database for visibility - this captures the actual Azure error
+            await errorLoggingService_1.ErrorLoggingService.logError({
+                service: 'riseai',
+                operation: 'generateConversationalResponse',
+                error,
+                additionalContext: { contentLength: fullContent.length }
+            });
             logger_1.logger.error({ error, errorMessage, contentLength: fullContent.length }, 'Conversational response generation failed');
             // Provide more specific error feedback
             if (errorMessage.includes('not configured')) {
