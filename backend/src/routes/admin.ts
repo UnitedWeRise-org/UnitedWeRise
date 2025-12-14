@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 import express from 'express';
 ;
 import { requireAuth, requireStagingAuth, AuthRequest } from '../middleware/auth';
+import { generateResetToken, hashResetToken } from '../utils/auth';
 import { moderationService } from '../services/moderationService';
 import { emailService } from '../services/emailService';
 import { body, query, validationResult } from 'express-validator';
@@ -3720,6 +3721,182 @@ router.post('/users/:userId/resend-verification', requireStagingAuth, requireAdm
       targetUserId: req.params.userId
     }, 'Failed to resend verification email');
     res.status(500).json({ error: 'Failed to resend verification email' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/users/{userId}/reset-password:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Trigger password reset email for any user (admin only)
+ *     description: |
+ *       Admin can trigger a password reset email for any user. The user will receive
+ *       an email with a password reset link, same as the forgot-password flow.
+ *       Requires TOTP verification for security.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to reset password for
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - totpToken
+ *             properties:
+ *               totpToken:
+ *                 type: string
+ *                 description: Admin's TOTP token for verification
+ *     responses:
+ *       200:
+ *         description: Password reset email sent successfully
+ *       400:
+ *         description: Invalid request or TOTP token
+ *       403:
+ *         description: Admin access required or TOTP not configured
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/users/:userId/reset-password', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { totpToken } = req.body;
+    const adminId = req.user!.id;
+    const adminUsername = req.user!.username;
+
+    // Validate TOTP token is provided
+    if (!totpToken) {
+      return res.status(400).json({ error: 'TOTP token is required' });
+    }
+
+    // Get admin's TOTP secret for verification
+    const adminUser = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: { totpSecret: true, totpEnabled: true }
+    });
+
+    if (!adminUser?.totpEnabled || !adminUser?.totpSecret) {
+      logger.warn({
+        action: 'admin_reset_password_no_totp',
+        adminId,
+        adminUsername,
+        targetUserId: userId,
+        securityEvent: 'totp_not_configured'
+      }, `Admin ${adminUsername} attempting password reset without TOTP configured`);
+      return res.status(403).json({ error: 'TOTP must be enabled for admin account to perform this action' });
+    }
+
+    // Verify admin's TOTP token
+    const validTOTP = speakeasy.totp.verify({
+      secret: adminUser.totpSecret,
+      encoding: 'base32',
+      token: totpToken,
+      window: 2
+    });
+
+    if (!validTOTP) {
+      logger.warn({
+        action: 'admin_reset_password_invalid_totp',
+        adminId,
+        adminUsername,
+        targetUserId: userId,
+        securityEvent: 'invalid_totp'
+      }, `Invalid TOTP for admin password reset by ${adminUsername}`);
+      return res.status(400).json({ error: 'Invalid TOTP token' });
+    }
+
+    // Get target user details
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        username: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Generate password reset token (same as forgot-password flow)
+    const resetToken = generateResetToken();
+    const hashedResetToken = hashResetToken(resetToken);
+    const resetExpiry = new Date(Date.now() + 3600000); // 1 hour
+
+    // Update user with reset token
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        resetToken: hashedResetToken,
+        resetExpiry
+      }
+    });
+
+    // Send password reset email
+    const emailTemplate = emailService.generatePasswordResetTemplate(
+      user.email,
+      resetToken,
+      user.firstName || undefined
+    );
+
+    const emailSent = await emailService.sendEmail(emailTemplate);
+
+    if (!emailSent) {
+      logger.error({
+        action: 'admin_reset_password_email_failed',
+        adminId,
+        adminUsername,
+        targetUserId: userId,
+        targetEmail: user.email
+      }, `Failed to send password reset email for user @${user.username}`);
+      return res.status(500).json({ error: 'Failed to send password reset email' });
+    }
+
+    // Log successful admin action
+    logger.info({
+      action: 'admin_reset_password_success',
+      adminId,
+      adminUsername,
+      targetUserId: userId,
+      targetUsername: user.username,
+      targetEmail: user.email,
+      expiresAt: resetExpiry.toISOString()
+    }, `Admin ${adminUsername} triggered password reset for user @${user.username}`);
+
+    res.json({
+      success: true,
+      message: `Password reset email sent to ${user.email}`,
+      expiresIn: '1 hour',
+      sentBy: adminId,
+      sentAt: new Date().toISOString(),
+      targetUser: {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      }
+    });
+
+  } catch (error) {
+    logger.error({
+      error,
+      endpoint: '/api/admin/users/:userId/reset-password',
+      action: 'admin_reset_password_error',
+      adminId: req.user?.id,
+      targetUserId: req.params.userId
+    }, 'Failed to trigger password reset');
+    res.status(500).json({ error: 'Failed to trigger password reset' });
   }
 });
 

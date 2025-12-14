@@ -617,7 +617,62 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
 
 // Get current user
 router.get('/me', requireAuth, async (req: AuthRequest, res) => {
-  res.json({ success: true, data: req.user });
+  try {
+    // Fetch additional user info not in the auth middleware
+    const fullUser = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        isModerator: true,
+        isAdmin: true,
+        isSuperAdmin: true,
+        password: true, // Need to check if set (won't return actual password)
+        oauthProviders: {
+          select: {
+            provider: true,
+            providerId: true,
+            email: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+    if (!fullUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Build response with password status (never expose actual password)
+    const userData = {
+      id: fullUser.id,
+      email: fullUser.email,
+      username: fullUser.username,
+      firstName: fullUser.firstName,
+      lastName: fullUser.lastName,
+      isModerator: fullUser.isModerator,
+      isAdmin: fullUser.isAdmin,
+      isSuperAdmin: fullUser.isSuperAdmin,
+      totpVerified: req.user!.totpVerified,
+      totpVerifiedAt: req.user!.totpVerifiedAt,
+      // Security-safe password status indicators
+      hasPassword: !!fullUser.password,
+      hasOAuthProviders: fullUser.oauthProviders.length > 0,
+      oauthProviders: fullUser.oauthProviders.map(p => ({
+        provider: p.provider,
+        email: p.email,
+        linkedAt: p.createdAt
+      }))
+    };
+
+    res.json({ success: true, data: userData });
+  } catch (error) {
+    req.log.error({ error, userId: req.user?.id }, 'Error fetching user data');
+    res.status(500).json({ error: 'Failed to fetch user data' });
+  }
 });
 
 // Forgot password
@@ -1039,6 +1094,159 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
     });
 
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/set-password:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Set password for OAuth-only accounts
+ *     description: |
+ *       Allows users who created their account via OAuth (Google) to add a password,
+ *       enabling them to login with email+password in addition to OAuth.
+ *
+ *       **Requirements**:
+ *       - User must be authenticated (via OAuth session)
+ *       - User must NOT have an existing password (password field is null)
+ *       - If user already has a password, use `/change-password` instead
+ *
+ *       **Security**: Password must meet strength requirements (min 8 chars, complexity).
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *               - confirmPassword
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *                 description: New password (min 8 chars with complexity requirements)
+ *               confirmPassword:
+ *                 type: string
+ *                 format: password
+ *                 description: Confirmation of new password (must match)
+ *     responses:
+ *       200:
+ *         description: Password set successfully
+ *       400:
+ *         description: Invalid password, passwords don't match, or user already has password
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ */
+router.post('/set-password', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { newPassword, confirmPassword } = req.body;
+    const ipAddress = req.ip || 'unknown';
+    const userAgent = req.get('User-Agent') || 'unknown';
+
+    // Validate required fields
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({ error: 'New password and confirmation are required' });
+    }
+
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+
+    // Validate password strength (minimum 8 characters)
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Check for password complexity (at least one letter and one number)
+    const hasLetter = /[a-zA-Z]/.test(newPassword);
+    const hasNumber = /[0-9]/.test(newPassword);
+    if (!hasLetter || !hasNumber) {
+      return res.status(400).json({
+        error: 'Password must contain at least one letter and one number'
+      });
+    }
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, username: true, password: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if user already has a password - if so, they should use change-password
+    if (user.password) {
+      return res.status(400).json({
+        error: 'You already have a password. Use the change password feature instead.',
+        hasPassword: true,
+        useEndpoint: '/api/auth/change-password'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password in database
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        passwordChangedAt: new Date()
+      }
+    });
+
+    // Log successful password set
+    await SecurityService.logEvent({
+      userId: user.id,
+      eventType: 'PASSWORD_SET',
+      ipAddress,
+      userAgent,
+      details: {
+        source: 'oauth_user_set_password',
+        timestamp: new Date().toISOString()
+      },
+      riskScore: 0
+    });
+
+    req.log.info({
+      userId,
+      username: user.username,
+      email: user.email
+    }, 'OAuth user set password successfully');
+
+    res.json({
+      success: true,
+      message: 'Password set successfully. You can now log in with email and password.',
+      canLoginWithPassword: true
+    });
+  } catch (error) {
+    req.log.error({ error, userId: req.user?.id }, 'Set password error');
+
+    await SecurityService.logEvent({
+      userId: req.user?.id,
+      eventType: 'SYSTEM_ERROR',
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown',
+      details: {
+        error: error.message,
+        endpoint: '/api/auth/set-password',
+        timestamp: new Date().toISOString()
+      },
+      riskScore: 30
+    });
+
+    res.status(500).json({ error: 'Failed to set password' });
   }
 });
 

@@ -1352,11 +1352,49 @@ class UsersController {
     }
 
     /**
-     * Reset user password (ported from monolithic version)
+     * Reset user password - triggers password reset email to user
+     * Admin triggers reset → user receives email → user sets new password
+     * Requires TOTP verification for security
+     * @param {string} userId - User ID to reset password for
+     * @param {string} username - Username for display in confirmation dialogs
      */
     async resetUserPassword(userId, username) {
-        // TODO: Implement password reset functionality
-        alert(`Reset password functionality for ${username} (${userId}) needs to be implemented`);
+        try {
+            // Show confirmation dialog
+            if (!confirm(`🔑 RESET USER PASSWORD\n\nUser: @${username}\nID: ${userId}\n\nThis will send a password reset email to the user's registered email address. The user will receive a link to set a new password.\n\nThis action requires TOTP verification. Continue?`)) {
+                return;
+            }
+
+            // Request TOTP confirmation
+            const { totpToken } = await requestTOTPConfirmation(
+                `Reset password for @${username}`
+            );
+
+            // Make API call to trigger password reset
+            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/admin/users/${userId}/reset-password`, {
+                method: 'POST',
+                body: JSON.stringify({ totpToken })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert(`✅ Password reset email sent successfully!\n\n• Sent to: ${data.targetUser?.email || 'user email'}\n• Expires in: ${data.expiresIn}\n• Sent at: ${new Date(data.sentAt).toLocaleString()}\n\nThe user will receive an email with a link to set their new password.`);
+
+                await adminDebugLog('UsersController', 'Password reset email sent', {
+                    userId,
+                    username,
+                    sentAt: data.sentAt
+                });
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to send password reset email');
+            }
+
+        } catch (error) {
+            console.error('Error resetting user password:', error);
+            alert(`❌ Failed to reset password: ${error.message}`);
+            await adminDebugError('UsersController', 'Password reset failed', error);
+        }
     }
 
     /**

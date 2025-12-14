@@ -204,6 +204,7 @@ class Profile {
                 case 'verifyPhone': this.verifyPhone(); break;
                 case 'refreshMessages': this.refreshMessages(); break;
                 case 'changePassword': this.changePassword(); break;
+                case 'setPassword': this.setPassword(); break;
                 case 'downloadData': this.downloadData(); break;
                 case 'openAdminDashboard': this.openAdminDashboard(); break;
                 case 'requestNotificationPermission': this.requestNotificationPermission(); break;
@@ -1022,7 +1023,7 @@ class Profile {
                     
                     <div class="settings-group">
                         <h4>Security</h4>
-                        <button data-action="changePassword" class="btn">Change Password</button>
+                        ${this.renderPasswordButton()}
                         <div class="totp-section">
                             <div id="totpStatus" class="totp-status">
                                 <div class="loading">Loading 2FA status...</div>
@@ -1675,8 +1676,289 @@ class Profile {
     }
 
     // Settings methods
-    changePassword() {
-        alert('Password change coming soon!');
+
+    /**
+     * Render the appropriate password button based on user's password status
+     * Shows "Set Password" for OAuth-only users, "Change Password" for users with password
+     */
+    renderPasswordButton() {
+        const user = window.currentUser;
+
+        // If user has OAuth providers but no password, show "Set Password"
+        if (user?.hasOAuthProviders && !user?.hasPassword) {
+            return `
+                <div class="password-section oauth-user">
+                    <p class="setting-description" style="margin-bottom: 0.5rem; color: #666;">
+                        You signed up with ${user.oauthProviders?.[0]?.provider || 'OAuth'}.
+                        Add a password to also log in with email.
+                    </p>
+                    <button data-action="setPassword" class="btn btn-primary">
+                        🔑 Set Password
+                    </button>
+                </div>
+            `;
+        }
+
+        // User has a password - show change password
+        return `<button data-action="changePassword" class="btn">Change Password</button>`;
+    }
+
+    /**
+     * Set password for OAuth-only users
+     * Shows a form to set a new password
+     */
+    async setPassword() {
+        try {
+            // Create modal for password entry
+            const modal = document.createElement('div');
+            modal.className = 'profile-edit-modal';
+            modal.innerHTML = `
+                <div class="modal-overlay" data-action="closeModal"></div>
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h3>🔑 Set Password</h3>
+                        <button class="close-btn" data-action="closeModal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin-bottom: 1rem; color: #666;">
+                            Add a password to your account so you can also log in with your email address.
+                        </p>
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" class="form-control"
+                                   placeholder="Enter new password" minlength="8" required>
+                            <small class="form-text text-muted">
+                                Minimum 8 characters, must include letters and numbers
+                            </small>
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <input type="password" id="confirmPassword" class="form-control"
+                                   placeholder="Confirm new password" required>
+                        </div>
+                        <div id="setPasswordError" class="error-message" style="display: none; color: #dc3545; margin-top: 0.5rem;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-action="closeModal">Cancel</button>
+                        <button class="btn btn-primary" id="setPasswordSubmit">Set Password</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Focus the first input
+            setTimeout(() => {
+                document.getElementById('newPassword')?.focus();
+            }, 100);
+
+            // Handle form submission
+            const submitBtn = document.getElementById('setPasswordSubmit');
+            submitBtn.addEventListener('click', async () => {
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const errorDiv = document.getElementById('setPasswordError');
+
+                // Validate
+                if (!newPassword || !confirmPassword) {
+                    errorDiv.textContent = 'Please fill in both password fields.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                if (newPassword.length < 8) {
+                    errorDiv.textContent = 'Password must be at least 8 characters long.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    errorDiv.textContent = 'Passwords do not match.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                // Check password complexity
+                const hasLetter = /[a-zA-Z]/.test(newPassword);
+                const hasNumber = /[0-9]/.test(newPassword);
+                if (!hasLetter || !hasNumber) {
+                    errorDiv.textContent = 'Password must contain at least one letter and one number.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                // Submit
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Setting password...';
+
+                try {
+                    const response = await apiCall('/auth/set-password', {
+                        method: 'POST',
+                        body: JSON.stringify({ newPassword, confirmPassword })
+                    });
+
+                    if (response.success) {
+                        modal.remove();
+                        alert('✅ Password set successfully! You can now log in with your email and password.');
+
+                        // Update the local user state
+                        if (window.currentUser) {
+                            window.currentUser.hasPassword = true;
+                        }
+
+                        // Re-render the settings tab to show "Change Password" instead
+                        this.showSettingsTab();
+                    } else {
+                        throw new Error(response.error || 'Failed to set password');
+                    }
+                } catch (error) {
+                    console.error('Error setting password:', error);
+                    errorDiv.textContent = error.message || 'Failed to set password. Please try again.';
+                    errorDiv.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Set Password';
+                }
+            });
+
+            // Handle Enter key
+            modal.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitBtn.click();
+                }
+            });
+
+            // Handle close
+            modal.querySelectorAll('[data-action="closeModal"]').forEach(btn => {
+                btn.addEventListener('click', () => modal.remove());
+            });
+
+        } catch (error) {
+            console.error('Error showing set password modal:', error);
+            alert('Failed to open password form. Please try again.');
+        }
+    }
+
+    /**
+     * Change password for users who already have a password
+     */
+    async changePassword() {
+        try {
+            // Create modal for password change
+            const modal = document.createElement('div');
+            modal.className = 'profile-edit-modal';
+            modal.innerHTML = `
+                <div class="modal-overlay" data-action="closeModal"></div>
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h3>🔐 Change Password</h3>
+                        <button class="close-btn" data-action="closeModal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="currentPassword">Current Password</label>
+                            <input type="password" id="currentPassword" class="form-control"
+                                   placeholder="Enter current password" required>
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" class="form-control"
+                                   placeholder="Enter new password" minlength="8" required>
+                            <small class="form-text text-muted">
+                                Minimum 8 characters
+                            </small>
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label for="confirmPassword">Confirm New Password</label>
+                            <input type="password" id="confirmPassword" class="form-control"
+                                   placeholder="Confirm new password" required>
+                        </div>
+                        <div id="changePasswordError" class="error-message" style="display: none; color: #dc3545; margin-top: 0.5rem;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-action="closeModal">Cancel</button>
+                        <button class="btn btn-primary" id="changePasswordSubmit">Change Password</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Focus the first input
+            setTimeout(() => {
+                document.getElementById('currentPassword')?.focus();
+            }, 100);
+
+            // Handle form submission
+            const submitBtn = document.getElementById('changePasswordSubmit');
+            submitBtn.addEventListener('click', async () => {
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const errorDiv = document.getElementById('changePasswordError');
+
+                // Validate
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                    errorDiv.textContent = 'Please fill in all password fields.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                if (newPassword.length < 8) {
+                    errorDiv.textContent = 'New password must be at least 8 characters long.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    errorDiv.textContent = 'New passwords do not match.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                // Submit
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Changing password...';
+
+                try {
+                    const response = await apiCall('/auth/change-password', {
+                        method: 'POST',
+                        body: JSON.stringify({ currentPassword, newPassword })
+                    });
+
+                    if (response.message || response.success) {
+                        modal.remove();
+                        alert('✅ Password changed successfully! Please log in again with your new password.');
+
+                        // The change-password endpoint revokes all sessions, so redirect to login
+                        window.location.reload();
+                    } else {
+                        throw new Error(response.error || 'Failed to change password');
+                    }
+                } catch (error) {
+                    console.error('Error changing password:', error);
+                    errorDiv.textContent = error.message || 'Failed to change password. Please try again.';
+                    errorDiv.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Change Password';
+                }
+            });
+
+            // Handle Enter key
+            modal.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitBtn.click();
+                }
+            });
+
+            // Handle close
+            modal.querySelectorAll('[data-action="closeModal"]').forEach(btn => {
+                btn.addEventListener('click', () => modal.remove());
+            });
+
+        } catch (error) {
+            console.error('Error showing change password modal:', error);
+            alert('Failed to open password form. Please try again.');
+        }
     }
 
     downloadData() {
