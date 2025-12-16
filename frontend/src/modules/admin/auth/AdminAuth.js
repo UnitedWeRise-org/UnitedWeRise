@@ -214,21 +214,12 @@ class AdminAuth {
     /**
      * Check authentication status and admin privileges
      * Primary entry point for authentication flow
+     *
+     * CRITICAL: Always verifies with backend even if localStorage has user data,
+     * because httpOnly auth cookies may have expired while localStorage persists.
      */
     async checkAuthStatus() {
-        if (this.currentUser) {
-            // User already loaded from localStorage
-            if (this.currentUser.isAdmin) {
-                this.showDashboard();
-                return;
-            } else {
-                this.showError('Admin access required. Please log in with an admin account.');
-                this.showLogin();
-                return;
-            }
-        }
-
-        // No user in localStorage, try to authenticate via cookies
+        // Always verify with backend - localStorage may be stale while httpOnly cookie expired
         try {
             const response = await fetch(`${this.API_BASE}/auth/me`, {
                 method: 'GET',
@@ -248,19 +239,32 @@ class AdminAuth {
                         this.showDashboard();
                     } else {
                         this.showError('Admin access required. Please log in with an admin account.');
+                        this.clearStoredUser();
                         this.showLogin();
                     }
                 } else {
+                    this.clearStoredUser();
                     this.showLogin();
                 }
             } else {
-                // Not authenticated via cookies
+                // Not authenticated via cookies - clear stale localStorage
+                this.clearStoredUser();
                 this.showLogin();
             }
         } catch (error) {
             console.error('Auth check error:', error);
+            this.clearStoredUser();
             this.showLogin();
         }
+    }
+
+    /**
+     * Clear stored user data from localStorage
+     * Called when auth token is invalid/expired
+     */
+    clearStoredUser() {
+        this.currentUser = null;
+        localStorage.removeItem('currentUser');
     }
 
     /**
