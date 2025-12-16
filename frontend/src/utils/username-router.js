@@ -13,7 +13,8 @@ class UsernameRouter {
             'api', 'admin', 'assets', 'uploads',
             'admin-dashboard.html', 'candidate-verification.html',
             'donation-success.html', 'donation-cancelled.html',
-            'verify-email.html', 'admin-feedback'
+            'verify-email.html', 'admin-feedback',
+            'reset-password'
         ];
 
         this.init();
