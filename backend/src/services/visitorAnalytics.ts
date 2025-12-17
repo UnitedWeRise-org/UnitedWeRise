@@ -14,11 +14,9 @@
  * - No PII stored (IP hashes rotate daily, preventing correlation)
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import crypto from 'crypto';
 import { logger } from './logger';
-
-const prisma = new PrismaClient();
 
 class VisitorAnalyticsService {
   /**

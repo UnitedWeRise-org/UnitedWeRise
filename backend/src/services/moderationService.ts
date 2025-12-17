@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma';
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { emailService } from './emailService';
 import { azureOpenAI, AzureOpenAIService } from './azureOpenAIService';
 import { logger } from './logger';
