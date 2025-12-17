@@ -1243,6 +1243,7 @@ details {
 /* Welcome content styling */
 .welcome-content {
     padding: 2rem;
+    padding-top: calc(110px + 2rem); /* Headspace for fixed feed controls + original padding */
     text-align: center;
     max-width: 800px;
     margin: 0 auto;
@@ -1915,6 +1916,7 @@ details {
     background-repeat: no-repeat;
     height: 100%; /* Fill parent container height */
     overflow-y: auto;
+    padding-top: 110px; /* Headspace for fixed feed controls */
 }
 
 /* Hide scrollbar for My Feed but keep functionality */
