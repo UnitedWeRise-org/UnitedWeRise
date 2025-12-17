@@ -1,12 +1,11 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { EmbeddingService } from '../services/embeddingService';
 import { azureOpenAI } from '../services/azureOpenAIService';
 import { logger } from '../services/logger';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Check if current user is a verified candidate
 router.get('/candidate/status', requireAuth, async (req: AuthRequest, res) => {
