@@ -3,14 +3,12 @@ import { Server as HTTPServer } from 'http';
 import { isProduction, enableRequestLogging } from '../utils/environment';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { MessageType, WebSocketMessagePayload, UnifiedMessage } from '../types/messaging';
 import { sessionManager } from './sessionManager';
 import { verifyToken } from '../utils/auth';
 import { COOKIE_NAMES } from '../utils/cookies';
 import { logger } from './logger';
-
-const prisma = new PrismaClient();
 
 export class WebSocketService {
   private io: Server;
