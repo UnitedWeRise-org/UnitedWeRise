@@ -3,7 +3,7 @@ import express from 'express';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import crypto from 'crypto';
-;
+import bcrypt from 'bcryptjs';
 import { requireAuth } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
 import { logger } from '../services/logger';
@@ -260,7 +260,6 @@ router.post('/disable', requireAuth, async (req: AuthRequest, res) => {
     }
 
     // Verify password
-    const bcrypt = require('bcryptjs');
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid password' });

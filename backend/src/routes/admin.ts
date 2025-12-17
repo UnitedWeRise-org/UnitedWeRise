@@ -1,6 +1,5 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
-;
 import { requireAuth, requireStagingAuth, AuthRequest } from '../middleware/auth';
 import { generateResetToken, hashResetToken } from '../utils/auth';
 import { moderationService } from '../services/moderationService';
@@ -75,7 +74,6 @@ const handleValidationErrors = (req: express.Request, res: express.Response, nex
  */
 router.get('/dashboard', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   // Generate unique request ID for tracing
-  const crypto = require('crypto');
   const requestId = crypto.randomBytes(4).toString('hex');
 
   logger.info({

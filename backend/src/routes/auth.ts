@@ -267,7 +267,7 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
     });
 
     // Generate and set CSRF token
-    const csrfToken = require('crypto').randomBytes(32).toString('hex');
+    const csrfToken = crypto.randomBytes(32).toString('hex');
     res.cookie(COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
       httpOnly: false, // CSRF token needs to be readable by JavaScript
       secure: requireSecureCookies(),
@@ -503,7 +503,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       });
 
       // Generate and set CSRF token
-      const csrfToken = require('crypto').randomBytes(32).toString('hex');
+      const csrfToken = crypto.randomBytes(32).toString('hex');
       res.cookie(COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
         httpOnly: false, // Needs to be readable by JS
         secure: requireSecureCookies(),
@@ -570,7 +570,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     });
 
     // Generate and set CSRF token
-    const csrfToken = require('crypto').randomBytes(32).toString('hex');
+    const csrfToken = crypto.randomBytes(32).toString('hex');
     res.cookie(COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
       httpOnly: false, // Needs to be readable by JS
       secure: requireSecureCookies(),

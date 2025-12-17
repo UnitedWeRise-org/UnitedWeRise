@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { OAuthService, OAuthProfile } from '../services/oauthService';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { authLimiter } from '../middleware/rateLimiting';
@@ -129,7 +130,6 @@ router.post('/google', authLimiter, async (req, res) => {
     });
 
     // Generate and set CSRF token
-    const crypto = require('crypto');
     const csrfToken = crypto.randomBytes(32).toString('hex');
     res.cookie(COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
       httpOnly: false,

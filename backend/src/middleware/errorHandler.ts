@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { isDevelopment } from '../utils/environment';
+import { logger } from '../services/logger';
 
 export interface CustomError extends Error {
   statusCode?: number;
@@ -95,7 +96,6 @@ export const securityLogger = (event: string, details: any, req?: Request) => {
     }, 'SECURITY EVENT');
   } else {
     // Fallback to global logger if no request context
-    const { logger } = require('../services/logger');
     logger.warn({
       event,
       ...details

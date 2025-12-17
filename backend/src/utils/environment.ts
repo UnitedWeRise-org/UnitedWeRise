@@ -93,10 +93,10 @@ export function getDatabaseLogLevel(): ('query' | 'info' | 'warn' | 'error')[] {
  * Log environment information using Pino structured logging
  * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
-export function logEnvironmentInfo(): void {
+export async function logEnvironmentInfo(): Promise<void> {
     // Import logger dynamically to avoid circular dependency
     // (environment.ts is imported by services/logger.ts)
-    const { logger } = require('../services/logger');
+    const { logger } = await import('../services/logger');
 
     const env = getEnvironment();
 
