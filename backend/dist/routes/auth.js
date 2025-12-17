@@ -311,10 +311,21 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
-        // Find user
-        const user = await prisma_1.prisma.user.findUnique({
+        // Find user (with Gmail normalization support)
+        // Gmail ignores dots in addresses, so ashley.m.oberry@gmail.com = ashleymoberry@gmail.com
+        let user = await prisma_1.prisma.user.findUnique({
             where: { email }
         });
+        // If not found and Gmail address, try normalized lookup
+        if (!user && (email.includes('@gmail.com') || email.includes('@googlemail.com'))) {
+            const normalizedInputEmail = (0, emailNormalization_1.normalizeEmail)(email);
+            const gmailUsers = await prisma_1.prisma.user.findMany({
+                where: {
+                    email: { contains: '@gmail.com' }
+                }
+            });
+            user = gmailUsers.find(u => (0, emailNormalization_1.normalizeEmail)(u.email) === normalizedInputEmail) || null;
+        }
         if (!user) {
             // Log failed login attempt with unknown user
             await securityService_1.SecurityService.logEvent({
@@ -634,9 +645,21 @@ router.post('/forgot-password', async (req, res) => {
         if (!email) {
             return res.status(400).json({ error: 'Email is required' });
         }
-        const user = await prisma_1.prisma.user.findUnique({
+        // Find user (with Gmail normalization support)
+        // Gmail ignores dots in addresses, so ashley.m.oberry@gmail.com = ashleymoberry@gmail.com
+        let user = await prisma_1.prisma.user.findUnique({
             where: { email }
         });
+        // If not found and Gmail address, try normalized lookup
+        if (!user && (email.includes('@gmail.com') || email.includes('@googlemail.com'))) {
+            const normalizedInputEmail = (0, emailNormalization_1.normalizeEmail)(email);
+            const gmailUsers = await prisma_1.prisma.user.findMany({
+                where: {
+                    email: { contains: '@gmail.com' }
+                }
+            });
+            user = gmailUsers.find(u => (0, emailNormalization_1.normalizeEmail)(u.email) === normalizedInputEmail) || null;
+        }
         if (!user) {
             // Don't reveal if email exists or not
             return res.json({ message: 'If the email exists, a reset link has been sent' });

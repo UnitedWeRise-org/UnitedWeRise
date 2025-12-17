@@ -309,10 +309,23 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user
-    const user = await prisma.user.findUnique({
+    // Find user (with Gmail normalization support)
+    // Gmail ignores dots in addresses, so ashley.m.oberry@gmail.com = ashleymoberry@gmail.com
+    let user = await prisma.user.findUnique({
       where: { email }
     });
+
+    // If not found and Gmail address, try normalized lookup
+    if (!user && (email.includes('@gmail.com') || email.includes('@googlemail.com'))) {
+      const normalizedInputEmail = normalizeEmail(email);
+      const gmailUsers = await prisma.user.findMany({
+        where: {
+          email: { contains: '@gmail.com' }
+        }
+      });
+
+      user = gmailUsers.find(u => normalizeEmail(u.email) === normalizedInputEmail) || null;
+    }
 
     if (!user) {
       // Log failed login attempt with unknown user
@@ -684,9 +697,23 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    const user = await prisma.user.findUnique({
+    // Find user (with Gmail normalization support)
+    // Gmail ignores dots in addresses, so ashley.m.oberry@gmail.com = ashleymoberry@gmail.com
+    let user = await prisma.user.findUnique({
       where: { email }
     });
+
+    // If not found and Gmail address, try normalized lookup
+    if (!user && (email.includes('@gmail.com') || email.includes('@googlemail.com'))) {
+      const normalizedInputEmail = normalizeEmail(email);
+      const gmailUsers = await prisma.user.findMany({
+        where: {
+          email: { contains: '@gmail.com' }
+        }
+      });
+
+      user = gmailUsers.find(u => normalizeEmail(u.email) === normalizedInputEmail) || null;
+    }
 
     if (!user) {
       // Don't reveal if email exists or not
