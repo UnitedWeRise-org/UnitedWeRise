@@ -8,7 +8,29 @@
 
 ---
 
-## [Unreleased] - 2025-12-12
+## [Unreleased] - 2025-12-17
+
+### Major Dependency Updates
+
+Comprehensive update of all major version dependencies to latest stable releases:
+
+**Updated Packages**:
+- TypeScript 5.9.3, Twilio 5.10.5, Helmet 8.1.0, Express-rate-limit 8.2.1
+- UUID 13.0.0, Swagger-ui-express 5.0.1, @faker-js/faker 10.1.0
+- OpenAI 6.9.1, Stripe 20.0.0, Zod 4.1.12
+- GitHub Actions: checkout v6, setup-node v6, codeql-action v4
+
+**Code Improvements**:
+- Fixed Prisma singleton pattern violations across 7 files
+- Prevents database connection pool exhaustion
+
+**Blocked**: Prisma 7.0.1 requires configuration migration (planned separately)
+
+See `docs/DEPENDENCY-UPDATES.md` for full details.
+
+---
+
+## [2025-12-12]
 
 ### @RiseAI Agent System - v1.0
 
