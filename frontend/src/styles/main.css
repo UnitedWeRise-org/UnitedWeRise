@@ -1175,8 +1175,8 @@ details {
     background: #4b5c09;
     border: 2px solid rgba(255,255,255,0.2);
     color: white;
-    width: 30px;
-    height: 60px;
+    width: 36px;
+    height: 72px;
     cursor: pointer;
     z-index: 10;
     border-radius: 8px; /* Rounded on all sides since it's centered on edge */
@@ -1184,7 +1184,7 @@ details {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
-    font-size: 0.8rem;
+    font-size: 1rem;
 }
 
 .sidebar-toggle-edge:hover {
@@ -1310,6 +1310,11 @@ details {
 /* Hide dropdown arrow in collapsed sidebar */
 .sidebar:not(.expanded) .dropdown-arrow {
     display: none;
+}
+
+/* Hide the entire dropdown when sidebar is collapsed */
+.sidebar:not(.expanded) .civic-hub-dropdown {
+    display: none !important;
 }
 
 /* ========================================

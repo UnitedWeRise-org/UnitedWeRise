@@ -242,11 +242,17 @@ class NavigationHandlers {
     }
 
     /**
-     * Toggle Civic Hub dropdown
+     * Toggle Civic Hub dropdown (only works when sidebar is expanded)
      */
     toggleCivicHub() {
+        const sidebar = document.getElementById('sidebar');
         const dropdown = document.getElementById('civicHubDropdown');
         const toggle = document.getElementById('civicHubToggle');
+
+        // Only allow dropdown when sidebar is expanded
+        if (!sidebar?.classList.contains('expanded')) {
+            return;
+        }
 
         if (dropdown && toggle) {
             this.civicHubOpen = !this.civicHubOpen;
@@ -1294,6 +1300,17 @@ class NavigationHandlers {
                 } else {
                     arrow.textContent = '▶';
                     toggleSidebar.title = 'Expand Sidebar';
+
+                    // Close Civic Hub dropdown when sidebar collapses
+                    const dropdown = document.getElementById('civicHubDropdown');
+                    const civicToggle = document.getElementById('civicHubToggle');
+                    if (dropdown) {
+                        dropdown.style.display = 'none';
+                    }
+                    if (civicToggle) {
+                        civicToggle.classList.remove('open');
+                    }
+                    this.civicHubOpen = false;
                 }
             });
 

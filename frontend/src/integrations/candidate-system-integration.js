@@ -259,6 +259,11 @@ class CandidateSystemIntegration {
                 return;
             }
 
+            // Skip sidebar navigation items - they don't need AI badges
+            if (element.closest('.sidebar') || element.closest('.thumbs')) {
+                return;
+            }
+
             // Add AI enhancement indicator
             const indicator = document.createElement('div');
             indicator.className = 'ai-enhanced-indicator';
