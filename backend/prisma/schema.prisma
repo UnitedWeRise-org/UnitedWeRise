@@ -113,6 +113,9 @@ model User {
   /// JSON object configuring notification delivery preferences
   /// @description Structure: { email: boolean, push: boolean, types: { likes: boolean, comments: boolean, ... } }
   notificationPreferences     Json?
+  /// JSON object storing UI preferences (dismissed modals, theme choices, etc.)
+  /// @description Structure: { dismissedModals: string[], ... }
+  uiPreferences               Json?
   /// User-chosen display name (may differ from username, used for formal contexts)
   displayName                 String?
   /// Cached count of users this user follows (denormalized for performance)

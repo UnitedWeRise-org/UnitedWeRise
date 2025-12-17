@@ -631,6 +631,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
         isAdmin: true,
         isSuperAdmin: true,
         password: true, // Need to check if set (won't return actual password)
+        uiPreferences: true, // UI preferences (dismissed modals, etc.)
         oauthProviders: {
           select: {
             provider: true,
@@ -665,7 +666,9 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
         provider: p.provider,
         email: p.email,
         linkedAt: p.createdAt
-      }))
+      })),
+      // UI preferences (dismissed modals, theme choices, etc.)
+      uiPreferences: fullUser.uiPreferences || {}
     };
 
     res.json({ success: true, data: userData });
