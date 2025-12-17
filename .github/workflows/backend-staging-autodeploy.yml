@@ -103,7 +103,7 @@ jobs:
 
           # Create a Node script to DYNAMICALLY sync ALL enum values from schema.prisma
           # This prevents drift by ensuring all enum values exist before migrations run
-          cat > sync-enum-values.js << 'ENUMSCRIPT'
+          cat > sync-enum-values.cjs << 'ENUMSCRIPT'
           const { Client } = require('pg');
           const fs = require('fs');
 
@@ -184,8 +184,8 @@ jobs:
           });
           ENUMSCRIPT
 
-          node sync-enum-values.js
-          rm sync-enum-values.js
+          node sync-enum-values.cjs
+          rm sync-enum-values.cjs
 
           echo ""
           echo "✅ Pre-migration enum processing complete"
