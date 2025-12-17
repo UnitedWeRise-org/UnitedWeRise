@@ -1,8 +1,7 @@
-import { PrismaClient, PoliticalProfileType } from '@prisma/client';
+import { PoliticalProfileType } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import bcrypt from 'bcryptjs';
 import { faker } from '@faker-js/faker';
-
-const prisma = new PrismaClient();
 
 // Major US cities with coordinates for geographic diversity
 const US_LOCATIONS = [

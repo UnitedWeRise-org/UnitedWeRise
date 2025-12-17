@@ -1,11 +1,10 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { MessageType } from '../types/messaging';
 import { logger } from '../services/logger';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get conversations list for a user
 router.get('/conversations', requireAuth, async (req: AuthRequest, res) => {
