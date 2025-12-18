@@ -1175,6 +1175,7 @@ details {
     background: #4b5c09;
     border: 1px solid #333;
     border-left: none; /* Flush with sidebar edge */
+    outline: 1px solid #333; /* Visibility against white background */
     color: white;
     width: 24px;
     height: 40px;
