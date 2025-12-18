@@ -1306,7 +1306,7 @@ details {
 }
 
 .sidebar.expanded .thumb.sub-item {
-    padding-left: 2rem;
+    padding-left: 1rem;
 }
 
 /* Hide dropdown arrow in collapsed sidebar */
@@ -2103,7 +2103,7 @@ details {
     background-repeat: no-repeat;
     height: 100%; /* Fill parent container height */
     overflow-y: auto;
-    padding-top: 110px; /* Headspace for fixed feed controls */
+    padding: 110px 2rem 0 2rem; /* Headspace for controls + side padding for scroll gutter */
 }
 
 /* Hide scrollbar for My Feed but keep functionality */

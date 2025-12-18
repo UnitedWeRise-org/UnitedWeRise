@@ -361,16 +361,22 @@ function initializeNotifications() {
  * Main function for notification bell click interaction
  */
 function toggleNotifications() {
+    console.log('🔔 toggleNotifications() called');
     const dropdown = document.getElementById('notificationDropdown');
+    console.log('🔔 dropdown element:', dropdown);
+    console.log('🔔 notificationDropdownOpen:', notificationDropdownOpen);
 
     if (!dropdown) {
+        console.log('🔔 No dropdown found, creating...');
         createNotificationDropdown();
         return toggleNotifications();
     }
 
     if (notificationDropdownOpen) {
+        console.log('🔔 Closing notifications');
         closeNotifications();
     } else {
+        console.log('🔔 Opening notifications');
         openNotifications();
     }
 }
@@ -693,17 +699,10 @@ function hideNotificationBell() {
 }
 
 // Event delegation for notification actions
+// NOTE: Bell toggle (data-action="toggle-notifications") is handled by navigation-handlers.js
+// This handler only processes notification-specific actions within the dropdown
 document.addEventListener('click', (e) => {
-    // Handle notification bell toggle
-    const toggleBtn = e.target.closest('[data-action="toggle-notifications"]');
-    if (toggleBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleNotifications();
-        return;
-    }
-
-    // Handle notification-specific actions
+    // Handle notification-specific actions (mark-all-read, handle-click)
     const target = e.target.closest('[data-notification-action]');
     if (!target) return;
 
@@ -763,6 +762,7 @@ if (typeof window !== 'undefined') {
 
     // Phase 4D-2 additional global exposure
     window.toggleNotifications = toggleNotifications;
+    console.log('🔔 toggleNotifications exposed to window:', typeof window.toggleNotifications);
     window.openNotifications = openNotifications;
     window.fetchNotifications = fetchNotifications;
     window.markAllNotificationsRead = markAllNotificationsRead;

@@ -83,7 +83,7 @@
       "Bash(git stash:*)"
     ],
     "deny": [
-      "Bash(npm run dev:*)",
+      "Bash(npm run dev:*)"
     ]
   }
 }
