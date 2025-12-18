@@ -699,17 +699,10 @@ function hideNotificationBell() {
 }
 
 // Event delegation for notification actions
+// NOTE: Bell toggle (data-action="toggle-notifications") is handled by navigation-handlers.js
+// This handler only processes notification-specific actions within the dropdown
 document.addEventListener('click', (e) => {
-    // Handle notification bell toggle
-    const toggleBtn = e.target.closest('[data-action="toggle-notifications"]');
-    if (toggleBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleNotifications();
-        return;
-    }
-
-    // Handle notification-specific actions
+    // Handle notification-specific actions (mark-all-read, handle-click)
     const target = e.target.closest('[data-notification-action]');
     if (!target) return;
 
