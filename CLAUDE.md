@@ -68,6 +68,21 @@ If on `main` for hotfixes or at user direction, stay on main. Otherwise prompt t
 
 **For templates and requirements**: See `.claude/protocols/document_protocol.md`
 
+### User Settings Pattern Guidelines
+
+When adding user settings/preferences, choose the appropriate pattern:
+
+| Pattern | When to Use | Example |
+|---------|-------------|---------|
+| **Dedicated Boolean column** | Simple on/off toggles queried frequently in WHERE clauses | `photoTaggingEnabled`, `requireTagApproval` |
+| **JSON field** | Grouped settings, UI preferences, rarely queried directly | `notificationPreferences`, `uiPreferences` |
+| **Relation table** | Need metadata (timestamps, admin attribution), analytics, or many-to-many relationships | `MOTDDismissal` (tracks who/what/when) |
+
+**Guidelines:**
+- UI preferences (dismissed modals, collapsed panels, theme choices) → `uiPreferences` JSON field
+- Feature toggles users control → Dedicated Boolean if frequently queried, JSON if grouped
+- Admin-trackable dismissals needing audit trail → Relation table
+
 ---
 
 ## Environment Configuration

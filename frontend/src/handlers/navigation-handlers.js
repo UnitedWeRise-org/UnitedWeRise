@@ -9,10 +9,261 @@ class NavigationHandlers {
     constructor() {
         this.currentPanel = null;
         this.mapContainer = null;
+        this.civicHubOpen = false;
+        this.currentInDevFeature = null;
+
+        // Feature configurations for admin-gated "in development" features
+        this.inDevFeatures = {
+            trending: {
+                icon: '🔥',
+                title: 'Trending Digest',
+                description: 'Discover what\'s being discussed across your community. AI-powered topic analysis and trending conversations coming soon.'
+            },
+            elections: {
+                icon: '📅',
+                title: 'Upcoming Elections',
+                description: 'View upcoming elections, candidate comparisons, and voting information for your area. Full election coverage coming soon.'
+            },
+            officials: {
+                icon: '🏛️',
+                title: 'My Elected Officials',
+                description: 'Connect with your elected representatives and track their activities and voting records. Enhanced official profiles coming soon.'
+            },
+            candidates: {
+                icon: '🗳️',
+                title: 'Candidate Hub',
+                description: 'Explore candidates running for office, their platforms, and endorsements. Candidate discovery features coming soon.'
+            },
+            organizing: {
+                icon: '📋',
+                title: 'Civic Organizing',
+                description: 'Create petitions, organize events, and coordinate civic action in your community. Community organizing tools coming soon.'
+            },
+            quests: {
+                icon: '🎯',
+                title: 'Civic Quests',
+                description: 'Complete civic engagement challenges to earn badges and track your participation. Gamified civic engagement coming soon.'
+            }
+        };
+
         this.setupEventListeners();
+        this.initializeAdminGating();
 
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('NavigationHandlers', 'Navigation system initialized');
+        }
+    }
+
+    /**
+     * Check if current user is admin or super-admin
+     */
+    isAdmin() {
+        return window.currentUser?.isAdmin === true || window.currentUser?.isSuperAdmin === true;
+    }
+
+    /**
+     * Check if user has dismissed a feature modal
+     */
+    hasUserDismissedFeature(featureId) {
+        const dismissed = window.currentUser?.uiPreferences?.dismissedModals || [];
+        return dismissed.includes(featureId);
+    }
+
+    /**
+     * Initialize admin gating on page load
+     */
+    initializeAdminGating() {
+        // Wait for DOM and auth to be ready
+        setTimeout(() => {
+            this.applyAdminGatingStyles();
+        }, 500);
+
+        // Re-apply when user state changes
+        document.addEventListener('userStateChanged', () => {
+            this.applyAdminGatingStyles();
+        });
+    }
+
+    /**
+     * Apply in-development styling to gated features based on admin status
+     */
+    applyAdminGatingStyles() {
+        const gatedElements = {
+            'trendingThumb': 'trending',
+            'electionsThumb': 'elections',
+            'officialsThumb': 'officials',
+            'candidatesThumb': 'candidates',
+            'organizingThumb': 'organizing'
+        };
+
+        const isAdmin = this.isAdmin();
+
+        for (const [elementId, featureId] of Object.entries(gatedElements)) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                if (isAdmin) {
+                    element.classList.remove('in-development');
+                    element.removeAttribute('data-tooltip');
+                } else {
+                    element.classList.add('in-development');
+                    const feature = this.inDevFeatures[featureId];
+                    if (this.hasUserDismissedFeature(featureId)) {
+                        element.setAttribute('data-tooltip', `${feature.title} - In Development`);
+                    }
+                }
+            }
+        }
+
+        // Gate Quest/Badge system elements (only show for admins)
+        const questContainer = document.getElementById('quest-progress-container');
+        const quickActions = document.getElementById('user-quick-actions');
+
+        if (questContainer) {
+            if (isAdmin && window.currentUser) {
+                // Admin: show quest container
+                questContainer.style.display = 'block';
+            } else {
+                // Non-admin: hide quest container
+                questContainer.style.display = 'none';
+            }
+        }
+
+        if (quickActions) {
+            if (isAdmin && window.currentUser) {
+                // Admin: show quick actions
+                quickActions.style.display = 'flex';
+            } else {
+                // Non-admin: hide quick actions
+                quickActions.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Show the "in development" modal for a feature
+     */
+    showInDevModal(featureId) {
+        const feature = this.inDevFeatures[featureId];
+        if (!feature) return;
+
+        this.currentInDevFeature = featureId;
+
+        const modal = document.getElementById('inDevModal');
+        const icon = document.getElementById('inDevModalIcon');
+        const title = document.getElementById('inDevModalTitle');
+        const description = document.getElementById('inDevModalDescription');
+        const checkbox = document.getElementById('inDevDontShowAgain');
+
+        if (modal && icon && title && description) {
+            icon.textContent = feature.icon;
+            title.textContent = feature.title;
+            description.textContent = feature.description;
+            if (checkbox) checkbox.checked = false;
+            modal.style.display = 'flex';
+        }
+    }
+
+    /**
+     * Close the "in development" modal
+     */
+    closeInDevModal() {
+        const modal = document.getElementById('inDevModal');
+        const checkbox = document.getElementById('inDevDontShowAgain');
+
+        if (modal) {
+            modal.style.display = 'none';
+
+            // If "don't show again" was checked, save preference
+            if (checkbox?.checked && this.currentInDevFeature) {
+                this.saveFeatureDismissal(this.currentInDevFeature);
+            }
+
+            this.currentInDevFeature = null;
+        }
+    }
+
+    /**
+     * Save feature dismissal preference (localStorage for now, backend when available)
+     */
+    async saveFeatureDismissal(featureId) {
+        // Update local state
+        if (!window.currentUser) return;
+
+        if (!window.currentUser.uiPreferences) {
+            window.currentUser.uiPreferences = {};
+        }
+        if (!window.currentUser.uiPreferences.dismissedModals) {
+            window.currentUser.uiPreferences.dismissedModals = [];
+        }
+
+        if (!window.currentUser.uiPreferences.dismissedModals.includes(featureId)) {
+            window.currentUser.uiPreferences.dismissedModals.push(featureId);
+        }
+
+        // Update localStorage
+        localStorage.setItem('currentUser', JSON.stringify(window.currentUser));
+
+        // Apply tooltip to the element
+        this.applyAdminGatingStyles();
+
+        // Save to backend
+        try {
+            const apiBase = window.apiConfig?.getApiUrl?.() || '';
+            await fetch(`${apiBase}/api/users/me/preferences`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ dismissedModals: [featureId] })
+            });
+        } catch (error) {
+            console.warn('Could not save preference to server:', error);
+        }
+    }
+
+    /**
+     * Handle gated feature click - show modal if not admin, execute if admin
+     * Returns true if feature should proceed, false if blocked
+     */
+    handleGatedFeature(featureId, executeCallback) {
+        if (this.isAdmin()) {
+            executeCallback();
+            return true;
+        }
+
+        // Non-admin: check if dismissed
+        if (this.hasUserDismissedFeature(featureId)) {
+            // Already dismissed - do nothing (tooltip shows on hover)
+            return false;
+        }
+
+        // Show modal
+        this.showInDevModal(featureId);
+        return false;
+    }
+
+    /**
+     * Toggle Civic Hub dropdown (only works when sidebar is expanded)
+     */
+    toggleCivicHub() {
+        const sidebar = document.getElementById('sidebar');
+        const dropdown = document.getElementById('civicHubDropdown');
+        const toggle = document.getElementById('civicHubToggle');
+
+        // Only allow dropdown when sidebar is expanded
+        if (!sidebar?.classList.contains('expanded')) {
+            return;
+        }
+
+        if (dropdown && toggle) {
+            this.civicHubOpen = !this.civicHubOpen;
+
+            if (this.civicHubOpen) {
+                dropdown.style.display = 'flex';
+                toggle.classList.add('open');
+            } else {
+                dropdown.style.display = 'none';
+                toggle.classList.remove('open');
+            }
         }
     }
 
@@ -84,13 +335,16 @@ class NavigationHandlers {
                 this.toggleMyFeed();
                 break;
             case 'trending':
-                this.toggleTrendingPanel();
+                // Admin-gated feature
+                this.handleGatedFeature('trending', () => this.toggleTrendingPanel());
                 break;
             case 'messages':
                 this.toggleMessages();
                 break;
             case 'organizing':
-                this.openCivicOrganizing();
+            case 'civic-organizing':
+                // Admin-gated feature
+                this.handleGatedFeature('organizing', () => this.openCivicOrganizing());
                 break;
             case 'map':
                 this.showMapFromSidebar();
@@ -102,20 +356,46 @@ class NavigationHandlers {
                 this.closePanel('trending');
                 break;
             case 'show-elections':
-                // Trigger modern elections system
-                if (window.electionsSystemIntegration && typeof window.electionsSystemIntegration.toggleElectionsPanel === 'function') {
-                    window.electionsSystemIntegration.toggleElectionsPanel();
-                } else {
-                    console.warn('Elections system not available');
-                }
+                // Admin-gated feature
+                this.handleGatedFeature('elections', () => {
+                    if (window.electionsSystemIntegration && typeof window.electionsSystemIntegration.toggleElectionsPanel === 'function') {
+                        window.electionsSystemIntegration.toggleElectionsPanel();
+                    } else {
+                        console.warn('Elections system not available');
+                    }
+                });
                 break;
             case 'show-officials':
-                // Trigger modern officials system
-                if (window.officialsSystemIntegration && typeof window.officialsSystemIntegration.toggleOfficialsPanel === 'function') {
-                    window.officialsSystemIntegration.toggleOfficialsPanel();
-                } else {
-                    console.warn('Officials system not available');
-                }
+                // Admin-gated feature
+                this.handleGatedFeature('officials', () => {
+                    if (window.officialsSystemIntegration && typeof window.officialsSystemIntegration.toggleOfficialsPanel === 'function') {
+                        window.officialsSystemIntegration.toggleOfficialsPanel();
+                    } else {
+                        console.warn('Officials system not available');
+                    }
+                });
+                break;
+            case 'show-candidates':
+                // Admin-gated feature
+                this.handleGatedFeature('candidates', () => {
+                    if (typeof window.showCandidates === 'function') {
+                        window.showCandidates();
+                    } else if (window.candidateSystemIntegration?.toggleCandidatePanel) {
+                        window.candidateSystemIntegration.toggleCandidatePanel();
+                    } else {
+                        console.warn('Candidates system not available');
+                    }
+                });
+                break;
+
+            // Civic Hub dropdown toggle
+            case 'toggle-civic-hub':
+                this.toggleCivicHub();
+                break;
+
+            // In Development modal close
+            case 'close-in-dev-modal':
+                this.closeInDevModal();
                 break;
 
             // Authentication actions
@@ -1007,8 +1287,34 @@ class NavigationHandlers {
     setupSidebarToggle() {
         const toggleSidebar = document.getElementById('toggleSidebar');
         if (toggleSidebar) {
-            // Don't replace existing handler, it's already properly set up
-            // Just ensure arrow state is correct on page load
+            // Add click handler for sidebar expand/collapse
+            toggleSidebar.addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                const arrow = document.querySelector('.arrow-icon');
+
+                sidebar.classList.toggle('expanded');
+
+                if (sidebar.classList.contains('expanded')) {
+                    arrow.textContent = '◀';
+                    toggleSidebar.title = 'Collapse Sidebar';
+                } else {
+                    arrow.textContent = '▶';
+                    toggleSidebar.title = 'Expand Sidebar';
+
+                    // Close Civic Hub dropdown when sidebar collapses
+                    const dropdown = document.getElementById('civicHubDropdown');
+                    const civicToggle = document.getElementById('civicHubToggle');
+                    if (dropdown) {
+                        dropdown.style.display = 'none';
+                    }
+                    if (civicToggle) {
+                        civicToggle.classList.remove('open');
+                    }
+                    this.civicHubOpen = false;
+                }
+            });
+
+            // Initialize arrow state on page load
             this.initializeSidebarArrowState();
         }
     }

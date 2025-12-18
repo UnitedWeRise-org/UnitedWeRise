@@ -651,17 +651,49 @@
         </div>
     </div>
 
+    <!-- In Development Feature Modal -->
+    <div id="inDevModal" class="in-dev-modal" style="display: none;">
+        <div class="in-dev-modal-backdrop" data-action="close-in-dev-modal"></div>
+        <div class="in-dev-modal-content">
+            <div class="in-dev-modal-icon" id="inDevModalIcon">🚧</div>
+            <h3 class="in-dev-modal-title" id="inDevModalTitle">Feature In Development</h3>
+            <p class="in-dev-modal-description" id="inDevModalDescription">
+                This feature is currently being developed. Check back later for updates!
+            </p>
+            <label class="in-dev-modal-checkbox">
+                <input type="checkbox" id="inDevDontShowAgain">
+                <span>Don't show this again</span>
+            </label>
+            <button class="in-dev-modal-btn" data-action="close-in-dev-modal">Got it</button>
+        </div>
+    </div>
+
     <div class="container">
         <div class="sidebar" id="sidebar">
             <div class="thumbs">
                 <div class="thumb" data-nav-toggle="feed" title="My Feed" id="feedThumb">📰 <span class="label">My Feed</span></div>
-                <div class="thumb" data-nav-toggle="trending" title="Trending">🔥 <span class="label">Trending</span></div>
-                <div class="thumb" data-action="show-elections" title="Upcoming Elections">📅 <span class="label">Elections</span></div>
-                <div class="thumb" data-action="show-officials" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
+                <div class="thumb" data-nav-toggle="trending" title="Trending" id="trendingThumb">🔥 <span class="label">Trending</span></div>
+                <!-- Civic Engagement Hub - Collapsible dropdown -->
+                <div class="thumb civic-hub-toggle" data-action="toggle-civic-hub" title="Civic Engagement" id="civicHubToggle">
+                    🏛️ <span class="label">Civic Hub</span><span class="dropdown-arrow">▼</span>
+                </div>
+                <div class="civic-hub-dropdown" id="civicHubDropdown" style="display: none;">
+                    <div class="thumb sub-item" data-action="show-elections" title="Upcoming Elections" id="electionsThumb">
+                        📅 <span class="label">Elections</span>
+                    </div>
+                    <div class="thumb sub-item" data-action="show-officials" title="My Elected Officials" id="officialsThumb">
+                        🏛️ <span class="label">Officials</span>
+                    </div>
+                    <div class="thumb sub-item" data-action="show-candidates" title="Candidates" id="candidatesThumb">
+                        🗳️ <span class="label">Candidates</span>
+                    </div>
+                    <div class="thumb sub-item" data-action="civic-organizing" title="Civic Organizing" id="organizingThumb">
+                        📋 <span class="label">Organizing</span>
+                    </div>
+                </div>
                 <div class="thumb" data-nav-toggle="map" title="Show Map" id="mapThumb">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" data-nav-toggle="messages" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
                 <div class="thumb" data-action="open-donation" title="Support Our Mission" id="donationThumb">💝 <span class="label">Donate</span></div>
-                <div class="thumb" data-nav-toggle="organizing" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
                 <div class="thumb" data-action="toggle-profile" title="My Profile" id="profileThumb">👤 <span class="label">My Profile</span></div>
             </div>
             <div class="sidebar-bottom">

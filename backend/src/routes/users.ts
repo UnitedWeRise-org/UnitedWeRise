@@ -1832,6 +1832,79 @@ router.get('/activity/me', requireAuth, async (req: AuthRequest, res) => {
 
 /**
  * @swagger
+ * /api/users/me/preferences:
+ *   patch:
+ *     tags: [User]
+ *     summary: Update user UI preferences
+ *     description: Updates UI preferences (dismissed modals, theme choices, etc.). Merges with existing preferences.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               dismissedModals:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of feature IDs to mark as dismissed
+ *     responses:
+ *       200:
+ *         description: Preferences updated successfully
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/me/preferences', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const userId = req.user!.id;
+        const { dismissedModals } = req.body;
+
+        // Fetch current preferences
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { uiPreferences: true }
+        });
+
+        // Merge with existing preferences
+        const currentPrefs = (user?.uiPreferences as Record<string, unknown>) || {};
+        const updatedPrefs = {
+            ...currentPrefs,
+        };
+
+        // Handle dismissedModals - merge arrays, avoid duplicates
+        if (dismissedModals && Array.isArray(dismissedModals)) {
+            const existingDismissed = (currentPrefs.dismissedModals as string[]) || [];
+            updatedPrefs.dismissedModals = [...new Set([...existingDismissed, ...dismissedModals])];
+        }
+
+        // Update in database
+        await prisma.user.update({
+            where: { id: userId },
+            data: { uiPreferences: updatedPrefs as object }
+        });
+
+        logger.info({ userId, updatedPrefs }, 'User UI preferences updated');
+
+        res.json({
+            success: true,
+            data: { uiPreferences: updatedPrefs }
+        });
+    } catch (error) {
+        logger.error({ err: error, userId: req.user!.id }, 'Error updating user preferences');
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update preferences'
+        });
+    }
+});
+
+/**
+ * @swagger
  * /api/users/activity/{userId}:
  *   get:
  *     tags: [User]
