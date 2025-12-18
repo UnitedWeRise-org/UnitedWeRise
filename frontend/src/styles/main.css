@@ -1173,19 +1173,18 @@ details {
     left: 3vw; /* Position at the edge of collapsed sidebar */
     transform: translateY(-50%) translateX(-50%); /* Center on the edge */
     background: #4b5c09;
-    border: 2px solid rgba(255,255,255,0.2);
-    outline: 1px solid #333; /* Dark outline for visibility against light backgrounds */
+    border: 1px solid #333; /* Dark border for visibility against light backgrounds */
     color: white;
-    width: 36px;
-    height: 72px;
+    width: 20px;
+    height: 36px;
     cursor: pointer;
     z-index: 10;
-    border-radius: 8px; /* Rounded on all sides since it's centered on edge */
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
-    font-size: 1rem;
+    font-size: 0.75rem;
 }
 
 .sidebar-toggle-edge:hover {
