@@ -318,7 +318,9 @@ class NavigationHandlers {
     }
 
     handleNavigationClick(event) {
+        console.log('🔔 handleNavigationClick fired, target:', event.target);
         const target = event.target.closest('[data-nav-toggle], [data-nav-action], [data-action]');
+        console.log('🔔 Found target:', target, 'action:', target?.dataset?.action);
         if (!target) return;
 
         // Don't prevent default behavior for file inputs - they need to open file picker
@@ -456,8 +458,12 @@ class NavigationHandlers {
 
             // Notification actions
             case 'toggle-notifications':
+                console.log('🔔 toggle-notifications case hit');
+                console.log('🔔 window.toggleNotifications exists:', typeof window.toggleNotifications === 'function');
                 if (typeof window.toggleNotifications === 'function') {
                     window.toggleNotifications();
+                } else {
+                    console.error('🔔 toggleNotifications function not found on window!');
                 }
                 break;
 
