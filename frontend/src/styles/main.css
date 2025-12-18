@@ -1170,21 +1170,22 @@ details {
 .sidebar-toggle-edge {
     position: fixed;
     top: 50%;
-    left: 3vw; /* Position at the edge of collapsed sidebar */
-    transform: translateY(-50%) translateX(-50%); /* Center on the edge */
+    left: 3vw;
+    transform: translateY(-50%); /* Only vertical centering - no horizontal shift */
     background: #4b5c09;
-    border: 1px solid #333; /* Dark border for visibility against light backgrounds */
+    border: 1px solid #333;
+    border-left: none; /* Flush with sidebar edge */
     color: white;
-    width: 20px;
-    height: 36px;
+    width: 24px;
+    height: 40px;
     cursor: pointer;
-    z-index: 10;
-    border-radius: 4px;
+    z-index: 9999; /* Above sidebar (9998) */
+    border-radius: 0 4px 4px 0; /* Rounded on right side only */
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
 }
 
 .sidebar-toggle-edge:hover {
