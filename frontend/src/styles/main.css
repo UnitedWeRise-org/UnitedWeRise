@@ -2103,7 +2103,7 @@ details {
     background-repeat: no-repeat;
     height: 100%; /* Fill parent container height */
     overflow-y: auto;
-    padding: 110px 1rem 0 1rem; /* Headspace for controls + side padding for scroll gutter */
+    padding: 110px 2rem 0 2rem; /* Headspace for controls + side padding for scroll gutter */
 }
 
 /* Hide scrollbar for My Feed but keep functionality */
