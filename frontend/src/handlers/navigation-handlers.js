@@ -186,22 +186,24 @@ class NavigationHandlers {
      * Save feature dismissal preference (localStorage for now, backend when available)
      */
     async saveFeatureDismissal(featureId) {
-        // Update local state
-        if (!window.currentUser) return;
+        // Update local state via userState (routes to localStorage automatically)
+        if (!window.currentUser || !window.userState) return;
 
-        if (!window.currentUser.uiPreferences) {
-            window.currentUser.uiPreferences = {};
-        }
-        if (!window.currentUser.uiPreferences.dismissedModals) {
-            window.currentUser.uiPreferences.dismissedModals = [];
-        }
+        // Build updated uiPreferences with new dismissal
+        const currentPrefs = window.currentUser.uiPreferences || {};
+        const dismissedModals = currentPrefs.dismissedModals || [];
 
-        if (!window.currentUser.uiPreferences.dismissedModals.includes(featureId)) {
-            window.currentUser.uiPreferences.dismissedModals.push(featureId);
+        if (!dismissedModals.includes(featureId)) {
+            dismissedModals.push(featureId);
         }
 
-        // Update localStorage
-        localStorage.setItem('currentUser', JSON.stringify(window.currentUser));
+        // Update via userState (handles localStorage persistence)
+        window.userState.update({
+            uiPreferences: {
+                ...currentPrefs,
+                dismissedModals
+            }
+        });
 
         // Apply tooltip to the element
         this.applyAdminGatingStyles();

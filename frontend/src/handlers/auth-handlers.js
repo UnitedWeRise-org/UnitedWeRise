@@ -304,12 +304,10 @@ export class AuthHandlers {
 
         // Clear auth-related localStorage
         localStorage.removeItem('authToken'); // Clear any legacy tokens
-        localStorage.removeItem('currentUser');
+        // Note: currentUser localStorage is handled by userState via window.currentUser setter
 
-        // Reset global user variables
-        if (typeof window.currentUser !== 'undefined') {
-            window.currentUser = null;
-        }
+        // Clear user state via userState (routes to localStorage automatically)
+        window.currentUser = null;
 
         // Reset UI to logged out state
         const authSection = document.getElementById('authSection');
