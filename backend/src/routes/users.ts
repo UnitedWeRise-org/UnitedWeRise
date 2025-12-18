@@ -1885,7 +1885,7 @@ router.patch('/me/preferences', requireAuth, async (req: AuthRequest, res) => {
         // Update in database
         await prisma.user.update({
             where: { id: userId },
-            data: { uiPreferences: updatedPrefs }
+            data: { uiPreferences: updatedPrefs as object }
         });
 
         logger.info({ userId, updatedPrefs }, 'User UI preferences updated');
