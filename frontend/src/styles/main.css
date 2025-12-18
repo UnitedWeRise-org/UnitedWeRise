@@ -1174,6 +1174,7 @@ details {
     transform: translateY(-50%) translateX(-50%); /* Center on the edge */
     background: #4b5c09;
     border: 2px solid rgba(255,255,255,0.2);
+    outline: 1px solid #333; /* Dark outline for visibility against light backgrounds */
     color: white;
     width: 36px;
     height: 72px;
