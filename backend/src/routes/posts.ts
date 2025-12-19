@@ -13,6 +13,7 @@ import { ActivityTracker } from '../services/activityTracker';
 import { PostGeographicService } from '../services/postGeographicService';
 import { PostManagementService } from '../services/postManagementService';
 import { EngagementScoringService } from '../services/engagementScoringService';
+import { RiseAIEnrichmentService } from '../services/riseAIEnrichmentService';
 import { logger } from '../services/logger';
 
 const router = express.Router();
@@ -837,6 +838,9 @@ router.get('/:postId', async (req, res) => {
         const userReaction = post.reactions && post.reactions[0] ? post.reactions[0] : null;
         const userShare = post.shares && post.shares[0] ? post.shares[0] : null;
 
+        // Get RiseAI response for this post (if any)
+        const riseAIResponse = await RiseAIEnrichmentService.getResponseForPost(postId, userId || undefined);
+
         res.json({
             post: {
                 ...post,
@@ -851,6 +855,7 @@ router.get('/:postId', async (req, res) => {
                 isShared: !!userShare,
                 userShareType: userShare?.shareType || null,
                 userShareContent: userShare?.content || null,
+                riseAIResponse: riseAIResponse || undefined,
                 reactions: undefined,
                 shares: undefined,
                 _count: undefined
@@ -2154,12 +2159,38 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
             }
         });
 
+        // Get RiseAI response comment IDs to filter them out (they'll be displayed inline)
+        const riseAICommentIds = await RiseAIEnrichmentService.getRiseAICommentIdsForPost(postId);
+        const riseAICommentIdSet = new Set(riseAICommentIds);
+
+        // Get RiseAI responses for all comments that triggered them
+        const allCommentIds = allComments.map(c => c.id);
+        const userId = (req as any).user?.id;
+        const riseAIResponses = await RiseAIEnrichmentService.enrichCommentsWithResponses(
+            allCommentIds,
+            userId
+        );
+
+        // Filter function to remove RiseAI response comments (shown inline) but keep nested replies
+        const filterRiseAIComments = (comments: any[]): any[] => {
+            return comments
+                .filter(comment => !riseAICommentIdSet.has(comment.id))
+                .map(comment => ({
+                    ...comment,
+                    // Add RiseAI response if this comment triggered one
+                    riseAIResponse: riseAIResponses.get(comment.id) || undefined,
+                    replies: filterRiseAIComments(comment.replies || [])
+                }));
+        };
+
+        const filteredComments = filterRiseAIComments(topLevelComments);
+
         res.json({
-            comments: topLevelComments,
+            comments: filteredComments,
             pagination: {
                 limit: limitNum,
                 offset: offsetNum,
-                count: topLevelComments.length
+                count: filteredComments.length
             }
         });
     } catch (error) {
