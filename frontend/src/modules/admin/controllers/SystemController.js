@@ -269,10 +269,26 @@ class SystemController {
     }
 
     /**
-     * Handle system configuration update with TOTP verification
+     * Check if current user is a SuperAdmin
+     * @returns {boolean} True if user is SuperAdmin
+     */
+    isSuperAdmin() {
+        const currentUser = window.adminAuth?.getCurrentUser?.() || window.currentUser;
+        return currentUser?.isSuperAdmin === true;
+    }
+
+    /**
+     * Handle system configuration update with TOTP verification (SuperAdmin only)
      */
     async handleConfigurationUpdate() {
         try {
+            // SuperAdmin permission check
+            if (!this.isSuperAdmin()) {
+                alert('❌ Access Denied\n\nSystem configuration updates require SuperAdmin privileges.');
+                await adminDebugWarn('SystemController', 'Configuration update blocked - not SuperAdmin');
+                return;
+            }
+
             const impact = `This will:
 • Update system configuration settings
 • May restart application services
@@ -299,19 +315,16 @@ class SystemController {
             // Create backup before changes
             await this.createConfigurationBackup();
 
-            // Apply configuration changes
-            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/admin/system/config`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    totpToken,
-                    changes: configChanges,
-                    adminUserId: window.adminAuth.getCurrentUser()?.id,
-                    timestamp: new Date().toISOString()
-                })
+            // Apply configuration changes using wrapper method
+            const response = await window.AdminAPI.put(`${window.AdminAPI.BACKEND_URL}/api/admin/system/config`, {
+                totpToken,
+                changes: configChanges,
+                adminUserId: window.adminAuth.getCurrentUser()?.id,
+                timestamp: new Date().toISOString()
             });
 
-            if (response.ok) {
-                const data = await response.json();
+            if (response.success) {
+                const data = response.data;
                 alert(`✅ Configuration updated successfully.\n\nUpdate ID: ${data.updateId}\nServices restarted: ${data.servicesRestarted || 0}`);
 
                 // Refresh system data
@@ -322,8 +335,7 @@ class SystemController {
                     changes: configChanges
                 });
             } else {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to update configuration');
+                throw new Error(response.error || 'Failed to update configuration');
             }
 
         } catch (error) {
@@ -456,10 +468,17 @@ class SystemController {
     }
 
     /**
-     * Handle maintenance mode toggle with TOTP verification
+     * Handle maintenance mode toggle with TOTP verification (SuperAdmin only)
      */
     async handleMaintenanceMode() {
         try {
+            // SuperAdmin permission check
+            if (!this.isSuperAdmin()) {
+                alert('❌ Access Denied\n\nMaintenance mode control requires SuperAdmin privileges.');
+                await adminDebugWarn('SystemController', 'Maintenance mode blocked - not SuperAdmin');
+                return;
+            }
+
             const currentMode = this.maintenanceMode;
             const action = currentMode ? 'disable' : 'enable';
 
@@ -489,34 +508,21 @@ class SystemController {
                 }
             }
 
-            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/admin/system/maintenance`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    totpToken,
-                    enable: !currentMode,
-                    reason: reason.trim(),
-                    adminUserId: window.adminAuth.getCurrentUser()?.id,
-                    timestamp: new Date().toISOString()
-                })
+            // Use the wrapper method instead of direct .call()
+            const response = await window.AdminAPI.toggleMaintenanceMode(!currentMode, reason.trim());
+
+            // response is already parsed by the wrapper method
+            this.maintenanceMode = !currentMode;
+
+            alert(`✅ Maintenance mode ${action}d successfully.\n\nStatus: ${this.maintenanceMode ? 'ACTIVE' : 'INACTIVE'}`);
+
+            // Update UI
+            this.updateMaintenanceModeDisplay();
+
+            await adminDebugLog('SystemController', `Maintenance mode ${action}d`, {
+                enabled: this.maintenanceMode,
+                reason: reason.trim()
             });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.maintenanceMode = !currentMode;
-
-                alert(`✅ Maintenance mode ${action}d successfully.\n\nMode ID: ${data.modeId}\nStatus: ${this.maintenanceMode ? 'ACTIVE' : 'INACTIVE'}`);
-
-                // Update UI
-                this.updateMaintenanceModeDisplay();
-
-                await adminDebugLog('SystemController', `Maintenance mode ${action}d`, {
-                    modeId: data.modeId,
-                    reason: reason.trim()
-                });
-            } else {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `Failed to ${action} maintenance mode`);
-            }
 
         } catch (error) {
             console.error('Error toggling maintenance mode:', error);

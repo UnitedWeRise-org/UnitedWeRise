@@ -1293,57 +1293,66 @@ class AdminAPI {
     }
 
     /**
-     * Get blocked IPs (placeholder - full implementation in Phase 3)
-     * @returns {Promise<Object>} Blocked IPs data
+     * Get blocked IPs list
+     * @param {Object} params - Query parameters
+     * @param {boolean} [params.includeExpired=false] - Include expired blocks
+     * @param {number} [params.limit=50] - Results per page
+     * @param {number} [params.offset=0] - Pagination offset
+     * @returns {Promise<Object>} Blocked IPs data with pagination
      */
-    async getBlockedIPs() {
-        // TODO: Implement backend endpoint in Phase 3
-        return {
-            success: true,
-            blockedIPs: [],
-            total: 0,
-            note: 'IP blocking feature coming soon'
-        };
+    async getBlockedIPs(params = {}) {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/security/blocked-ips`, params);
+        if (!response.success) {
+            throw new Error(`Failed to fetch blocked IPs: ${response.status}`);
+        }
+        return response.data;
     }
 
     /**
-     * Block an IP address (placeholder - full implementation in Phase 3)
-     * @param {string} ipAddress - IP to block
+     * Block an IP address (SuperAdmin only, requires TOTP)
+     * @param {string} ipAddress - IP address to block (IPv4 or IPv6)
      * @param {Object} params - Block parameters
-     * @returns {Promise<Object>} Block result
+     * @param {string} params.reason - Reason for blocking (10-500 characters)
+     * @param {string} [params.expiresAt] - Optional expiration date (ISO 8601)
+     * @param {Object} [params.metadata] - Optional metadata
+     * @returns {Promise<Object>} Block result with created block data
      */
     async blockIP(ipAddress, params = {}) {
-        // TODO: Implement backend endpoint in Phase 3
-        return {
-            success: false,
-            error: 'IP blocking feature coming soon'
-        };
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/security/block-ip`, {
+            ipAddress,
+            reason: params.reason,
+            expiresAt: params.expiresAt,
+            metadata: params.metadata
+        });
+        if (!response.success) {
+            throw new Error(response.error || `Failed to block IP: ${response.status}`);
+        }
+        return response.data;
     }
 
     /**
-     * Unblock an IP address (placeholder - full implementation in Phase 3)
-     * @param {string} ipAddress - IP to unblock
+     * Unblock an IP address (SuperAdmin only, requires TOTP)
+     * @param {string} ipAddress - IP address to unblock
      * @returns {Promise<Object>} Unblock result
      */
     async unblockIP(ipAddress) {
-        // TODO: Implement backend endpoint in Phase 3
-        return {
-            success: false,
-            error: 'IP blocking feature coming soon'
-        };
+        const response = await this.delete(`${this.BACKEND_URL}/api/admin/security/unblock-ip?ipAddress=${encodeURIComponent(ipAddress)}`);
+        if (!response.success) {
+            throw new Error(response.error || `Failed to unblock IP: ${response.status}`);
+        }
+        return response.data;
     }
 
     /**
-     * Clear all blocked IPs (placeholder - full implementation in Phase 3)
-     * @param {Object} params - Parameters including TOTP token
-     * @returns {Promise<Object>} Clear result
+     * Clear all blocked IPs (SuperAdmin only, requires TOTP)
+     * @returns {Promise<Object>} Clear result with count of cleared blocks
      */
-    async clearBlockedIPs(params = {}) {
-        // TODO: Implement backend endpoint in Phase 3
-        return {
-            success: false,
-            error: 'IP blocking feature coming soon'
-        };
+    async clearBlockedIPs() {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/security/clear-blocked-ips`, {});
+        if (!response.success) {
+            throw new Error(response.error || `Failed to clear blocked IPs: ${response.status}`);
+        }
+        return response.data;
     }
 
     /**
@@ -1465,6 +1474,16 @@ class AdminAPI {
         };
     }
 
+    /**
+     * Get payments list with filtering and pagination
+     * @param {Object} params - Query parameters
+     * @param {number} [params.page=1] - Page number
+     * @param {number} [params.limit=50] - Results per page
+     * @param {string} [params.status] - Filter by status (COMPLETED, PENDING, FAILED, etc.)
+     * @param {string} [params.type] - Filter by type (DONATION, FEE)
+     * @param {string} [params.search] - Search by user email or Stripe ID
+     * @returns {Promise<Object>} Payments data with pagination and summary
+     */
     async getPayments(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/payments`, params);
         if (!response.success) {
@@ -1473,14 +1492,25 @@ class AdminAPI {
         return response.data;
     }
 
+    /**
+     * Process a refund for a payment
+     * @deprecated Refunds should be processed directly in the Stripe Dashboard.
+     *             This method is disabled for security and audit trail purposes.
+     *             Visit https://dashboard.stripe.com/payments to process refunds.
+     * @param {string} paymentId - Payment ID
+     * @param {string} reason - Refund reason
+     * @returns {Promise<never>} Always throws an error directing to Stripe Dashboard
+     * @throws {Error} Always throws - use Stripe Dashboard instead
+     */
     async refundPayment(paymentId, reason) {
-        const response = await this.post(`${this.BACKEND_URL}/api/admin/payments/${paymentId}/refund`, {
+        await adminDebugWarn('AdminAPI', 'DEPRECATED: refundPayment called - refunds should be processed in Stripe Dashboard', {
+            paymentId,
             reason
         });
-        if (!response.success) {
-            throw new Error(`Failed to process refund: ${response.status}`);
-        }
-        return response.data;
+        throw new Error(
+            'Refunds are now processed directly in the Stripe Dashboard for better security and audit trails. ' +
+            'Please visit https://dashboard.stripe.com/payments to process refunds.'
+        );
     }
 
     /**

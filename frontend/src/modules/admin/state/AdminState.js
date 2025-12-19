@@ -418,6 +418,9 @@ class AdminState {
                 case 'civic-engagement':
                     // CivicEngagementController handles its own data loading via init()
                     break;
+                case 'payments':
+                    await this.loadPaymentsData({}, false);
+                    break;
                 default:
                     console.warn(`Unknown section: ${sectionId}`);
             }
@@ -871,6 +874,73 @@ class AdminState {
         } finally {
             this.isLoading = false;
         }
+    }
+
+    /**
+     * Load payments data from backend
+     * @param {Object} params - Query parameters (page, limit, status, type, search)
+     * @param {boolean} useCache - Whether to use cached data
+     * @returns {Promise<Object>} Payments data with pagination and summary
+     */
+    async loadPaymentsData(params = {}, useCache = false) {
+        const cacheKey = `payments_${JSON.stringify(params)}`;
+
+        if (useCache && this.isCacheValid(cacheKey)) {
+            const cached = this.getCache(cacheKey);
+            this.displayPaymentsData(cached);
+            return cached;
+        }
+
+        try {
+            this.isLoading = true;
+
+            // Call the payments API endpoint
+            const response = await window.AdminAPI.getPayments(params);
+
+            const data = {
+                payments: response.payments || [],
+                pagination: response.pagination || {
+                    page: 1,
+                    limit: 50,
+                    total: 0,
+                    pages: 1
+                },
+                summary: response.summary || {
+                    totalCompletedCents: 0,
+                    totalCompletedFormatted: '$0.00',
+                    byStatus: {}
+                }
+            };
+
+            this.displayPaymentsData(data);
+            this.setCache(cacheKey, data);
+
+            await adminDebugLog('AdminState', 'Payments data loaded', {
+                count: data.payments.length,
+                total: data.pagination.total
+            });
+
+            return data;
+
+        } catch (error) {
+            console.error('Error loading payments:', error);
+            this.showError('Failed to load payments data');
+            throw error;
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    /**
+     * Display payments data
+     * @param {Object} data - Payments data to display
+     */
+    displayPaymentsData(data) {
+        // PaymentsController handles its own display via init() override
+        if (window.paymentsController && window.paymentsController.displayPaymentsData) {
+            window.paymentsController.displayPaymentsData(data);
+        }
+        console.log('Displaying payments data:', data);
     }
 
     /**

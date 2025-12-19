@@ -98,6 +98,7 @@
             <button class="nav-button" data-section="deployment">🚀 Deployment</button>
             <button class="nav-button" data-section="system">System</button>
             <button class="nav-button" data-section="errors">🚨 Errors</button>
+            <button class="nav-button" data-section="payments">💰 Payments</button>
         </div>
 
         <!-- Overview Section -->
@@ -1968,6 +1969,93 @@ Auto-refresh enabled every 60 seconds
                 </div>
             </div>
 
+        </div>
+
+        <!-- Payments Section -->
+        <div id="payments" class="dashboard-section">
+            <h2>💰 Payment Management</h2>
+            <p style="color: #666; margin-bottom: 1.5rem;">View-only payment dashboard. Refunds are processed via <a href="https://dashboard.stripe.com" target="_blank" rel="noopener">Stripe Dashboard</a>.</p>
+
+            <!-- Payment Summary Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Revenue</div>
+                    <div class="stat-number" id="totalPaymentsAmount">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Transactions</div>
+                    <div class="stat-number" id="totalPaymentsCount">0</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #4caf50;">
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-number" id="completedPayments" style="color: #4caf50;">0</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #ff9800;">
+                    <div class="stat-label">Refunded</div>
+                    <div class="stat-number" id="refundedPayments" style="color: #ff9800;">0</div>
+                </div>
+            </div>
+
+            <!-- Payment Filters -->
+            <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                <div>
+                    <label style="font-size: 0.85rem; color: #666;">Status:</label>
+                    <select id="paymentStatusFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">All Statuses</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="FAILED">Failed</option>
+                        <option value="REFUNDED">Refunded</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.85rem; color: #666;">Type:</label>
+                    <select id="paymentTypeFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">All Types</option>
+                        <option value="DONATION">Donations</option>
+                        <option value="FEE">Fees</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.85rem; color: #666;">Search:</label>
+                    <input type="text" id="paymentSearchInput" placeholder="Email, username, or Stripe ID" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; width: 200px;">
+                </div>
+                <button id="paymentSearchBtn" style="padding: 0.5rem 1rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">Search</button>
+                <button id="paymentRefreshBtn" style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">Refresh</button>
+            </div>
+
+            <!-- Payments Table -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0 0 1rem 0;">Payment History</h3>
+                <div id="paymentsTableContainer" style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: #f5f5f5;">
+                                <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">Date</th>
+                                <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">User</th>
+                                <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">Amount</th>
+                                <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">Type</th>
+                                <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">Status</th>
+                                <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">Stripe ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsTableBody">
+                            <tr><td colspan="6" style="padding: 2rem; text-align: center; color: #666;">Loading payments...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div id="paymentsPagination" style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span id="paymentsPageInfo" style="color: #666; font-size: 0.9rem;">Page 1 of 1</span>
+                    <div>
+                        <button id="paymentsPrevBtn" style="padding: 0.5rem 1rem; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;" disabled>Previous</button>
+                        <button id="paymentsNextBtn" style="padding: 0.5rem 1rem; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; margin-left: 0.5rem;" disabled>Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="paymentsError" class="error" style="display: none;"></div>
         </div>
 
         <!-- Civic Engagement Section -->
