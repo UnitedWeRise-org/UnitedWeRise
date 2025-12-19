@@ -1341,12 +1341,22 @@ router.get('/analytics', requireStagingAuth, requireAdmin, async (req: AuthReque
     })
   ]);
 
-  // Extract data from parallel queries
-  const userGrowth = userGrowthStats[0] as any;
-  const engagement = engagementStats[0] as any;
-  const civic = civicEngagementStats[0] as any;
-  const content = contentStats[0] as any;
-  const health = systemHealthStats[0] as any;
+  // Extract data from parallel queries with safe defaults
+  // Note: Raw SQL COUNT returns BigInt, use Number() to convert
+  const userGrowth = (userGrowthStats[0] || {}) as any;
+  const engagement = (engagementStats[0] || {}) as any;
+  const civic = (civicEngagementStats[0] || {}) as any;
+  const content = (contentStats[0] || {}) as any;
+  const health = (systemHealthStats[0] || {}) as any;
+
+  // Helper to safely convert BigInt/string/number to number
+  const toNum = (val: any): number => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'bigint') return Number(val);
+    if (typeof val === 'string') return parseInt(val, 10) || 0;
+    if (typeof val === 'number') return val;
+    return 0;
+  };
 
   // Report breakdown by reason
     const reportReasons = await prisma.report.groupBy({
@@ -1378,58 +1388,58 @@ router.get('/analytics', requireStagingAuth, requireAdmin, async (req: AuthReque
       }
     });
 
-    // Calculate key metrics
+    // Calculate key metrics using toNum helper for BigInt safety
     const metrics = {
       // User Metrics
       userGrowth: {
-        totalUsers: parseInt(userGrowth.total_users) || 0,
-        newUsers: parseInt(userGrowth.new_users) || 0,
-        activeUsers24h: parseInt(userGrowth.active_24h) || 0,
-        activeUsers7d: parseInt(userGrowth.active_7d) || 0,
-        activeUsers30d: parseInt(userGrowth.active_30d) || 0,
-        suspendedUsers: parseInt(userGrowth.suspended_users) || 0,
-        verifiedUsers: parseInt(userGrowth.verified_users) || 0,
-        usersWithLocation: parseInt(userGrowth.users_with_location) || 0
+        totalUsers: toNum(userGrowth.total_users),
+        newUsers: toNum(userGrowth.new_users),
+        activeUsers24h: toNum(userGrowth.active_24h),
+        activeUsers7d: toNum(userGrowth.active_7d),
+        activeUsers30d: toNum(userGrowth.active_30d),
+        suspendedUsers: toNum(userGrowth.suspended_users),
+        verifiedUsers: toNum(userGrowth.verified_users),
+        usersWithLocation: toNum(userGrowth.users_with_location)
       },
 
       // Engagement Metrics
       engagement: {
-        postsCreated: parseInt(engagement.posts_created) || 0,
-        commentsCreated: parseInt(engagement.comments_created) || 0,
-        likesGiven: parseInt(engagement.likes_given) || 0,
-        messagesSent: parseInt(engagement.messages_sent) || 0,
+        postsCreated: toNum(engagement.posts_created),
+        commentsCreated: toNum(engagement.comments_created),
+        likesGiven: toNum(engagement.likes_given),
+        messagesSent: toNum(engagement.messages_sent),
         avgLikesPerPost: parseFloat(engagement.avg_likes_per_post) || 0,
         avgCommentsPerPost: parseFloat(engagement.avg_comments_per_post) || 0,
-        engagementRate: userGrowth.active_24h > 0 ? 
-          (((parseInt(engagement.posts_created) + parseInt(engagement.comments_created)) / parseInt(userGrowth.active_24h)) * 100).toFixed(1) : '0'
+        engagementRate: toNum(userGrowth.active_24h) > 0 ?
+          (((toNum(engagement.posts_created) + toNum(engagement.comments_created)) / toNum(userGrowth.active_24h)) * 100).toFixed(1) : '0'
       },
 
       // Civic Engagement Metrics
       civicEngagement: {
-        petitionsCreated: parseInt(civic.petitions_created) || 0,
-        petitionSignatures: parseInt(civic.petition_signatures) || 0,
-        eventsCreated: parseInt(civic.events_created) || 0,
-        eventRSVPs: parseInt(civic.event_rsvps) || 0,
-        upcomingElections: parseInt(civic.upcoming_elections) || 0,
-        civicParticipationRate: userGrowth.active_30d > 0 ? 
-          (((parseInt(civic.petitions_created) + parseInt(civic.events_created)) / parseInt(userGrowth.active_30d)) * 100).toFixed(1) : '0'
+        petitionsCreated: toNum(civic.petitions_created),
+        petitionSignatures: toNum(civic.petition_signatures),
+        eventsCreated: toNum(civic.events_created),
+        eventRSVPs: toNum(civic.event_rsvps),
+        upcomingElections: toNum(civic.upcoming_elections),
+        civicParticipationRate: toNum(userGrowth.active_30d) > 0 ?
+          (((toNum(civic.petitions_created) + toNum(civic.events_created)) / toNum(userGrowth.active_30d)) * 100).toFixed(1) : '0'
       },
 
       // Content Metrics
       content: {
-        politicalPosts: parseInt(content.political_posts) || 0,
-        postsWithFeedback: parseInt(content.posts_with_feedback) || 0,
-        photosUploaded: parseInt(content.photos_uploaded) || 0,
-        reportsFiled: parseInt(content.reports_filed) || 0,
-        politicalContentRate: engagement.posts_created > 0 ? 
-          ((parseInt(content.political_posts) / parseInt(engagement.posts_created)) * 100).toFixed(1) : '0'
+        politicalPosts: toNum(content.political_posts),
+        postsWithFeedback: toNum(content.posts_with_feedback),
+        photosUploaded: toNum(content.photos_uploaded),
+        reportsFiled: toNum(content.reports_filed),
+        politicalContentRate: toNum(engagement.posts_created) > 0 ?
+          ((toNum(content.political_posts) / toNum(engagement.posts_created)) * 100).toFixed(1) : '0'
       },
 
       // System Health Metrics
       systemHealth: {
-        reputationEvents: parseInt(health.reputation_events) || 0,
+        reputationEvents: toNum(health.reputation_events),
         avgReputation: parseFloat(health.avg_reputation) || 70,
-        lowReputationUsers: parseInt(health.low_reputation_users) || 0
+        lowReputationUsers: toNum(health.low_reputation_users)
       }
     };
 
