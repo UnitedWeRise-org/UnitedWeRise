@@ -164,6 +164,8 @@ class UnifiedPostRenderer {
 
                 ${this.renderPostMedia(post.photos, settings)}
 
+                ${post.riseAIResponse ? this.renderInlineRiseAIResponse(post.riseAIResponse, post.id) : ''}
+
                 ${settings.showTopicIndicators && post.stance ? this.renderTopicIndicator(post.stance) : ''}
 
                 ${settings.showActions ? this.renderActions(post, settings) : ''}
@@ -221,6 +223,147 @@ class UnifiedPostRenderer {
             .replace(/https?:\/\/[^\s]+/g, '<a href="$&" target="_blank" rel="noopener noreferrer">$&</a>');
 
         return `<div class="post-text">${processedContent}</div>`;
+    }
+
+    /**
+     * Render inline RiseAI response directly below trigger content
+     * Creates a visible prompt→response flow for AI-assisted conversation
+     * @param {Object} riseAIResponse - Enriched RiseAI response data from API
+     * @param {string} postId - The post ID this response is attached to
+     * @returns {string} HTML for inline response or empty string
+     * @private
+     */
+    renderInlineRiseAIResponse(riseAIResponse, postId) {
+        if (!riseAIResponse) return '';
+
+        // Show pending/processing state
+        if (riseAIResponse.status === 'pending' || riseAIResponse.status === 'processing' || riseAIResponse.status === 'analyzing') {
+            return `
+                <div class="riseai-inline-response riseai-pending" data-post-id="${postId}">
+                    <div class="riseai-response-header">
+                        <div class="riseai-avatar">
+                            <div class="riseai-avatar-icon">AI</div>
+                        </div>
+                        <div class="riseai-author-info">
+                            <span class="riseai-name">RiseAI</span>
+                            <span class="riseai-badge" title="AI Assistant">analyzing...</span>
+                        </div>
+                    </div>
+                    <div class="riseai-response-content riseai-loading">
+                        <div class="riseai-spinner"></div>
+                        <span>RiseAI is analyzing this content...</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show failed state
+        if (riseAIResponse.status === 'failed') {
+            return `
+                <div class="riseai-inline-response riseai-failed" data-post-id="${postId}">
+                    <div class="riseai-response-header">
+                        <div class="riseai-avatar">
+                            <div class="riseai-avatar-icon">AI</div>
+                        </div>
+                        <div class="riseai-author-info">
+                            <span class="riseai-name">RiseAI</span>
+                            <span class="riseai-badge riseai-error">analysis failed</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // No response comment yet
+        if (!riseAIResponse.responseComment) {
+            return '';
+        }
+
+        const response = riseAIResponse.responseComment;
+        const author = response.author || {};
+        const timeAgo = this.getTimeAgo(new Date(response.createdAt));
+
+        // Process content for display
+        const processedContent = (response.content || '')
+            .replace(/\n/g, '<br>')
+            .replace(/https?:\/\/[^\s]+/g, '<a href="$&" target="_blank" rel="noopener noreferrer">$&</a>');
+
+        // Determine active reaction states
+        const likeActive = response.userSentiment === 'LIKE' ? 'active' : '';
+        const dislikeActive = response.userSentiment === 'DISLIKE' ? 'active' : '';
+        const agreeActive = response.userStance === 'AGREE' ? 'active' : '';
+        const disagreeActive = response.userStance === 'DISAGREE' ? 'active' : '';
+
+        return `
+            <div class="riseai-inline-response"
+                 data-comment-id="${response.id}"
+                 data-interaction-id="${riseAIResponse.interactionId}"
+                 data-post-id="${postId}">
+                <div class="riseai-response-header">
+                    <div class="riseai-avatar">
+                        ${author.avatar
+                            ? `<img src="${author.avatar}" alt="RiseAI" class="riseai-avatar-img">`
+                            : `<div class="riseai-avatar-icon">AI</div>`
+                        }
+                    </div>
+                    <div class="riseai-author-info">
+                        <span class="riseai-name">${author.firstName || 'RiseAI'}</span>
+                        ${author.verified ? '<span class="riseai-verified" title="Verified">✓</span>' : ''}
+                        <span class="riseai-badge" title="AI Analysis Assistant">AI</span>
+                        <span class="riseai-timestamp">${timeAgo}</span>
+                    </div>
+                </div>
+                <div class="riseai-response-content">
+                    ${processedContent}
+                </div>
+                <div class="riseai-response-actions">
+                    <button class="riseai-reaction-btn ${likeActive}"
+                            data-action="toggleRiseAIReaction"
+                            data-comment-id="${response.id}"
+                            data-reaction-type="SENTIMENT"
+                            data-reaction-value="LIKE"
+                            title="Like">
+                        <span class="reaction-icon">👍</span>
+                        <span class="reaction-count">${response.likesCount || 0}</span>
+                    </button>
+                    <button class="riseai-reaction-btn ${dislikeActive}"
+                            data-action="toggleRiseAIReaction"
+                            data-comment-id="${response.id}"
+                            data-reaction-type="SENTIMENT"
+                            data-reaction-value="DISLIKE"
+                            title="Dislike">
+                        <span class="reaction-icon">👎</span>
+                        <span class="reaction-count">${response.dislikesCount || 0}</span>
+                    </button>
+                    <button class="riseai-reaction-btn ${agreeActive}"
+                            data-action="toggleRiseAIReaction"
+                            data-comment-id="${response.id}"
+                            data-reaction-type="STANCE"
+                            data-reaction-value="AGREE"
+                            title="Agree">
+                        <span class="reaction-icon">✅</span>
+                        <span class="reaction-count">${response.agreesCount || 0}</span>
+                    </button>
+                    <button class="riseai-reaction-btn ${disagreeActive}"
+                            data-action="toggleRiseAIReaction"
+                            data-comment-id="${response.id}"
+                            data-reaction-type="STANCE"
+                            data-reaction-value="DISAGREE"
+                            title="Disagree">
+                        <span class="reaction-icon">❌</span>
+                        <span class="reaction-count">${response.disagreesCount || 0}</span>
+                    </button>
+                    <button class="riseai-reply-btn"
+                            data-action="replyToRiseAI"
+                            data-comment-id="${response.id}"
+                            data-post-id="${postId}"
+                            title="Reply to RiseAI">
+                        <span class="reaction-icon">💬</span>
+                        <span>Reply</span>
+                    </button>
+                </div>
+            </div>
+        `;
     }
 
     /**

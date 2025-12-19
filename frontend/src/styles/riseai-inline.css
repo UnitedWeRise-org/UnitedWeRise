@@ -1,0 +1,290 @@
+/**
+ * RiseAI Inline Response Styles
+ *
+ * Styles for displaying RiseAI responses inline with triggering content
+ * Creates a visible prompt→response flow for AI-assisted conversation
+ */
+
+/* Base container for inline RiseAI response */
+.riseai-inline-response {
+    margin: 12px 0;
+    padding: 16px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 3px solid var(--riseai-accent, #6366f1);
+    border-radius: 8px;
+    position: relative;
+}
+
+/* Comment-level response - slightly smaller */
+.riseai-inline-response.riseai-comment-response {
+    margin: 8px 0;
+    padding: 12px;
+    margin-left: 20px;
+}
+
+/* Visual connector from trigger to response */
+.riseai-inline-response::before {
+    content: '';
+    position: absolute;
+    left: -15px;
+    top: 20px;
+    width: 12px;
+    height: 2px;
+    background: var(--riseai-accent, #6366f1);
+}
+
+/* Header with avatar and author info */
+.riseai-response-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+/* Avatar container */
+.riseai-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.riseai-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.riseai-avatar-icon {
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* Author info section */
+.riseai-author-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.riseai-name {
+    font-weight: 600;
+    color: var(--riseai-accent, #6366f1);
+    font-size: 14px;
+}
+
+.riseai-verified {
+    color: var(--riseai-accent, #6366f1);
+    font-size: 12px;
+}
+
+.riseai-badge {
+    background: var(--riseai-accent, #6366f1);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.riseai-badge.riseai-error {
+    background: #dc3545;
+}
+
+.riseai-timestamp {
+    color: #6c757d;
+    font-size: 12px;
+}
+
+/* Response content */
+.riseai-response-content {
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 14px;
+    color: #333;
+}
+
+.riseai-response-content a {
+    color: var(--riseai-accent, #6366f1);
+    text-decoration: none;
+}
+
+.riseai-response-content a:hover {
+    text-decoration: underline;
+}
+
+/* Loading state */
+.riseai-response-content.riseai-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.riseai-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e9ecef;
+    border-top-color: var(--riseai-accent, #6366f1);
+    border-radius: 50%;
+    animation: riseai-spin 1s linear infinite;
+}
+
+@keyframes riseai-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Action buttons */
+.riseai-response-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    flex-wrap: wrap;
+}
+
+.riseai-reaction-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #495057;
+}
+
+.riseai-reaction-btn:hover {
+    background: #f8f9fa;
+    border-color: var(--riseai-accent, #6366f1);
+}
+
+.riseai-reaction-btn.active {
+    background: var(--riseai-accent, #6366f1);
+    border-color: var(--riseai-accent, #6366f1);
+    color: white;
+}
+
+.riseai-reaction-btn .reaction-icon {
+    font-size: 14px;
+}
+
+.riseai-reaction-btn .reaction-count {
+    font-weight: 500;
+}
+
+.riseai-reply-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #495057;
+    margin-left: auto;
+}
+
+.riseai-reply-btn:hover {
+    background: var(--riseai-accent, #6366f1);
+    border-color: var(--riseai-accent, #6366f1);
+    color: white;
+}
+
+/* Pending state */
+.riseai-inline-response.riseai-pending {
+    opacity: 0.8;
+}
+
+/* Failed state */
+.riseai-inline-response.riseai-failed {
+    border-left-color: #dc3545;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .riseai-inline-response {
+        background: linear-gradient(135deg, #1e1e2e 0%, #2d2d3f 100%);
+    }
+
+    .riseai-response-content {
+        color: #e0e0e0;
+    }
+
+    .riseai-timestamp {
+        color: #9ca3af;
+    }
+
+    .riseai-reaction-btn {
+        background: #2d2d3f;
+        border-color: #4b4b5b;
+        color: #e0e0e0;
+    }
+
+    .riseai-reaction-btn:hover {
+        background: #3d3d4f;
+    }
+
+    .riseai-reply-btn {
+        background: #2d2d3f;
+        border-color: #4b4b5b;
+        color: #e0e0e0;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .riseai-inline-response {
+        padding: 12px;
+        margin: 8px 0;
+    }
+
+    .riseai-inline-response::before {
+        display: none;
+    }
+
+    .riseai-avatar {
+        width: 32px;
+        height: 32px;
+    }
+
+    .riseai-response-actions {
+        gap: 6px;
+    }
+
+    .riseai-reaction-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+
+    .riseai-reply-btn {
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+        margin-top: 6px;
+    }
+}
