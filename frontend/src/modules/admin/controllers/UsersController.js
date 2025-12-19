@@ -40,6 +40,30 @@ class UsersController {
         this.deleteSelectedActivity = this.deleteSelectedActivity.bind(this);
         this.getActivityLabel = this.getActivityLabel.bind(this);
         this.formatTimeAgo = this.formatTimeAgo.bind(this);
+        this.getActivityStatus = this.getActivityStatus.bind(this);
+    }
+
+    /**
+     * Get user activity status based on lastSeenAt timestamp
+     * @param {string|Date} lastSeenAt - User's last activity timestamp
+     * @returns {Object} Status object with class, icon, and text
+     */
+    getActivityStatus(lastSeenAt) {
+        if (!lastSeenAt) {
+            return { class: 'inactive', icon: '🔴', text: 'Never seen' };
+        }
+
+        const now = Date.now();
+        const lastSeen = new Date(lastSeenAt).getTime();
+        const hoursDiff = (now - lastSeen) / (1000 * 60 * 60);
+
+        if (hoursDiff < 24) {
+            return { class: 'online', icon: '🟢', text: 'Active today' };
+        }
+        if (hoursDiff < 168) { // 7 days
+            return { class: 'recent', icon: '🟡', text: 'This week' };
+        }
+        return { class: 'inactive', icon: '🔴', text: 'Inactive' };
     }
 
     /**
@@ -604,9 +628,12 @@ class UsersController {
                     </span>
                 </td>
                 <td>
-                    <span class="status-badge ${user.isActive ? 'active' : 'inactive'}">
-                        ${user.isActive ? '✅ Active' : '❌ Inactive'}
-                    </span>
+                    ${(() => {
+                        const status = this.getActivityStatus(user.lastSeenAt);
+                        return `<span class="status-badge ${status.class}" title="Last seen: ${user.lastSeenAt ? new Date(user.lastSeenAt).toLocaleString() : 'Never'}">
+                            ${status.icon} ${status.text}
+                        </span>`;
+                    })()}
                 </td>
                 <td>${user.stats?.posts || 0}</td>
                 <td>${user.stats?.followers || 0}</td>

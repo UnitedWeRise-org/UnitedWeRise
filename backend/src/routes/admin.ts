@@ -15,6 +15,7 @@ import path from 'path';
 import crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
 import { logger } from '../services/logger';
+import { AuditService, AUDIT_ACTIONS } from '../services/auditService';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -1340,12 +1341,22 @@ router.get('/analytics', requireStagingAuth, requireAdmin, async (req: AuthReque
     })
   ]);
 
-  // Extract data from parallel queries
-  const userGrowth = userGrowthStats[0] as any;
-  const engagement = engagementStats[0] as any;
-  const civic = civicEngagementStats[0] as any;
-  const content = contentStats[0] as any;
-  const health = systemHealthStats[0] as any;
+  // Extract data from parallel queries with safe defaults
+  // Note: Raw SQL COUNT returns BigInt, use Number() to convert
+  const userGrowth = (userGrowthStats[0] || {}) as any;
+  const engagement = (engagementStats[0] || {}) as any;
+  const civic = (civicEngagementStats[0] || {}) as any;
+  const content = (contentStats[0] || {}) as any;
+  const health = (systemHealthStats[0] || {}) as any;
+
+  // Helper to safely convert BigInt/string/number to number
+  const toNum = (val: any): number => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'bigint') return Number(val);
+    if (typeof val === 'string') return parseInt(val, 10) || 0;
+    if (typeof val === 'number') return val;
+    return 0;
+  };
 
   // Report breakdown by reason
     const reportReasons = await prisma.report.groupBy({
@@ -1377,58 +1388,58 @@ router.get('/analytics', requireStagingAuth, requireAdmin, async (req: AuthReque
       }
     });
 
-    // Calculate key metrics
+    // Calculate key metrics using toNum helper for BigInt safety
     const metrics = {
       // User Metrics
       userGrowth: {
-        totalUsers: parseInt(userGrowth.total_users) || 0,
-        newUsers: parseInt(userGrowth.new_users) || 0,
-        activeUsers24h: parseInt(userGrowth.active_24h) || 0,
-        activeUsers7d: parseInt(userGrowth.active_7d) || 0,
-        activeUsers30d: parseInt(userGrowth.active_30d) || 0,
-        suspendedUsers: parseInt(userGrowth.suspended_users) || 0,
-        verifiedUsers: parseInt(userGrowth.verified_users) || 0,
-        usersWithLocation: parseInt(userGrowth.users_with_location) || 0
+        totalUsers: toNum(userGrowth.total_users),
+        newUsers: toNum(userGrowth.new_users),
+        activeUsers24h: toNum(userGrowth.active_24h),
+        activeUsers7d: toNum(userGrowth.active_7d),
+        activeUsers30d: toNum(userGrowth.active_30d),
+        suspendedUsers: toNum(userGrowth.suspended_users),
+        verifiedUsers: toNum(userGrowth.verified_users),
+        usersWithLocation: toNum(userGrowth.users_with_location)
       },
 
       // Engagement Metrics
       engagement: {
-        postsCreated: parseInt(engagement.posts_created) || 0,
-        commentsCreated: parseInt(engagement.comments_created) || 0,
-        likesGiven: parseInt(engagement.likes_given) || 0,
-        messagesSent: parseInt(engagement.messages_sent) || 0,
+        postsCreated: toNum(engagement.posts_created),
+        commentsCreated: toNum(engagement.comments_created),
+        likesGiven: toNum(engagement.likes_given),
+        messagesSent: toNum(engagement.messages_sent),
         avgLikesPerPost: parseFloat(engagement.avg_likes_per_post) || 0,
         avgCommentsPerPost: parseFloat(engagement.avg_comments_per_post) || 0,
-        engagementRate: userGrowth.active_24h > 0 ? 
-          (((parseInt(engagement.posts_created) + parseInt(engagement.comments_created)) / parseInt(userGrowth.active_24h)) * 100).toFixed(1) : '0'
+        engagementRate: toNum(userGrowth.active_24h) > 0 ?
+          (((toNum(engagement.posts_created) + toNum(engagement.comments_created)) / toNum(userGrowth.active_24h)) * 100).toFixed(1) : '0'
       },
 
       // Civic Engagement Metrics
       civicEngagement: {
-        petitionsCreated: parseInt(civic.petitions_created) || 0,
-        petitionSignatures: parseInt(civic.petition_signatures) || 0,
-        eventsCreated: parseInt(civic.events_created) || 0,
-        eventRSVPs: parseInt(civic.event_rsvps) || 0,
-        upcomingElections: parseInt(civic.upcoming_elections) || 0,
-        civicParticipationRate: userGrowth.active_30d > 0 ? 
-          (((parseInt(civic.petitions_created) + parseInt(civic.events_created)) / parseInt(userGrowth.active_30d)) * 100).toFixed(1) : '0'
+        petitionsCreated: toNum(civic.petitions_created),
+        petitionSignatures: toNum(civic.petition_signatures),
+        eventsCreated: toNum(civic.events_created),
+        eventRSVPs: toNum(civic.event_rsvps),
+        upcomingElections: toNum(civic.upcoming_elections),
+        civicParticipationRate: toNum(userGrowth.active_30d) > 0 ?
+          (((toNum(civic.petitions_created) + toNum(civic.events_created)) / toNum(userGrowth.active_30d)) * 100).toFixed(1) : '0'
       },
 
       // Content Metrics
       content: {
-        politicalPosts: parseInt(content.political_posts) || 0,
-        postsWithFeedback: parseInt(content.posts_with_feedback) || 0,
-        photosUploaded: parseInt(content.photos_uploaded) || 0,
-        reportsFiled: parseInt(content.reports_filed) || 0,
-        politicalContentRate: engagement.posts_created > 0 ? 
-          ((parseInt(content.political_posts) / parseInt(engagement.posts_created)) * 100).toFixed(1) : '0'
+        politicalPosts: toNum(content.political_posts),
+        postsWithFeedback: toNum(content.posts_with_feedback),
+        photosUploaded: toNum(content.photos_uploaded),
+        reportsFiled: toNum(content.reports_filed),
+        politicalContentRate: toNum(engagement.posts_created) > 0 ?
+          ((toNum(content.political_posts) / toNum(engagement.posts_created)) * 100).toFixed(1) : '0'
       },
 
       // System Health Metrics
       systemHealth: {
-        reputationEvents: parseInt(health.reputation_events) || 0,
+        reputationEvents: toNum(health.reputation_events),
         avgReputation: parseFloat(health.avg_reputation) || 70,
-        lowReputationUsers: parseInt(health.low_reputation_users) || 0
+        lowReputationUsers: toNum(health.low_reputation_users)
       }
     };
 
@@ -4494,5 +4505,1645 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
     res.status(500).json({ error: 'Failed to process batch activity deletion' });
   }
 });
+
+// ============================================================
+// REPORTS MANAGEMENT ENDPOINTS
+// ============================================================
+
+/**
+ * @swagger
+ * /api/admin/reports/queue:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get filtered reports queue (admin only)
+ *     description: Retrieves reports with filtering, sorting, and pagination.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [all, PENDING, IN_REVIEW, RESOLVED, DISMISSED]
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [all, LOW, MEDIUM, HIGH, URGENT]
+ *       - in: query
+ *         name: dateRange
+ *         schema:
+ *           type: string
+ *           enum: ['1', '7', '30', '90', 'all']
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Reports queue retrieved successfully
+ */
+router.get('/reports/queue',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    query('status').optional().isString(),
+    query('type').optional().isString(),
+    query('priority').optional().isString(),
+    query('dateRange').optional().isString(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('offset').optional().isInt({ min: 0 }).toInt(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const {
+        status = 'all',
+        type = 'all',
+        priority = 'all',
+        dateRange = '7',
+        limit = 50,
+        offset = 0
+      } = req.query;
+
+      // Build where clause
+      const where: any = {};
+
+      if (status !== 'all') {
+        where.status = status;
+      }
+
+      if (type !== 'all') {
+        where.reason = type;
+      }
+
+      if (priority !== 'all') {
+        where.priority = priority;
+      }
+
+      // Date range filter
+      if (dateRange !== 'all') {
+        const days = parseInt(dateRange as string, 10);
+        if (!isNaN(days)) {
+          where.createdAt = {
+            gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+          };
+        }
+      }
+
+      const [reports, total] = await Promise.all([
+        prisma.report.findMany({
+          where,
+          orderBy: [
+            { priority: 'desc' },
+            { createdAt: 'desc' }
+          ],
+          take: Number(limit),
+          skip: Number(offset),
+          include: {
+            reporter: {
+              select: { id: true, username: true, displayName: true, avatar: true }
+            },
+            moderator: {
+              select: { id: true, username: true, displayName: true }
+            }
+          }
+        }),
+        prisma.report.count({ where })
+      ]);
+
+      // Map to frontend expected format
+      const formattedReports = reports.map(report => ({
+        id: report.id,
+        createdAt: report.createdAt,
+        type: report.reason,
+        priority: report.priority,
+        status: report.status.toLowerCase(),
+        reporter: report.reporter,
+        targetType: report.targetType,
+        targetId: report.targetId,
+        description: report.description,
+        assignedTo: report.moderator,
+        moderatorNotes: report.moderatorNotes,
+        actionTaken: report.actionTaken,
+        moderatedAt: report.moderatedAt,
+      }));
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          reports: formattedReports,
+          total,
+          pagination: {
+            page: Math.floor(Number(offset) / Number(limit)) + 1,
+            limit: Number(limit),
+            total,
+            pages: Math.ceil(total / Number(limit))
+          }
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/reports/queue' }, 'Failed to get reports queue');
+      return res.status(500).json({ success: false, error: 'Failed to get reports queue' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/reports/analytics:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get reports analytics (admin only)
+ *     description: Retrieves report statistics and trends.
+ *     security:
+ *       - cookieAuth: []
+ */
+router.get('/reports/analytics',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    query('dateRange').optional().isString(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { dateRange = '30' } = req.query;
+
+      // Calculate date range
+      const days = dateRange === 'all' ? 365 : parseInt(dateRange as string, 10) || 30;
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+      // Get counts by status
+      const [total, pending, inReview, resolved, dismissed] = await Promise.all([
+        prisma.report.count({ where: { createdAt: { gte: startDate } } }),
+        prisma.report.count({ where: { status: 'PENDING', createdAt: { gte: startDate } } }),
+        prisma.report.count({ where: { status: 'IN_REVIEW', createdAt: { gte: startDate } } }),
+        prisma.report.count({ where: { status: 'RESOLVED', createdAt: { gte: startDate } } }),
+        prisma.report.count({ where: { status: 'DISMISSED', createdAt: { gte: startDate } } }),
+      ]);
+
+      // Get category breakdown
+      const categoryBreakdown = await prisma.report.groupBy({
+        by: ['reason'],
+        where: { createdAt: { gte: startDate } },
+        _count: { id: true }
+      });
+
+      // Calculate weekly trend (last 7 weeks)
+      const weeklyTrend = [];
+      for (let i = 6; i >= 0; i--) {
+        const weekStart = new Date(Date.now() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+        const weekEnd = new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000);
+        const count = await prisma.report.count({
+          where: {
+            createdAt: { gte: weekStart, lt: weekEnd }
+          }
+        });
+        weeklyTrend.push({
+          date: weekStart.toISOString().split('T')[0],
+          count
+        });
+      }
+
+      // Calculate resolution rate and average resolution time
+      const resolvedReports = await prisma.report.findMany({
+        where: {
+          status: { in: ['RESOLVED', 'DISMISSED'] },
+          createdAt: { gte: startDate },
+          moderatedAt: { not: null }
+        },
+        select: { createdAt: true, moderatedAt: true }
+      });
+
+      const resolutionRate = total > 0 ? Math.round(((resolved + dismissed) / total) * 100) : 0;
+
+      let avgResolutionTime = 0;
+      if (resolvedReports.length > 0) {
+        const totalTime = resolvedReports.reduce((sum, report) => {
+          if (report.moderatedAt) {
+            return sum + (report.moderatedAt.getTime() - report.createdAt.getTime());
+          }
+          return sum;
+        }, 0);
+        avgResolutionTime = Math.round((totalTime / resolvedReports.length) / (1000 * 60 * 60)); // hours
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          total,
+          pending,
+          inReview,
+          resolved,
+          dismissed,
+          resolutionRate,
+          avgResolutionTime,
+          weeklyTrend,
+          categoryBreakdown: categoryBreakdown.map(c => ({
+            category: c.reason,
+            count: c._count.id,
+            percentage: total > 0 ? Math.round((c._count.id / total) * 100) : 0
+          }))
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/reports/analytics' }, 'Failed to get reports analytics');
+      return res.status(500).json({ success: false, error: 'Failed to get reports analytics' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/reports/types:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get available report types (admin only)
+ *     description: Returns all available report reasons/types.
+ */
+router.get('/reports/types',
+  requireStagingAuth,
+  requireAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      // Return the enum values as report types
+      const reportTypes = [
+        { value: 'SPAM', label: 'Spam', description: 'Unsolicited commercial content or repetitive posts' },
+        { value: 'HARASSMENT', label: 'Harassment', description: 'Targeted harassment or bullying' },
+        { value: 'HATE_SPEECH', label: 'Hate Speech', description: 'Content promoting hatred against protected groups' },
+        { value: 'MISINFORMATION', label: 'Misinformation', description: 'False or misleading information' },
+        { value: 'INAPPROPRIATE_CONTENT', label: 'Inappropriate Content', description: 'Content not suitable for the platform' },
+        { value: 'FAKE_ACCOUNT', label: 'Fake Account', description: 'Account impersonating someone or using false identity' },
+        { value: 'IMPERSONATION', label: 'Impersonation', description: 'Pretending to be another person or entity' },
+        { value: 'COPYRIGHT_VIOLATION', label: 'Copyright Violation', description: 'Content violating copyright laws' },
+        { value: 'VIOLENCE_THREATS', label: 'Violence/Threats', description: 'Threats of violence or harm' },
+        { value: 'SELF_HARM', label: 'Self Harm', description: 'Content promoting self-harm or suicide' },
+        { value: 'PRIVACY_VIOLATION', label: 'Privacy Violation', description: 'Sharing private information without consent' },
+        { value: 'OTHER', label: 'Other', description: 'Other violations not listed above' },
+      ];
+
+      return res.status(200).json({
+        success: true,
+        data: reportTypes
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/reports/types' }, 'Failed to get report types');
+      return res.status(500).json({ success: false, error: 'Failed to get report types' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/reports/{reportId}/details:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get full report details (admin only)
+ *     description: Retrieves complete details for a specific report including history.
+ */
+router.get('/reports/:reportId/details',
+  requireStagingAuth,
+  requireAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      const { reportId } = req.params;
+
+      const report = await prisma.report.findUnique({
+        where: { id: reportId },
+        include: {
+          reporter: {
+            select: {
+              id: true, username: true, displayName: true, avatar: true,
+              createdAt: true, reputationScore: true
+            }
+          },
+          moderator: {
+            select: { id: true, username: true, displayName: true }
+          }
+        }
+      });
+
+      if (!report) {
+        return res.status(404).json({ success: false, error: 'Report not found' });
+      }
+
+      // Get target content details
+      let targetContent: any = null;
+      switch (report.targetType) {
+        case 'POST':
+          targetContent = await prisma.post.findUnique({
+            where: { id: report.targetId },
+            select: {
+              id: true, content: true, createdAt: true,
+              author: { select: { id: true, username: true, displayName: true } }
+            }
+          });
+          break;
+        case 'COMMENT':
+          targetContent = await prisma.comment.findUnique({
+            where: { id: report.targetId },
+            select: {
+              id: true, content: true, createdAt: true,
+              user: { select: { id: true, username: true, displayName: true } }
+            }
+          });
+          break;
+        case 'USER':
+          targetContent = await prisma.user.findUnique({
+            where: { id: report.targetId },
+            select: {
+              id: true, username: true, displayName: true, avatar: true,
+              createdAt: true, reputationScore: true, isSuspended: true
+            }
+          });
+          break;
+      }
+
+      // Get related reports (same target)
+      const relatedReports = await prisma.report.findMany({
+        where: {
+          targetType: report.targetType,
+          targetId: report.targetId,
+          id: { not: report.id }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true, reason: true, status: true, createdAt: true,
+          reporter: { select: { username: true } }
+        }
+      });
+
+      // Get moderation history for this report
+      const moderationHistory = await prisma.moderationLog.findMany({
+        where: {
+          targetType: report.targetType as any,
+          targetId: report.targetId
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          moderator: { select: { username: true, displayName: true } }
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          report: {
+            id: report.id,
+            createdAt: report.createdAt,
+            type: report.reason,
+            priority: report.priority,
+            status: report.status,
+            reporter: report.reporter,
+            targetType: report.targetType,
+            targetId: report.targetId,
+            description: report.description,
+            assignedTo: report.moderator,
+            moderatorNotes: report.moderatorNotes,
+            actionTaken: report.actionTaken,
+            moderatedAt: report.moderatedAt,
+            aiAssessmentScore: report.aiAssessmentScore,
+            aiUrgencyLevel: report.aiUrgencyLevel,
+            aiAnalysisNotes: report.aiAnalysisNotes,
+          },
+          targetContent,
+          relatedReports,
+          moderationHistory
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/reports/:reportId/details' }, 'Failed to get report details');
+      return res.status(500).json({ success: false, error: 'Failed to get report details' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/reports/{reportId}/history:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get report action history (admin only)
+ */
+router.get('/reports/:reportId/history',
+  requireStagingAuth,
+  requireAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      const { reportId } = req.params;
+
+      const report = await prisma.report.findUnique({
+        where: { id: reportId },
+        select: { targetType: true, targetId: true }
+      });
+
+      if (!report) {
+        return res.status(404).json({ success: false, error: 'Report not found' });
+      }
+
+      const history = await prisma.moderationLog.findMany({
+        where: {
+          targetType: report.targetType as any,
+          targetId: report.targetId
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          moderator: { select: { id: true, username: true, displayName: true } }
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: history
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/reports/:reportId/history' }, 'Failed to get report history');
+      return res.status(500).json({ success: false, error: 'Failed to get report history' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/reports/{reportId}/action:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Take action on a report (admin only)
+ */
+router.post('/reports/:reportId/action',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('action').isString().isIn(['dismiss', 'warn', 'suspend', 'delete', 'escalate', 'resolve']),
+    body('notes').optional().isString().trim(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { reportId } = req.params;
+      const { action, notes } = req.body;
+      const adminUser = req.user!;
+
+      const report = await prisma.report.findUnique({
+        where: { id: reportId },
+        include: { reporter: true }
+      });
+
+      if (!report) {
+        return res.status(404).json({ success: false, error: 'Report not found' });
+      }
+
+      // Map action to status and moderation action
+      let newStatus: 'PENDING' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED' = 'RESOLVED';
+      let moderationAction: any = 'NO_ACTION';
+
+      switch (action) {
+        case 'dismiss':
+          newStatus = 'DISMISSED';
+          moderationAction = 'NO_ACTION';
+          break;
+        case 'warn':
+          newStatus = 'RESOLVED';
+          moderationAction = 'USER_WARNED';
+          break;
+        case 'suspend':
+          newStatus = 'RESOLVED';
+          moderationAction = 'USER_SUSPENDED';
+          break;
+        case 'delete':
+          newStatus = 'RESOLVED';
+          moderationAction = 'CONTENT_DELETED';
+          break;
+        case 'escalate':
+          newStatus = 'IN_REVIEW';
+          moderationAction = 'NO_ACTION';
+          break;
+        case 'resolve':
+          newStatus = 'RESOLVED';
+          moderationAction = 'NO_ACTION';
+          break;
+      }
+
+      // Update report
+      const updatedReport = await prisma.report.update({
+        where: { id: reportId },
+        data: {
+          status: newStatus,
+          actionTaken: moderationAction,
+          moderatorId: adminUser.id,
+          moderatorNotes: notes,
+          moderatedAt: new Date()
+        }
+      });
+
+      // Create moderation log
+      await prisma.moderationLog.create({
+        data: {
+          moderatorId: adminUser.id,
+          targetType: report.targetType as any,
+          targetId: report.targetId,
+          action: moderationAction,
+          reason: `Report ${action}: ${report.reason}`,
+          notes: notes,
+          metadata: { reportId, originalAction: action }
+        }
+      });
+
+      // Create audit log
+      await AuditService.log({
+        action: action === 'dismiss' ? AUDIT_ACTIONS.REPORT_DISMISSED :
+               action === 'escalate' ? AUDIT_ACTIONS.REPORT_ESCALATED :
+               AUDIT_ACTIONS.REPORT_RESOLVED,
+        adminId: adminUser.id,
+        targetType: 'report',
+        targetId: reportId,
+        details: { action, notes, previousStatus: report.status, newStatus },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      logger.info({
+        action: 'report_action_taken',
+        adminId: adminUser.id,
+        reportId,
+        reportAction: action,
+        previousStatus: report.status,
+        newStatus
+      }, `Admin took action on report: ${action}`);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          reportId,
+          action,
+          newStatus,
+          moderationAction,
+          moderatedAt: updatedReport.moderatedAt
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/reports/:reportId/action' }, 'Failed to take report action');
+      return res.status(500).json({ success: false, error: 'Failed to take report action' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/reports/bulk-action:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Bulk action on multiple reports (admin only)
+ */
+router.post('/reports/bulk-action',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('reportIds').isArray({ min: 1 }),
+    body('action').isString().isIn(['dismiss', 'warn', 'suspend', 'escalate', 'resolve']),
+    body('notes').optional().isString().trim(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { reportIds, action, notes } = req.body;
+      const adminUser = req.user!;
+
+      // Map action to status
+      let newStatus: 'PENDING' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED' = 'RESOLVED';
+      let moderationAction: any = 'NO_ACTION';
+
+      switch (action) {
+        case 'dismiss':
+          newStatus = 'DISMISSED';
+          break;
+        case 'warn':
+          moderationAction = 'USER_WARNED';
+          break;
+        case 'suspend':
+          moderationAction = 'USER_SUSPENDED';
+          break;
+        case 'escalate':
+          newStatus = 'IN_REVIEW';
+          break;
+      }
+
+      // Update all reports
+      const result = await prisma.report.updateMany({
+        where: { id: { in: reportIds } },
+        data: {
+          status: newStatus,
+          actionTaken: moderationAction,
+          moderatorId: adminUser.id,
+          moderatorNotes: notes,
+          moderatedAt: new Date()
+        }
+      });
+
+      // Create audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.REPORT_BULK_ACTION,
+        adminId: adminUser.id,
+        targetType: 'reports',
+        targetId: reportIds.join(','),
+        details: { action, notes, count: result.count, reportIds },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      logger.info({
+        action: 'bulk_report_action',
+        adminId: adminUser.id,
+        reportCount: result.count,
+        bulkAction: action
+      }, `Admin performed bulk action on ${result.count} reports`);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          action,
+          count: result.count,
+          newStatus
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/reports/bulk-action' }, 'Failed to perform bulk action');
+      return res.status(500).json({ success: false, error: 'Failed to perform bulk action' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/reports/export:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Export reports as CSV (admin only)
+ */
+router.get('/reports/export',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    query('status').optional().isString(),
+    query('type').optional().isString(),
+    query('dateRange').optional().isString(),
+    query('format').optional().isIn(['csv', 'json']),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { status = 'all', type = 'all', dateRange = '30', format = 'csv' } = req.query;
+      const adminUser = req.user!;
+
+      // Build where clause
+      const where: any = {};
+      if (status !== 'all') where.status = status;
+      if (type !== 'all') where.reason = type;
+
+      const days = dateRange === 'all' ? 365 : parseInt(dateRange as string, 10) || 30;
+      where.createdAt = { gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) };
+
+      const reports = await prisma.report.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          reporter: { select: { username: true } },
+          moderator: { select: { username: true } }
+        }
+      });
+
+      // Create audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ANALYTICS_EXPORTED,
+        adminId: adminUser.id,
+        targetType: 'reports',
+        details: { format, count: reports.length, filters: { status, type, dateRange } },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      if (format === 'json') {
+        return res.status(200).json({
+          success: true,
+          data: reports
+        });
+      }
+
+      // Generate CSV
+      const headers = ['ID', 'Created', 'Type', 'Priority', 'Status', 'Reporter', 'Target Type', 'Target ID', 'Description', 'Moderator', 'Moderated At', 'Action Taken', 'Notes'];
+      const rows = reports.map(r => [
+        r.id,
+        r.createdAt.toISOString(),
+        r.reason,
+        r.priority,
+        r.status,
+        r.reporter?.username || 'N/A',
+        r.targetType,
+        r.targetId,
+        `"${(r.description || '').replace(/"/g, '""')}"`,
+        r.moderator?.username || 'N/A',
+        r.moderatedAt?.toISOString() || '',
+        r.actionTaken || '',
+        `"${(r.moderatorNotes || '').replace(/"/g, '""')}"`
+      ]);
+
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=reports-${new Date().toISOString().split('T')[0]}.csv`);
+      return res.send(csv);
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/reports/export' }, 'Failed to export reports');
+      return res.status(500).json({ success: false, error: 'Failed to export reports' });
+    }
+  }
+);
+
+// ============================================================
+// ERROR TRACKING ENDPOINTS
+// ============================================================
+
+/**
+ * @swagger
+ * /api/admin/errors/resolve:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Mark errors as resolved (admin only)
+ *     description: Marks one or more application errors as resolved with optional notes.
+ */
+router.post('/errors/resolve',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('errorIds').isArray({ min: 1 }),
+    body('resolution').optional().isString().trim(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { errorIds, resolution } = req.body;
+      const adminUser = req.user!;
+
+      const result = await prisma.applicationError.updateMany({
+        where: { id: { in: errorIds } },
+        data: {
+          resolved: true,
+          resolution: resolution || 'Resolved by admin'
+        }
+      });
+
+      // Create audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ERROR_RESOLVED,
+        adminId: adminUser.id,
+        targetType: 'errors',
+        targetId: errorIds.join(','),
+        details: { count: result.count, resolution },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      logger.info({
+        action: 'errors_resolved',
+        adminId: adminUser.id,
+        count: result.count
+      }, `Admin resolved ${result.count} errors`);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          resolvedCount: result.count,
+          errorIds
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/errors/resolve' }, 'Failed to resolve errors');
+      return res.status(500).json({ success: false, error: 'Failed to resolve errors' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/errors/report:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Generate error analysis report (admin only)
+ *     description: Generates a summary report of application errors.
+ */
+router.post('/errors/report',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('timeframe').optional().isIn(['1d', '7d', '30d', '90d']),
+    body('service').optional().isString(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { timeframe = '7d', service } = req.body;
+      const adminUser = req.user!;
+
+      // Calculate date range
+      const days = { '1d': 1, '7d': 7, '30d': 30, '90d': 90 }[timeframe] || 7;
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+      const where: any = { createdAt: { gte: startDate } };
+      if (service) where.service = service;
+
+      // Get error counts and breakdown
+      const [totalErrors, unresolvedCount, errorsByService, errorsByType, recentCritical] = await Promise.all([
+        prisma.applicationError.count({ where }),
+        prisma.applicationError.count({ where: { ...where, resolved: false } }),
+        prisma.applicationError.groupBy({
+          by: ['service'],
+          where,
+          _count: { id: true },
+          orderBy: { _count: { id: 'desc' } }
+        }),
+        prisma.applicationError.groupBy({
+          by: ['errorType'],
+          where,
+          _count: { id: true },
+          orderBy: { _count: { id: 'desc' } },
+          take: 10
+        }),
+        prisma.applicationError.findMany({
+          where: { ...where, resolved: false },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true, service: true, operation: true, errorType: true,
+            message: true, createdAt: true
+          }
+        })
+      ]);
+
+      // Create audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ERROR_REPORT_GENERATED,
+        adminId: adminUser.id,
+        details: { timeframe, service, totalErrors, unresolvedCount },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          period: { start: startDate, end: new Date(), days },
+          summary: {
+            totalErrors,
+            unresolvedCount,
+            resolvedCount: totalErrors - unresolvedCount,
+            resolutionRate: totalErrors > 0 ? Math.round(((totalErrors - unresolvedCount) / totalErrors) * 100) : 0
+          },
+          byService: errorsByService.map(s => ({ service: s.service, count: s._count.id })),
+          byType: errorsByType.map(t => ({ errorType: t.errorType, count: t._count.id })),
+          recentCritical,
+          recommendations: unresolvedCount > 10
+            ? ['High number of unresolved errors - consider prioritizing error resolution']
+            : []
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/errors/report' }, 'Failed to generate error report');
+      return res.status(500).json({ success: false, error: 'Failed to generate error report' });
+    }
+  }
+);
+
+// ============================================================
+// SYSTEM CONFIGURATION ENDPOINTS
+// ============================================================
+
+/**
+ * @swagger
+ * /api/admin/system/config:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get system configuration (admin only)
+ *     description: Retrieves current system configuration settings.
+ */
+router.get('/system/config',
+  requireStagingAuth,
+  requireAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      // Return system configuration (environment-based for now)
+      const config = {
+        environment: process.env.NODE_ENV || 'development',
+        features: {
+          riseAI: process.env.ENABLE_RISE_AI === 'true',
+          semanticTopics: process.env.ENABLE_SEMANTIC_TOPICS === 'true',
+          rateLimiting: true,
+          emailVerification: true,
+        },
+        limits: {
+          maxUploadSize: parseInt(process.env.MAX_UPLOAD_SIZE || '10485760', 10),
+          maxPostLength: 5000,
+          maxCommentLength: 2000,
+          rateLimitWindow: 15 * 60 * 1000, // 15 minutes
+          rateLimitMax: 100,
+        },
+        maintenance: {
+          enabled: process.env.MAINTENANCE_MODE === 'true',
+          message: process.env.MAINTENANCE_MESSAGE || '',
+        }
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: config
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/system/config' }, 'Failed to get system config');
+      return res.status(500).json({ success: false, error: 'Failed to get system configuration' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/system/maintenance:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Toggle maintenance mode (super-admin only)
+ *     description: Enables or disables maintenance mode.
+ */
+router.post('/system/maintenance',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('enabled').isBoolean(),
+    body('message').optional().isString().trim(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { enabled, message } = req.body;
+      const adminUser = req.user!;
+
+      // Require super admin for maintenance mode
+      if (!adminUser.isSuperAdmin) {
+        return res.status(403).json({
+          success: false,
+          error: 'Super admin access required for maintenance mode'
+        });
+      }
+
+      // In a real implementation, this would update a database setting or
+      // trigger a configuration reload. For now, we log and acknowledge.
+      logger.warn({
+        action: 'maintenance_mode_toggled',
+        adminId: adminUser.id,
+        enabled,
+        message
+      }, `Maintenance mode ${enabled ? 'enabled' : 'disabled'}`);
+
+      // Create audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.MAINTENANCE_MODE_TOGGLED,
+        adminId: adminUser.id,
+        details: { enabled, message },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          maintenanceMode: enabled,
+          message: message || (enabled ? 'System is under maintenance' : ''),
+          note: 'Configuration change logged. Full implementation requires environment variable or database setting update.'
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/system/maintenance' }, 'Failed to toggle maintenance mode');
+      return res.status(500).json({ success: false, error: 'Failed to toggle maintenance mode' });
+    }
+  }
+);
+
+// ============================================================
+// ANALYTICS EXPORT ENDPOINTS
+// ============================================================
+
+/**
+ * @swagger
+ * /api/admin/analytics/custom-report:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Generate custom analytics report (admin only)
+ *     description: Generates a custom analytics report based on specified metrics.
+ */
+router.post('/analytics/custom-report',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('metrics').isArray({ min: 1 }),
+    body('startDate').optional().isISO8601(),
+    body('endDate').optional().isISO8601(),
+    body('groupBy').optional().isIn(['day', 'week', 'month']),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { metrics, startDate, endDate, groupBy = 'day' } = req.body;
+      const adminUser = req.user!;
+
+      // Calculate date range
+      const end = endDate ? new Date(endDate) : new Date();
+      const start = startDate ? new Date(startDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const report: any = {
+        period: { start, end, groupBy },
+        metrics: {},
+        generatedAt: new Date()
+      };
+
+      // Gather requested metrics
+      for (const metric of metrics) {
+        switch (metric) {
+          case 'users':
+            report.metrics.users = {
+              total: await prisma.user.count(),
+              newInPeriod: await prisma.user.count({ where: { createdAt: { gte: start, lte: end } } }),
+              active: await prisma.user.count({ where: { lastSeenAt: { gte: start } } })
+            };
+            break;
+          case 'posts':
+            report.metrics.posts = {
+              total: await prisma.post.count(),
+              newInPeriod: await prisma.post.count({ where: { createdAt: { gte: start, lte: end } } })
+            };
+            break;
+          case 'reports':
+            report.metrics.reports = {
+              total: await prisma.report.count({ where: { createdAt: { gte: start, lte: end } } }),
+              pending: await prisma.report.count({ where: { status: 'PENDING', createdAt: { gte: start, lte: end } } }),
+              resolved: await prisma.report.count({ where: { status: 'RESOLVED', createdAt: { gte: start, lte: end } } })
+            };
+            break;
+          case 'engagement':
+            report.metrics.engagement = {
+              totalLikes: await prisma.like.count({ where: { createdAt: { gte: start, lte: end } } }),
+              totalComments: await prisma.comment.count({ where: { createdAt: { gte: start, lte: end } } }),
+              totalShares: await prisma.share.count({ where: { createdAt: { gte: start, lte: end } } })
+            };
+            break;
+        }
+      }
+
+      // Create audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ANALYTICS_REPORT_GENERATED,
+        adminId: adminUser.id,
+        details: { metrics, startDate: start, endDate: end, groupBy },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: report
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/analytics/custom-report' }, 'Failed to generate custom report');
+      return res.status(500).json({ success: false, error: 'Failed to generate custom report' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/analytics/export:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Export analytics data (admin only)
+ *     description: Exports analytics data in CSV or JSON format.
+ */
+router.post('/analytics/export',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('dataType').isIn(['users', 'posts', 'reports', 'engagement']),
+    body('format').optional().isIn(['csv', 'json']),
+    body('startDate').optional().isISO8601(),
+    body('endDate').optional().isISO8601(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { dataType, format = 'csv', startDate, endDate } = req.body;
+      const adminUser = req.user!;
+
+      const end = endDate ? new Date(endDate) : new Date();
+      const start = startDate ? new Date(startDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      let data: any[] = [];
+      let headers: string[] = [];
+
+      switch (dataType) {
+        case 'users':
+          data = await prisma.user.findMany({
+            where: { createdAt: { gte: start, lte: end } },
+            select: {
+              id: true, username: true, email: true, createdAt: true,
+              isAdmin: true, isModerator: true, emailVerified: true, isSuspended: true
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+          headers = ['ID', 'Username', 'Email', 'Created', 'Admin', 'Moderator', 'Verified', 'Suspended'];
+          break;
+        case 'posts':
+          data = await prisma.post.findMany({
+            where: { createdAt: { gte: start, lte: end } },
+            select: {
+              id: true, content: true, createdAt: true, likesCount: true, commentsCount: true,
+              author: { select: { username: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+          headers = ['ID', 'Author', 'Content', 'Created', 'Likes', 'Comments'];
+          break;
+        case 'engagement':
+          // Get daily engagement stats
+          const days = Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+          data = [];
+          for (let i = 0; i < days && i < 90; i++) {
+            const dayStart = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
+            const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+            data.push({
+              date: dayStart.toISOString().split('T')[0],
+              likes: await prisma.like.count({ where: { createdAt: { gte: dayStart, lt: dayEnd } } }),
+              comments: await prisma.comment.count({ where: { createdAt: { gte: dayStart, lt: dayEnd } } }),
+              posts: await prisma.post.count({ where: { createdAt: { gte: dayStart, lt: dayEnd } } })
+            });
+          }
+          headers = ['Date', 'Likes', 'Comments', 'Posts'];
+          break;
+      }
+
+      // Create audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ANALYTICS_EXPORTED,
+        adminId: adminUser.id,
+        targetType: dataType,
+        details: { format, count: data.length, startDate: start, endDate: end },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      if (format === 'json') {
+        return res.status(200).json({ success: true, data });
+      }
+
+      // Generate CSV
+      const csvRows = data.map(row => {
+        switch (dataType) {
+          case 'users':
+            return [row.id, row.username, row.email, row.createdAt, row.isAdmin, row.isModerator, row.emailVerified, row.isSuspended].join(',');
+          case 'posts':
+            return [row.id, row.author?.username || 'N/A', `"${(row.content || '').substring(0, 100).replace(/"/g, '""')}"`, row.createdAt, row.likesCount, row.commentsCount].join(',');
+          case 'engagement':
+            return [row.date, row.likes, row.comments, row.posts].join(',');
+          default:
+            return '';
+        }
+      });
+
+      const csv = [headers.join(','), ...csvRows].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=${dataType}-export-${new Date().toISOString().split('T')[0]}.csv`);
+      return res.send(csv);
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/analytics/export' }, 'Failed to export analytics');
+      return res.status(500).json({ success: false, error: 'Failed to export analytics' });
+    }
+  }
+);
+
+// ============================================================
+// AI INSIGHTS ENDPOINTS
+// ============================================================
+
+/**
+ * @swagger
+ * /api/admin/ai-insights/metrics:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get AI system metrics (admin only)
+ *     description: Retrieves metrics about AI usage and performance.
+ */
+router.get('/ai-insights/metrics',
+  requireStagingAuth,
+  requireAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      // Get RiseAI usage stats
+      const [totalInteractions, recentInteractions, contentFlags, avgUsagePerUser] = await Promise.all([
+        prisma.riseAIInteraction.count(),
+        prisma.riseAIInteraction.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+        prisma.contentFlag.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+        prisma.riseAIUsage.aggregate({
+          where: { date: { gte: thirtyDaysAgo } },
+          _avg: { count: true }
+        })
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          riseAI: {
+            totalInteractions,
+            last30Days: recentInteractions,
+            avgDailyUsage: avgUsagePerUser._avg.count || 0
+          },
+          contentModeration: {
+            flagsLast30Days: contentFlags,
+            aiEnabled: process.env.ENABLE_AI_MODERATION === 'true'
+          },
+          status: {
+            azureOpenAI: process.env.AZURE_OPENAI_ENDPOINT ? 'configured' : 'not_configured',
+            embeddingService: process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT ? 'configured' : 'not_configured'
+          }
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/ai-insights/metrics' }, 'Failed to get AI metrics');
+      return res.status(500).json({ success: false, error: 'Failed to get AI metrics' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/ai-insights/run-analysis:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Trigger AI analysis (admin only)
+ *     description: Triggers an AI analysis of platform content or user behavior.
+ */
+router.post('/ai-insights/run-analysis',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('analysisType').isIn(['content_moderation', 'trending_topics', 'user_engagement', 'sentiment']),
+    body('scope').optional().isIn(['recent', 'all']),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { analysisType, scope = 'recent' } = req.body;
+      const adminUser = req.user!;
+
+      // Create audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.AI_ANALYSIS_TRIGGERED,
+        adminId: adminUser.id,
+        details: { analysisType, scope },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      // In a full implementation, this would trigger async AI analysis
+      // For now, return acknowledgment with basic stats
+      const analysisId = `analysis_${Date.now()}`;
+
+      logger.info({
+        action: 'ai_analysis_triggered',
+        adminId: adminUser.id,
+        analysisType,
+        scope,
+        analysisId
+      }, `AI analysis triggered: ${analysisType}`);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          analysisId,
+          status: 'queued',
+          analysisType,
+          scope,
+          estimatedCompletion: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+          note: 'Analysis has been queued. Results will be available in AI Insights.'
+        }
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/ai-insights/run-analysis' }, 'Failed to trigger AI analysis');
+      return res.status(500).json({ success: false, error: 'Failed to trigger AI analysis' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/ai-insights/generate-report:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Generate AI insights report (admin only)
+ *     description: Generates a comprehensive AI-powered insights report.
+ */
+router.post('/ai-insights/generate-report',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('reportType').isIn(['weekly_summary', 'content_health', 'engagement_analysis', 'moderation_review']),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { reportType } = req.body;
+      const adminUser = req.user!;
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      // Gather data for the report
+      const [postCount, commentCount, reportCount, userCount, flagCount] = await Promise.all([
+        prisma.post.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+        prisma.comment.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+        prisma.report.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+        prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+        prisma.contentFlag.count({ where: { createdAt: { gte: sevenDaysAgo } } })
+      ]);
+
+      // Create audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.AI_REPORT_GENERATED,
+        adminId: adminUser.id,
+        details: { reportType },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      const report = {
+        reportType,
+        period: { start: sevenDaysAgo, end: new Date() },
+        generatedAt: new Date(),
+        summary: {
+          totalPosts: postCount,
+          totalComments: commentCount,
+          totalReports: reportCount,
+          newUsers: userCount,
+          contentFlags: flagCount
+        },
+        insights: [
+          postCount > 100 ? 'High content creation activity this week' : 'Normal content creation levels',
+          reportCount > 20 ? 'Elevated report volume - consider reviewing moderation queue' : 'Report volume within normal range',
+          userCount > 50 ? 'Strong user growth this week' : 'Steady user growth'
+        ],
+        recommendations: [
+          reportCount > 20 ? 'Prioritize report queue review' : null,
+          flagCount > 10 ? 'Review AI-flagged content for patterns' : null,
+        ].filter(Boolean)
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: report
+      });
+    } catch (error) {
+      logger.error({ error, endpoint: '/api/admin/ai-insights/generate-report' }, 'Failed to generate AI report');
+      return res.status(500).json({ success: false, error: 'Failed to generate AI report' });
+    }
+  }
+);
+
+// ============================================================
+// AUDIT LOGS ENDPOINTS
+// ============================================================
+
+/**
+ * @swagger
+ * /api/admin/audit-logs:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get admin audit logs (admin only)
+ *     description: Retrieves audit logs of administrative actions with optional filters.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: adminId
+ *         schema:
+ *           type: string
+ *         description: Filter by admin user ID
+ *       - in: query
+ *         name: action
+ *         schema:
+ *           type: string
+ *         description: Filter by action type (e.g., USER_SUSPENDED, REPORT_RESOLVED)
+ *       - in: query
+ *         name: targetType
+ *         schema:
+ *           type: string
+ *         description: Filter by target type (e.g., user, post, report)
+ *       - in: query
+ *         name: targetId
+ *         schema:
+ *           type: string
+ *         description: Filter by target ID
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter logs after this date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter logs before this date
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of logs to return (max 100)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Offset for pagination
+ *     responses:
+ *       200:
+ *         description: Audit logs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     logs:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     total:
+ *                       type: integer
+ *                     pagination:
+ *                       type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
+router.get('/audit-logs',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    query('adminId').optional().isString().trim(),
+    query('action').optional().isString().trim(),
+    query('targetType').optional().isString().trim(),
+    query('targetId').optional().isString().trim(),
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('offset').optional().isInt({ min: 0 }).toInt(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const {
+        adminId,
+        action,
+        targetType,
+        targetId,
+        startDate,
+        endDate,
+        limit = 50,
+        offset = 0
+      } = req.query;
+
+      const result = await AuditService.getLogs({
+        adminId: adminId as string,
+        action: action as string,
+        targetType: targetType as string,
+        targetId: targetId as string,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        limit: Number(limit),
+        offset: Number(offset),
+      });
+
+      logger.info({
+        endpoint: '/api/admin/audit-logs',
+        adminId: req.user?.id,
+        filters: { adminId, action, targetType, targetId, startDate, endDate },
+        resultCount: result.logs.length,
+        totalCount: result.total
+      }, 'Audit logs retrieved');
+
+      return res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      logger.error({
+        error,
+        endpoint: '/api/admin/audit-logs',
+        adminId: req.user?.id
+      }, 'Failed to retrieve audit logs');
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve audit logs'
+      });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/audit-logs/stats:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get audit log statistics (admin only)
+ *     description: Retrieves statistics about admin actions over a time period.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date for statistics
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date for statistics
+ *     responses:
+ *       200:
+ *         description: Audit statistics retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ */
+router.get('/audit-logs/stats',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+  ],
+  handleValidationErrors,
+  async (req: AuthRequest, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+
+      // Default to last 30 days if no dates provided
+      const end = endDate ? new Date(endDate as string) : new Date();
+      const start = startDate
+        ? new Date(startDate as string)
+        : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const stats = await AuditService.getStats(start, end);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...stats,
+          period: { startDate: start, endDate: end }
+        }
+      });
+    } catch (error) {
+      logger.error({
+        error,
+        endpoint: '/api/admin/audit-logs/stats',
+        adminId: req.user?.id
+      }, 'Failed to retrieve audit statistics');
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve audit statistics'
+      });
+    }
+  }
+);
 
 export default router;

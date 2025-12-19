@@ -700,7 +700,7 @@ class AdminState {
     }
 
     /**
-     * Load analytics data
+     * Load analytics data from backend
      */
     async loadAnalyticsData(params = {}, useCache = false) {
         const cacheKey = `analytics_${JSON.stringify(params)}`;
@@ -714,8 +714,45 @@ class AdminState {
         try {
             this.isLoading = true;
 
-            // Use cached global stats
-            const data = this.getCache('dashboard_global') || await window.AdminAPI.getDashboardStats();
+            // Call the analytics API endpoint
+            const response = await window.AdminAPI.getAnalytics(params);
+
+            // Transform backend response to frontend data structure
+            const data = {
+                period: response.period || '30 days',
+                summary: response.summary || {},
+                dailyActivity: response.dailyActivity || [],
+                geographicDistribution: response.geographicDistribution || [],
+                reputationEventBreakdown: response.reputationEventBreakdown || [],
+                reportBreakdown: response.reportBreakdown || [],
+                flagDistribution: response.flagDistribution || [],
+                generatedAt: response.generatedAt || new Date().toISOString(),
+                // Provide structured access to summary metrics
+                coreMetrics: {
+                    totalUsers: response.summary?.userGrowth?.totalUsers || 0,
+                    activeUsers: response.summary?.userGrowth?.activeUsers24h || 0,
+                    newUsers: response.summary?.userGrowth?.newUsers || 0,
+                    verifiedUsers: response.summary?.userGrowth?.verifiedUsers || 0
+                },
+                userEngagement: {
+                    postsCreated: response.summary?.engagement?.postsCreated || 0,
+                    commentsCreated: response.summary?.engagement?.commentsCreated || 0,
+                    likesGiven: response.summary?.engagement?.likesGiven || 0,
+                    messagesSent: response.summary?.engagement?.messagesSent || 0,
+                    engagementRate: response.summary?.engagement?.engagementRate || '0'
+                },
+                contentPerformance: {
+                    politicalPosts: response.summary?.content?.politicalPosts || 0,
+                    photosUploaded: response.summary?.content?.photosUploaded || 0,
+                    reportsFiled: response.summary?.content?.reportsFiled || 0
+                },
+                civicMetrics: {
+                    petitionsCreated: response.summary?.civicEngagement?.petitionsCreated || 0,
+                    petitionSignatures: response.summary?.civicEngagement?.petitionSignatures || 0,
+                    eventsCreated: response.summary?.civicEngagement?.eventsCreated || 0,
+                    eventRSVPs: response.summary?.civicEngagement?.eventRSVPs || 0
+                }
+            };
 
             this.displayAnalyticsData(data);
             this.setCache(cacheKey, data);
@@ -731,7 +768,7 @@ class AdminState {
     }
 
     /**
-     * Load AI insights data
+     * Load AI insights data from backend
      */
     async loadAIInsightsData(params = {}, useCache = false) {
         const cacheKey = `ai_insights_${JSON.stringify(params)}`;
@@ -745,11 +782,36 @@ class AdminState {
         try {
             this.isLoading = true;
 
-            // For now, return empty data structure - this can be expanded later
+            // Call the AI insights API endpoint (fetches metrics, analysis, suggestions in parallel)
+            const response = await window.AdminAPI.getAIInsights();
+
+            // Transform response to expected data structure
             const data = {
-                insights: [],
-                trends: [],
-                recommendations: []
+                // Metrics from RiseAI usage
+                metrics: response.metrics || {},
+                riseAI: response.metrics?.riseAI || {
+                    totalInteractions: 0,
+                    last30Days: 0,
+                    avgDailyUsage: 0
+                },
+                contentModeration: response.metrics?.contentModeration || {
+                    flagsLast30Days: 0,
+                    aiEnabled: false
+                },
+                // Analysis insights
+                analysis: response.analysis || {},
+                insights: response.analysis?.insights || [],
+                trends: response.analysis?.trends || [],
+                // Suggestions from user feedback
+                suggestions: response.suggestions?.suggestions || [],
+                categoryBreakdown: response.suggestions?.categoryBreakdown || {},
+                // Recommendations extracted from analysis
+                recommendations: response.analysis?.recommendations || [],
+                // Status info
+                status: response.metrics?.status || {
+                    aiServicesOnline: false,
+                    lastAnalysisRun: null
+                }
             };
 
             this.displayAIInsightsData(data);
@@ -766,7 +828,7 @@ class AdminState {
     }
 
     /**
-     * Load errors data
+     * Load errors data from backend
      */
     async loadErrorsData(params = {}, useCache = false) {
         const cacheKey = `errors_${JSON.stringify(params)}`;
@@ -780,15 +842,21 @@ class AdminState {
         try {
             this.isLoading = true;
 
-            // For now, return empty data structure - this can be expanded later
+            // Call the actual backend API
+            const response = await window.AdminAPI.getErrors(params);
+
+            // Transform response to match what ErrorsController expects
             const data = {
-                errors: [],
-                total: 0,
+                errors: response.errors || [],
+                stats: response.stats || {},
+                timeframe: response.timeframe || '24h',
+                note: response.note || '',
+                total: response.errors?.length || 0,
                 pagination: {
                     page: 1,
                     limit: 50,
-                    total: 0,
-                    pages: 0
+                    total: response.errors?.length || 0,
+                    pages: Math.ceil((response.errors?.length || 0) / 50)
                 }
             };
 

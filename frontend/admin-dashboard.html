@@ -2489,6 +2489,14 @@ Auto-refresh enabled every 60 seconds
     <script type="module" src="js/adminDebugger.js"></script>
     <script type="module" src="src/js/deployment-status.js"></script>
 
+    <!-- Auth State Enforcement: Must run before any auth code accesses window.currentUser -->
+    <!-- Makes window.currentUser a getter/setter that routes through userState (single source of truth) -->
+    <script type="module">
+        import { userState, enforceCurrentUserGetter } from './src/modules/core/state/user.js';
+        window.userState = userState;
+        enforceCurrentUserGetter();
+    </script>
+
     <!-- Authentication System: ES6 module UnifiedAuth.js (part of 3-layer auth architecture) -->
     <!-- See index.html auth documentation for full architecture explanation -->
     <script type="module" src="src/modules/auth/UnifiedAuth.js"></script>

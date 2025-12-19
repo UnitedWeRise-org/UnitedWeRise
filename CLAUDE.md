@@ -68,6 +68,25 @@ If on `main` for hotfixes or at user direction, stay on main. Otherwise prompt t
 
 **For templates and requirements**: See `.claude/protocols/document_protocol.md`
 
+### DevLog Generation
+
+**Trigger:** Significant work sessions (complexity 9+ OR explicit design discussion)
+
+**Process:**
+1. **Plan phase**: Flag "DevLog summary needed: Yes" and capture user intent
+2. **Document phase**: Generate `docs/devlogs/YYYY-MM-DD-topic.md` from plan notes
+3. **Deploy phase**: Devlog committed with feature code
+
+**Content captures:**
+- User's stated goals and reasoning
+- Key technical decisions made
+- Outcome summary
+
+**Not captured:**
+- Routine bug fixes (unless architectural)
+- Minor refactors
+- Test-only changes
+
 ### User Settings Pattern Guidelines
 
 When adding user settings/preferences, choose the appropriate pattern:
