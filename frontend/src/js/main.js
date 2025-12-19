@@ -17,6 +17,12 @@ import '../utils/toast.js';  // Toast notifications (window.showToast)
 import { initializeGoogleAds } from './google-ads-init.js';
 import { initLoadingOverlayFailsafe } from './loading-overlay-failsafe.js';
 
+// Phase 1-auth: Auth state enforcement (must run before any code accesses window.currentUser)
+// This makes window.currentUser a getter/setter that routes through userState,
+// preventing split-brain bugs where different systems have different auth state.
+import { enforceCurrentUserGetter } from '../modules/core/state/user.js';
+enforceCurrentUserGetter();
+
 // Phase 1a: Admin debug system (used by many modules, loaded early)
 import '../../js/adminDebugger.js';
 

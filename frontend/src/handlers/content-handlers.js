@@ -464,12 +464,13 @@ export class ContentHandlers {
                             }
                         }
 
-                        // Store district info in currentUser
+                        // Store district info via userState (routes to localStorage)
                         if (districtNumber && stateAbbr) {
-                            window.currentUser.district = districtNumber;
-                            window.currentUser.state = stateAbbr;
+                            if (window.userState && window.currentUser) {
+                                window.userState.update({ district: districtNumber, state: stateAbbr });
+                            }
 
-                            console.log(`District info extracted: ${window.currentUser.state}-${window.currentUser.district}`);
+                            console.log(`District info extracted: ${stateAbbr}-${districtNumber}`);
 
                             // Load boundary if currently at local zoom
                             if (window.currentZoomLevel === 'local' && window.boundaryManager && window.currentLocation) {

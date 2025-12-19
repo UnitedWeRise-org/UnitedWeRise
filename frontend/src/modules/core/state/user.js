@@ -43,13 +43,13 @@ class UserState {
     set current(user) {
         const previousUser = this._currentUser;
         this._currentUser = user;
-        
+
         // Save to localStorage
         this._saveToStorage();
-        
-        // Maintain backward compatibility
-        window.currentUser = user;
-        
+
+        // Note: window.currentUser is now a getter that reads from userState.current
+        // No need to set it directly - the getter handles backward compatibility
+
         // Notify listeners if user changed
         if (JSON.stringify(previousUser) !== JSON.stringify(user)) {
             this._notifyListeners();
@@ -150,7 +150,7 @@ class UserState {
                 const user = JSON.parse(stored);
                 // Don't trigger listeners on initial load
                 this._currentUser = user;
-                window.currentUser = user;
+                // Note: window.currentUser is now a getter - no need to set directly
             }
         } catch (error) {
             console.error('Failed to load user from storage:', error);
@@ -267,6 +267,53 @@ export const userState = new UserState();
 // Maintain backward compatibility
 if (typeof window !== 'undefined') {
     window.userState = userState;
+}
+
+/**
+ * Define window.currentUser as a getter/setter that routes through userState.
+ * This prevents bypassing the coordinator by directly setting window.currentUser.
+ *
+ * Call this early in app initialization to enforce single source of truth.
+ *
+ * @example
+ * import { enforceCurrentUserGetter } from './modules/core/state/user.js';
+ * enforceCurrentUserGetter();
+ */
+export function enforceCurrentUserGetter() {
+    if (typeof window === 'undefined') return;
+
+    // Only define if not already defined as getter
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'currentUser');
+    if (descriptor && descriptor.get) return; // Already a getter
+
+    // Store any existing value before redefining
+    const existingValue = window.currentUser;
+
+    Object.defineProperty(window, 'currentUser', {
+        get: () => window.userState?.current,
+        set: (value) => {
+            if (value === null || value === undefined) {
+                // Logout - route through userState
+                if (window.userState) {
+                    window.userState.clear();
+                }
+            } else if (value && typeof value === 'object') {
+                // Login/update - route through userState
+                if (window.userState) {
+                    window.userState.current = value;
+                }
+            }
+        },
+        configurable: true,
+        enumerable: true
+    });
+
+    // Restore existing value through the new setter (which routes to userState)
+    if (existingValue && typeof existingValue === 'object') {
+        window.currentUser = existingValue;
+    }
+
+    console.log('✅ window.currentUser getter/setter enforced - all access routes through userState');
 }
 
 export default userState;

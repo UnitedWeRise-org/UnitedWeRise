@@ -204,10 +204,10 @@ class UnifiedAuth {
                 }
 
                 if (totpLoginResponse.ok && !totpResult.requiresTOTP) {
-                    // Store CSRF token and user data only
+                    // Store CSRF token and user data
                     window.csrfToken = totpResult.csrfToken;
-                    localStorage.setItem('currentUser', JSON.stringify(totpResult.user));
-                    window.currentUser = totpResult.user; // Sync with unified-manager state
+                    // Note: window.currentUser setter routes through userState → localStorage
+                    window.currentUser = totpResult.user;
 
                     // TOTP tokens now stored in secure httpOnly cookies (no localStorage needed)
                     // Token is now in httpOnly cookie
@@ -234,10 +234,10 @@ class UnifiedAuth {
 
             // Regular login (no TOTP required)
             if (response.ok) {
-                // Store CSRF token and user data only
+                // Store CSRF token and user data
                 window.csrfToken = result.csrfToken;
-                localStorage.setItem('currentUser', JSON.stringify(result.user));
-                window.currentUser = result.user; // Sync with unified-manager state
+                // Note: window.currentUser setter routes through userState → localStorage
+                window.currentUser = result.user;
 
                 // Token is now in httpOnly cookie
                 if (typeof adminDebugLog !== 'undefined') {
@@ -308,8 +308,7 @@ class UnifiedAuth {
             // Continue with local cleanup even if API call fails
         }
 
-        // Clear local data
-        localStorage.removeItem('currentUser');
+        // Clear local data (window.currentUser setter routes through userState → localStorage)
         window.csrfToken = null;
         window.currentUser = null;
 

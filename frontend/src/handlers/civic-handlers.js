@@ -208,14 +208,12 @@ export class CivicHandlers {
                         }
 
                         if (districtNumber && stateAbbr) {
-                            // Store district info for boundary loading
-                            if (!window.currentUser) {
-                                window.currentUser = {};
+                            // Store district info for boundary loading via userState (routes to localStorage)
+                            if (window.userState && window.currentUser) {
+                                window.userState.update({ district: districtNumber, state: stateAbbr });
                             }
-                            window.currentUser.district = districtNumber;
-                            window.currentUser.state = stateAbbr;
 
-                            console.log(`District info extracted: ${window.currentUser.state}-${window.currentUser.district}`);
+                            console.log(`District info extracted: ${stateAbbr}-${districtNumber}`);
 
                             // Load boundary if currently at local zoom
                             if (typeof currentZoomLevel !== 'undefined' && currentZoomLevel === 'local' &&
@@ -419,7 +417,7 @@ export class CivicHandlers {
         }
 
         localStorage.removeItem('authToken'); // Clear any legacy tokens
-        localStorage.removeItem('currentUser');
+        // Note: currentUser localStorage is handled by userState via window.currentUser setter
         window.currentUser = null;
 
         // Reset UI to logged out state

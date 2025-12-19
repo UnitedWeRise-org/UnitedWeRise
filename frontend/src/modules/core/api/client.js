@@ -306,16 +306,33 @@ class APIClient {
     }
 
     /**
-     * Handle unauthorized response
+     * Handle unauthorized response - properly clear ALL auth state systems
      * @private
      */
-    _handleUnauthorized() {
-        // Clear user state and redirect to login
-        if (window.userState) {
-            window.userState.current = null;
+    async _handleUnauthorized() {
+        // Use the unified auth manager for complete logout:
+        // - Clears window.currentUser (via getter/setter enforcement)
+        // - Clears localStorage.currentUser (via userState._saveToStorage)
+        // - Clears userState.current
+        // - Clears httpOnly cookies (via backend logout endpoint)
+        // - Dispatches userLoggedOut event
+        // - Updates UI via session.setUserLoggedOut()
+        if (window.unifiedAuthManager) {
+            try {
+                await window.unifiedAuthManager.logout();
+            } catch (error) {
+                console.error('❌ Unified logout failed, falling back to userState.clear():', error);
+                // Fallback to clearing userState directly
+                if (window.userState) {
+                    window.userState.clear();
+                }
+            }
+        } else if (window.userState) {
+            // Fallback if unified auth manager not available
+            window.userState.clear();
         }
-        
-        // Dispatch custom event
+
+        // Dispatch custom event for any remaining listeners
         window.dispatchEvent(new CustomEvent('unauthorized'));
     }
 

@@ -280,8 +280,6 @@ function updateNotificationBadge() {
  * @param {Object} notification - The new notification object
  */
 function updateNotificationUI(notification) {
-    console.log('🔔 Updating notification UI with:', notification);
-
     // Add new notification to cache at the beginning (most recent first)
     if (!notificationsCache.find(n => n.id === notification.id)) {
         notificationsCache.unshift(notification);
@@ -361,22 +359,16 @@ function initializeNotifications() {
  * Main function for notification bell click interaction
  */
 function toggleNotifications() {
-    console.log('🔔 toggleNotifications() called');
     const dropdown = document.getElementById('notificationDropdown');
-    console.log('🔔 dropdown element:', dropdown);
-    console.log('🔔 notificationDropdownOpen:', notificationDropdownOpen);
 
     if (!dropdown) {
-        console.log('🔔 No dropdown found, creating...');
         createNotificationDropdown();
         return toggleNotifications();
     }
 
     if (notificationDropdownOpen) {
-        console.log('🔔 Closing notifications');
         closeNotifications();
     } else {
-        console.log('🔔 Opening notifications');
         openNotifications();
     }
 }
@@ -679,7 +671,6 @@ function showNotificationBell() {
     const notificationSection = document.getElementById('notificationSection');
     if (notificationSection) {
         notificationSection.style.display = 'flex';
-        console.log('🔔 Notification bell shown');
     }
 }
 
@@ -695,7 +686,6 @@ function hideNotificationBell() {
     closeNotifications();
     // Clear cache
     notificationsCache = [];
-    console.log('🔔 Notification bell hidden');
 }
 
 // Event delegation for notification actions
@@ -738,13 +728,11 @@ document.addEventListener('click', (e) => {
 
 // Listen for auth state changes to show/hide bell
 window.addEventListener('userLoggedIn', (e) => {
-    console.log('🔔 User logged in - initializing notifications');
     showNotificationBell();
     initializeNotifications();
 });
 
 window.addEventListener('userLoggedOut', () => {
-    console.log('🔔 User logged out - hiding notifications');
     hideNotificationBell();
 });
 
@@ -762,7 +750,6 @@ if (typeof window !== 'undefined') {
 
     // Phase 4D-2 additional global exposure
     window.toggleNotifications = toggleNotifications;
-    console.log('🔔 toggleNotifications exposed to window:', typeof window.toggleNotifications);
     window.openNotifications = openNotifications;
     window.fetchNotifications = fetchNotifications;
     window.markAllNotificationsRead = markAllNotificationsRead;

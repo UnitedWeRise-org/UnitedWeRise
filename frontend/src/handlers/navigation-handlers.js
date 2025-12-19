@@ -186,22 +186,24 @@ class NavigationHandlers {
      * Save feature dismissal preference (localStorage for now, backend when available)
      */
     async saveFeatureDismissal(featureId) {
-        // Update local state
-        if (!window.currentUser) return;
+        // Update local state via userState (routes to localStorage automatically)
+        if (!window.currentUser || !window.userState) return;
 
-        if (!window.currentUser.uiPreferences) {
-            window.currentUser.uiPreferences = {};
-        }
-        if (!window.currentUser.uiPreferences.dismissedModals) {
-            window.currentUser.uiPreferences.dismissedModals = [];
-        }
+        // Build updated uiPreferences with new dismissal
+        const currentPrefs = window.currentUser.uiPreferences || {};
+        const dismissedModals = currentPrefs.dismissedModals || [];
 
-        if (!window.currentUser.uiPreferences.dismissedModals.includes(featureId)) {
-            window.currentUser.uiPreferences.dismissedModals.push(featureId);
+        if (!dismissedModals.includes(featureId)) {
+            dismissedModals.push(featureId);
         }
 
-        // Update localStorage
-        localStorage.setItem('currentUser', JSON.stringify(window.currentUser));
+        // Update via userState (handles localStorage persistence)
+        window.userState.update({
+            uiPreferences: {
+                ...currentPrefs,
+                dismissedModals
+            }
+        });
 
         // Apply tooltip to the element
         this.applyAdminGatingStyles();
@@ -318,9 +320,7 @@ class NavigationHandlers {
     }
 
     handleNavigationClick(event) {
-        console.log('🔔 handleNavigationClick fired, target:', event.target);
         const target = event.target.closest('[data-nav-toggle], [data-nav-action], [data-action]');
-        console.log('🔔 Found target:', target, 'action:', target?.dataset?.action);
         if (!target) return;
 
         // Don't prevent default behavior for file inputs - they need to open file picker
@@ -458,12 +458,10 @@ class NavigationHandlers {
 
             // Notification actions
             case 'toggle-notifications':
-                console.log('🔔 toggle-notifications case hit');
-                console.log('🔔 window.toggleNotifications exists:', typeof window.toggleNotifications === 'function');
                 if (typeof window.toggleNotifications === 'function') {
                     window.toggleNotifications();
                 } else {
-                    console.error('🔔 toggleNotifications function not found on window!');
+                    console.error('toggleNotifications function not found on window');
                 }
                 break;
 
