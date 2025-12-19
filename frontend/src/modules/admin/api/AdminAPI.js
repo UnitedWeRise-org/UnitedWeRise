@@ -837,6 +837,19 @@ class AdminAPI {
         return response.data;
     }
 
+    /**
+     * Get candidate verification details
+     * @param {string} verificationId - Candidate registration ID
+     * @returns {Promise<Object>} Verification details including documents and status
+     */
+    async getCandidateVerificationDetails(verificationId) {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/candidates/${verificationId}`);
+        if (!response.success) {
+            throw new Error(`Failed to fetch candidate verification details: ${response.status}`);
+        }
+        return response;
+    }
+
     async getVerificationQueue(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/candidates/verification`, params);
         if (!response.success) {
@@ -896,6 +909,26 @@ class AdminAPI {
     // ============================================================
 
     /**
+     * Get errors list with stats
+     * @param {Object} params - Query parameters
+     * @param {string} [params.severity='all'] - Filter by severity (all, critical, error, warning)
+     * @param {string} [params.timeframe='24h'] - Timeframe (1h, 24h, 7d)
+     * @returns {Promise<Object>} Errors data with stats
+     */
+    async getErrors(params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.severity) queryParams.append('severity', params.severity);
+        if (params.timeframe) queryParams.append('timeframe', params.timeframe);
+
+        const url = `${this.BACKEND_URL}/api/admin/errors${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+        const response = await this.get(url);
+        if (!response.success) {
+            throw new Error(`Failed to get errors: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
      * Mark errors as resolved
      * @param {Array<string>} errorIds - Array of error IDs to resolve
      * @param {string} [resolution] - Resolution notes
@@ -923,6 +956,49 @@ class AdminAPI {
         const response = await this.post(`${this.BACKEND_URL}/api/admin/errors/report`, params);
         if (!response.success) {
             throw new Error(`Failed to generate error report: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    // ============================================================
+    // CONTENT MANAGEMENT METHODS
+    // ============================================================
+
+    /**
+     * Get AI-flagged content
+     * @param {Object} params - Query parameters
+     * @param {number} [params.page=1] - Page number
+     * @param {number} [params.limit=50] - Results per page
+     * @param {string} [params.flagType] - Filter by flag type
+     * @param {number} [params.minConfidence] - Minimum confidence score
+     * @returns {Promise<Object>} Flagged content with pagination
+     */
+    async getFlaggedContent(params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page.toString());
+        if (params.limit) queryParams.append('limit', params.limit.toString());
+        if (params.flagType) queryParams.append('flagType', params.flagType);
+        if (params.minConfidence) queryParams.append('minConfidence', params.minConfidence.toString());
+        const url = `${this.BACKEND_URL}/api/admin/content/flagged${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+        const response = await this.get(url);
+        if (!response.success) {
+            throw new Error(`Failed to get flagged content: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Resolve a content flag
+     * @param {string} flagId - Flag ID to resolve
+     * @param {string} resolution - Resolution action (dismiss, warn, remove)
+     * @returns {Promise<Object>} Resolution result
+     */
+    async resolveContentFlag(flagId, resolution) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/content/flags/${flagId}/resolve`, {
+            resolution
+        });
+        if (!response.success) {
+            throw new Error(`Failed to resolve content flag: ${response.status}`);
         }
         return response.data;
     }
@@ -956,6 +1032,28 @@ class AdminAPI {
         });
         if (!response.success) {
             throw new Error(`Failed to toggle maintenance mode: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    // ============================================================
+    // ANALYTICS METHODS
+    // ============================================================
+
+    /**
+     * Get comprehensive analytics data
+     * @param {Object} params - Query parameters
+     * @param {number} [params.days=30] - Number of days for analytics (7, 30, 90)
+     * @returns {Promise<Object>} Analytics data including user growth, engagement, civic metrics
+     */
+    async getAnalytics(params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.days) queryParams.append('days', params.days.toString());
+
+        const url = `${this.BACKEND_URL}/api/admin/analytics${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+        const response = await this.get(url);
+        if (!response.success) {
+            throw new Error(`Failed to get analytics: ${response.status}`);
         }
         return response.data;
     }
@@ -1021,6 +1119,25 @@ class AdminAPI {
     // ============================================================
 
     /**
+     * Get combined AI insights data (metrics + analysis + suggestions)
+     * @returns {Promise<Object>} Combined AI insights data
+     */
+    async getAIInsights() {
+        // Fetch metrics, analysis, and suggestions in parallel
+        const [metricsResponse, analysisResponse, suggestionsResponse] = await Promise.all([
+            this.get(`${this.BACKEND_URL}/api/admin/ai-insights/metrics`),
+            this.get(`${this.BACKEND_URL}/api/admin/ai-insights/analysis`),
+            this.get(`${this.BACKEND_URL}/api/admin/ai-insights/suggestions`)
+        ]);
+
+        return {
+            metrics: metricsResponse.success ? metricsResponse.data : null,
+            analysis: analysisResponse.success ? analysisResponse.data : null,
+            suggestions: suggestionsResponse.success ? suggestionsResponse.data : null
+        };
+    }
+
+    /**
      * Get AI system metrics
      * @returns {Promise<Object>} AI metrics including usage and status
      */
@@ -1028,6 +1145,37 @@ class AdminAPI {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/ai-insights/metrics`);
         if (!response.success) {
             throw new Error(`Failed to get AI metrics: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get AI analysis data
+     * @returns {Promise<Object>} AI analysis data
+     */
+    async getAIAnalysis() {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/ai-insights/analysis`);
+        if (!response.success) {
+            throw new Error(`Failed to get AI analysis: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get AI suggestions
+     * @param {Object} params - Filter parameters
+     * @param {string} [params.category='all'] - Category filter
+     * @param {string} [params.status='all'] - Status filter
+     * @returns {Promise<Object>} AI suggestions
+     */
+    async getAISuggestions(params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.category) queryParams.append('category', params.category);
+        if (params.status) queryParams.append('status', params.status);
+        const url = `${this.BACKEND_URL}/api/admin/ai-insights/suggestions${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+        const response = await this.get(url);
+        if (!response.success) {
+            throw new Error(`Failed to get AI suggestions: ${response.status}`);
         }
         return response.data;
     }
@@ -1059,6 +1207,186 @@ class AdminAPI {
             throw new Error(`Failed to generate AI report: ${response.status}`);
         }
         return response.data;
+    }
+
+    // ============================================================
+    // SECURITY METHODS
+    // ============================================================
+
+    /**
+     * Get security events
+     * @param {Object} params - Query parameters
+     * @param {number} [params.page=1] - Page number
+     * @param {number} [params.limit=50] - Results per page
+     * @param {string} [params.eventType] - Filter by event type
+     * @param {number} [params.minRiskScore=0] - Minimum risk score
+     * @param {number} [params.days=7] - Days to look back
+     * @returns {Promise<Object>} Security events with pagination
+     */
+    async getSecurityEvents(params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page.toString());
+        if (params.limit) queryParams.append('limit', params.limit.toString());
+        if (params.eventType) queryParams.append('eventType', params.eventType);
+        if (params.minRiskScore) queryParams.append('minRiskScore', params.minRiskScore.toString());
+        if (params.days) queryParams.append('days', params.days.toString());
+        const url = `${this.BACKEND_URL}/api/admin/security/events${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+        const response = await this.get(url);
+        if (!response.success) {
+            throw new Error(`Failed to get security events: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get security statistics
+     * @param {string} [timeframe='24h'] - Timeframe (24h, 7d, 30d)
+     * @returns {Promise<Object>} Security statistics
+     */
+    async getSecurityStats(timeframe = '24h') {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/security/stats?timeframe=${timeframe}`);
+        if (!response.success) {
+            throw new Error(`Failed to get security stats: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get failed login attempts - uses security events endpoint filtered for login failures
+     * @returns {Promise<Object>} Failed login data
+     */
+    async getFailedLogins() {
+        const response = await this.getSecurityEvents({ eventType: 'LOGIN_FAILURE', days: 7, limit: 100 });
+        return {
+            success: true,
+            failedLogins: response?.events || [],
+            total: response?.total || 0,
+            timeframe: '7 days'
+        };
+    }
+
+    /**
+     * Get suspicious activity - uses security events endpoint filtered for high risk
+     * @returns {Promise<Object>} Suspicious activity data
+     */
+    async getSuspiciousActivity() {
+        const response = await this.getSecurityEvents({ minRiskScore: 50, days: 7, limit: 100 });
+        return {
+            success: true,
+            suspiciousActivity: response?.events || [],
+            total: response?.total || 0,
+            timeframe: '7 days'
+        };
+    }
+
+    /**
+     * Get security metrics - wraps security stats endpoint
+     * @returns {Promise<Object>} Security metrics
+     */
+    async getSecurityMetrics() {
+        const stats = await this.getSecurityStats('24h');
+        return {
+            success: true,
+            metrics: stats || {},
+            timeframe: '24h'
+        };
+    }
+
+    /**
+     * Get blocked IPs (placeholder - full implementation in Phase 3)
+     * @returns {Promise<Object>} Blocked IPs data
+     */
+    async getBlockedIPs() {
+        // TODO: Implement backend endpoint in Phase 3
+        return {
+            success: true,
+            blockedIPs: [],
+            total: 0,
+            note: 'IP blocking feature coming soon'
+        };
+    }
+
+    /**
+     * Block an IP address (placeholder - full implementation in Phase 3)
+     * @param {string} ipAddress - IP to block
+     * @param {Object} params - Block parameters
+     * @returns {Promise<Object>} Block result
+     */
+    async blockIP(ipAddress, params = {}) {
+        // TODO: Implement backend endpoint in Phase 3
+        return {
+            success: false,
+            error: 'IP blocking feature coming soon'
+        };
+    }
+
+    /**
+     * Unblock an IP address (placeholder - full implementation in Phase 3)
+     * @param {string} ipAddress - IP to unblock
+     * @returns {Promise<Object>} Unblock result
+     */
+    async unblockIP(ipAddress) {
+        // TODO: Implement backend endpoint in Phase 3
+        return {
+            success: false,
+            error: 'IP blocking feature coming soon'
+        };
+    }
+
+    /**
+     * Clear all blocked IPs (placeholder - full implementation in Phase 3)
+     * @param {Object} params - Parameters including TOTP token
+     * @returns {Promise<Object>} Clear result
+     */
+    async clearBlockedIPs(params = {}) {
+        // TODO: Implement backend endpoint in Phase 3
+        return {
+            success: false,
+            error: 'IP blocking feature coming soon'
+        };
+    }
+
+    /**
+     * Set login monitoring status (placeholder - full implementation in Phase 3)
+     * @param {boolean} enabled - Enable or disable monitoring
+     * @returns {Promise<Object>} Setting result
+     */
+    async setLoginMonitoring(enabled) {
+        // TODO: Implement backend endpoint in Phase 3
+        return {
+            success: true,
+            enabled,
+            note: 'Login monitoring configuration coming soon'
+        };
+    }
+
+    /**
+     * Dismiss a security alert (placeholder - full implementation in Phase 3)
+     * @param {string} alertId - Alert ID to dismiss
+     * @returns {Promise<Object>} Dismiss result
+     */
+    async dismissSecurityAlert(alertId) {
+        // TODO: Implement backend endpoint in Phase 3
+        return {
+            success: true,
+            alertId,
+            note: 'Alert dismissed (full implementation coming soon)'
+        };
+    }
+
+    /**
+     * Get activity details - uses security events endpoint
+     * @param {string} activityId - Activity ID
+     * @returns {Promise<Object>} Activity details
+     */
+    async getActivityDetails(activityId) {
+        const response = await this.getSecurityEvents({ limit: 1 });
+        // Find the specific event by ID from cached events or return placeholder
+        const event = response?.events?.find(e => e.id === activityId);
+        return {
+            success: true,
+            activity: event || { id: activityId, note: 'Details lookup coming soon' }
+        };
     }
 
     // ============================================================
