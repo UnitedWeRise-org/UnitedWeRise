@@ -450,6 +450,12 @@ class UnifiedAuthManager {
      * Logout and clear ALL systems
      */
     async logout() {
+        // Prevent re-entry during logout (fixes infinite loop when logout 401s)
+        if (this._isLoggingOut) {
+            console.log('⏸️ Logout already in progress, skipping');
+            return { success: true };
+        }
+
         await adminDebugLog('UnifiedAuthManager', 'Unified logout starting...');
 
         // Stop proactive refresh timer
