@@ -424,7 +424,7 @@ export class SecurityService {
   static async cleanupOldEvents(daysToKeep: number = 90): Promise<number> {
     try {
       const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
-      
+
       const result = await prisma.securityEvent.deleteMany({
         where: {
           createdAt: { lt: cutoffDate },
@@ -438,5 +438,233 @@ export class SecurityService {
       logger.error({ error }, 'Failed to cleanup old security events');
       return 0;
     }
+  }
+
+  // ============================================================
+  // IP BLOCKING METHODS
+  // ============================================================
+
+  /**
+   * Check if an IP address is blocked
+   * @param ipAddress - IP address to check (IPv4 or IPv6)
+   * @returns true if IP is blocked and block is active/not expired
+   */
+  static async isIPBlocked(ipAddress: string): Promise<boolean> {
+    try {
+      const blocked = await prisma.blockedIP.findFirst({
+        where: {
+          ipAddress,
+          isActive: true,
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: new Date() } }
+          ]
+        }
+      });
+      return !!blocked;
+    } catch (error) {
+      logger.error({ error, ipAddress }, 'Failed to check IP block status');
+      return false; // Fail open for safety - don't block legitimate users on error
+    }
+  }
+
+  /**
+   * Block an IP address (manual admin action)
+   * @param params - Block parameters including IP, reason, and admin ID
+   * @returns Success status with block ID or error message
+   */
+  static async blockIP(params: {
+    ipAddress: string;
+    reason: string;
+    blockedById: string;
+    expiresAt?: Date;
+    metadata?: any;
+  }): Promise<{ success: boolean; blockId?: string; error?: string }> {
+    try {
+      const { ipAddress, reason, blockedById, expiresAt, metadata } = params;
+
+      // Validate IP format
+      if (!this.isValidIPAddress(ipAddress)) {
+        return { success: false, error: 'Invalid IP address format' };
+      }
+
+      // Validate reason length
+      if (!reason || reason.trim().length < 5) {
+        return { success: false, error: 'Reason must be at least 5 characters' };
+      }
+
+      // Check if already blocked
+      const existing = await prisma.blockedIP.findUnique({
+        where: { ipAddress }
+      });
+
+      if (existing?.isActive) {
+        return { success: false, error: 'IP address is already blocked' };
+      }
+
+      // Create or update block (upsert handles reactivating previously blocked IPs)
+      const block = await prisma.blockedIP.upsert({
+        where: { ipAddress },
+        create: {
+          ipAddress,
+          reason: reason.trim(),
+          blockedById,
+          expiresAt,
+          metadata,
+          isActive: true
+        },
+        update: {
+          reason: reason.trim(),
+          blockedById,
+          blockedAt: new Date(),
+          expiresAt,
+          metadata,
+          isActive: true
+        }
+      });
+
+      // Log security event for audit trail
+      await this.logEvent({
+        userId: blockedById,
+        eventType: 'IP_BLOCKED',
+        ipAddress,
+        details: { reason, expiresAt, blockId: block.id },
+        riskScore: 0 // Admin action, not a risk event
+      });
+
+      logger.info({ ipAddress, blockedById, blockId: block.id }, 'IP address blocked');
+
+      return { success: true, blockId: block.id };
+    } catch (error) {
+      logger.error({ error, ipAddress: params.ipAddress }, 'Failed to block IP');
+      return { success: false, error: 'Failed to block IP address' };
+    }
+  }
+
+  /**
+   * Unblock an IP address
+   * @param ipAddress - IP address to unblock
+   * @param unblockById - Admin user ID performing the unblock
+   * @returns Success status or error message
+   */
+  static async unblockIP(ipAddress: string, unblockById: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const block = await prisma.blockedIP.findUnique({
+        where: { ipAddress }
+      });
+
+      if (!block || !block.isActive) {
+        return { success: false, error: 'IP address is not blocked' };
+      }
+
+      await prisma.blockedIP.update({
+        where: { ipAddress },
+        data: { isActive: false }
+      });
+
+      // Log security event for audit trail
+      await this.logEvent({
+        userId: unblockById,
+        eventType: 'IP_UNBLOCKED',
+        ipAddress,
+        details: { originalBlockId: block.id, originalReason: block.reason },
+        riskScore: 0
+      });
+
+      logger.info({ ipAddress, unblockById }, 'IP address unblocked');
+
+      return { success: true };
+    } catch (error) {
+      logger.error({ error, ipAddress }, 'Failed to unblock IP');
+      return { success: false, error: 'Failed to unblock IP address' };
+    }
+  }
+
+  /**
+   * Get list of blocked IPs for admin dashboard
+   * @param options - Filtering options
+   * @returns Array of blocked IP records with admin details
+   */
+  static async getBlockedIPs(options: {
+    includeExpired?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<any[]> {
+    try {
+      const { includeExpired = false, limit = 100, offset = 0 } = options;
+
+      const where: any = {};
+
+      if (!includeExpired) {
+        where.isActive = true;
+        where.OR = [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ];
+      }
+
+      return await prisma.blockedIP.findMany({
+        where,
+        include: {
+          blockedBy: {
+            select: {
+              id: true,
+              username: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { blockedAt: 'desc' },
+        take: limit,
+        skip: offset
+      });
+    } catch (error) {
+      logger.error({ error }, 'Failed to get blocked IPs');
+      return [];
+    }
+  }
+
+  /**
+   * Clear all blocked IPs (super-admin only action)
+   * @param adminId - Super admin user ID performing the action
+   * @returns Success status with count of cleared blocks
+   */
+  static async clearAllBlockedIPs(adminId: string): Promise<{ success: boolean; clearedCount: number; error?: string }> {
+    try {
+      const result = await prisma.blockedIP.updateMany({
+        where: { isActive: true },
+        data: { isActive: false }
+      });
+
+      // Log security event for audit trail
+      await this.logEvent({
+        userId: adminId,
+        eventType: 'ALL_IPS_UNBLOCKED',
+        details: { clearedCount: result.count },
+        riskScore: 0
+      });
+
+      logger.warn({ adminId, clearedCount: result.count }, 'All blocked IPs cleared');
+
+      return { success: true, clearedCount: result.count };
+    } catch (error) {
+      logger.error({ error }, 'Failed to clear blocked IPs');
+      return { success: false, clearedCount: 0, error: 'Failed to clear blocked IPs' };
+    }
+  }
+
+  /**
+   * Validate IP address format (IPv4 or IPv6)
+   * @param ip - IP address string to validate
+   * @returns true if valid IPv4 or IPv6 format
+   */
+  static isValidIPAddress(ip: string): boolean {
+    // IPv4 pattern
+    const ipv4Regex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
+    // Simplified IPv6 pattern (full and compressed formats)
+    const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))$/;
+
+    return ipv4Regex.test(ip) || ipv6Regex.test(ip);
   }
 }

@@ -1560,7 +1560,7 @@ router.get('/security/stats', requireStagingAuth, requireAdmin, async (req: Auth
   try {
     const timeframe = (req.query.timeframe as '24h' | '7d' | '30d') || '24h';
     const stats = await SecurityService.getSecurityStats(timeframe);
-    
+
     res.json(stats);
   } catch (error) {
     logger.error({
@@ -1573,6 +1573,312 @@ router.get('/security/stats', requireStagingAuth, requireAdmin, async (req: Auth
     res.status(500).json({ error: 'Failed to retrieve security statistics' });
   }
 });
+
+// ============================================================
+// IP BLOCKING ENDPOINTS
+// ============================================================
+
+/**
+ * @swagger
+ * /api/admin/security/blocked-ips:
+ *   get:
+ *     tags: [Admin - Security]
+ *     summary: Get list of blocked IP addresses
+ *     description: Returns all currently blocked IPs with block details and admin info
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: includeExpired
+ *         schema:
+ *           type: boolean
+ *         description: Include expired/inactive blocks (default false)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Max results (default 100, max 500)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: List of blocked IPs
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized (admin required)
+ */
+router.get('/security/blocked-ips', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const includeExpired = req.query.includeExpired === 'true';
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const blockedIPs = await SecurityService.getBlockedIPs({
+      includeExpired,
+      limit,
+      offset
+    });
+
+    const total = await prisma.blockedIP.count({
+      where: includeExpired ? {} : { isActive: true }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        blockedIPs,
+        pagination: { limit, offset, total }
+      }
+    });
+  } catch (error) {
+    logger.error({
+      error,
+      endpoint: '/api/admin/security/blocked-ips',
+      action: 'get_blocked_ips_error',
+      adminId: req.user?.id
+    }, 'Failed to get blocked IPs');
+    res.status(500).json({ success: false, error: 'Failed to retrieve blocked IPs' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/security/block-ip:
+ *   post:
+ *     tags: [Admin - Security]
+ *     summary: Block an IP address (super-admin only)
+ *     description: Manually block an IP address from accessing the platform
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ipAddress
+ *               - reason
+ *             properties:
+ *               ipAddress:
+ *                 type: string
+ *                 description: IPv4 or IPv6 address to block
+ *               reason:
+ *                 type: string
+ *                 minLength: 5
+ *                 maxLength: 500
+ *                 description: Reason for blocking
+ *               expiresAt:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Optional expiration (null = permanent)
+ *     responses:
+ *       200:
+ *         description: IP blocked successfully
+ *       400:
+ *         description: Invalid IP or reason
+ *       403:
+ *         description: Super admin required
+ */
+router.post('/security/block-ip',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('ipAddress').isString().trim().notEmpty().withMessage('IP address is required'),
+    body('reason').isString().trim().isLength({ min: 5, max: 500 }).withMessage('Reason must be 5-500 characters'),
+    body('expiresAt').optional().isISO8601().withMessage('Invalid expiration date format')
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      // Validate request
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const { ipAddress, reason, expiresAt } = req.body;
+      const adminUser = req.user!;
+
+      // Require super admin for IP blocking
+      if (!adminUser.isSuperAdmin) {
+        return res.status(403).json({
+          success: false,
+          error: 'Super admin access required for IP blocking'
+        });
+      }
+
+      const result = await SecurityService.blockIP({
+        ipAddress,
+        reason,
+        blockedById: adminUser.id,
+        expiresAt: expiresAt ? new Date(expiresAt) : undefined
+      });
+
+      if (result.success) {
+        // Create audit log
+        await AuditService.log({
+          action: 'IP_BLOCKED',
+          adminId: adminUser.id,
+          details: { ipAddress, reason, expiresAt },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+
+        res.json({ success: true, data: { blockId: result.blockId } });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      logger.error({
+        error,
+        endpoint: '/api/admin/security/block-ip',
+        action: 'block_ip_error',
+        adminId: req.user?.id
+      }, 'Failed to block IP');
+      res.status(500).json({ success: false, error: 'Failed to block IP address' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/security/unblock-ip:
+ *   delete:
+ *     tags: [Admin - Security]
+ *     summary: Unblock an IP address (super-admin only)
+ *     description: Remove an IP address from the block list
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ipAddress
+ *             properties:
+ *               ipAddress:
+ *                 type: string
+ *                 description: IP address to unblock
+ *     responses:
+ *       200:
+ *         description: IP unblocked successfully
+ *       400:
+ *         description: IP not found or not blocked
+ *       403:
+ *         description: Super admin required
+ */
+router.delete('/security/unblock-ip',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('ipAddress').isString().trim().notEmpty().withMessage('IP address is required')
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const { ipAddress } = req.body;
+      const adminUser = req.user!;
+
+      // Require super admin
+      if (!adminUser.isSuperAdmin) {
+        return res.status(403).json({
+          success: false,
+          error: 'Super admin access required for IP unblocking'
+        });
+      }
+
+      const result = await SecurityService.unblockIP(ipAddress, adminUser.id);
+
+      if (result.success) {
+        await AuditService.log({
+          action: 'IP_UNBLOCKED',
+          adminId: adminUser.id,
+          details: { ipAddress },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+
+        res.json({ success: true });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      logger.error({
+        error,
+        endpoint: '/api/admin/security/unblock-ip',
+        action: 'unblock_ip_error',
+        adminId: req.user?.id
+      }, 'Failed to unblock IP');
+      res.status(500).json({ success: false, error: 'Failed to unblock IP address' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/security/clear-blocked-ips:
+ *   post:
+ *     tags: [Admin - Security]
+ *     summary: Clear all blocked IPs (super-admin only)
+ *     description: Remove all IP addresses from the block list
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: All IPs unblocked successfully
+ *       403:
+ *         description: Super admin required
+ */
+router.post('/security/clear-blocked-ips',
+  requireStagingAuth,
+  requireAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      const adminUser = req.user!;
+
+      if (!adminUser.isSuperAdmin) {
+        return res.status(403).json({
+          success: false,
+          error: 'Super admin access required to clear all blocked IPs'
+        });
+      }
+
+      const result = await SecurityService.clearAllBlockedIPs(adminUser.id);
+
+      if (result.success) {
+        await AuditService.log({
+          action: 'ALL_IPS_UNBLOCKED',
+          adminId: adminUser.id,
+          details: { clearedCount: result.clearedCount },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+
+        res.json({ success: true, data: { clearedCount: result.clearedCount } });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      logger.error({
+        error,
+        endpoint: '/api/admin/security/clear-blocked-ips',
+        action: 'clear_blocked_ips_error',
+        adminId: req.user?.id
+      }, 'Failed to clear blocked IPs');
+      res.status(500).json({ success: false, error: 'Failed to clear blocked IPs' });
+    }
+  }
+);
 
 // Enhanced Dashboard with Security Metrics
 router.get('/dashboard/enhanced', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
@@ -6145,5 +6451,186 @@ router.get('/audit-logs/stats',
     }
   }
 );
+
+// ============================================================
+// PAYMENTS ADMIN ENDPOINTS
+// ============================================================
+
+/**
+ * @swagger
+ * /api/admin/payments:
+ *   get:
+ *     tags: [Admin - Payments]
+ *     summary: Get payments list for admin dashboard
+ *     description: Retrieves paginated payments with filtering options. View-only - refunds are processed in Stripe dashboard.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Results per page (default 50, max 100)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED, REFUNDED, PARTIAL_REFUNDED]
+ *         description: Filter by payment status
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [DONATION, FEE]
+ *         description: Filter by payment type
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by user email, username, or Stripe ID
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter payments from this date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter payments until this date
+ *     responses:
+ *       200:
+ *         description: Paginated payments list with summary statistics
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized (admin required)
+ */
+router.get('/payments', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const status = req.query.status as string;
+    const type = req.query.type as string;
+    const search = req.query.search as string;
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+    const offset = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {};
+
+    if (status) where.status = status;
+    if (type) where.type = type;
+
+    if (startDate && endDate) {
+      where.createdAt = { gte: startDate, lte: endDate };
+    } else if (startDate) {
+      where.createdAt = { gte: startDate };
+    } else if (endDate) {
+      where.createdAt = { lte: endDate };
+    }
+
+    if (search) {
+      where.OR = [
+        { stripePaymentIntentId: { contains: search, mode: 'insensitive' } },
+        { stripeChargeId: { contains: search, mode: 'insensitive' } },
+        { receiptNumber: { contains: search, mode: 'insensitive' } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { user: { username: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    // Fetch payments with related data
+    const [payments, total] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              firstName: true,
+              lastName: true
+            }
+          },
+          refunds: {
+            select: {
+              id: true,
+              amount: true,
+              status: true,
+              reason: true,
+              createdAt: true
+            }
+          }
+          // Note: campaignId exists but no relation defined in schema
+          // Campaign info would require separate lookup if needed
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.payment.count({ where })
+    ]);
+
+    // Get summary statistics
+    const [totalCompleted, statusCounts] = await Promise.all([
+      prisma.payment.aggregate({
+        where: { status: 'COMPLETED' },
+        _sum: { amount: true }
+      }),
+      prisma.payment.groupBy({
+        by: ['status'],
+        _count: true
+      })
+    ]);
+
+    // Format response
+    res.json({
+      success: true,
+      data: {
+        payments: payments.map(p => ({
+          ...p,
+          // Format amount from cents to dollars for display
+          amountFormatted: `$${(p.amount / 100).toFixed(2)}`,
+          // Include Stripe dashboard link
+          stripeLink: p.stripePaymentIntentId
+            ? `https://dashboard.stripe.com/payments/${p.stripePaymentIntentId}`
+            : null
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        },
+        summary: {
+          totalCompletedCents: totalCompleted._sum.amount || 0,
+          totalCompletedFormatted: `$${((totalCompleted._sum.amount || 0) / 100).toFixed(2)}`,
+          byStatus: statusCounts.reduce((acc, item) => {
+            acc[item.status] = item._count;
+            return acc;
+          }, {} as Record<string, number>)
+        }
+      }
+    });
+  } catch (error) {
+    logger.error({
+      error,
+      endpoint: '/api/admin/payments',
+      action: 'payments_list_error',
+      adminId: req.user?.id
+    }, 'Failed to retrieve payments');
+    res.status(500).json({ success: false, error: 'Failed to retrieve payments' });
+  }
+});
 
 export default router;

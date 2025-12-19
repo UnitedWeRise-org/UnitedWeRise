@@ -260,6 +260,8 @@ model User {
   reputationEvents            ReputationEvent[]
   /// Security events logged for this user (NOT cascaded - retained for audit)
   securityEvents              SecurityEvent[]
+  /// IPs blocked by this admin user (NOT cascaded - retained for security audit)
+  blockedIPs                  BlockedIP[]               @relation("BlockedIPAdmin")
   /// Post shares by this user (CASCADE: deletes shares)
   shares                      Share[]
   /// Stripe customer record for this user (1:1, NOT cascaded - financial data retained)
@@ -1857,6 +1859,37 @@ model SecurityEvent {
   @@index([createdAt])
   @@index([ipAddress])
   @@index([riskScore])
+}
+
+/// Blocked IP addresses for security enforcement
+/// @description Manually blocked IPs by admins - prevents access from malicious IP addresses.
+/// Supports temporary blocks (via expiresAt) or permanent blocks (expiresAt = null).
+/// Includes audit trail via blockedBy relation and metadata for additional context.
+model BlockedIP {
+  /// Unique identifier for the block record
+  id          String    @id @default(cuid())
+  /// The IP address that is blocked (IPv4 or IPv6, unique constraint)
+  ipAddress   String    @unique
+  /// Human-readable reason for the block (required, min 5 chars recommended)
+  reason      String
+  /// Admin user who created the block (foreign key to User)
+  blockedById String
+  /// When the block was created
+  blockedAt   DateTime  @default(now())
+  /// Optional expiration date (null = permanent block)
+  expiresAt   DateTime?
+  /// Whether this block is currently active (soft delete pattern)
+  isActive    Boolean   @default(true)
+  /// Additional metadata (failed login count, geographic info, security event links)
+  metadata    Json?
+
+  /// Relation to admin who created the block
+  blockedBy   User      @relation("BlockedIPAdmin", fields: [blockedById], references: [id])
+
+  @@index([ipAddress])
+  @@index([blockedById])
+  @@index([isActive])
+  @@index([expiresAt])
 }
 
 model ReputationEvent {
