@@ -8,6 +8,39 @@
 
 ---
 
+## [2025-12-19] - Admin Dashboard Infrastructure
+
+### Added
+
+**Payments Admin Section (View-Only)**
+- `GET /api/admin/payments` endpoint with pagination, filtering (status, type), and search
+- `PaymentsController.js` frontend controller with table rendering and status badges
+- Summary stats (total completed, count by status)
+- Direct links to Stripe Dashboard for payment details
+- Refunds now processed via Stripe Dashboard (AdminAPI.refundPayment deprecated)
+
+**IP Blocking Infrastructure**
+- `BlockedIP` database model for manual IP blocking by admins
+- SecurityService methods: `blockIP`, `unblockIP`, `getBlockedIPs`, `clearAllBlockedIPs`, `isIPBlocked`
+- Admin endpoints: `GET/POST/DELETE /api/admin/security/blocked-ips`
+- Support for temporary (expiring) and permanent blocks
+- Full audit trail via `blockedBy` relation
+
+### Changed
+
+**SystemController.js Fixes**
+- Added `isSuperAdmin()` helper for permission checks
+- Configuration updates and maintenance mode now require SuperAdmin privileges
+- Fixed API wrapper pattern: uses `AdminAPI.put()` instead of direct `.call()`
+- Response handling now checks `response.success` instead of `response.ok`
+
+### Security
+- IP blocking endpoints require SuperAdmin + TOTP verification
+- Maintenance mode restricted to SuperAdmin only
+- All IP blocking actions logged via SecurityService audit trail
+
+---
+
 ## [Unreleased] - 2025-12-17
 
 ### Major Dependency Updates
