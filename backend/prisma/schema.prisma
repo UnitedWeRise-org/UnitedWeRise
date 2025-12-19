@@ -232,6 +232,8 @@ model User {
   createdMOTDs                MessageOfTheDay[]         @relation("CreatedMOTDs")
   /// Moderation actions performed by this moderator user (CASCADE)
   moderationLogs              ModerationLog[]           @relation("ModerationLogs")
+  /// Admin audit log entries for actions performed by this admin user (SetNull)
+  auditLogs                   AuditLog[]                @relation("AdminAuditLogs")
   /// Notifications received by this user (CASCADE: deletes notifications)
   receivedNotifications       Notification[]            @relation("NotificationReceiver")
   /// Notifications sent by this user (system-generated or direct)
@@ -3854,5 +3856,39 @@ model ApplicationError {
   @@index([errorType])
   @@index([userId])
   @@index([resolved])
+  @@index([createdAt])
+}
+
+/// Admin audit log for tracking all administrative actions
+/// @description Comprehensive logging of all admin dashboard operations.
+/// Used for accountability, compliance, and troubleshooting.
+/// Retained indefinitely for audit purposes.
+model AuditLog {
+  /// Unique identifier for this audit record
+  id          String   @id @default(cuid())
+  /// Admin action performed (e.g., "USER_SUSPENDED", "REPORT_RESOLVED", "CONFIG_UPDATED")
+  action      String
+  /// Admin who performed the action
+  adminId     String
+  /// Type of target entity (e.g., "user", "post", "report", "config")
+  targetType  String?
+  /// ID of the target entity
+  targetId    String?
+  /// Additional details about the action (JSON object with context)
+  details     Json?
+  /// IP address of the admin at time of action
+  ipAddress   String?
+  /// User agent string of the admin's browser
+  userAgent   String?
+  /// Timestamp of the action
+  createdAt   DateTime @default(now())
+
+  /// Relationship to User (admin who performed the action)
+  /// SetNull: keeps audit record if admin account deleted
+  admin       User     @relation("AdminAuditLogs", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType, targetId])
   @@index([createdAt])
 }

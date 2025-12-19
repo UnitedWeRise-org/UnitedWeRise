@@ -678,6 +678,149 @@ class AdminAPI {
         return response.data;
     }
 
+    /**
+     * Get filtered reports queue
+     * @param {Object} params - Filter parameters
+     * @param {string} [params.status] - Filter by status (all, PENDING, IN_REVIEW, RESOLVED, DISMISSED)
+     * @param {string} [params.type] - Filter by report type/reason
+     * @param {string} [params.priority] - Filter by priority (all, LOW, MEDIUM, HIGH, URGENT)
+     * @param {string} [params.dateRange] - Filter by date range (1, 7, 30, 90, all)
+     * @param {number} [params.limit=50] - Number of reports to return
+     * @param {number} [params.offset=0] - Offset for pagination
+     * @returns {Promise<Object>} Reports queue with pagination
+     */
+    async getReportsQueue(params = {}) {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/reports/queue`, params);
+        if (!response.success) {
+            throw new Error(`Failed to fetch reports queue: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get reports analytics and statistics
+     * @param {string} [dateRange='30'] - Date range for analytics (1, 7, 30, 90, all)
+     * @returns {Promise<Object>} Reports analytics including counts, trends, and breakdowns
+     */
+    async getReportsAnalytics(dateRange = '30') {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/reports/analytics`, { dateRange });
+        if (!response.success) {
+            throw new Error(`Failed to fetch reports analytics: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get available report types/reasons
+     * @returns {Promise<Array>} List of report types with labels and descriptions
+     */
+    async getReportTypes() {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/reports/types`);
+        if (!response.success) {
+            throw new Error(`Failed to fetch report types: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get full details for a specific report
+     * @param {string} reportId - Report ID
+     * @returns {Promise<Object>} Report details including target content and related reports
+     */
+    async getReportDetails(reportId) {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/reports/${reportId}/details`);
+        if (!response.success) {
+            throw new Error(`Failed to fetch report details: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get action history for a report
+     * @param {string} reportId - Report ID
+     * @returns {Promise<Array>} Moderation action history
+     */
+    async getReportHistory(reportId) {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/reports/${reportId}/history`);
+        if (!response.success) {
+            throw new Error(`Failed to fetch report history: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Take action on a report
+     * @param {string} reportId - Report ID
+     * @param {string} action - Action to take (dismiss, warn, suspend, delete, escalate, resolve)
+     * @param {Object} data - Additional data
+     * @param {string} [data.notes] - Moderator notes
+     * @returns {Promise<Object>} Action result
+     */
+    async takeReportAction(reportId, action, data = {}) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/reports/${reportId}/action`, {
+            action,
+            notes: data.notes
+        });
+        if (!response.success) {
+            throw new Error(`Failed to take report action: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Perform bulk action on multiple reports
+     * @param {Array<string>} reportIds - Array of report IDs
+     * @param {string} action - Action to take (dismiss, warn, suspend, escalate, resolve)
+     * @param {Object} data - Additional data
+     * @param {string} [data.notes] - Moderator notes
+     * @returns {Promise<Object>} Bulk action result
+     */
+    async bulkReportAction(reportIds, action, data = {}) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/reports/bulk-action`, {
+            reportIds,
+            action,
+            notes: data.notes
+        });
+        if (!response.success) {
+            throw new Error(`Failed to perform bulk action: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Export reports as CSV or JSON
+     * @param {Object} params - Export parameters
+     * @param {string} [params.status='all'] - Filter by status
+     * @param {string} [params.type='all'] - Filter by type
+     * @param {string} [params.dateRange='30'] - Date range
+     * @param {string} [params.format='csv'] - Export format (csv or json)
+     * @returns {Promise<Blob|Object>} CSV blob or JSON data
+     */
+    async exportReports(params = {}) {
+        const { status = 'all', type = 'all', dateRange = '30', format = 'csv' } = params;
+
+        if (format === 'json') {
+            const response = await this.get(`${this.BACKEND_URL}/api/admin/reports/export`, { ...params, format: 'json' });
+            if (!response.success) {
+                throw new Error(`Failed to export reports: ${response.status}`);
+            }
+            return response.data;
+        }
+
+        // For CSV, use direct fetch to get the blob
+        const queryParams = new URLSearchParams({ status, type, dateRange, format: 'csv' });
+        const response = await fetch(`${this.BACKEND_URL}/api/admin/reports/export?${queryParams}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to export reports: ${response.status}`);
+        }
+
+        return response.blob();
+    }
+
     async getCandidateProfiles(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/candidates/profiles`, params);
         if (!response.success) {
@@ -714,29 +857,283 @@ class AdminAPI {
 
     /**
      * Get audit logs for admin actions
-     * @stub Backend endpoint not yet implemented
-     * @todo Implement backend endpoint: GET /api/admin/audit-logs
-     * @param {Object} params - Query parameters (page, limit, action, userId, dateRange)
-     * @returns {Promise<Object>} Mock data structure until backend ready
+     * @param {Object} params - Query parameters
+     * @param {string} [params.adminId] - Filter by admin ID
+     * @param {string} [params.action] - Filter by action type
+     * @param {string} [params.targetType] - Filter by target type
+     * @param {string} [params.targetId] - Filter by target ID
+     * @param {string} [params.startDate] - Filter logs after this date (ISO 8601)
+     * @param {string} [params.endDate] - Filter logs before this date (ISO 8601)
+     * @param {number} [params.limit=50] - Number of logs to return (max 100)
+     * @param {number} [params.offset=0] - Offset for pagination
+     * @returns {Promise<Object>} Audit logs with pagination
      */
     async getAuditLogs(params = {}) {
-        await adminDebugLog('AdminAPI', 'STUB: getAuditLogs - awaiting backend implementation');
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/audit-logs`, params);
+        if (!response.success) {
+            throw new Error(`Failed to fetch audit logs: ${response.status}`);
+        }
+        return response.data;
+    }
 
-        // Return mock data for missing endpoint to prevent 404 network logs
-        return {
-            logs: [],
-            total: 0,
-            pagination: {
-                page: parseInt(params.page) || 1,
-                limit: parseInt(params.limit) || 50,
-                total: 0,
-                pages: 0
-            },
-            filters: {
-                action: params.action || 'all',
-                userId: params.userId || 'all',
-                dateRange: params.dateRange || 'all'
+    /**
+     * Get audit log statistics for a time period
+     * @param {Object} params - Query parameters
+     * @param {string} [params.startDate] - Start date for statistics (ISO 8601)
+     * @param {string} [params.endDate] - End date for statistics (ISO 8601)
+     * @returns {Promise<Object>} Audit statistics including action counts and top admins
+     */
+    async getAuditLogStats(params = {}) {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/audit-logs/stats`, params);
+        if (!response.success) {
+            throw new Error(`Failed to fetch audit log stats: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    // ============================================================
+    // ERROR TRACKING METHODS
+    // ============================================================
+
+    /**
+     * Mark errors as resolved
+     * @param {Array<string>} errorIds - Array of error IDs to resolve
+     * @param {string} [resolution] - Resolution notes
+     * @returns {Promise<Object>} Resolution result
+     */
+    async resolveErrors(errorIds, resolution) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/errors/resolve`, {
+            errorIds,
+            resolution
+        });
+        if (!response.success) {
+            throw new Error(`Failed to resolve errors: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Generate error analysis report
+     * @param {Object} params - Report parameters
+     * @param {string} [params.timeframe='7d'] - Timeframe (1d, 7d, 30d, 90d)
+     * @param {string} [params.service] - Filter by service name
+     * @returns {Promise<Object>} Error analysis report
+     */
+    async generateErrorReport(params = {}) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/errors/report`, params);
+        if (!response.success) {
+            throw new Error(`Failed to generate error report: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    // ============================================================
+    // SYSTEM CONFIGURATION METHODS
+    // ============================================================
+
+    /**
+     * Get system configuration
+     * @returns {Promise<Object>} System configuration settings
+     */
+    async getSystemConfig() {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/system/config`);
+        if (!response.success) {
+            throw new Error(`Failed to get system config: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Toggle maintenance mode (super-admin only)
+     * @param {boolean} enabled - Enable or disable maintenance mode
+     * @param {string} [message] - Maintenance message
+     * @returns {Promise<Object>} Maintenance mode result
+     */
+    async toggleMaintenanceMode(enabled, message) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/system/maintenance`, {
+            enabled,
+            message
+        });
+        if (!response.success) {
+            throw new Error(`Failed to toggle maintenance mode: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    // ============================================================
+    // ANALYTICS EXPORT METHODS
+    // ============================================================
+
+    /**
+     * Generate custom analytics report
+     * @param {Object} params - Report parameters
+     * @param {Array<string>} params.metrics - Metrics to include (users, posts, reports, engagement)
+     * @param {string} [params.startDate] - Start date (ISO 8601)
+     * @param {string} [params.endDate] - End date (ISO 8601)
+     * @param {string} [params.groupBy='day'] - Grouping (day, week, month)
+     * @returns {Promise<Object>} Custom analytics report
+     */
+    async generateCustomReport(params) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/analytics/custom-report`, params);
+        if (!response.success) {
+            throw new Error(`Failed to generate custom report: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Export analytics data
+     * @param {Object} params - Export parameters
+     * @param {string} params.dataType - Data type (users, posts, reports, engagement)
+     * @param {string} [params.format='csv'] - Export format (csv, json)
+     * @param {string} [params.startDate] - Start date (ISO 8601)
+     * @param {string} [params.endDate] - End date (ISO 8601)
+     * @returns {Promise<Blob|Object>} Export data
+     */
+    async exportAnalytics(params) {
+        const { dataType, format = 'csv', startDate, endDate } = params;
+
+        if (format === 'json') {
+            const response = await this.post(`${this.BACKEND_URL}/api/admin/analytics/export`, params);
+            if (!response.success) {
+                throw new Error(`Failed to export analytics: ${response.status}`);
             }
+            return response.data;
+        }
+
+        // For CSV, use direct fetch
+        const response = await fetch(`${this.BACKEND_URL}/api/admin/analytics/export`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ dataType, format: 'csv', startDate, endDate })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to export analytics: ${response.status}`);
+        }
+
+        return response.blob();
+    }
+
+    // ============================================================
+    // AI INSIGHTS METHODS
+    // ============================================================
+
+    /**
+     * Get AI system metrics
+     * @returns {Promise<Object>} AI metrics including usage and status
+     */
+    async getAIMetrics() {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/ai-insights/metrics`);
+        if (!response.success) {
+            throw new Error(`Failed to get AI metrics: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Trigger AI analysis
+     * @param {Object} params - Analysis parameters
+     * @param {string} params.analysisType - Type (content_moderation, trending_topics, user_engagement, sentiment)
+     * @param {string} [params.scope='recent'] - Scope (recent, all)
+     * @returns {Promise<Object>} Analysis job info
+     */
+    async runAIAnalysis(params) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/ai-insights/run-analysis`, params);
+        if (!response.success) {
+            throw new Error(`Failed to run AI analysis: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Generate AI insights report
+     * @param {Object} params - Report parameters
+     * @param {string} params.reportType - Type (weekly_summary, content_health, engagement_analysis, moderation_review)
+     * @returns {Promise<Object>} AI insights report
+     */
+    async generateAIReport(params) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/ai-insights/generate-report`, params);
+        if (!response.success) {
+            throw new Error(`Failed to generate AI report: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    // ============================================================
+    // EXTERNAL CANDIDATES PLACEHOLDER METHODS
+    // ============================================================
+
+    /**
+     * Get vote tracking data (Coming Soon)
+     * @returns {Promise<Object>} Placeholder data
+     */
+    async getVoteTrackingData() {
+        return {
+            comingSoon: true,
+            feature: 'Vote Tracking',
+            message: 'Vote tracking integration is coming soon. This will provide real-time election results and voting pattern analysis.'
+        };
+    }
+
+    /**
+     * Get campaign finance data (Coming Soon)
+     * @returns {Promise<Object>} Placeholder data
+     */
+    async getCampaignFinanceData() {
+        return {
+            comingSoon: true,
+            feature: 'Campaign Finance',
+            message: 'Campaign finance data integration is coming soon. This will provide FEC filing data and contribution tracking.'
+        };
+    }
+
+    /**
+     * Get news tracking data (Coming Soon)
+     * @returns {Promise<Object>} Placeholder data
+     */
+    async getNewsTrackingData() {
+        return {
+            comingSoon: true,
+            feature: 'News Tracking',
+            message: 'Political news tracking is coming soon. This will aggregate and analyze news coverage of candidates.'
+        };
+    }
+
+    /**
+     * Get polling data (Coming Soon)
+     * @returns {Promise<Object>} Placeholder data
+     */
+    async getPollingData() {
+        return {
+            comingSoon: true,
+            feature: 'Polling Data',
+            message: 'Polling data integration is coming soon. This will provide aggregated polling data and trend analysis.'
+        };
+    }
+
+    /**
+     * Get data source health (Coming Soon)
+     * @returns {Promise<Object>} Placeholder data
+     */
+    async getDataSourceHealth() {
+        return {
+            comingSoon: true,
+            feature: 'Data Sources',
+            message: 'External data source management is coming soon. This will show integration status with FEC, news APIs, and polling sources.'
+        };
+    }
+
+    /**
+     * Get external candidates analytics (Coming Soon)
+     * @returns {Promise<Object>} Placeholder data
+     */
+    async getExternalCandidatesAnalytics() {
+        return {
+            comingSoon: true,
+            feature: 'External Analytics',
+            message: 'External candidate analytics is coming soon. This will provide insights across vote tracking, finance, news, and polling data.'
         };
     }
 
