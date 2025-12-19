@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO Meta Tags -->
+    <title>Development Logs | United We Rise</title>
+    <meta name="description" content="Technical development logs and architecture overview for United We Rise - a civic engagement platform built with modern web technologies.">
+    <meta name="keywords" content="civic tech, open source, web development, TypeScript, Prisma, Azure, civic engagement">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.unitedwerise.org/devlogs.html">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.unitedwerise.org/devlogs.html">
+    <meta property="og:title" content="Development Logs | United We Rise">
+    <meta property="og:description" content="Technical development logs and architecture overview for United We Rise civic engagement platform.">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="src/styles/main.css">
+    <style>
+        /* DevLogs-specific styles */
+        .devlogs-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .devlogs-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 8px;
+        }
+
+        .devlogs-header h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        .devlogs-header p {
+            color: #5a6c7d;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #4b5c09;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .section-title {
+            color: #2c3e50;
+            border-bottom: 2px solid #4b5c09;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Tech Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4b5c09;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: #5a6c7d;
+            font-size: 0.9rem;
+        }
+
+        /* Tech Stack */
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .tech-card {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #4b5c09;
+        }
+
+        .tech-card h4 {
+            color: #2c3e50;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .tech-card p {
+            color: #5a6c7d;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        /* DevLog Entries */
+        .devlog-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .devlog-entry {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: box-shadow 0.2s;
+        }
+
+        .devlog-entry:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .devlog-date {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .devlog-title {
+            color: #2c3e50;
+            margin: 0 0 0.5rem 0;
+            font-size: 1.25rem;
+        }
+
+        .devlog-summary {
+            color: #5a6c7d;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Contribute Section */
+        .contribute-section {
+            background: #e8f5e9;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .contribute-section h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+
+        .contribute-btn {
+            display: inline-block;
+            background: #4b5c09;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        .contribute-btn:hover {
+            background: #3a4807;
+        }
+
+        /* Footer */
+        .devlogs-footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+            border-top: 1px solid #e9ecef;
+            margin-top: 2rem;
+        }
+
+        /* Security badges */
+        .security-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #495057;
+        }
+
+        .badge-security {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body style="background: #fff; min-height: 100vh;">
+    <div class="devlogs-container">
+        <a href="/" class="back-link">&larr; Back to United We Rise</a>
+
+        <!-- Header -->
+        <div class="devlogs-header">
+            <img src="UWR Logo on Circle.png" alt="United We Rise" style="width: 60px; height: 60px; margin-bottom: 1rem;">
+            <h1>Development Logs</h1>
+            <p>Technical architecture and development progress for the United We Rise civic engagement platform.</p>
+        </div>
+
+        <!-- Platform Stats -->
+        <h2 class="section-title">Platform at a Glance</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">427</div>
+                <div class="stat-label">API Endpoints</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">20+</div>
+                <div class="stat-label">Route Modules</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">4</div>
+                <div class="stat-label">Environments</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">ES6 Modules</div>
+            </div>
+        </div>
+
+        <!-- Tech Stack -->
+        <h2 class="section-title">Technology Stack</h2>
+        <div class="tech-stack">
+            <div class="tech-card">
+                <h4>Backend</h4>
+                <p>TypeScript, Express, Prisma ORM, PostgreSQL</p>
+            </div>
+            <div class="tech-card">
+                <h4>Frontend</h4>
+                <p>Vanilla ES6 modules, MapLibre GL, Socket.io</p>
+            </div>
+            <div class="tech-card">
+                <h4>Infrastructure</h4>
+                <p>Azure Container Apps, Static Web Apps, Blob Storage</p>
+            </div>
+            <div class="tech-card">
+                <h4>AI Integration</h4>
+                <p>Azure OpenAI for topic discovery and content analysis</p>
+            </div>
+        </div>
+
+        <!-- Security -->
+        <h2 class="section-title">Security Posture</h2>
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+            <p style="margin: 0 0 1rem 0; color: #5a6c7d;">Enterprise-grade security implemented throughout:</p>
+            <div class="security-badges">
+                <span class="badge badge-security">httpOnly Cookies</span>
+                <span class="badge badge-security">CSRF Protection</span>
+                <span class="badge badge-security">TOTP 2FA</span>
+                <span class="badge badge-security">Content Security Policy</span>
+                <span class="badge badge-security">Environment Isolation</span>
+                <span class="badge badge-security">Automated Migrations</span>
+            </div>
+        </div>
+
+        <!-- DevLog Entries -->
+        <h2 class="section-title">Development Log</h2>
+        <ul class="devlog-list">
+            <li class="devlog-entry">
+                <div class="devlog-date">December 19, 2025</div>
+                <h3 class="devlog-title">Authentication Architecture Refactor</h3>
+                <p class="devlog-summary">
+                    Implemented single source of truth pattern for authentication state across main site and admin dashboard.
+                    Fixed split-brain bugs where session expiry caused inconsistent state and popup loops.
+                    Added Content Security Policy headers for enhanced XSS protection.
+                </p>
+            </li>
+            <!-- More entries will be added as development continues -->
+        </ul>
+
+        <!-- Contribute -->
+        <div class="contribute-section">
+            <h3>Want to Help Build This?</h3>
+            <p style="color: #5a6c7d; max-width: 500px; margin: 0 auto;">
+                United We Rise is built by volunteers passionate about civic technology.
+                Whether you're a developer, designer, or civic enthusiast, there's a place for you.
+            </p>
+            <a href="/" class="contribute-btn" onclick="setTimeout(() => document.querySelector('[data-modal-about]')?.click(), 100)">
+                Get Involved
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <div class="devlogs-footer">
+            <p><strong>United We Rise</strong> - Democratizing Democracy, Together<br>
+            Operated by People United for Peaceful Revolution, Inc. 501(c)(3)</p>
+        </div>
+    </div>
+</body>
+</html>
