@@ -17,7 +17,7 @@ class AdminAuth {
         }
         AdminAuth.instance = this;
 
-        this.currentUser = null;
+        // Note: currentUser is managed by userState via window.currentUser getter/setter
         this.totpVerified = false;
         this.autoRefreshInterval = null;
         this.lastTokenRefresh = new Date(); // Initialize to current time to prevent "Infinity minutes" bug
@@ -62,18 +62,12 @@ class AdminAuth {
     }
 
     /**
-     * Load current user from localStorage
+     * Load current user - now handled by userState via window.currentUser getter
      */
     loadCurrentUser() {
-        try {
-            const stored = localStorage.getItem('currentUser');
-            if (stored) {
-                this.currentUser = JSON.parse(stored);
-            }
-        } catch (error) {
-            console.error('Error loading user from localStorage:', error);
-            localStorage.removeItem('currentUser');
-        }
+        // userState loads from localStorage on initialization
+        // window.currentUser getter routes through userState
+        return window.currentUser;
     }
 
     /**
@@ -216,9 +210,9 @@ class AdminAuth {
      * Primary entry point for authentication flow
      */
     async checkAuthStatus() {
-        if (this.currentUser) {
-            // User already loaded from localStorage
-            if (this.currentUser.isAdmin) {
+        if (window.currentUser) {
+            // User already loaded from userState
+            if (window.currentUser.isAdmin) {
                 this.showDashboard();
                 return;
             } else {
@@ -228,7 +222,7 @@ class AdminAuth {
             }
         }
 
-        // No user in localStorage, try to authenticate via cookies
+        // No user in userState, try to authenticate via cookies
         try {
             const response = await fetch(`${this.API_BASE}/auth/me`, {
                 method: 'GET',
@@ -241,10 +235,10 @@ class AdminAuth {
             if (response.ok) {
                 const userData = await response.json();
                 if (userData.success && userData.data) {
-                    this.currentUser = userData.data;
-                    localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                    // Set via window.currentUser - routes through userState → localStorage
+                    window.currentUser = userData.data;
 
-                    if (this.currentUser.isAdmin) {
+                    if (window.currentUser.isAdmin) {
                         this.showDashboard();
                     } else {
                         this.showError('Admin access required. Please log in with an admin account.');
@@ -282,8 +276,8 @@ class AdminAuth {
             const result = await unifiedLogin(email, password, 'admin-dashboard');
 
             if (result.success) {
-                this.currentUser = result.user;
-                localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                // Set via window.currentUser - routes through userState → localStorage
+                window.currentUser = result.user;
 
                 // Set TOTP status from secure cookie-based authentication
                 if (result.totpVerified) {
@@ -358,8 +352,8 @@ class AdminAuth {
         console.log('Dashboard elements toggled');
 
         const welcomeMessage = document.getElementById('welcomeMessage');
-        if (welcomeMessage && this.currentUser) {
-            welcomeMessage.textContent = `Welcome back, ${this.currentUser.firstName || this.currentUser.username}`;
+        if (welcomeMessage && window.currentUser) {
+            welcomeMessage.textContent = `Welcome back, ${window.currentUser.firstName || window.currentUser.username}`;
         }
 
         // Trigger dashboard data loading
@@ -382,9 +376,9 @@ class AdminAuth {
             clearInterval(this.autoRefreshInterval);
         }
 
-        this.currentUser = null;
+        // Clear via window.currentUser - routes through userState.clear() → removes localStorage
+        window.currentUser = null;
         this.totpVerified = false;
-        localStorage.removeItem('currentUser');
 
         // Redirect to login
         this.showLogin();
@@ -407,14 +401,14 @@ class AdminAuth {
      * Check if user is authenticated admin
      */
     isAuthenticated() {
-        return this.currentUser && this.currentUser.isAdmin;
+        return window.currentUser && window.currentUser.isAdmin;
     }
 
     /**
      * Get current admin user
      */
     getCurrentUser() {
-        return this.currentUser;
+        return window.currentUser;
     }
 
     /**

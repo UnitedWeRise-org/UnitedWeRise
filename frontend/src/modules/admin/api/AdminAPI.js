@@ -201,8 +201,8 @@ class AdminAPI {
                     console.error('🔒 TOTP verification expired - redirecting to login');
                     alert('Your security session has expired. Please log in again.');
 
-                    // Clear all auth data (httpOnly cookies cleared server-side)
-                    localStorage.removeItem('currentUser');
+                    // Clear all auth data via userState (httpOnly cookies cleared server-side)
+                    window.currentUser = null;  // Routes through userState.clear() → removes localStorage
                     window.csrfToken = null;
 
                     // Redirect to login
@@ -229,8 +229,8 @@ class AdminAPI {
                         retryCount: retryCount
                     });
 
-                    // Clear auth data and redirect to login
-                    localStorage.removeItem('currentUser');
+                    // Clear auth data via userState and redirect to login
+                    window.currentUser = null;  // Routes through userState.clear() → removes localStorage
 
                     if (window.adminAuth) {
                         window.adminAuth.showLogin();
@@ -281,8 +281,8 @@ class AdminAPI {
                                     refreshStatus: refreshResponse.status
                                 });
 
-                                // Clear auth data and redirect to login
-                                localStorage.removeItem('currentUser');
+                                // Clear auth data via userState and redirect to login
+                                window.currentUser = null;  // Routes through userState.clear() → removes localStorage
 
                                 if (window.adminAuth) {
                                     window.adminAuth.showLogin();
@@ -330,7 +330,7 @@ class AdminAPI {
                             });
 
                             // Clear auth data and redirect to login
-                            localStorage.removeItem('currentUser');
+                            window.currentUser = null;  // Routes through userState.clear() → removes localStorage
 
                             if (window.adminAuth) {
                                 window.adminAuth.showLogin();
