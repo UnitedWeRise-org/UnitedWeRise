@@ -8,61 +8,10 @@
     <meta name="last-updated" content="2025-08-21T21:15:00.000Z">
 
     <!--
-      Content Security Policy (CSP) - Frontend Protection
-
-      ARCHITECTURE NOTE: CSP defined here via meta tag (not backend HTTP header)
-      Reason: Frontend served by Azure Static Web Apps (static blob storage/CDN)
-      Backend CSP would only apply to API responses, not user-facing HTML
-
-      SECURITY FIX (2025-11-11): Changed Azure Blob Storage from wildcard
-      (*.blob.core.windows.net) to specific account (uwrstorage2425.blob.core.windows.net)
-      to prevent subdomain-style attacks
-
-      CSP ENHANCEMENT (ES6 Modularization Complete):
-      - unsafe-inline REMOVED from script-src - all inline scripts migrated to ES6 modules
-      - unsafe-eval still required for dynamic imports in ES6 module system
+      Content Security Policy (CSP):
+      CSP is defined via HTTP header in staticwebapp.config.json
+      This provides server-level enforcement (more reliable than meta tags)
     -->
-    <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;
-        script-src 'self' 'unsafe-eval' 'unsafe-hashes' blob: 'sha256-6zwuiTKyvKeDDyc2WFz/yvJy3ZnaDzTdvxEwfqyewlU='
-            https://www.googletagmanager.com
-            https://www.google-analytics.com
-            https://googleads.g.doubleclick.net
-            https://accounts.google.com
-            https://unpkg.com
-            https://js.stripe.com
-            https://js.hcaptcha.com
-            https://cdn.socket.io;
-        style-src 'self' 'unsafe-inline' 'unsafe-eval'
-            https://unpkg.com
-            https://js.stripe.com
-            data: blob:;
-        worker-src 'self' blob: data:;
-        frame-src 'self'
-            https://js.stripe.com
-            https://m.stripe.network
-            https://newassets.hcaptcha.com
-            https://www.googletagmanager.com
-            https://accounts.google.com;
-        connect-src 'self'
-            https://api.unitedwerise.org
-            https://dev-api.unitedwerise.org
-            wss://api.unitedwerise.org
-            wss://dev-api.unitedwerise.org
-            https://uwrstorage2425.blob.core.windows.net
-            https://www.google-analytics.com
-            https://googleads.g.doubleclick.net
-            https://www.google.com
-            https://accounts.google.com
-            https://api.hcaptcha.com
-            https://hcaptcha.com
-            https://m.stripe.network
-            https://*.cartocdn.com;
-        img-src 'self' data: blob:
-            https://uwrstorage2425.blob.core.windows.net
-            https://www.google-analytics.com
-            https://googleads.g.doubleclick.net;
-    ">
 
     <!-- SEO Meta Tags -->
     <title>United We Rise - Unite Communities, Empower Democracy</title>
