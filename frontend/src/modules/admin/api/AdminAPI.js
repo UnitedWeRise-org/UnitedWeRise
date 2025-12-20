@@ -19,6 +19,13 @@ class AdminAPI {
         this.post = this.post.bind(this);
         this.put = this.put.bind(this);
         this.delete = this.delete.bind(this);
+
+        // Session verification mutex (prevents concurrent verify calls)
+        this.isVerifyingSession = false;
+        this.sessionVerificationPromise = null;
+
+        // Logout guard (prevents multiple concurrent logouts)
+        this.isLoggingOut = false;
     }
 
     /**
@@ -31,6 +38,63 @@ class AdminAPI {
 
         // Use centralized environment detection for API base URL
         return getApiBaseUrl().replace('/api', '');
+    }
+
+    /**
+     * Verify session with mutex - prevents multiple concurrent verification calls
+     * Returns true if session is valid, false otherwise
+     */
+    async verifySessionOnce() {
+        // If already verifying, wait for that result
+        if (this.isVerifyingSession && this.sessionVerificationPromise) {
+            console.log('⏸️ Session verification in progress, waiting...');
+            return this.sessionVerificationPromise;
+        }
+
+        this.isVerifyingSession = true;
+        this.sessionVerificationPromise = (async () => {
+            try {
+                const response = await fetch(`${this.BACKEND_URL}/api/auth/me`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                return response.ok;
+            } catch (error) {
+                console.warn('Session verification network error:', error);
+                return false;
+            } finally {
+                this.isVerifyingSession = false;
+                this.sessionVerificationPromise = null;
+            }
+        })();
+
+        return this.sessionVerificationPromise;
+    }
+
+    /**
+     * Trigger logout with guard - prevents multiple concurrent logout attempts
+     */
+    triggerLogout(reason) {
+        if (this.isLoggingOut) {
+            console.log('[AdminAPI] Logout already in progress, skipping duplicate');
+            return;
+        }
+
+        this.isLoggingOut = true;
+        console.error(`🔒 ${reason}`);
+        window.currentUser = null;
+
+        if (window.adminAuth) {
+            window.adminAuth.showLogin();
+        } else {
+            window.location.href = '/admin-dashboard.html';
+        }
+
+        // Reset after brief delay to allow re-login attempts
+        setTimeout(() => {
+            this.isLoggingOut = false;
+        }, 2000);
     }
 
     /**
@@ -105,7 +169,9 @@ class AdminAPI {
         const totpSessionToken = cookies['totpSessionToken'];
 
         console.group('🔑 Authentication Cookies:');
-        console.log('authToken:', authToken ? `✅ Present (${authToken.substring(0, 20)}...)` : '❌ Missing');
+        // authToken is httpOnly - cannot be read by JavaScript (expected security behavior)
+        // The cookie IS present and sent automatically by the browser with credentials: 'include'
+        console.log('authToken:', '🔒 httpOnly (not readable by JS, sent automatically)');
         console.log('csrf-token:', csrfToken ? `✅ Present (${csrfToken.substring(0, 20)}...)` : '❌ Missing');
         console.log('totpSessionToken:', totpSessionToken ? `✅ Present (${totpSessionToken.substring(0, 20)}...)` : '❌ Missing');
         console.groupEnd();
@@ -302,16 +368,12 @@ class AdminAPI {
                             return response;
                         }
                     } else {
-                        // Not a token expiration - verify session to check if it's a network issue
+                        // Not a token expiration - verify session with mutex
                         console.warn('⚠️ 401 without ACCESS_TOKEN_EXPIRED code - verifying session...');
 
-                        const verifyResponse = await fetch(`${this.BACKEND_URL}/api/auth/me`, {
-                            method: 'GET',
-                            credentials: 'include',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
+                        const sessionValid = await this.verifySessionOnce();
 
-                        if (verifyResponse.ok) {
+                        if (sessionValid) {
                             // Session is still valid - 401 was likely timing issue
                             console.log('✅ Session verified valid - 401 was likely timing issue, retrying...');
                             await adminDebugLog('AdminAPI', '401 error but session valid - retrying request', {
@@ -323,21 +385,9 @@ class AdminAPI {
                             await new Promise(resolve => setTimeout(resolve, 300));
                             return this.call(url, options, retryCount + 1);
                         } else {
-                            // Session is truly invalid - log out
-                            console.error('🔒 Session verification failed - logging out');
-                            await adminDebugError('AdminAPI', 'Authentication failed - session invalid', {
-                                verifyStatus: verifyResponse.status
-                            });
-
-                            // Clear auth data and redirect to login
-                            window.currentUser = null;  // Routes through userState.clear() → removes localStorage
-
-                            if (window.adminAuth) {
-                                window.adminAuth.showLogin();
-                            } else {
-                                window.location.href = '/admin-dashboard.html';
-                            }
-
+                            // Session is truly invalid - log out (guarded)
+                            await adminDebugError('AdminAPI', 'Authentication failed - session invalid');
+                            this.triggerLogout('Session verification failed - logging out');
                             return response;
                         }
                     }
