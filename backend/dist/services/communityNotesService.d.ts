@@ -224,7 +224,7 @@ export declare class CommunityNotesService {
             confidence: number;
             sourcePostId: string | null;
             sourceUserId: string | null;
-            confidenceHistory: import("@prisma/client/runtime/library").JsonValue;
+            confidenceHistory: import("@prisma/client/runtime/client").JsonValue;
             citationCount: number;
             claim: string;
             challengeCount: number;

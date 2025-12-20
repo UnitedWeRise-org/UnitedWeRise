@@ -8,6 +8,8 @@ const logger_1 = require("./logger");
  * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 class NewsApiRateLimiter {
+    static THE_NEWS_API_DAILY_LIMIT = 100;
+    static CACHE_KEY = 'the_news_api_daily_count';
     /**
      * Check if we can make a request to The News API today
      */
@@ -73,6 +75,4 @@ class NewsApiRateLimiter {
     }
 }
 exports.NewsApiRateLimiter = NewsApiRateLimiter;
-NewsApiRateLimiter.THE_NEWS_API_DAILY_LIMIT = 100;
-NewsApiRateLimiter.CACHE_KEY = 'the_news_api_daily_count';
 //# sourceMappingURL=newsApiRateLimiter.js.map

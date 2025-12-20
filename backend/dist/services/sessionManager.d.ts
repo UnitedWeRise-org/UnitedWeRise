@@ -28,14 +28,14 @@ declare class SessionManager {
         userAgent?: string;
         ipAddress?: string;
     }, rememberMe?: boolean): Promise<{
+        userId: string;
         id: string;
         createdAt: Date;
-        userId: string;
         expiresAt: Date;
         lastUsedAt: Date;
         tokenHash: string;
         revokedAt: Date | null;
-        deviceInfo: import("@prisma/client/runtime/library").JsonValue | null;
+        deviceInfo: import("@prisma/client/runtime/client").JsonValue | null;
         rememberMe: boolean;
     }>;
     /**
@@ -45,10 +45,10 @@ declare class SessionManager {
      */
     validateRefreshToken(token: string): Promise<{
         user: {
+            password: string | null;
             id: string;
             email: string;
             username: string;
-            password: string | null;
             firstName: string | null;
             lastName: string | null;
             avatar: string | null;
@@ -81,7 +81,7 @@ declare class SessionManager {
             phoneVerifyCode: string | null;
             phoneVerifyExpiry: Date | null;
             maritalStatus: string | null;
-            profilePrivacySettings: import("@prisma/client/runtime/library").JsonValue | null;
+            profilePrivacySettings: import("@prisma/client/runtime/client").JsonValue | null;
             resetToken: string | null;
             resetExpiry: Date | null;
             isOnline: boolean;
@@ -90,14 +90,15 @@ declare class SessionManager {
             isAdmin: boolean;
             isSuperAdmin: boolean;
             isSuspended: boolean;
-            onboardingData: import("@prisma/client/runtime/library").JsonValue | null;
+            onboardingData: import("@prisma/client/runtime/client").JsonValue | null;
             onboardingCompleted: boolean;
             interests: string[];
-            notificationPreferences: import("@prisma/client/runtime/library").JsonValue | null;
+            notificationPreferences: import("@prisma/client/runtime/client").JsonValue | null;
+            uiPreferences: import("@prisma/client/runtime/client").JsonValue | null;
             displayName: string | null;
             followingCount: number;
             followersCount: number;
-            deviceFingerprint: import("@prisma/client/runtime/library").JsonValue | null;
+            deviceFingerprint: import("@prisma/client/runtime/client").JsonValue | null;
             lastLoginAt: Date | null;
             lastLoginIp: string | null;
             lockedUntil: Date | null;
@@ -118,14 +119,14 @@ declare class SessionManager {
             totpSetupAt: Date | null;
         };
     } & {
+        userId: string;
         id: string;
         createdAt: Date;
-        userId: string;
         expiresAt: Date;
         lastUsedAt: Date;
         tokenHash: string;
         revokedAt: Date | null;
-        deviceInfo: import("@prisma/client/runtime/library").JsonValue | null;
+        deviceInfo: import("@prisma/client/runtime/client").JsonValue | null;
         rememberMe: boolean;
     }>;
     /**
@@ -136,14 +137,14 @@ declare class SessionManager {
      * @returns New token record
      */
     rotateRefreshToken(oldToken: string, newToken: string, gracePeriodSeconds?: number): Promise<{
+        userId: string;
         id: string;
         createdAt: Date;
-        userId: string;
         expiresAt: Date;
         lastUsedAt: Date;
         tokenHash: string;
         revokedAt: Date | null;
-        deviceInfo: import("@prisma/client/runtime/library").JsonValue | null;
+        deviceInfo: import("@prisma/client/runtime/client").JsonValue | null;
         rememberMe: boolean;
     }>;
     /**

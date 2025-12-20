@@ -62,6 +62,7 @@ const DAILY_MAX_GAIN = 2;
  * - 0-29: Heavily suppressed (-20%)
  */
 class ReputationService {
+    prisma;
     constructor() {
         this.prisma = prisma_1.prisma;
     }

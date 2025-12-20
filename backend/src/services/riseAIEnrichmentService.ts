@@ -77,6 +77,15 @@ export class RiseAIEnrichmentService {
         orderBy: { createdAt: 'desc' }, // Get most recent if multiple
       });
 
+      // Debug logging to trace enrichment lookup
+      logger.info({
+        postId,
+        interactionFound: !!interaction,
+        interactionId: interaction?.id,
+        status: interaction?.status,
+        responseCommentId: interaction?.responseCommentId,
+      }, 'RiseAI enrichment lookup for post');
+
       if (!interaction) {
         return null;
       }
@@ -145,6 +154,17 @@ export class RiseAIEnrichmentService {
         },
         orderBy: { createdAt: 'desc' },
       });
+
+      // Debug logging for batch enrichment
+      logger.info({
+        requestedPostIds: postIds.length,
+        interactionsFound: interactions.length,
+        interactionDetails: interactions.map(i => ({
+          postId: i.triggerPostId,
+          status: i.status,
+          hasResponse: !!i.responseCommentId
+        }))
+      }, 'RiseAI batch enrichment for feed');
 
       // Group by postId, taking most recent
       const interactionsByPost = new Map<string, typeof interactions[0]>();

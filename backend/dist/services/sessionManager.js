@@ -7,10 +7,8 @@ const auth_1 = require("../utils/auth");
 const logger_1 = require("./logger");
 // In-memory fallback if Redis isn't available
 class MemoryStore {
-    constructor() {
-        this.store = new Map();
-        this.expiry = new Map();
-    }
+    store = new Map();
+    expiry = new Map();
     set(key, value, ttlSeconds) {
         this.store.set(key, value);
         this.expiry.set(key, Date.now() + (ttlSeconds * 1000));
@@ -33,6 +31,8 @@ class MemoryStore {
     }
 }
 class SessionManager {
+    store;
+    isRedis;
     constructor() {
         try {
             // Try to connect to Redis if available

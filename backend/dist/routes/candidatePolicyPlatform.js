@@ -4,19 +4,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const embeddingService_1 = require("../services/embeddingService");
 const azureOpenAIService_1 = require("../services/azureOpenAIService");
 const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
 // Check if current user is a verified candidate
 router.get('/candidate/status', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
         // Check if user is a candidate
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { userId },
             select: {
                 id: true,
@@ -60,7 +59,7 @@ router.get('/candidate/my-positions', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
         // Get candidate ID
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { userId },
             select: { id: true },
         });
@@ -71,7 +70,7 @@ router.get('/candidate/my-positions', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Get all positions for this candidate
-        const positions = await prisma.policyPosition.findMany({
+        const positions = await prisma_1.prisma.policyPosition.findMany({
             where: {
                 candidateId: candidate.id,
             },
@@ -105,7 +104,7 @@ router.get('/candidate/my-positions', auth_1.requireAuth, async (req, res) => {
 // Get all policy categories
 router.get('/categories', async (req, res) => {
     try {
-        const categories = await prisma.policyCategory.findMany({
+        const categories = await prisma_1.prisma.policyCategory.findMany({
             where: { isActive: true },
             orderBy: { displayOrder: 'asc' },
             include: {
@@ -137,7 +136,7 @@ router.get('/candidate/:candidateId/positions', async (req, res) => {
         if (published === 'true') {
             whereClause.isPublished = true;
         }
-        const positions = await prisma.policyPosition.findMany({
+        const positions = await prisma_1.prisma.policyPosition.findMany({
             where: whereClause,
             include: {
                 category: {
@@ -168,7 +167,7 @@ router.get('/race/:officeId/comparison', async (req, res) => {
     try {
         const { officeId } = req.params;
         // Get all active candidates for this office
-        const candidates = await prisma.candidate.findMany({
+        const candidates = await prisma_1.prisma.candidate.findMany({
             where: {
                 officeId,
                 status: 'ACTIVE',
@@ -183,7 +182,7 @@ router.get('/race/:officeId/comparison', async (req, res) => {
         });
         // Get all published policy positions for these candidates
         const candidateIds = candidates.map(c => c.id);
-        const positions = await prisma.policyPosition.findMany({
+        const positions = await prisma_1.prisma.policyPosition.findMany({
             where: {
                 candidateId: { in: candidateIds },
                 isPublished: true,
@@ -202,7 +201,7 @@ router.get('/race/:officeId/comparison', async (req, res) => {
             ],
         });
         // Get policy categories for structure
-        const categories = await prisma.policyCategory.findMany({
+        const categories = await prisma_1.prisma.policyCategory.findMany({
             where: { isActive: true },
             orderBy: { displayOrder: 'asc' },
         });
@@ -240,7 +239,7 @@ router.post('/positions', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Verify user is a candidate
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { userId },
             select: { id: true, name: true },
         });
@@ -251,7 +250,7 @@ router.post('/positions', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Check if position already exists for this category
-        const existingPosition = await prisma.policyPosition.findFirst({
+        const existingPosition = await prisma_1.prisma.policyPosition.findFirst({
             where: {
                 candidateId: candidate.id,
                 categoryId,
@@ -262,7 +261,7 @@ router.post('/positions', auth_1.requireAuth, async (req, res) => {
         let newPosition;
         if (existingPosition) {
             // Create new version of existing position
-            newPosition = await prisma.policyPosition.create({
+            newPosition = await prisma_1.prisma.policyPosition.create({
                 data: {
                     candidateId: candidate.id,
                     categoryId,
@@ -287,7 +286,7 @@ router.post('/positions', auth_1.requireAuth, async (req, res) => {
         }
         else {
             // Create new position
-            newPosition = await prisma.policyPosition.create({
+            newPosition = await prisma_1.prisma.policyPosition.create({
                 data: {
                     candidateId: candidate.id,
                     categoryId,
@@ -317,7 +316,7 @@ router.post('/positions', auth_1.requireAuth, async (req, res) => {
                 const embedding = await embeddingService_1.EmbeddingService.generateEmbedding(textForEmbedding);
                 // AI analysis for keywords, category, stance, and summary
                 const aiAnalysis = await analyzePolicyContent(title, content, summary);
-                await prisma.policyPosition.update({
+                await prisma_1.prisma.policyPosition.update({
                     where: { id: newPosition.id },
                     data: {
                         embedding,
@@ -354,7 +353,7 @@ router.get('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
         const userId = req.user.id;
         const { positionId } = req.params;
         // Verify user is a candidate and owns this position
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { userId },
             select: { id: true },
         });
@@ -364,7 +363,7 @@ router.get('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
                 error: 'User must be a registered candidate',
             });
         }
-        const position = await prisma.policyPosition.findFirst({
+        const position = await prisma_1.prisma.policyPosition.findFirst({
             where: {
                 id: positionId,
                 candidateId: candidate.id,
@@ -408,7 +407,7 @@ router.put('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Verify user is a candidate and owns this position
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { userId },
             select: { id: true },
         });
@@ -418,7 +417,7 @@ router.put('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
                 error: 'User must be a registered candidate',
             });
         }
-        const existingPosition = await prisma.policyPosition.findFirst({
+        const existingPosition = await prisma_1.prisma.policyPosition.findFirst({
             where: {
                 id: positionId,
                 candidateId: candidate.id,
@@ -431,7 +430,7 @@ router.put('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Create new version of the position
-        const newVersion = await prisma.policyPosition.create({
+        const newVersion = await prisma_1.prisma.policyPosition.create({
             data: {
                 candidateId: candidate.id,
                 categoryId: existingPosition.categoryId,
@@ -461,7 +460,7 @@ router.put('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
                 const embedding = await embeddingService_1.EmbeddingService.generateEmbedding(textForEmbedding);
                 // AI analysis for keywords, category, stance, and summary
                 const aiAnalysis = await analyzePolicyContent(title, content, summary);
-                await prisma.policyPosition.update({
+                await prisma_1.prisma.policyPosition.update({
                     where: { id: newVersion.id },
                     data: {
                         embedding,
@@ -499,7 +498,7 @@ router.patch('/positions/:positionId/publish', auth_1.requireAuth, async (req, r
         const { positionId } = req.params;
         const { isPublished } = req.body;
         // Verify user owns this position
-        const position = await prisma.policyPosition.findFirst({
+        const position = await prisma_1.prisma.policyPosition.findFirst({
             where: {
                 id: positionId,
                 candidate: { userId },
@@ -512,7 +511,7 @@ router.patch('/positions/:positionId/publish', auth_1.requireAuth, async (req, r
             });
         }
         // Update publish status
-        const updatedPosition = await prisma.policyPosition.update({
+        const updatedPosition = await prisma_1.prisma.policyPosition.update({
             where: { id: positionId },
             data: {
                 isPublished,
@@ -524,7 +523,7 @@ router.patch('/positions/:positionId/publish', auth_1.requireAuth, async (req, r
             try {
                 const textForEmbedding = `${position.title}\n${position.summary}\n${position.content}\n${position.keyPoints.join('\n')}`;
                 const embedding = await embeddingService_1.EmbeddingService.generateEmbedding(textForEmbedding);
-                await prisma.policyPosition.update({
+                await prisma_1.prisma.policyPosition.update({
                     where: { id: positionId },
                     data: { embedding },
                 });
@@ -552,7 +551,7 @@ router.delete('/positions/:positionId', auth_1.requireAuth, async (req, res) => 
         const userId = req.user.id;
         const { positionId } = req.params;
         // Verify user owns this position
-        const position = await prisma.policyPosition.findFirst({
+        const position = await prisma_1.prisma.policyPosition.findFirst({
             where: {
                 id: positionId,
                 candidate: { userId },
@@ -565,7 +564,7 @@ router.delete('/positions/:positionId', auth_1.requireAuth, async (req, res) => 
             });
         }
         // Soft delete by unpublishing
-        await prisma.policyPosition.update({
+        await prisma_1.prisma.policyPosition.update({
             where: { id: positionId },
             data: {
                 isPublished: false,

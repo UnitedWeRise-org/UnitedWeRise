@@ -5,6 +5,32 @@ const prisma_1 = require("../lib/prisma");
 ;
 const logger_1 = require("./logger");
 class SecurityService {
+    // Event type constants
+    static EVENT_TYPES = {
+        LOGIN_SUCCESS: 'LOGIN_SUCCESS',
+        LOGIN_FAILED: 'LOGIN_FAILED',
+        PASSWORD_RESET_REQUEST: 'PASSWORD_RESET_REQUEST',
+        PASSWORD_RESET_SUCCESS: 'PASSWORD_RESET_SUCCESS',
+        ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+        MULTIPLE_FAILED_LOGINS: 'MULTIPLE_FAILED_LOGINS',
+        SUSPICIOUS_LOGIN_LOCATION: 'SUSPICIOUS_LOGIN_LOCATION',
+        RAPID_REQUESTS: 'RAPID_REQUESTS',
+        EMAIL_VERIFICATION_FAILED: 'EMAIL_VERIFICATION_FAILED',
+        SESSION_HIJACK_ATTEMPT: 'SESSION_HIJACK_ATTEMPT',
+        UNUSUAL_USER_AGENT: 'UNUSUAL_USER_AGENT',
+        BRUTE_FORCE_DETECTED: 'BRUTE_FORCE_DETECTED',
+        SPAM_DETECTED: 'SPAM_DETECTED',
+        CONTENT_VIOLATION: 'CONTENT_VIOLATION',
+        ADMIN_ACTION: 'ADMIN_ACTION',
+        SECURITY_ALERT: 'SECURITY_ALERT'
+    };
+    // Risk score thresholds
+    static RISK_THRESHOLDS = {
+        LOW: 25,
+        MEDIUM: 50,
+        HIGH: 75,
+        CRITICAL: 90
+    };
     /**
      * Log a security event
      */
@@ -355,32 +381,201 @@ class SecurityService {
             return 0;
         }
     }
+    // ============================================================
+    // IP BLOCKING METHODS
+    // ============================================================
+    /**
+     * Check if an IP address is blocked
+     * @param ipAddress - IP address to check (IPv4 or IPv6)
+     * @returns true if IP is blocked and block is active/not expired
+     */
+    static async isIPBlocked(ipAddress) {
+        try {
+            const blocked = await prisma_1.prisma.blockedIP.findFirst({
+                where: {
+                    ipAddress,
+                    isActive: true,
+                    OR: [
+                        { expiresAt: null },
+                        { expiresAt: { gt: new Date() } }
+                    ]
+                }
+            });
+            return !!blocked;
+        }
+        catch (error) {
+            logger_1.logger.error({ error, ipAddress }, 'Failed to check IP block status');
+            return false; // Fail open for safety - don't block legitimate users on error
+        }
+    }
+    /**
+     * Block an IP address (manual admin action)
+     * @param params - Block parameters including IP, reason, and admin ID
+     * @returns Success status with block ID or error message
+     */
+    static async blockIP(params) {
+        try {
+            const { ipAddress, reason, blockedById, expiresAt, metadata } = params;
+            // Validate IP format
+            if (!this.isValidIPAddress(ipAddress)) {
+                return { success: false, error: 'Invalid IP address format' };
+            }
+            // Validate reason length
+            if (!reason || reason.trim().length < 5) {
+                return { success: false, error: 'Reason must be at least 5 characters' };
+            }
+            // Check if already blocked
+            const existing = await prisma_1.prisma.blockedIP.findUnique({
+                where: { ipAddress }
+            });
+            if (existing?.isActive) {
+                return { success: false, error: 'IP address is already blocked' };
+            }
+            // Create or update block (upsert handles reactivating previously blocked IPs)
+            const block = await prisma_1.prisma.blockedIP.upsert({
+                where: { ipAddress },
+                create: {
+                    ipAddress,
+                    reason: reason.trim(),
+                    blockedById,
+                    expiresAt,
+                    metadata,
+                    isActive: true
+                },
+                update: {
+                    reason: reason.trim(),
+                    blockedById,
+                    blockedAt: new Date(),
+                    expiresAt,
+                    metadata,
+                    isActive: true
+                }
+            });
+            // Log security event for audit trail
+            await this.logEvent({
+                userId: blockedById,
+                eventType: 'IP_BLOCKED',
+                ipAddress,
+                details: { reason, expiresAt, blockId: block.id },
+                riskScore: 0 // Admin action, not a risk event
+            });
+            logger_1.logger.info({ ipAddress, blockedById, blockId: block.id }, 'IP address blocked');
+            return { success: true, blockId: block.id };
+        }
+        catch (error) {
+            logger_1.logger.error({ error, ipAddress: params.ipAddress }, 'Failed to block IP');
+            return { success: false, error: 'Failed to block IP address' };
+        }
+    }
+    /**
+     * Unblock an IP address
+     * @param ipAddress - IP address to unblock
+     * @param unblockById - Admin user ID performing the unblock
+     * @returns Success status or error message
+     */
+    static async unblockIP(ipAddress, unblockById) {
+        try {
+            const block = await prisma_1.prisma.blockedIP.findUnique({
+                where: { ipAddress }
+            });
+            if (!block || !block.isActive) {
+                return { success: false, error: 'IP address is not blocked' };
+            }
+            await prisma_1.prisma.blockedIP.update({
+                where: { ipAddress },
+                data: { isActive: false }
+            });
+            // Log security event for audit trail
+            await this.logEvent({
+                userId: unblockById,
+                eventType: 'IP_UNBLOCKED',
+                ipAddress,
+                details: { originalBlockId: block.id, originalReason: block.reason },
+                riskScore: 0
+            });
+            logger_1.logger.info({ ipAddress, unblockById }, 'IP address unblocked');
+            return { success: true };
+        }
+        catch (error) {
+            logger_1.logger.error({ error, ipAddress }, 'Failed to unblock IP');
+            return { success: false, error: 'Failed to unblock IP address' };
+        }
+    }
+    /**
+     * Get list of blocked IPs for admin dashboard
+     * @param options - Filtering options
+     * @returns Array of blocked IP records with admin details
+     */
+    static async getBlockedIPs(options = {}) {
+        try {
+            const { includeExpired = false, limit = 100, offset = 0 } = options;
+            const where = {};
+            if (!includeExpired) {
+                where.isActive = true;
+                where.OR = [
+                    { expiresAt: null },
+                    { expiresAt: { gt: new Date() } }
+                ];
+            }
+            return await prisma_1.prisma.blockedIP.findMany({
+                where,
+                include: {
+                    blockedBy: {
+                        select: {
+                            id: true,
+                            username: true,
+                            email: true
+                        }
+                    }
+                },
+                orderBy: { blockedAt: 'desc' },
+                take: limit,
+                skip: offset
+            });
+        }
+        catch (error) {
+            logger_1.logger.error({ error }, 'Failed to get blocked IPs');
+            return [];
+        }
+    }
+    /**
+     * Clear all blocked IPs (super-admin only action)
+     * @param adminId - Super admin user ID performing the action
+     * @returns Success status with count of cleared blocks
+     */
+    static async clearAllBlockedIPs(adminId) {
+        try {
+            const result = await prisma_1.prisma.blockedIP.updateMany({
+                where: { isActive: true },
+                data: { isActive: false }
+            });
+            // Log security event for audit trail
+            await this.logEvent({
+                userId: adminId,
+                eventType: 'ALL_IPS_UNBLOCKED',
+                details: { clearedCount: result.count },
+                riskScore: 0
+            });
+            logger_1.logger.warn({ adminId, clearedCount: result.count }, 'All blocked IPs cleared');
+            return { success: true, clearedCount: result.count };
+        }
+        catch (error) {
+            logger_1.logger.error({ error }, 'Failed to clear blocked IPs');
+            return { success: false, clearedCount: 0, error: 'Failed to clear blocked IPs' };
+        }
+    }
+    /**
+     * Validate IP address format (IPv4 or IPv6)
+     * @param ip - IP address string to validate
+     * @returns true if valid IPv4 or IPv6 format
+     */
+    static isValidIPAddress(ip) {
+        // IPv4 pattern
+        const ipv4Regex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        // Simplified IPv6 pattern (full and compressed formats)
+        const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))$/;
+        return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+    }
 }
 exports.SecurityService = SecurityService;
-// Event type constants
-SecurityService.EVENT_TYPES = {
-    LOGIN_SUCCESS: 'LOGIN_SUCCESS',
-    LOGIN_FAILED: 'LOGIN_FAILED',
-    PASSWORD_RESET_REQUEST: 'PASSWORD_RESET_REQUEST',
-    PASSWORD_RESET_SUCCESS: 'PASSWORD_RESET_SUCCESS',
-    ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
-    MULTIPLE_FAILED_LOGINS: 'MULTIPLE_FAILED_LOGINS',
-    SUSPICIOUS_LOGIN_LOCATION: 'SUSPICIOUS_LOGIN_LOCATION',
-    RAPID_REQUESTS: 'RAPID_REQUESTS',
-    EMAIL_VERIFICATION_FAILED: 'EMAIL_VERIFICATION_FAILED',
-    SESSION_HIJACK_ATTEMPT: 'SESSION_HIJACK_ATTEMPT',
-    UNUSUAL_USER_AGENT: 'UNUSUAL_USER_AGENT',
-    BRUTE_FORCE_DETECTED: 'BRUTE_FORCE_DETECTED',
-    SPAM_DETECTED: 'SPAM_DETECTED',
-    CONTENT_VIOLATION: 'CONTENT_VIOLATION',
-    ADMIN_ACTION: 'ADMIN_ACTION',
-    SECURITY_ALERT: 'SECURITY_ALERT'
-};
-// Risk score thresholds
-SecurityService.RISK_THRESHOLDS = {
-    LOW: 25,
-    MEDIUM: 50,
-    HIGH: 75,
-    CRITICAL: 90
-};
 //# sourceMappingURL=securityService.js.map

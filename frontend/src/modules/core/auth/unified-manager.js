@@ -621,30 +621,53 @@ class UnifiedAuthManager {
      */
     _syncFromExistingSystems() {
         // Check if user is already logged in
+        // OPTIMIZATION: Use try-catch for localStorage parse to handle corruption
+        let storedUser = null;
+        try {
+            const storedData = localStorage.getItem('currentUser');
+            if (storedData) {
+                storedUser = JSON.parse(storedData);
+            }
+        } catch (e) {
+            adminDebugLog('UnifiedAuthManager', 'Failed to parse stored user data, treating as logged out');
+            localStorage.removeItem('currentUser');
+        }
+
         const existingUser = window.currentUser ||
                            (window.userState && window.userState.current) ||
-                           (localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')) : null);
+                           storedUser;
+
+        // OPTIMIZATION: Early exit for logged-out users - aligned with app-initialization.js
+        // If no cached user exists, explicitly set logged-out state
+        if (!existingUser) {
+            adminDebugLog('UnifiedAuthManager', 'No existing user found - setting logged-out state');
+            this._currentAuthState = {
+                isAuthenticated: false,
+                user: null,
+                csrfToken: null,
+                sessionValid: false
+            };
+            return;
+        }
 
         const existingToken = window.csrfToken ||
                             (window.apiClient && window.apiClient.csrfToken);
 
-        if (existingUser) {
-            adminDebugLog('UnifiedAuthManager', 'Syncing from existing user session', existingUser.username || existingUser.email);
-            this._currentAuthState = {
-                isAuthenticated: true,
-                user: existingUser,
-                csrfToken: existingToken,
-                sessionValid: true
-            };
+        adminDebugLog('UnifiedAuthManager', 'Syncing from existing user session', existingUser.username || existingUser.email);
+        this._currentAuthState = {
+            isAuthenticated: true,
+            user: existingUser,
+            csrfToken: existingToken,
+            sessionValid: true
+        };
 
-            // CRITICAL: Sync this user to ALL systems, including legacy
-            // Note: Can't await here since _syncFromExistingSystems is not async
-            // But we need to sync immediately to prevent race conditions
-            this._syncAllSystemsSync(existingUser, existingToken);
+        // CRITICAL: Sync this user to ALL systems, including legacy
+        // Note: Can't await here since _syncFromExistingSystems is not async
+        // But we need to sync immediately to prevent race conditions
+        this._syncAllSystemsSync(existingUser, existingToken);
 
-            // Start proactive refresh timer for existing session
-            this._startProactiveRefreshTimer();
-        }
+        // Start proactive refresh timer for existing session
+        this._startProactiveRefreshTimer();
     }
 
     /**

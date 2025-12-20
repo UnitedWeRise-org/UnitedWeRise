@@ -3,11 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPerformanceMetrics = exports.performanceMiddleware = exports.performanceMonitor = void 0;
 const logger_1 = require("../services/logger");
 class PerformanceMonitor {
-    constructor() {
-        this.metrics = [];
-        this.maxMetrics = 1000; // Keep last 1000 requests
-        this.slowRequestThreshold = 1000; // 1 second
-    }
+    metrics = [];
+    maxMetrics = 1000; // Keep last 1000 requests
+    slowRequestThreshold = 1000; // 1 second
     recordMetric(metric) {
         this.metrics.push(metric);
         // Keep only recent metrics

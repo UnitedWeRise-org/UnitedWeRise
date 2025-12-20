@@ -6,6 +6,14 @@ const embeddingService_1 = require("./embeddingService");
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const logger_1 = require("./logger");
 class TopicAggregationService {
+    static DEFAULT_TIMEFRAME_HOURS = 168; // 7 days
+    static MIN_POSTS_PER_TOPIC = 5;
+    static SIMILARITY_THRESHOLD = 0.70;
+    static STANCE_SIMILARITY_THRESHOLD = 0.65;
+    static MAX_TOPICS = 15;
+    static CACHE_DURATION_MINUTES = 15;
+    static topicCache = new Map();
+    static cacheTimestamps = new Map();
     /**
      * Generate aggregated topics with dual-vector stance detection
      */
@@ -378,12 +386,4 @@ ${opposeSample}`;
     }
 }
 exports.TopicAggregationService = TopicAggregationService;
-TopicAggregationService.DEFAULT_TIMEFRAME_HOURS = 168; // 7 days
-TopicAggregationService.MIN_POSTS_PER_TOPIC = 5;
-TopicAggregationService.SIMILARITY_THRESHOLD = 0.70;
-TopicAggregationService.STANCE_SIMILARITY_THRESHOLD = 0.65;
-TopicAggregationService.MAX_TOPICS = 15;
-TopicAggregationService.CACHE_DURATION_MINUTES = 15;
-TopicAggregationService.topicCache = new Map();
-TopicAggregationService.cacheTimestamps = new Map();
 //# sourceMappingURL=topicAggregationService.js.map

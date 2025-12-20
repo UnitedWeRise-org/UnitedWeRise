@@ -15,6 +15,17 @@ const client_1 = require("@prisma/client");
 const apiCache_1 = require("./apiCache");
 const logger_1 = __importDefault(require("../utils/logger"));
 class ExternalCandidateService {
+    static googleCivicApiKey = process.env.GOOGLE_CIVIC_API_KEY;
+    static fecApiKey = process.env.FEC_API_KEY;
+    // Cache durations for different data types (in minutes)
+    static CACHE_DURATIONS = {
+        GOOGLE_CIVIC_CANDIDATES: 30 * 24 * 60, // 30 days - candidate rosters rarely change
+        GOOGLE_CIVIC_ELECTIONS: 7 * 24 * 60, // 7 days - election dates are stable
+        FEC_FINANCIAL_DATA: 7 * 24 * 60, // 7 days - FEC reports filed monthly/quarterly
+        BALLOTPEDIA_POLICY: 14 * 24 * 60, // 14 days - policy positions stable during campaigns
+        CANDIDATE_SEARCH: 3 * 24 * 60, // 3 days - search results can be cached shorter
+        CLAIMABLE_CANDIDATES: 60 // 1 hour - user-specific data should refresh more often
+    };
     /**
      * Import candidates from Google Civic API for a specific address
      */
@@ -643,16 +654,5 @@ class ExternalCandidateService {
     }
 }
 exports.ExternalCandidateService = ExternalCandidateService;
-ExternalCandidateService.googleCivicApiKey = process.env.GOOGLE_CIVIC_API_KEY;
-ExternalCandidateService.fecApiKey = process.env.FEC_API_KEY;
-// Cache durations for different data types (in minutes)
-ExternalCandidateService.CACHE_DURATIONS = {
-    GOOGLE_CIVIC_CANDIDATES: 30 * 24 * 60, // 30 days - candidate rosters rarely change
-    GOOGLE_CIVIC_ELECTIONS: 7 * 24 * 60, // 7 days - election dates are stable
-    FEC_FINANCIAL_DATA: 7 * 24 * 60, // 7 days - FEC reports filed monthly/quarterly
-    BALLOTPEDIA_POLICY: 14 * 24 * 60, // 14 days - policy positions stable during campaigns
-    CANDIDATE_SEARCH: 3 * 24 * 60, // 3 days - search results can be cached shorter
-    CLAIMABLE_CANDIDATES: 60 // 1 hour - user-specific data should refresh more often
-};
 exports.externalCandidateService = new ExternalCandidateService();
 //# sourceMappingURL=externalCandidateService.js.map

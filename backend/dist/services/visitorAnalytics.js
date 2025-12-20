@@ -18,10 +18,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const crypto_1 = __importDefault(require("crypto"));
 const logger_1 = require("./logger");
-const prisma = new client_1.PrismaClient();
 class VisitorAnalyticsService {
     /**
      * Hash an IP address with the current daily salt
@@ -70,7 +69,7 @@ class VisitorAnalyticsService {
     async checkRateLimit(ipHash) {
         const config = await this.getConfig();
         // Check if IP is currently blocked
-        const rateLimit = await prisma.iPRateLimit.findUnique({
+        const rateLimit = await prisma_1.prisma.iPRateLimit.findUnique({
             where: { ipHash },
         });
         if (rateLimit) {
@@ -85,7 +84,7 @@ class VisitorAnalyticsService {
             const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
             if (rateLimit.lastRequest < hourAgo) {
                 // Reset counter if last request was >1 hour ago
-                await prisma.iPRateLimit.update({
+                await prisma_1.prisma.iPRateLimit.update({
                     where: { ipHash },
                     data: {
                         requestCount: 1,
@@ -101,7 +100,7 @@ class VisitorAnalyticsService {
             if (newCount > config.rateLimitPerHour) {
                 // Exceeded rate limit - block IP
                 const blockedUntil = new Date(Date.now() + config.blockDurationHours * 60 * 60 * 1000);
-                await prisma.iPRateLimit.update({
+                await prisma_1.prisma.iPRateLimit.update({
                     where: { ipHash },
                     data: {
                         requestCount: newCount,
@@ -116,7 +115,7 @@ class VisitorAnalyticsService {
                 };
             }
             // Update counter
-            await prisma.iPRateLimit.update({
+            await prisma_1.prisma.iPRateLimit.update({
                 where: { ipHash },
                 data: {
                     requestCount: newCount,
@@ -126,7 +125,7 @@ class VisitorAnalyticsService {
         }
         else {
             // Create new rate limit record
-            await prisma.iPRateLimit.create({
+            await prisma_1.prisma.iPRateLimit.create({
                 data: {
                     ipHash,
                     requestCount: 1,
@@ -159,7 +158,7 @@ class VisitorAnalyticsService {
         // Check for suspicious activity
         const isSuspicious = await this.checkSuspiciousActivity(ipHash);
         // Create PageView record
-        await prisma.pageView.create({
+        await prisma_1.prisma.pageView.create({
             data: {
                 path: params.path,
                 ipHash,
@@ -182,7 +181,7 @@ class VisitorAnalyticsService {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         // Count pageviews from this IP today
-        const todayCount = await prisma.pageView.count({
+        const todayCount = await prisma_1.prisma.pageView.count({
             where: {
                 ipHash,
                 createdAt: { gte: today },
@@ -197,7 +196,7 @@ class VisitorAnalyticsService {
      * @returns Aggregated statistics
      */
     async getStats(startDate, endDate) {
-        const stats = await prisma.dailyVisitStats.findMany({
+        const stats = await prisma_1.prisma.dailyVisitStats.findMany({
             where: {
                 date: {
                     gte: startDate,
@@ -237,12 +236,12 @@ class VisitorAnalyticsService {
      * @returns AnalyticsConfig record
      */
     async getConfig() {
-        let config = await prisma.analyticsConfig.findUnique({
+        let config = await prisma_1.prisma.analyticsConfig.findUnique({
             where: { id: 'default' },
         });
         if (!config) {
             // Create default config
-            config = await prisma.analyticsConfig.create({
+            config = await prisma_1.prisma.analyticsConfig.create({
                 data: {
                     id: 'default',
                     rateLimitPerHour: 100,
@@ -264,7 +263,7 @@ class VisitorAnalyticsService {
      */
     async rotateDailySalt() {
         const newSalt = crypto_1.default.randomBytes(32).toString('hex');
-        const config = await prisma.analyticsConfig.update({
+        const config = await prisma_1.prisma.analyticsConfig.update({
             where: { id: 'default' },
             data: {
                 currentDailySalt: newSalt,
@@ -286,7 +285,7 @@ class VisitorAnalyticsService {
         const endOfDay = new Date(targetDate);
         endOfDay.setHours(23, 59, 59, 999);
         // Get all pageviews for the day
-        const pageviews = await prisma.pageView.findMany({
+        const pageviews = await prisma_1.prisma.pageView.findMany({
             where: {
                 createdAt: {
                     gte: startOfDay,
@@ -302,7 +301,7 @@ class VisitorAnalyticsService {
         const botVisits = pageviews.filter(pv => pv.isBot).length;
         const suspiciousActivityCount = new Set(pageviews.filter(pv => pv.isSuspicious).map(pv => pv.ipHash)).size;
         // Count signups for the day
-        const signupsCount = await prisma.user.count({
+        const signupsCount = await prisma_1.prisma.user.count({
             where: {
                 createdAt: {
                     gte: startOfDay,
@@ -326,7 +325,7 @@ class VisitorAnalyticsService {
                 sessionsWithDuration.length
             : null;
         // Create or update DailyVisitStats
-        const stats = await prisma.dailyVisitStats.upsert({
+        const stats = await prisma_1.prisma.dailyVisitStats.upsert({
             where: { date: startOfDay },
             update: {
                 uniqueVisitors,
@@ -369,7 +368,7 @@ class VisitorAnalyticsService {
     async cleanupOldData() {
         const config = await this.getConfig();
         const cutoffDate = new Date(Date.now() - config.dataRetentionDays * 24 * 60 * 60 * 1000);
-        const deleted = await prisma.pageView.deleteMany({
+        const deleted = await prisma_1.prisma.pageView.deleteMany({
             where: {
                 createdAt: { lt: cutoffDate },
             },
@@ -379,7 +378,7 @@ class VisitorAnalyticsService {
             cutoffDate: cutoffDate.toDateString()
         }, 'Deleted old PageView records');
         // Also clean up expired IPRateLimit blocks
-        const expiredBlocks = await prisma.iPRateLimit.deleteMany({
+        const expiredBlocks = await prisma_1.prisma.iPRateLimit.deleteMany({
             where: {
                 blockedUntil: { lt: new Date() },
                 lastRequest: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // >24 hours old
@@ -400,7 +399,7 @@ class VisitorAnalyticsService {
      */
     async getSuspiciousIPs(days = 7) {
         const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-        const suspiciousPageViews = await prisma.pageView.groupBy({
+        const suspiciousPageViews = await prisma_1.prisma.pageView.groupBy({
             by: ['ipHash'],
             where: {
                 isSuspicious: true,
@@ -433,15 +432,15 @@ class VisitorAnalyticsService {
         const monthAgo = new Date(today);
         monthAgo.setDate(monthAgo.getDate() - 30);
         // Get today's live data (not yet aggregated)
-        const todayPageViews = await prisma.pageView.count({
+        const todayPageViews = await prisma_1.prisma.pageView.count({
             where: { createdAt: { gte: today } },
         });
-        const todayUniqueVisitors = await prisma.pageView.findMany({
+        const todayUniqueVisitors = await prisma_1.prisma.pageView.findMany({
             where: { createdAt: { gte: today } },
             select: { ipHash: true },
             distinct: ['ipHash'],
         });
-        const todaySignups = await prisma.user.count({
+        const todaySignups = await prisma_1.prisma.user.count({
             where: { createdAt: { gte: today } },
         });
         // Get aggregated historical data

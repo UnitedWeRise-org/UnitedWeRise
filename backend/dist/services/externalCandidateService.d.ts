@@ -45,6 +45,7 @@ export declare class ExternalCandidateService {
         email: string;
         phone: string;
     }): Promise<{
+        userId: string | null;
         name: string;
         id: string;
         embedding: number[];
@@ -52,7 +53,6 @@ export declare class ExternalCandidateService {
         updatedAt: Date;
         verificationStatus: string | null;
         campaignWebsite: string | null;
-        userId: string | null;
         status: import(".prisma/client").$Enums.CandidateStatus | null;
         withdrawnAt: Date | null;
         party: string | null;

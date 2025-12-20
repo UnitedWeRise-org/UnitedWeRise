@@ -11,6 +11,11 @@ const axios_1 = __importDefault(require("axios"));
 const prisma_1 = require("../lib/prisma");
 const logger_1 = require("./logger");
 class QwenService {
+    static API_URL = process.env.QWEN3_API_URL || 'http://localhost:8000';
+    static API_KEY = process.env.QWEN3_API_KEY;
+    static MODEL = 'Qwen2.5-72B-Instruct';
+    static MAX_RETRIES = 3;
+    static TIMEOUT_MS = 30000; // 30 seconds
     /**
      * Test Qwen3 API connection
      */
@@ -390,9 +395,4 @@ Respond with valid JSON only:`;
     }
 }
 exports.QwenService = QwenService;
-QwenService.API_URL = process.env.QWEN3_API_URL || 'http://localhost:8000';
-QwenService.API_KEY = process.env.QWEN3_API_KEY;
-QwenService.MODEL = 'Qwen2.5-72B-Instruct';
-QwenService.MAX_RETRIES = 3;
-QwenService.TIMEOUT_MS = 30000; // 30 seconds
 //# sourceMappingURL=qwenService.js.map

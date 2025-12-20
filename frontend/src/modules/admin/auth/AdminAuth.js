@@ -341,8 +341,9 @@ class AdminAuth {
 
     /**
      * Show admin dashboard
+     * Proactively refreshes token if stale before loading data
      */
-    showDashboard() {
+    async showDashboard() {
         console.log('showDashboard called');
         const loginSection = document.getElementById('loginSection');
         const dashboardMain = document.getElementById('dashboardMain');
@@ -360,7 +361,19 @@ class AdminAuth {
             welcomeMessage.textContent = `Welcome back, ${window.currentUser.firstName || window.currentUser.username}`;
         }
 
-        // Trigger dashboard data loading
+        // Proactive token refresh if > 5 minutes old (matches refreshAllData threshold)
+        // This prevents 401 cascade on initial dashboard load
+        const now = new Date();
+        const timeSinceLastRefresh = this.lastTokenRefresh
+            ? (now - this.lastTokenRefresh) / (1000 * 60)
+            : Infinity;
+
+        if (timeSinceLastRefresh > 5) {
+            console.log(`🔄 Proactive token refresh before dashboard load (${Math.floor(timeSinceLastRefresh)} minutes since last refresh)`);
+            await this.refreshToken(true);
+        }
+
+        // Trigger dashboard data loading (now with fresh token)
         this.triggerDashboardLoad();
 
         // Set up auto-refresh every 5 minutes (less aggressive to avoid 404 spam)

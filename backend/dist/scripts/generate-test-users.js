@@ -4,9 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const faker_1 = require("@faker-js/faker");
-const prisma = new client_1.PrismaClient();
 // Major US cities with coordinates for geographic diversity
 const US_LOCATIONS = [
     { city: 'New York', state: 'NY', lat: 40.7128, lng: -74.0060, zipCode: '10001' },
@@ -168,7 +168,7 @@ async function generateTestUsers() {
     const createdUsers = [];
     for (const userData of users) {
         try {
-            const user = await prisma.user.create({
+            const user = await prisma_1.prisma.user.create({
                 data: userData
             });
             createdUsers.push(user);
@@ -187,7 +187,7 @@ async function generateTestUsers() {
         for (let j = 0; j < postCount; j++) {
             const postContent = generatePost(user.politicalParty || 'Moderate');
             try {
-                const post = await prisma.post.create({
+                const post = await prisma_1.prisma.post.create({
                     data: {
                         content: postContent,
                         authorId: user.id,
@@ -214,7 +214,7 @@ async function generateTestUsers() {
         const following = createdUsers[Math.floor(Math.random() * createdUsers.length)];
         if (follower.id !== following.id) {
             try {
-                await prisma.follow.create({
+                await prisma_1.prisma.follow.create({
                     data: {
                         followerId: follower.id,
                         followingId: following.id
@@ -232,7 +232,7 @@ async function generateTestUsers() {
         const user = createdUsers[Math.floor(Math.random() * createdUsers.length)];
         const post = posts[Math.floor(Math.random() * posts.length)];
         try {
-            await prisma.like.create({
+            await prisma_1.prisma.like.create({
                 data: {
                     userId: user.id,
                     postId: post.id
@@ -260,6 +260,6 @@ generateTestUsers()
     process.exit(1);
 })
     .finally(async () => {
-    await prisma.$disconnect();
+    await prisma_1.prisma.$disconnect();
 });
 //# sourceMappingURL=generate-test-users.js.map

@@ -53,6 +53,9 @@ async function getTransformersModule() {
     return transformersModule;
 }
 class SentenceTransformersService {
+    static embeddingPipeline = null;
+    static MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
+    static FALLBACK_DIMENSION = 384; // Dimension for all-MiniLM-L6-v2
     /**
      * Initialize local embedding pipeline
      */
@@ -367,7 +370,4 @@ class SentenceTransformersService {
     }
 }
 exports.SentenceTransformersService = SentenceTransformersService;
-SentenceTransformersService.embeddingPipeline = null;
-SentenceTransformersService.MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
-SentenceTransformersService.FALLBACK_DIMENSION = 384; // Dimension for all-MiniLM-L6-v2
 //# sourceMappingURL=sentenceTransformersService.js.map

@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const crypto_1 = __importDefault(require("crypto"));
 const oauthService_1 = require("../services/oauthService");
 const auth_1 = require("../middleware/auth");
 const rateLimiting_1 = require("../middleware/rateLimiting");
@@ -124,8 +125,7 @@ router.post('/google', rateLimiting_1.authLimiter, async (req, res) => {
             domain: '.unitedwerise.org'
         });
         // Generate and set CSRF token
-        const crypto = require('crypto');
-        const csrfToken = crypto.randomBytes(32).toString('hex');
+        const csrfToken = crypto_1.default.randomBytes(32).toString('hex');
         res.cookie(cookies_1.COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
             httpOnly: false,
             secure: (0, environment_1.requireSecureCookies)(),

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.captchaService = void 0;
 const logger_1 = require("./logger");
 class CaptchaService {
+    secretKey;
     constructor() {
         this.secretKey = process.env.HCAPTCHA_SECRET_KEY || '';
         if (!this.secretKey) {

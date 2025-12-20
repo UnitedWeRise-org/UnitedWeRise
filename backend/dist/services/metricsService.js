@@ -4,11 +4,13 @@ exports.metricsService = void 0;
 const prisma_1 = require("../lib/prisma");
 const logger_1 = require("./logger");
 class MetricsService {
+    prisma;
+    metrics = new Map();
+    counters = new Map();
+    histograms = new Map();
+    gauges = new Map();
+    startTime;
     constructor() {
-        this.metrics = new Map();
-        this.counters = new Map();
-        this.histograms = new Map();
-        this.gauges = new Map();
         this.prisma = prisma_1.prisma;
         this.startTime = Date.now();
         this.initializeMetrics();

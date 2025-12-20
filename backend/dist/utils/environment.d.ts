@@ -54,7 +54,7 @@ export declare function getDatabaseLogLevel(): ('query' | 'info' | 'warn' | 'err
  * Log environment information using Pino structured logging
  * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
-export declare function logEnvironmentInfo(): void;
+export declare function logEnvironmentInfo(): Promise<void>;
 declare const _default: {
     getEnvironment: typeof getEnvironment;
     isDevelopment: typeof isDevelopment;

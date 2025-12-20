@@ -88,12 +88,12 @@ export declare class ActivityTracker {
             avatar: string;
         };
     } & {
+        userId: string;
         id: string;
         createdAt: Date;
-        userId: string;
         targetType: string;
         targetId: string;
-        metadata: import("@prisma/client/runtime/library").JsonValue | null;
+        metadata: import("@prisma/client/runtime/client").JsonValue | null;
         activityType: import(".prisma/client").$Enums.ActivityType;
     })[]>;
     /**

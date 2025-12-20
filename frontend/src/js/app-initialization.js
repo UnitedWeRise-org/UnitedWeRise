@@ -63,6 +63,16 @@ class AppInitializer {
         // Declare storedUser at function scope to avoid scoping issues
         const storedUser = localStorage.getItem('currentUser');
 
+        // OPTIMIZATION: Early exit for logged-out users
+        // If no cached user exists, skip all authenticated API calls
+        // This prevents 3 unnecessary 401s on every page load for logged-out users
+        if (!storedUser) {
+            AppInitializer.log('🔓 No cached user - skipping authenticated API calls');
+            this.setLoggedOutState();
+            this.isInitialized = true;
+            return { authenticated: false, reason: 'no_cached_user' };
+        }
+
         try {
             // Step 1: Check for existing user data (httpOnly cookies handle authentication automatically)
             
@@ -170,63 +180,12 @@ class AppInitializer {
                     return { authenticated: false, reason: 'not_authenticated' };
                 }
                 
-                // For other errors (network, 500, etc), try limited fallback
-                AppInitializer.log('🔄 Trying minimal auth verification fallback...');
-                
-                try {
-                    // First try auth/me for authentication check
-                    const authData = await window.apiClient.call('/auth/me');
-                    
-                    if (authData && authData.user) {
-                        AppInitializer.log('✅ Auth/me fallback successful');
-                        this.userData = authData.user;
-                        localStorage.setItem('currentUser', JSON.stringify(this.userData));
-                        window.currentUser = this.userData;
+                // For other errors (network, 500, etc), use cached data
+                // OPTIMIZATION: Removed fallback cascade to /auth/me and /users/profile
+                // If batch fails for non-auth reasons and we have cached user, use cached data
+                AppInitializer.log('💾 Batch failed, checking for cached data...');
 
-                        // Set logged in state
-                        this.setLoggedInState({ user: this.userData });
-                        
-                        this.isInitialized = true;
-                        return { 
-                            authenticated: true, 
-                            userData: this.userData,
-                            fallback: true
-                        };
-                    } else {
-                        AppInitializer.log('❌ Auth/me returned no user data', 'warn');
-                    }
-                } catch (authError) {
-                    AppInitializer.log('🔄 Auth/me failed:', authError.message || authError, 'warn');
-                    
-                    try {
-                        // Get user profile data as final fallback
-                        const userProfile = await window.apiClient.call('/users/profile');
-                        
-                        if (userProfile) {
-                            AppInitializer.log('✅ Users/profile fallback successful');
-                            this.userData = userProfile;
-                            localStorage.setItem('currentUser', JSON.stringify(this.userData));
-                            window.currentUser = this.userData;
-
-                            // Set logged in state
-                            this.setLoggedInState({ user: this.userData });
-                            
-                            this.isInitialized = true;
-                            return { 
-                                authenticated: true, 
-                                userData: this.userData,
-                                fallback: true
-                            };
-                        } else {
-                            AppInitializer.log('❌ Users/profile returned no data', 'warn');
-                        }
-                    } catch (profileError) {
-                        AppInitializer.log('🔄 Users/profile failed:', profileError.message || profileError, 'warn');
-                        AppInitializer.log('💾 All API calls failed, checking for cached data...', 'warn');
-                    }
-                }
-                
-                // If we get here, all API calls failed - try cached data
+                // Use cached data if available
                 if (storedUser) {
                     AppInitializer.log('📱 Using cached user data as final fallback', 'warn');
                     try {

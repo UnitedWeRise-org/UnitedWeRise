@@ -4,7 +4,7 @@
 **Last Updated**: 2025-11-05
 **Database**: PostgreSQL (Azure Flexible Server)
 **ORM**: Prisma
-**Total Models**: 87
+**Total Models**: 88
 
 ---
 
@@ -70,13 +70,13 @@ UnitedWeRise uses PostgreSQL with Prisma ORM for data management. The schema is 
 
 ## Database Statistics
 
-- **Total Models**: 87
+- **Total Models**: 88
 - **Core User & Authentication**: 10 models
 - **Social & Content**: 12 models
 - **Civic Engagement & Gamification**: 6 models
 - **Electoral & Political**: 28 models
 - **Messaging**: 6 models
-- **Moderation & Safety**: 10 models
+- **Moderation & Safety**: 11 models
 - **Payment & Transactions**: 6 models
 - **Administrative**: 6 models
 - **Geographic & Location**: 5 models
@@ -186,6 +186,7 @@ UnitedWeRise uses PostgreSQL with Prisma ORM for data management. The schema is 
 - `MOTDDismissal` - Message dismissal tracking
 - `MOTDView` - Message view analytics
 - `MOTDLog` - MOTD administration audit log
+- `BlockedIP` - Manual IP blocking by admins (SuperAdmin only)
 
 ### Payment & Transaction Models
 - `Payment` - All payment transactions
@@ -1239,6 +1240,61 @@ model Report {
 - Multiple reports on same content automatically escalate priority
 - Moderators can bulk-resolve duplicate reports
 - Action taken logged in ModerationLog for audit trail
+
+---
+
+### BlockedIP Model
+
+```prisma
+model BlockedIP {
+  id          String    @id @default(cuid())
+  ipAddress   String    @unique
+  reason      String
+  blockedById String
+  blockedAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  metadata    Json?
+  blockedBy   User      @relation("BlockedIPAdmin", fields: [blockedById], references: [id])
+
+  @@index([ipAddress])
+  @@index([blockedById])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+```
+
+**Fields:**
+- `id` (String, CUID): Primary key
+- `ipAddress` (String, unique): IPv4 or IPv6 address to block
+- `reason` (String): Human-readable reason for block (required, min 5 chars recommended)
+- `blockedById` (String, FK): SuperAdmin who created the block
+- `blockedAt` (DateTime): When block was created
+- `expiresAt` (DateTime, optional): Expiration date (null = permanent block)
+- `isActive` (Boolean): Soft delete pattern - deactivate instead of delete
+- `metadata` (Json, optional): Additional context (failed login count, geo info, security event links)
+
+**Relationships:**
+- `blockedBy`: Many-to-one with User (the admin who blocked)
+
+**Indexes:**
+- `ipAddress`: Fast lookup for middleware checks
+- `blockedById`: Admin audit trail
+- `isActive`: Filter active blocks
+- `expiresAt`: Cleanup expired blocks
+
+**Business Logic:**
+- SuperAdmin-only: Only SuperAdmins can create, modify, or delete blocks
+- TOTP required: All blocking actions require TOTP verification
+- Temporary blocks: Set `expiresAt` for auto-expiring blocks
+- Audit trail: All actions logged via SecurityService
+- Soft delete: `isActive=false` preserves history instead of deleting
+
+**API Endpoints:**
+- `GET /api/admin/security/blocked-ips` - List blocks (Admin)
+- `POST /api/admin/security/block-ip` - Create block (SuperAdmin + TOTP)
+- `DELETE /api/admin/security/unblock-ip` - Deactivate block (SuperAdmin + TOTP)
+- `POST /api/admin/security/clear-blocked-ips` - Clear all blocks (SuperAdmin + TOTP)
 
 ---
 

@@ -8,7 +8,7 @@ const prisma_1 = require("../lib/prisma");
  * Health and Deployment Status Endpoints
  *
  * Provides detailed information about component deployment status
- * Updated: 2025-10-23 - Testing automated workflow with API URL fixes
+ * Updated: 2025-12-19 - Includes RiseAI inline response enrichment
  */
 const express_1 = require("express");
 ;

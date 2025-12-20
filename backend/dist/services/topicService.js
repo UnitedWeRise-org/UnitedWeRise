@@ -5,6 +5,9 @@ const prisma_1 = require("../lib/prisma");
 const embeddingService_1 = require("./embeddingService");
 const logger_1 = require("./logger");
 class TopicService {
+    static MIN_POSTS_PER_TOPIC = 3;
+    static SIMILARITY_THRESHOLD = 0.7;
+    static MAX_TOPICS_PER_ANALYSIS = 20;
     /**
      * Analyze recent posts and generate topic clusters
      */
@@ -578,7 +581,4 @@ class TopicService {
     }
 }
 exports.TopicService = TopicService;
-TopicService.MIN_POSTS_PER_TOPIC = 3;
-TopicService.SIMILARITY_THRESHOLD = 0.7;
-TopicService.MAX_TOPICS_PER_ANALYSIS = 20;
 //# sourceMappingURL=topicService.js.map

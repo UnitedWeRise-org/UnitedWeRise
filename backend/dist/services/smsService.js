@@ -4,8 +4,9 @@ exports.smsService = void 0;
 const twilio_1 = require("twilio");
 const logger_1 = require("./logger");
 class SMSService {
+    client = null;
+    fromNumber;
     constructor() {
-        this.client = null;
         this.fromNumber = process.env.TWILIO_PHONE_NUMBER || '';
         this.initializeClient();
     }
