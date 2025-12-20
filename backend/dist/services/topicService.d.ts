@@ -76,7 +76,7 @@ export declare class TopicService {
                 searchable: boolean;
                 feedVisible: boolean;
                 audience: import(".prisma/client").$Enums.PostAudience;
-                editHistory: import("@prisma/client/runtime/library").JsonValue | null;
+                editHistory: import("@prisma/client/runtime/client").JsonValue | null;
                 latitude: number | null;
                 longitude: number | null;
                 originalH3Index: string | null;
@@ -139,10 +139,10 @@ export declare class TopicService {
                         lastName: string;
                     };
                 } & {
+                    userId: string;
                     id: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    userId: string;
                     content: string;
                     postId: string;
                     parentId: string | null;
@@ -159,9 +159,9 @@ export declare class TopicService {
                     disagreesCount: number;
                 })[];
                 likes: {
+                    userId: string;
                     id: string;
                     createdAt: Date;
-                    userId: string;
                     postId: string;
                 }[];
                 author: {
@@ -208,7 +208,7 @@ export declare class TopicService {
                 searchable: boolean;
                 feedVisible: boolean;
                 audience: import(".prisma/client").$Enums.PostAudience;
-                editHistory: import("@prisma/client/runtime/library").JsonValue | null;
+                editHistory: import("@prisma/client/runtime/client").JsonValue | null;
                 latitude: number | null;
                 longitude: number | null;
                 originalH3Index: string | null;

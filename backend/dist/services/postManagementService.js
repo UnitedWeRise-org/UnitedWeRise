@@ -9,6 +9,12 @@ exports.PostManagementService = void 0;
 const prisma_1 = require("../lib/prisma");
 const activityTracker_1 = require("./activityTracker");
 class PostManagementService {
+    static config = {
+        maxEditHistoryVersions: 10,
+        enableSoftDelete: true,
+        requireEditReasons: false,
+        archiveCommentsOnDelete: true,
+    };
     /**
      * Update configuration for modular behavior
      */
@@ -301,11 +307,5 @@ class PostManagementService {
     }
 }
 exports.PostManagementService = PostManagementService;
-PostManagementService.config = {
-    maxEditHistoryVersions: 10,
-    enableSoftDelete: true,
-    requireEditReasons: false,
-    archiveCommentsOnDelete: true,
-};
 exports.default = PostManagementService;
 //# sourceMappingURL=postManagementService.js.map

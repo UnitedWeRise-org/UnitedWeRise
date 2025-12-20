@@ -9,6 +9,7 @@ const auth_1 = require("../middleware/auth");
 const probabilityFeedService_1 = require("../services/probabilityFeedService");
 const engagementScoringService_1 = require("../services/engagementScoringService");
 const slotRollService_1 = require("../services/slotRollService");
+const riseAIEnrichmentService_1 = require("../services/riseAIEnrichmentService");
 const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -175,25 +176,32 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
             isLiked: likedPostIds.has(post.id),
             _count: undefined
         }));
+        // Enrich posts with RiseAI responses (batch for efficiency)
+        const riseAIResponses = await riseAIEnrichmentService_1.RiseAIEnrichmentService.enrichPostsWithResponses(postIds, userId);
+        const postsWithRiseAI = postsWithLikeStatus.map(post => ({
+            ...post,
+            riseAIResponse: riseAIResponses.get(post.id) || undefined
+        }));
         // DIAGNOSTIC: Log photo data being sent to frontend
         logger_1.logger.debug({
-            totalPosts: postsWithLikeStatus.length,
-            postsWithPhotos: postsWithLikeStatus.filter(p => p.photos && p.photos.length > 0).length,
-            samplePost: postsWithLikeStatus.find(p => p.photos?.length > 0) ? {
-                postId: postsWithLikeStatus.find(p => p.photos?.length > 0).id,
-                photoCount: postsWithLikeStatus.find(p => p.photos?.length > 0).photos.length
+            totalPosts: postsWithRiseAI.length,
+            postsWithPhotos: postsWithRiseAI.filter(p => p.photos && p.photos.length > 0).length,
+            postsWithRiseAI: postsWithRiseAI.filter(p => p.riseAIResponse).length,
+            samplePost: postsWithRiseAI.find(p => p.photos?.length > 0) ? {
+                postId: postsWithRiseAI.find(p => p.photos?.length > 0).id,
+                photoCount: postsWithRiseAI.find(p => p.photos?.length > 0).photos.length
             } : null
         }, 'Feed API photo data');
         res.json({
-            posts: postsWithLikeStatus,
+            posts: postsWithRiseAI,
             algorithm: feedResult.algorithm,
             weights: feedResult.weights,
             stats: feedResult.stats,
             pagination: {
                 limit: limitNum,
                 offset: offsetNum,
-                count: postsWithLikeStatus.length,
-                hasMore: postsWithLikeStatus.length === limitNum // If we got full limit, likely more available
+                count: postsWithRiseAI.length,
+                hasMore: postsWithRiseAI.length === limitNum // If we got full limit, likely more available
             }
         });
     }

@@ -18,6 +18,7 @@ const activityTracker_1 = require("../services/activityTracker");
 const postGeographicService_1 = require("../services/postGeographicService");
 const postManagementService_1 = require("../services/postManagementService");
 const engagementScoringService_1 = require("../services/engagementScoringService");
+const riseAIEnrichmentService_1 = require("../services/riseAIEnrichmentService");
 const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -205,9 +206,9 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
             // Calculate the next position
             threadPosition = headPost._count.threadPosts + 1;
             isThreadContinuation = true;
-            // Enforce continuation character limit (1000 chars)
-            if (content.trim().length > 1000) {
-                return res.status(400).json({ error: 'Thread continuation posts are limited to 1000 characters' });
+            // Enforce continuation character limit (500 chars, unified with head posts)
+            if (content.trim().length > 500) {
+                return res.status(400).json({ error: 'Thread continuation posts are limited to 500 characters' });
             }
         }
         else {
@@ -780,6 +781,8 @@ router.get('/:postId', async (req, res) => {
         }
         const userReaction = post.reactions && post.reactions[0] ? post.reactions[0] : null;
         const userShare = post.shares && post.shares[0] ? post.shares[0] : null;
+        // Get RiseAI response for this post (if any)
+        const riseAIResponse = await riseAIEnrichmentService_1.RiseAIEnrichmentService.getResponseForPost(postId, userId || undefined);
         res.json({
             post: {
                 ...post,
@@ -794,6 +797,7 @@ router.get('/:postId', async (req, res) => {
                 isShared: !!userShare,
                 userShareType: userShare?.shareType || null,
                 userShareContent: userShare?.content || null,
+                riseAIResponse: riseAIResponse || undefined,
                 reactions: undefined,
                 shares: undefined,
                 _count: undefined
@@ -1941,12 +1945,31 @@ router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res
                 topLevelComments.push(commentWithReplies);
             }
         });
+        // Get RiseAI response comment IDs to filter them out (they'll be displayed inline)
+        const riseAICommentIds = await riseAIEnrichmentService_1.RiseAIEnrichmentService.getRiseAICommentIdsForPost(postId);
+        const riseAICommentIdSet = new Set(riseAICommentIds);
+        // Get RiseAI responses for all comments that triggered them
+        const allCommentIds = allComments.map(c => c.id);
+        const userId = req.user?.id;
+        const riseAIResponses = await riseAIEnrichmentService_1.RiseAIEnrichmentService.enrichCommentsWithResponses(allCommentIds, userId);
+        // Filter function to remove RiseAI response comments (shown inline) but keep nested replies
+        const filterRiseAIComments = (comments) => {
+            return comments
+                .filter(comment => !riseAICommentIdSet.has(comment.id))
+                .map(comment => ({
+                ...comment,
+                // Add RiseAI response if this comment triggered one
+                riseAIResponse: riseAIResponses.get(comment.id) || undefined,
+                replies: filterRiseAIComments(comment.replies || [])
+            }));
+        };
+        const filteredComments = filterRiseAIComments(topLevelComments);
         res.json({
-            comments: topLevelComments,
+            comments: filteredComments,
             pagination: {
                 limit: limitNum,
                 offset: offsetNum,
-                count: topLevelComments.length
+                count: filteredComments.length
             }
         });
     }

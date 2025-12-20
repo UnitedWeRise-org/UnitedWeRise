@@ -113,7 +113,11 @@ class UnifiedPostRenderer {
             hasPhotos: !!(post.photos?.length),
             photoCount: post.photos?.length || 0,
             hasImageUrl: !!post.imageUrl,
-            postKeys: Object.keys(post)
+            postKeys: Object.keys(post),
+            // RiseAI debug
+            hasRiseAIResponse: !!post.riseAIResponse,
+            riseAIStatus: post.riseAIResponse?.status,
+            riseAIHasComment: !!post.riseAIResponse?.responseComment
         });
 
         // Validate post data

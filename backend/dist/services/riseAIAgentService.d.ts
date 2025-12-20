@@ -27,10 +27,10 @@ export declare class RiseAIAgentService {
      * Uses upsert to handle race conditions and existing users with matching email/username
      */
     static ensureSystemUser(): Promise<{
+        password: string | null;
         id: string;
         email: string;
         username: string;
-        password: string | null;
         firstName: string | null;
         lastName: string | null;
         avatar: string | null;
@@ -76,6 +76,7 @@ export declare class RiseAIAgentService {
         onboardingCompleted: boolean;
         interests: string[];
         notificationPreferences: Prisma.JsonValue | null;
+        uiPreferences: Prisma.JsonValue | null;
         displayName: string | null;
         followingCount: number;
         followersCount: number;

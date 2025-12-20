@@ -1,1 +1,1 @@
-{"version":3,"file":"totp.d.ts","sourceRoot":"","sources":["../../src/routes/totp.ts"],"names":[],"mappings":"AAYA,QAAA,MAAM,MAAM,4CAAmB,CAAC;AAiYhC,eAAe,MAAM,CAAC"}
+{"version":3,"file":"totp.d.ts","sourceRoot":"","sources":["../../src/routes/totp.ts"],"names":[],"mappings":"AAYA,QAAA,MAAM,MAAM,4CAAmB,CAAC;AAgYhC,eAAe,MAAM,CAAC"}

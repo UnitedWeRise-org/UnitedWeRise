@@ -41,7 +41,7 @@ const express_1 = __importDefault(require("express"));
 const speakeasy = __importStar(require("speakeasy"));
 const QRCode = __importStar(require("qrcode"));
 const crypto_1 = __importDefault(require("crypto"));
-;
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const auth_1 = require("../middleware/auth");
 const logger_1 = require("../services/logger");
 // Using singleton prisma from lib/prisma.ts
@@ -258,8 +258,7 @@ router.post('/disable', auth_1.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'TOTP is not enabled for this account' });
         }
         // Verify password
-        const bcrypt = require('bcryptjs');
-        const validPassword = await bcrypt.compare(password, user.password);
+        const validPassword = await bcryptjs_1.default.compare(password, user.password);
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid password' });
         }

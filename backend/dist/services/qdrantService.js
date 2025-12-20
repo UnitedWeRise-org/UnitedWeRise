@@ -4,6 +4,9 @@ exports.QdrantService = void 0;
 const js_client_rest_1 = require("@qdrant/js-client-rest");
 const logger_1 = require("./logger");
 class QdrantService {
+    static client;
+    static COLLECTION_NAME = 'post_embeddings';
+    static VECTOR_DIMENSION = 384; // all-MiniLM-L6-v2 dimension
     /**
      * Initialize Qdrant client
      */
@@ -257,6 +260,4 @@ class QdrantService {
     }
 }
 exports.QdrantService = QdrantService;
-QdrantService.COLLECTION_NAME = 'post_embeddings';
-QdrantService.VECTOR_DIMENSION = 384; // all-MiniLM-L6-v2 dimension
 //# sourceMappingURL=qdrantService.js.map

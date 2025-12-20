@@ -74,7 +74,7 @@ declare class VisitorAnalyticsService {
             anonymousVisits: number;
             botVisits: number;
             signupsCount: number;
-            popularPages: import("@prisma/client/runtime/library").JsonValue | null;
+            popularPages: import("@prisma/client/runtime/client").JsonValue | null;
             avgSessionDuration: number | null;
         }[];
         totals: {
@@ -134,7 +134,7 @@ declare class VisitorAnalyticsService {
         anonymousVisits: number;
         botVisits: number;
         signupsCount: number;
-        popularPages: import("@prisma/client/runtime/library").JsonValue | null;
+        popularPages: import("@prisma/client/runtime/client").JsonValue | null;
         avgSessionDuration: number | null;
     }>;
     /**

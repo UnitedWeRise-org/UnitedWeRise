@@ -4,11 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
 // Get conversations list for a user
 router.get('/conversations', auth_1.requireAuth, async (req, res) => {
     try {
@@ -22,7 +21,7 @@ router.get('/conversations', auth_1.requireAuth, async (req, res) => {
         if (type && (type === 'USER_USER' || type === 'ADMIN_CANDIDATE' || type === 'USER_CANDIDATE')) {
             whereClause.type = type;
         }
-        const conversations = await prisma.conversationMeta.findMany({
+        const conversations = await prisma_1.prisma.conversationMeta.findMany({
             where: whereClause,
             orderBy: {
                 lastMessageAt: 'desc'
@@ -31,7 +30,7 @@ router.get('/conversations', auth_1.requireAuth, async (req, res) => {
         });
         // Get last message for each conversation
         const conversationsWithMessages = await Promise.all(conversations.map(async (conv) => {
-            const lastMessage = await prisma.unifiedMessage.findFirst({
+            const lastMessage = await prisma_1.prisma.unifiedMessage.findFirst({
                 where: {
                     conversationId: conv.id
                 },
@@ -65,7 +64,7 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
         const limit = parseInt(req.query.limit) || 50;
         const offset = parseInt(req.query.offset) || 0;
         // Verify user is participant in this conversation
-        const conversation = await prisma.conversationMeta.findUnique({
+        const conversation = await prisma_1.prisma.conversationMeta.findUnique({
             where: { id: conversationId }
         });
         if (!conversation || !conversation.participants.includes(userId)) {
@@ -74,7 +73,7 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
                 error: 'Access denied to this conversation'
             });
         }
-        const messages = await prisma.unifiedMessage.findMany({
+        const messages = await prisma_1.prisma.unifiedMessage.findMany({
             where: {
                 conversationId
             },
@@ -147,7 +146,7 @@ router.post('/send', auth_1.requireAuth, async (req, res) => {
             }
         }
         // Create the message
-        const message = await prisma.unifiedMessage.create({
+        const message = await prisma_1.prisma.unifiedMessage.create({
             data: {
                 type: type,
                 senderId,
@@ -158,7 +157,7 @@ router.post('/send', auth_1.requireAuth, async (req, res) => {
             }
         });
         // Update or create conversation metadata
-        await prisma.conversationMeta.upsert({
+        await prisma_1.prisma.conversationMeta.upsert({
             where: { id: finalConversationId },
             update: {
                 lastMessageAt: message.createdAt,
@@ -203,7 +202,7 @@ router.post('/mark-read', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Mark messages as read (only messages where user is recipient)
-        const updateResult = await prisma.unifiedMessage.updateMany({
+        const updateResult = await prisma_1.prisma.unifiedMessage.updateMany({
             where: {
                 id: { in: messageIds },
                 recipientId: userId,
@@ -216,14 +215,14 @@ router.post('/mark-read', auth_1.requireAuth, async (req, res) => {
         });
         // Update conversation unread count if conversation ID provided
         if (conversationId) {
-            const unreadCount = await prisma.unifiedMessage.count({
+            const unreadCount = await prisma_1.prisma.unifiedMessage.count({
                 where: {
                     conversationId,
                     recipientId: userId,
                     isRead: false
                 }
             });
-            await prisma.conversationMeta.update({
+            await prisma_1.prisma.conversationMeta.update({
                 where: { id: conversationId },
                 data: { unreadCount }
             });
@@ -255,7 +254,7 @@ router.get('/unread-count', auth_1.requireAuth, async (req, res) => {
         if (type && (type === 'USER_USER' || type === 'ADMIN_CANDIDATE' || type === 'USER_CANDIDATE')) {
             whereClause.type = type;
         }
-        const unreadCount = await prisma.unifiedMessage.count({
+        const unreadCount = await prisma_1.prisma.unifiedMessage.count({
             where: whereClause
         });
         res.json({
@@ -279,7 +278,7 @@ router.get('/admin/candidate/:candidateId', auth_1.requireAuth, async (req, res)
         const limit = parseInt(req.query.limit) || 50;
         const offset = parseInt(req.query.offset) || 0;
         // Check if user is admin
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { isAdmin: true }
         });
@@ -290,7 +289,7 @@ router.get('/admin/candidate/:candidateId', auth_1.requireAuth, async (req, res)
             });
         }
         const conversationId = `admin_candidate_${candidateId}`;
-        const messages = await prisma.unifiedMessage.findMany({
+        const messages = await prisma_1.prisma.unifiedMessage.findMany({
             where: {
                 type: 'ADMIN_CANDIDATE',
                 conversationId
@@ -302,7 +301,7 @@ router.get('/admin/candidate/:candidateId', auth_1.requireAuth, async (req, res)
             skip: offset
         });
         // Get candidate info
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { id: candidateId },
             select: {
                 id: true,
@@ -313,7 +312,7 @@ router.get('/admin/candidate/:candidateId', auth_1.requireAuth, async (req, res)
             }
         });
         // Get unread count for admin
-        const unreadAdminCount = await prisma.unifiedMessage.count({
+        const unreadAdminCount = await prisma_1.prisma.unifiedMessage.count({
             where: {
                 type: 'ADMIN_CANDIDATE',
                 conversationId,
@@ -346,7 +345,7 @@ router.get('/candidate/admin-messages', auth_1.requireAuth, async (req, res) => 
         const limit = parseInt(req.query.limit) || 50;
         const offset = parseInt(req.query.offset) || 0;
         // Get candidate profile for this user
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { userId },
             select: { id: true, name: true }
         });
@@ -357,7 +356,7 @@ router.get('/candidate/admin-messages', auth_1.requireAuth, async (req, res) => 
             });
         }
         const conversationId = `admin_candidate_${candidate.id}`;
-        const messages = await prisma.unifiedMessage.findMany({
+        const messages = await prisma_1.prisma.unifiedMessage.findMany({
             where: {
                 type: 'ADMIN_CANDIDATE',
                 conversationId
@@ -369,7 +368,7 @@ router.get('/candidate/admin-messages', auth_1.requireAuth, async (req, res) => 
             skip: offset
         });
         // Get unread count for candidate
-        const unreadCandidateCount = await prisma.unifiedMessage.count({
+        const unreadCandidateCount = await prisma_1.prisma.unifiedMessage.count({
             where: {
                 type: 'ADMIN_CANDIDATE',
                 conversationId,
@@ -402,7 +401,7 @@ router.get('/candidate/user-messages', auth_1.requireAuth, async (req, res) => {
         const limit = parseInt(req.query.limit) || 50;
         const offset = parseInt(req.query.offset) || 0;
         // Get candidate profile for this user
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { userId },
             select: { id: true, name: true }
         });
@@ -413,7 +412,7 @@ router.get('/candidate/user-messages', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Get all conversations for this candidate (USER_CANDIDATE type)
-        const conversations = await prisma.conversationMeta.findMany({
+        const conversations = await prisma_1.prisma.conversationMeta.findMany({
             where: {
                 type: 'USER_CANDIDATE',
                 participants: { has: userId }
@@ -426,7 +425,7 @@ router.get('/candidate/user-messages', auth_1.requireAuth, async (req, res) => {
         });
         // Get messages for each conversation with sender details
         const conversationsWithMessages = await Promise.all(conversations.map(async (conv) => {
-            const messages = await prisma.unifiedMessage.findMany({
+            const messages = await prisma_1.prisma.unifiedMessage.findMany({
                 where: {
                     conversationId: conv.id,
                     type: 'USER_CANDIDATE'
@@ -438,7 +437,7 @@ router.get('/candidate/user-messages', auth_1.requireAuth, async (req, res) => {
             });
             // Get sender details for each unique sender
             const senderIds = [...new Set(messages.map(m => m.senderId))];
-            const senders = await prisma.user.findMany({
+            const senders = await prisma_1.prisma.user.findMany({
                 where: { id: { in: senderIds } },
                 select: { id: true, username: true, firstName: true, lastName: true }
             });
@@ -453,7 +452,7 @@ router.get('/candidate/user-messages', auth_1.requireAuth, async (req, res) => {
             return {
                 ...conv,
                 messages: messagesWithSenders.reverse(), // Chronological order
-                unreadCount: await prisma.unifiedMessage.count({
+                unreadCount: await prisma_1.prisma.unifiedMessage.count({
                     where: {
                         conversationId: conv.id,
                         recipientId: userId,

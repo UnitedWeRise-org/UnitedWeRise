@@ -9,6 +9,11 @@ const azureConfig_1 = require("../config/azureConfig");
 const environment_1 = require("../utils/environment");
 const logger_1 = require("./logger");
 class EmbeddingService {
+    static EMBEDDING_DIMENSION = 384; // Sentence Transformers dimension
+    static QWEN3_API_URL = process.env.QWEN3_API_URL || 'http://localhost:8000';
+    static MODEL_NAME = 'Qwen/Qwen2.5-3B';
+    static API_KEY = process.env.HUGGINGFACE_API_KEY || process.env.QWEN3_API_KEY;
+    static USE_QDRANT = process.env.QDRANT_URL !== undefined;
     /**
      * Generate embedding using best available service (Azure OpenAI > Local)
      */
@@ -396,9 +401,4 @@ class EmbeddingService {
     }
 }
 exports.EmbeddingService = EmbeddingService;
-EmbeddingService.EMBEDDING_DIMENSION = 384; // Sentence Transformers dimension
-EmbeddingService.QWEN3_API_URL = process.env.QWEN3_API_URL || 'http://localhost:8000';
-EmbeddingService.MODEL_NAME = 'Qwen/Qwen2.5-3B';
-EmbeddingService.API_KEY = process.env.HUGGINGFACE_API_KEY || process.env.QWEN3_API_KEY;
-EmbeddingService.USE_QDRANT = process.env.QDRANT_URL !== undefined;
 //# sourceMappingURL=embeddingService.js.map

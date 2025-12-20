@@ -273,7 +273,7 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
             domain: '.unitedwerise.org'
         });
         // Generate and set CSRF token
-        const csrfToken = require('crypto').randomBytes(32).toString('hex');
+        const csrfToken = crypto_1.default.randomBytes(32).toString('hex');
         res.cookie(cookies_1.COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
             httpOnly: false, // CSRF token needs to be readable by JavaScript
             secure: (0, environment_1.requireSecureCookies)(),
@@ -474,7 +474,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 domain: '.unitedwerise.org'
             });
             // Generate and set CSRF token
-            const csrfToken = require('crypto').randomBytes(32).toString('hex');
+            const csrfToken = crypto_1.default.randomBytes(32).toString('hex');
             res.cookie(cookies_1.COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
                 httpOnly: false, // Needs to be readable by JS
                 secure: (0, environment_1.requireSecureCookies)(),
@@ -528,7 +528,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             domain: '.unitedwerise.org'
         });
         // Generate and set CSRF token
-        const csrfToken = require('crypto').randomBytes(32).toString('hex');
+        const csrfToken = crypto_1.default.randomBytes(32).toString('hex');
         res.cookie(cookies_1.COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
             httpOnly: false, // Needs to be readable by JS
             secure: (0, environment_1.requireSecureCookies)(),
@@ -586,6 +586,7 @@ router.get('/me', auth_2.requireAuth, async (req, res) => {
                 isAdmin: true,
                 isSuperAdmin: true,
                 password: true, // Need to check if set (won't return actual password)
+                uiPreferences: true, // UI preferences (dismissed modals, etc.)
                 oauthProviders: {
                     select: {
                         provider: true,
@@ -618,7 +619,9 @@ router.get('/me', auth_2.requireAuth, async (req, res) => {
                 provider: p.provider,
                 email: p.email,
                 linkedAt: p.createdAt
-            }))
+            })),
+            // UI preferences (dismissed modals, theme choices, etc.)
+            uiPreferences: fullUser.uiPreferences || {}
         };
         res.json({ success: true, data: userData });
     }

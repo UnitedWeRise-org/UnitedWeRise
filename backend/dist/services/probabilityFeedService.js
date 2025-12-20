@@ -5,6 +5,14 @@ const prisma_1 = require("../lib/prisma");
 const engagementScoringService_1 = require("./engagementScoringService");
 const logger_1 = require("./logger");
 class ProbabilityFeedService {
+    // Default weights - can be overridden per user or via A/B testing
+    static defaultWeights = {
+        recency: 0.30, // Prefer newer content
+        similarity: 0.25, // Match user interests
+        social: 0.25, // Posts from connections
+        trending: 0.10, // Popular content
+        reputation: 0.10 // Author reputation
+    };
     /**
      * Generate personalized feed using probability cloud sampling algorithm
      *
@@ -143,6 +151,8 @@ class ProbabilityFeedService {
             where: {
                 createdAt: { gte: thirtyDaysAgo },
                 authorId: { not: userId }, // Don't include user's own posts
+                deletedAt: null, // Only non-deleted posts
+                threadHeadId: null, // Exclude thread continuations (only show thread heads)
                 tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
             },
             include: {
@@ -405,12 +415,4 @@ class ProbabilityFeedService {
     }
 }
 exports.ProbabilityFeedService = ProbabilityFeedService;
-// Default weights - can be overridden per user or via A/B testing
-ProbabilityFeedService.defaultWeights = {
-    recency: 0.30, // Prefer newer content
-    similarity: 0.25, // Match user interests
-    social: 0.25, // Posts from connections
-    trending: 0.10, // Popular content
-    reputation: 0.10 // Author reputation
-};
 //# sourceMappingURL=probabilityFeedService.js.map

@@ -17,6 +17,9 @@ const logger_1 = require("./logger");
  * - Suspension and warning management
  */
 class ModerationService {
+    prisma;
+    toxicityThreshold;
+    spamKeywords;
     constructor() {
         this.prisma = prisma_1.prisma;
         this.toxicityThreshold = 0.8; // Confidence threshold for flagging content

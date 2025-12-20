@@ -7,16 +7,16 @@ exports.WebSocketService = void 0;
 const socket_io_1 = require("socket.io");
 const environment_1 = require("../utils/environment");
 const crypto_1 = __importDefault(require("crypto"));
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const messaging_1 = require("../types/messaging");
 const sessionManager_1 = require("./sessionManager");
 const auth_1 = require("../utils/auth");
 const cookies_1 = require("../utils/cookies");
 const logger_1 = require("./logger");
-const prisma = new client_1.PrismaClient();
 class WebSocketService {
+    io;
+    userSockets = new Map();
     constructor(httpServer) {
-        this.userSockets = new Map();
         // Environment-aware CORS configuration
         // Explicit origins required (cannot use wildcard with credentials: true)
         const allowedOrigins = [
@@ -53,7 +53,7 @@ class WebSocketService {
             }
             this.userSockets.get(userId).add(socket.id);
             // Update user online status in database
-            await prisma.user.update({
+            await prisma_1.prisma.user.update({
                 where: { id: userId },
                 data: {
                     isOnline: true,
@@ -82,7 +82,7 @@ class WebSocketService {
                     if (userSocketSet.size === 0) {
                         this.userSockets.delete(userId);
                         // Update user offline status in database (only when last socket disconnects)
-                        await prisma.user.update({
+                        await prisma_1.prisma.user.update({
                             where: { id: userId },
                             data: {
                                 isOnline: false,
@@ -184,7 +184,7 @@ class WebSocketService {
                 return next(new Error('Authentication error: No valid token provided'));
             }
             // Get user details from database
-            const user = await prisma.user.findUnique({
+            const user = await prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 select: { id: true, username: true, isAdmin: true, isSuspended: true }
             });
@@ -318,7 +318,7 @@ class WebSocketService {
             const userId = socket.data.userId;
             const { messageIds, conversationId } = data;
             // Mark messages as read in database
-            await prisma.unifiedMessage.updateMany({
+            await prisma_1.prisma.unifiedMessage.updateMany({
                 where: {
                     id: { in: messageIds },
                     recipientId: userId
@@ -330,14 +330,14 @@ class WebSocketService {
             });
             // Update conversation metadata
             if (conversationId) {
-                const unreadCount = await prisma.unifiedMessage.count({
+                const unreadCount = await prisma_1.prisma.unifiedMessage.count({
                     where: {
                         conversationId,
                         recipientId: userId,
                         isRead: false
                     }
                 });
-                await prisma.conversationMeta.update({
+                await prisma_1.prisma.conversationMeta.update({
                     where: { id: conversationId },
                     data: { unreadCount }
                 });
@@ -370,7 +370,7 @@ class WebSocketService {
             }
         }
         // Create the message
-        const message = await prisma.unifiedMessage.create({
+        const message = await prisma_1.prisma.unifiedMessage.create({
             data: {
                 type: type === messaging_1.MessageType.USER_USER ? 'USER_USER' :
                     type === messaging_1.MessageType.USER_CANDIDATE ? 'USER_CANDIDATE' : 'ADMIN_CANDIDATE',
@@ -382,7 +382,7 @@ class WebSocketService {
             }
         });
         // Update or create conversation metadata
-        await prisma.conversationMeta.upsert({
+        await prisma_1.prisma.conversationMeta.upsert({
             where: { id: finalConversationId },
             update: {
                 lastMessageAt: message.createdAt,

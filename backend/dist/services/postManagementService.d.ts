@@ -82,7 +82,7 @@ export declare class PostManagementService {
             searchable: boolean;
             feedVisible: boolean;
             audience: import(".prisma/client").$Enums.PostAudience;
-            editHistory: import("@prisma/client/runtime/library").JsonValue | null;
+            editHistory: import("@prisma/client/runtime/client").JsonValue | null;
             latitude: number | null;
             longitude: number | null;
             originalH3Index: string | null;
@@ -103,7 +103,7 @@ export declare class PostManagementService {
             originalContent: string;
             content: string;
             extendedContent: string;
-            editHistory: import("@prisma/client/runtime/library").JsonValue;
+            editHistory: import("@prisma/client/runtime/client").JsonValue;
             deletedAt: Date;
             deleteReason: string;
             engagement: {
@@ -111,10 +111,10 @@ export declare class PostManagementService {
                 commentsCount: number;
             };
             comments: {
+                userId: string;
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                userId: string;
                 content: string;
                 postId: string;
                 parentId: string | null;
@@ -161,7 +161,7 @@ export declare class PostManagementService {
         postId: string;
         deletedAt: Date;
         deleteReason: string;
-        archive: import("@prisma/client/runtime/library").JsonValue;
+        archive: import("@prisma/client/runtime/client").JsonValue;
     }>;
     /**
      * Check if user can edit post (modular permission system)

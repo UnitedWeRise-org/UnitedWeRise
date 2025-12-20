@@ -9,6 +9,30 @@ const axios_1 = __importDefault(require("axios"));
 const electionService_1 = require("./electionService");
 const logger_1 = require("./logger");
 class EnhancedElectionService {
+    static CACHE_DURATION_HOURS = 6;
+    static API_TIMEOUT_MS = 5000;
+    static CACHE_KEY = 'election_data_cache';
+    // External API configurations
+    static EXTERNAL_APIS = [
+        {
+            name: 'Ballotpedia',
+            baseUrl: 'https://api.ballotpedia.org',
+            rateLimitPerHour: 100,
+            isAvailable: false // Will be enabled when API keys are configured
+        },
+        {
+            name: 'Vote Smart',
+            baseUrl: 'https://api.votesmart.org',
+            rateLimitPerHour: 1000,
+            isAvailable: false
+        },
+        {
+            name: 'Google Civic Info',
+            baseUrl: 'https://www.googleapis.com/civicinfo/v2',
+            rateLimitPerHour: 25000,
+            isAvailable: !!process.env.GOOGLE_CIVIC_API_KEY
+        }
+    ];
     /**
      * Main entry point - get election data using multi-tier strategy
      */
@@ -410,28 +434,4 @@ class EnhancedElectionService {
     }
 }
 exports.EnhancedElectionService = EnhancedElectionService;
-EnhancedElectionService.CACHE_DURATION_HOURS = 6;
-EnhancedElectionService.API_TIMEOUT_MS = 5000;
-EnhancedElectionService.CACHE_KEY = 'election_data_cache';
-// External API configurations
-EnhancedElectionService.EXTERNAL_APIS = [
-    {
-        name: 'Ballotpedia',
-        baseUrl: 'https://api.ballotpedia.org',
-        rateLimitPerHour: 100,
-        isAvailable: false // Will be enabled when API keys are configured
-    },
-    {
-        name: 'Vote Smart',
-        baseUrl: 'https://api.votesmart.org',
-        rateLimitPerHour: 1000,
-        isAvailable: false
-    },
-    {
-        name: 'Google Civic Info',
-        baseUrl: 'https://www.googleapis.com/civicinfo/v2',
-        rateLimitPerHour: 25000,
-        isAvailable: !!process.env.GOOGLE_CIVIC_API_KEY
-    }
-];
 //# sourceMappingURL=enhancedElectionService.js.map

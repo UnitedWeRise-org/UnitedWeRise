@@ -14,8 +14,17 @@ const openai_1 = __importDefault(require("openai"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const errorLoggingService_1 = require("./errorLoggingService");
 class AzureOpenAIService {
+    clients = new Map();
+    endpoint;
+    apiKey;
+    embeddingDeployment;
+    chatDeployment;
+    tier1Reasoning;
+    tier2Reasoning;
+    generalChat;
+    vision;
+    isConfigured;
     constructor() {
-        this.clients = new Map();
         const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
         const apiKey = process.env.AZURE_OPENAI_API_KEY;
         // Tier-based deployments (o1/o4-mini reasoning upgrade - December 2024)

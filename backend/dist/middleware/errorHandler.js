@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createError = exports.securityLogger = exports.requestLogger = exports.notFoundHandler = exports.errorHandler = void 0;
 const environment_1 = require("../utils/environment");
+const logger_1 = require("../services/logger");
 // Global error handler
 const errorHandler = (err, req, res, next) => {
     // Log error details using Pino
@@ -79,8 +80,7 @@ const securityLogger = (event, details, req) => {
     }
     else {
         // Fallback to global logger if no request context
-        const { logger } = require('../services/logger');
-        logger.warn({
+        logger_1.logger.warn({
             event,
             ...details
         }, 'SECURITY EVENT');

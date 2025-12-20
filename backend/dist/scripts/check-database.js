@@ -1,19 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
 async function checkDatabase() {
     try {
         console.log('🔍 Checking database connection and data...');
         console.log(`📍 Database URL: ${process.env.DATABASE_URL?.replace(/:[^:@]*@/, ':****@')}`);
         // Test basic connection
-        await prisma.$connect();
+        await prisma_1.prisma.$connect();
         console.log('✅ Database connected successfully');
         // Count users
-        const userCount = await prisma.user.count();
+        const userCount = await prisma_1.prisma.user.count();
         console.log(`👥 Total users in database: ${userCount}`);
         // Check for test users
-        const testUsers = await prisma.user.findMany({
+        const testUsers = await prisma_1.prisma.user.findMany({
             where: {
                 email: {
                     contains: 'testuser'
@@ -35,10 +34,10 @@ async function checkDatabase() {
             });
         }
         // Count posts
-        const postCount = await prisma.post.count();
+        const postCount = await prisma_1.prisma.post.count();
         console.log(`📝 Total posts in database: ${postCount}`);
         // Check recent posts
-        const recentPosts = await prisma.post.findMany({
+        const recentPosts = await prisma_1.prisma.post.findMany({
             include: {
                 author: {
                     select: {
@@ -59,7 +58,7 @@ async function checkDatabase() {
         console.error('❌ Database check failed:', error);
     }
     finally {
-        await prisma.$disconnect();
+        await prisma_1.prisma.$disconnect();
     }
 }
 checkDatabase().catch(console.error);

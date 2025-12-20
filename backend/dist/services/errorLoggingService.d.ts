@@ -35,19 +35,19 @@ export declare class ErrorLoggingService {
             displayName: string;
         };
     } & {
+        service: string;
+        requestId: string | null;
+        userId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        userId: string | null;
         details: Prisma.JsonValue | null;
         resolved: boolean;
         resolution: string | null;
         message: string;
-        service: string;
         operation: string;
         errorType: string;
         stack: string | null;
-        requestId: string | null;
     })[]>;
     /**
      * Get a single error by ID
@@ -59,37 +59,37 @@ export declare class ErrorLoggingService {
             displayName: string;
         };
     } & {
+        service: string;
+        requestId: string | null;
+        userId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        userId: string | null;
         details: Prisma.JsonValue | null;
         resolved: boolean;
         resolution: string | null;
         message: string;
-        service: string;
         operation: string;
         errorType: string;
         stack: string | null;
-        requestId: string | null;
     }>;
     /**
      * Mark an error as resolved with optional resolution notes
      */
     static markResolved(errorId: string, resolution?: string): Promise<{
+        service: string;
+        requestId: string | null;
+        userId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        userId: string | null;
         details: Prisma.JsonValue | null;
         resolved: boolean;
         resolution: string | null;
         message: string;
-        service: string;
         operation: string;
         errorType: string;
         stack: string | null;
-        requestId: string | null;
     }>;
     /**
      * Get error counts grouped by service (for monitoring dashboard)

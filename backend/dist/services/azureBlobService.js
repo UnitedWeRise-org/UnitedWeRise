@@ -5,6 +5,9 @@ const storage_blob_1 = require("@azure/storage-blob");
 const uuid_1 = require("uuid");
 const logger_1 = require("./logger");
 class AzureBlobService {
+    static blobServiceClient;
+    static containerClient;
+    static CONTAINER_NAME = 'photos';
     /**
      * Initialize Azure Blob Storage
      */
@@ -111,5 +114,4 @@ class AzureBlobService {
     }
 }
 exports.AzureBlobService = AzureBlobService;
-AzureBlobService.CONTAINER_NAME = 'photos';
 //# sourceMappingURL=azureBlobService.js.map

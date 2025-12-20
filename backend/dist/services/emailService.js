@@ -24,8 +24,8 @@ const logger_1 = require("./logger");
  * - FRONTEND_URL for link generation
  */
 class EmailService {
+    transporter = null;
     constructor() {
-        this.transporter = null;
         this.initializeTransporter();
     }
     /**

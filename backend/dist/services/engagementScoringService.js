@@ -7,6 +7,36 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EngagementScoringService = void 0;
 class EngagementScoringService {
+    static config = {
+        algorithm: 'balanced',
+        weights: {
+            likes: 1.0,
+            dislikes: 0.8, // Still counts as engagement
+            agrees: 1.2, // Shows resonance
+            disagrees: 1.5, // Sparks discussion
+            comments: 2.0,
+            shares: 3.0,
+            views: 0.1,
+            communityNotes: 2.5,
+            reportsWeight: -0.5, // Negative impact
+            commentEngagement: 1.5, // Comment reactions show deep engagement
+            enhancedShares: 2.5 // Enhanced share metrics (quote shares, quality)
+        },
+        modifiers: {
+            timeDecayEnabled: true,
+            timeDecayFactor: 0.95, // 5% decay per hour
+            controversyBoost: true,
+            controversyThreshold: 1.5, // More disagrees than agrees
+            qualityBias: true,
+            newContentBoost: true,
+            authorReputationWeight: 0.3
+        },
+        adjustments: {
+            minScore: 0,
+            maxScore: 1000,
+            scaleToRange: false
+        }
+    };
     /**
      * Update scoring configuration
      */
@@ -532,35 +562,5 @@ class EngagementScoringService {
     }
 }
 exports.EngagementScoringService = EngagementScoringService;
-EngagementScoringService.config = {
-    algorithm: 'balanced',
-    weights: {
-        likes: 1.0,
-        dislikes: 0.8, // Still counts as engagement
-        agrees: 1.2, // Shows resonance
-        disagrees: 1.5, // Sparks discussion
-        comments: 2.0,
-        shares: 3.0,
-        views: 0.1,
-        communityNotes: 2.5,
-        reportsWeight: -0.5, // Negative impact
-        commentEngagement: 1.5, // Comment reactions show deep engagement
-        enhancedShares: 2.5 // Enhanced share metrics (quote shares, quality)
-    },
-    modifiers: {
-        timeDecayEnabled: true,
-        timeDecayFactor: 0.95, // 5% decay per hour
-        controversyBoost: true,
-        controversyThreshold: 1.5, // More disagrees than agrees
-        qualityBias: true,
-        newContentBoost: true,
-        authorReputationWeight: 0.3
-    },
-    adjustments: {
-        minScore: 0,
-        maxScore: 1000,
-        scaleToRange: false
-    }
-};
 exports.default = EngagementScoringService;
 //# sourceMappingURL=engagementScoringService.js.map

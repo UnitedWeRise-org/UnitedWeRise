@@ -23,9 +23,7 @@ const logger_1 = require("../services/logger");
 // Create child logger for analytics cleanup job
 const jobLogger = logger_1.logger.child({ component: 'analytics-cleanup-job' });
 class AnalyticsCleanupJob {
-    constructor() {
-        this.job = null;
-    }
+    job = null;
     /**
      * Start the cron job
      * Runs at 3 AM UTC every day

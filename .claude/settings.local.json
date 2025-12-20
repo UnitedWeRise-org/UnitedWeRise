@@ -80,7 +80,9 @@
       "WebFetch(domain:api.github.com)",
       "Bash(where magick)",
       "Bash(pip install:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh run view:*)"
     ],
     "deny": [
       "Bash(npm run dev:*)"

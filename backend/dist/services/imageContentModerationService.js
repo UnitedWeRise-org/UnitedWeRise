@@ -58,6 +58,10 @@ const moderation_1 = require("../types/moderation");
 const SEVERITY_THRESHOLD_BLOCK = 4; // Block medium+ severity
 const SEVERITY_THRESHOLD_WARN = 2; // Warn on low+ severity
 class ImageContentModerationService {
+    client;
+    isConfigured;
+    config;
+    endpoint;
     constructor() {
         const endpoint = process.env.AZURE_CONTENT_SAFETY_ENDPOINT || 'https://eastus.api.cognitive.microsoft.com/';
         const apiKey = process.env.AZURE_CONTENT_SAFETY_KEY;

@@ -4,8 +4,9 @@ const prisma_1 = require("../lib/prisma");
 const storage_blob_1 = require("@azure/storage-blob");
 const logger_1 = require("./logger");
 class BadgeService {
+    storageClient;
+    containerName = 'photos'; // Using existing photos container
     constructor() {
-        this.containerName = 'photos'; // Using existing photos container
         const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
         if (connectionString) {
             this.storageClient = storage_blob_1.BlobServiceClient.fromConnectionString(connectionString);

@@ -16,78 +16,76 @@ const azureOpenAIService_1 = require("./azureOpenAIService");
 const prisma_1 = require("../lib/prisma");
 const logger_1 = __importDefault(require("../utils/logger"));
 class FeedbackAnalysisService {
-    constructor() {
-        // Pre-computed embeddings for feedback reference phrases
-        this.feedbackEmbeddings = new Map();
-        this.isEmbeddingsInitialized = false;
-        this.feedbackKeywords = {
-            suggestion: [
-                'suggest', 'recommend', 'should add', 'would be nice', 'feature request',
-                'could improve', 'better if', 'enhance', 'upgrade', 'add feature',
-                'would be great', 'maybe you could', 'it would help', 'consider adding',
-                'should be able', 'shouldn\'t be able', 'should just', 'should have',
-                'needs to', 'would prefer', 'instead of', 'rather than'
-            ],
-            bug_report: [
-                'bug', 'error', 'broken', 'not working', 'glitch', 'issue', 'problem',
-                'crash', 'freeze', 'loading', 'fail', 'incorrect', 'wrong'
-            ],
-            concern: [
-                'concern', 'worried about', 'problem with', 'disappointed',
-                'frustrated', 'confusing', 'unclear', 'difficult', 'hard to'
-            ],
-            ui_ux: [
-                'interface', 'design', 'layout', 'button', 'menu', 'navigation',
-                'hard to find', 'confusing layout', 'user experience', 'mobile',
-                'scroll', 'feed', 'timeline', 'infinite', 'pagination', 'load more',
-                'end of', 'populate', 'refresh', 'update', 'social media'
-            ],
-            performance: [
-                'slow', 'fast', 'loading', 'lag', 'speed', 'performance',
-                'timeout', 'response time', 'optimization'
-            ],
-            accessibility: [
-                'accessibility', 'screen reader', 'keyboard', 'contrast',
-                'font size', 'color blind', 'disability', 'inclusive'
-            ]
-        };
-        // Reference feedback phrases for vector similarity
-        this.feedbackReferencePhrases = {
-            bug_report: [
-                "The website is broken and not working properly",
-                "This site has bugs and errors that need fixing",
-                "The platform is slow and crashes frequently",
-                "There are performance issues with loading"
-            ],
-            suggestion: [
-                "It would be great if this website had new features",
-                "I suggest improving the user interface design",
-                "The platform could be enhanced with better functionality",
-                "Maybe you could add more useful tools"
-            ],
-            concern: [
-                "I'm worried about the usability of this site",
-                "The website design is confusing and unclear",
-                "It's difficult to navigate this platform effectively",
-                "This interface is frustrating to use"
-            ],
-            ui_ux: [
-                "The navigation menu needs better design",
-                "The user interface could be more intuitive",
-                "Dark mode would improve the visual experience",
-                "The layout and buttons need repositioning",
-                "The feed should have infinite scrolling like other social media",
-                "You shouldn't be able to reach the end of the feed",
-                "Posts should load automatically as you scroll down"
-            ],
-            performance: [
-                "The website loads too slowly",
-                "Performance optimization is needed urgently",
-                "Loading times are unacceptably long",
-                "The site speed needs improvement"
-            ]
-        };
-    }
+    // Pre-computed embeddings for feedback reference phrases
+    feedbackEmbeddings = new Map();
+    isEmbeddingsInitialized = false;
+    feedbackKeywords = {
+        suggestion: [
+            'suggest', 'recommend', 'should add', 'would be nice', 'feature request',
+            'could improve', 'better if', 'enhance', 'upgrade', 'add feature',
+            'would be great', 'maybe you could', 'it would help', 'consider adding',
+            'should be able', 'shouldn\'t be able', 'should just', 'should have',
+            'needs to', 'would prefer', 'instead of', 'rather than'
+        ],
+        bug_report: [
+            'bug', 'error', 'broken', 'not working', 'glitch', 'issue', 'problem',
+            'crash', 'freeze', 'loading', 'fail', 'incorrect', 'wrong'
+        ],
+        concern: [
+            'concern', 'worried about', 'problem with', 'disappointed',
+            'frustrated', 'confusing', 'unclear', 'difficult', 'hard to'
+        ],
+        ui_ux: [
+            'interface', 'design', 'layout', 'button', 'menu', 'navigation',
+            'hard to find', 'confusing layout', 'user experience', 'mobile',
+            'scroll', 'feed', 'timeline', 'infinite', 'pagination', 'load more',
+            'end of', 'populate', 'refresh', 'update', 'social media'
+        ],
+        performance: [
+            'slow', 'fast', 'loading', 'lag', 'speed', 'performance',
+            'timeout', 'response time', 'optimization'
+        ],
+        accessibility: [
+            'accessibility', 'screen reader', 'keyboard', 'contrast',
+            'font size', 'color blind', 'disability', 'inclusive'
+        ]
+    };
+    // Reference feedback phrases for vector similarity
+    feedbackReferencePhrases = {
+        bug_report: [
+            "The website is broken and not working properly",
+            "This site has bugs and errors that need fixing",
+            "The platform is slow and crashes frequently",
+            "There are performance issues with loading"
+        ],
+        suggestion: [
+            "It would be great if this website had new features",
+            "I suggest improving the user interface design",
+            "The platform could be enhanced with better functionality",
+            "Maybe you could add more useful tools"
+        ],
+        concern: [
+            "I'm worried about the usability of this site",
+            "The website design is confusing and unclear",
+            "It's difficult to navigate this platform effectively",
+            "This interface is frustrating to use"
+        ],
+        ui_ux: [
+            "The navigation menu needs better design",
+            "The user interface could be more intuitive",
+            "Dark mode would improve the visual experience",
+            "The layout and buttons need repositioning",
+            "The feed should have infinite scrolling like other social media",
+            "You shouldn't be able to reach the end of the feed",
+            "Posts should load automatically as you scroll down"
+        ],
+        performance: [
+            "The website loads too slowly",
+            "Performance optimization is needed urgently",
+            "Loading times are unacceptably long",
+            "The site speed needs improvement"
+        ]
+    };
     /**
      * Initialize embeddings for reference phrases using Azure OpenAI
      */

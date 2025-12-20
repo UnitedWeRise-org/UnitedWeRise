@@ -13,6 +13,12 @@ const logger_1 = require("./logger");
 const DEFAULT_DAILY_LIMIT_NON_ADMIN = 10;
 const DEFAULT_DAILY_LIMIT_ADMIN = -1; // Unlimited
 class RiseAIMentionService {
+    // Regex patterns for @RiseAI mentions (case-insensitive)
+    static MENTION_PATTERNS = [
+        /@riseai\b/gi,
+        /@rise-ai\b/gi,
+        /@rise_ai\b/gi
+    ];
     /**
      * Detect @RiseAI mentions in text content
      */
@@ -304,10 +310,4 @@ class RiseAIMentionService {
     }
 }
 exports.RiseAIMentionService = RiseAIMentionService;
-// Regex patterns for @RiseAI mentions (case-insensitive)
-RiseAIMentionService.MENTION_PATTERNS = [
-    /@riseai\b/gi,
-    /@rise-ai\b/gi,
-    /@rise_ai\b/gi
-];
 //# sourceMappingURL=riseAIMentionService.js.map
