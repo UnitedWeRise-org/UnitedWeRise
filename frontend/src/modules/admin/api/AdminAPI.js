@@ -284,10 +284,12 @@ class AdminAPI {
             }
 
             // Handle authentication errors with automatic token refresh
+            // FIXED: Always try refresh first for ANY 401, not just ACCESS_TOKEN_EXPIRED
+            // This handles: expired cookies, missing cookies, token rotation edge cases
             if (response.status === 401) {
-                console.warn('⚠️ Admin API: Received 401 - checking for token expiration...');
+                console.warn('⚠️ Admin API: Received 401 - attempting token refresh...');
 
-                // If this is a retry, don't retry again
+                // If this is a retry, don't retry again - session is truly invalid
                 if (retryCount > 0) {
                     console.error('🔒 401 after retry - session is invalid');
                     await adminDebugError('AdminAPI', '401 error persists after retry - logging out', {
@@ -295,107 +297,67 @@ class AdminAPI {
                         retryCount: retryCount
                     });
 
-                    // Clear auth data via userState and redirect to login
-                    window.currentUser = null;  // Routes through userState.clear() → removes localStorage
-
-                    if (window.adminAuth) {
-                        window.adminAuth.showLogin();
-                    } else {
-                        window.location.href = '/admin-dashboard.html';
-                    }
-
+                    this.triggerLogout('401 persists after token refresh - session invalid');
                     return response;
                 }
 
-                // Check if this is an access token expiration error
-                try {
-                    const errorData = await response.clone().json().catch(() => ({}));
+                // Parse error response for logging (but don't use it to decide refresh strategy)
+                const errorData = await response.clone().json().catch(() => ({}));
+                await adminDebugLog('AdminAPI', '401 received - refreshing token', {
+                    originalUrl: url,
+                    method: options.method || 'GET',
+                    errorCode: errorData.code || 'none',
+                    errorMessage: errorData.error || 'unknown'
+                });
 
-                    if (errorData.code === 'ACCESS_TOKEN_EXPIRED') {
-                        console.log('🔄 Access token expired - attempting refresh...');
-                        await adminDebugLog('AdminAPI', 'Access token expired - refreshing', {
-                            originalUrl: url,
-                            method: options.method || 'GET'
+                // ALWAYS try token refresh first via AdminAuth (which has mutex protection)
+                // This handles ALL 401 cases: ACCESS_TOKEN_EXPIRED, no token, revoked, etc.
+                try {
+                    let refreshSucceeded = false;
+
+                    // Use AdminAuth.refreshToken() for mutex-protected refresh
+                    if (window.adminAuth && typeof window.adminAuth.refreshToken === 'function') {
+                        console.log('🔄 Attempting token refresh via AdminAuth...');
+                        refreshSucceeded = await window.adminAuth.refreshToken(true); // Force refresh
+                    } else {
+                        // Fallback: direct refresh call if AdminAuth not available
+                        console.log('🔄 AdminAuth not available - attempting direct refresh...');
+                        const refreshResponse = await fetch(`${this.BACKEND_URL}/api/auth/refresh`, {
+                            method: 'POST',
+                            credentials: 'include'
                         });
 
-                        // Attempt to refresh token
-                        try {
-                            const refreshResponse = await fetch(`${this.BACKEND_URL}/api/auth/refresh`, {
-                                method: 'POST',
-                                credentials: 'include'
-                            });
-
-                            if (refreshResponse.ok) {
-                                const refreshData = await refreshResponse.json();
-
-                                // Update CSRF token if provided
-                                if (refreshData.csrfToken) {
-                                    window.csrfToken = refreshData.csrfToken;
-                                }
-
-                                console.log('✅ Token refreshed successfully - retrying request');
-                                await adminDebugLog('AdminAPI', 'Token refresh successful - retrying original request');
-
-                                // Wait for cookie propagation
-                                await new Promise(resolve => setTimeout(resolve, 300));
-
-                                // Retry original request with incremented retry count
-                                return this.call(url, options, retryCount + 1);
-                            } else {
-                                console.error('🔒 Token refresh failed - logging out');
-                                await adminDebugError('AdminAPI', 'Token refresh failed', {
-                                    refreshStatus: refreshResponse.status
-                                });
-
-                                // Clear auth data via userState and redirect to login
-                                window.currentUser = null;  // Routes through userState.clear() → removes localStorage
-
-                                if (window.adminAuth) {
-                                    window.adminAuth.showLogin();
-                                } else {
-                                    window.location.href = '/admin-dashboard.html';
-                                }
-
-                                return response;
+                        if (refreshResponse.ok) {
+                            const refreshData = await refreshResponse.json();
+                            if (refreshData.csrfToken) {
+                                window.csrfToken = refreshData.csrfToken;
                             }
-                        } catch (refreshError) {
-                            console.error('🔒 Token refresh error:', refreshError);
-                            await adminDebugError('AdminAPI', 'Token refresh exception', {
-                                error: refreshError.message
-                            });
-
-                            // Network error during refresh - keep user logged in
-                            return response;
-                        }
-                    } else {
-                        // Not a token expiration - verify session with mutex
-                        console.warn('⚠️ 401 without ACCESS_TOKEN_EXPIRED code - verifying session...');
-
-                        const sessionValid = await this.verifySessionOnce();
-
-                        if (sessionValid) {
-                            // Session is still valid - 401 was likely timing issue
-                            console.log('✅ Session verified valid - 401 was likely timing issue, retrying...');
-                            await adminDebugLog('AdminAPI', '401 error but session valid - retrying request', {
-                                originalUrl: url,
-                                method: options.method || 'GET'
-                            });
-
-                            // Wait a moment for cookies to propagate, then retry
-                            await new Promise(resolve => setTimeout(resolve, 300));
-                            return this.call(url, options, retryCount + 1);
-                        } else {
-                            // Session is truly invalid - log out (guarded)
-                            await adminDebugError('AdminAPI', 'Authentication failed - session invalid');
-                            this.triggerLogout('Session verification failed - logging out');
-                            return response;
+                            // Wait for cookie propagation (AdminAuth.refreshToken already does this)
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            refreshSucceeded = true;
                         }
                     }
-                } catch (verifyError) {
-                    // Network error during verification - don't log out
-                    console.warn('⚠️ Could not handle 401 due to error - keeping user logged in');
-                    await adminDebugWarn('AdminAPI', '401 handling error', {
-                        error: verifyError.message
+
+                    if (refreshSucceeded) {
+                        console.log('✅ Token refreshed successfully - retrying request');
+                        await adminDebugLog('AdminAPI', 'Token refresh successful - retrying original request');
+
+                        // Retry original request with incremented retry count
+                        return this.call(url, options, retryCount + 1);
+                    } else {
+                        // Refresh failed - session is truly invalid
+                        console.error('🔒 Token refresh failed - session invalid');
+                        await adminDebugError('AdminAPI', 'Token refresh failed - logging out');
+
+                        // AdminAuth.refreshToken() already calls logout if 401 from refresh endpoint
+                        // Just return response so caller can handle gracefully
+                        return response;
+                    }
+                } catch (refreshError) {
+                    // Network error during refresh - keep user logged in (temporary issue)
+                    console.warn('⚠️ Token refresh network error - keeping user logged in');
+                    await adminDebugWarn('AdminAPI', 'Token refresh network error', {
+                        error: refreshError.message
                     });
 
                     return response;

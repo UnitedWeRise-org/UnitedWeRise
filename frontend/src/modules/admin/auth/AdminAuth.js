@@ -175,6 +175,7 @@ class AdminAuth {
     /**
      * Handle tab visibility change - refresh token when tab becomes visible after being hidden
      * Debounced to prevent rapid-fire refreshes from multiple visibility events
+     * FIXED: Now awaits token refresh to prevent race condition with API calls
      */
     handleVisibilityChange() {
         // Clear any pending debounce timer
@@ -183,7 +184,7 @@ class AdminAuth {
         }
 
         // Debounce visibility changes by 1 second to prevent rapid-fire refreshes
-        this.visibilityChangeDebounceTimer = setTimeout(() => {
+        this.visibilityChangeDebounceTimer = setTimeout(async () => {
             if (!document.hidden && this.isAuthenticated()) {
                 // Prevent concurrent refreshes from visibility changes
                 if (this.isRefreshingToken) {
@@ -199,7 +200,9 @@ class AdminAuth {
                 // BUGFIX: Align threshold with 5-minute auto-refresh interval (was 10, caused 403s)
                 if (timeSinceLastRefresh > 5) {
                     console.log(`🔄 Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refreshing token`);
-                    this.refreshToken(true); // Force refresh
+                    // FIXED: Await refresh to ensure token is fresh before any API calls
+                    await this.refreshToken(true); // Force refresh
+                    console.log('✅ Visibility change refresh complete');
                 }
             }
         }, 1000); // 1 second debounce
