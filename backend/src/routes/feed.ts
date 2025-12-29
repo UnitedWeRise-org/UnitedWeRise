@@ -880,6 +880,15 @@ router.get('/public', async (req, res) => {
 
     const feedResult = await SlotRollService.generateFeed(null, { slots: limit, excludeIds });
 
+    // Get postIds for enrichment
+    const postIds = feedResult.posts.map(({ post }) => post.id);
+
+    // Enrich posts with RiseAI responses (no userId for public feed)
+    const riseAIResponses = await RiseAIEnrichmentService.enrichPostsWithResponses(
+      postIds,
+      undefined
+    );
+
     // Transform posts for response (remove internal scoring fields)
     const posts = feedResult.posts.map(({ post, pool }) => ({
       id: post.id,
@@ -891,6 +900,7 @@ router.get('/public', async (req, res) => {
       sharesCount: post._count?.shares || 0,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      riseAIResponse: riseAIResponses.get(post.id) || undefined,
       _pool: pool // Include pool type for debugging/analytics
     }));
 
@@ -984,6 +994,12 @@ router.get('/slot-roll', requireAuth, async (req: AuthRequest, res) => {
     });
     const likedPostIds = new Set(userLikes.map(like => like.postId));
 
+    // Enrich posts with RiseAI responses (batch for efficiency)
+    const riseAIResponses = await RiseAIEnrichmentService.enrichPostsWithResponses(
+      postIds,
+      userId
+    );
+
     const posts = audienceFilteredPosts.map(({ post, pool }) => ({
       id: post.id,
       content: post.content,
@@ -995,6 +1011,7 @@ router.get('/slot-roll', requireAuth, async (req: AuthRequest, res) => {
       isLiked: likedPostIds.has(post.id),
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      riseAIResponse: riseAIResponses.get(post.id) || undefined,
       _pool: pool
     }));
 

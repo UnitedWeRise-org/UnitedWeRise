@@ -22,6 +22,7 @@ class AdminAuth {
         this.autoRefreshInterval = null;
         this.lastTokenRefresh = new Date(); // Initialize to current time to prevent "Infinity minutes" bug
         this.isRefreshingToken = false; // Flag to prevent concurrent refreshes
+        this.refreshPending = false; // Flag to signal refresh is about to start (during debounce)
         this.visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this.API_BASE = this.getApiBase();
         this.BACKEND_URL = this.getBackendUrl();
@@ -175,32 +176,52 @@ class AdminAuth {
     /**
      * Handle tab visibility change - refresh token when tab becomes visible after being hidden
      * Debounced to prevent rapid-fire refreshes from multiple visibility events
+     * FIXED: Sets refreshPending immediately so API calls wait during debounce period
      */
     handleVisibilityChange() {
-        // Clear any pending debounce timer
+        // Clear any pending debounce timer and reset pending flag
         if (this.visibilityChangeDebounceTimer) {
             clearTimeout(this.visibilityChangeDebounceTimer);
+            this.refreshPending = false;
+        }
+
+        // Set refreshPending IMMEDIATELY if refresh will be needed
+        // This signals API calls to wait during the 1-second debounce period
+        if (!document.hidden && this.isAuthenticated()) {
+            const now = new Date();
+            const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
+
+            if (timeSinceLastRefresh > 5) {
+                this.refreshPending = true;
+                console.log(`⏳ Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refresh pending`);
+            }
         }
 
         // Debounce visibility changes by 1 second to prevent rapid-fire refreshes
-        this.visibilityChangeDebounceTimer = setTimeout(() => {
-            if (!document.hidden && this.isAuthenticated()) {
-                // Prevent concurrent refreshes from visibility changes
-                if (this.isRefreshingToken) {
-                    console.log('⏸️ Visibility change refresh skipped (refresh already in progress)');
-                    return;
-                }
+        this.visibilityChangeDebounceTimer = setTimeout(async () => {
+            try {
+                if (!document.hidden && this.isAuthenticated()) {
+                    // Prevent concurrent refreshes from visibility changes
+                    if (this.isRefreshingToken) {
+                        console.log('⏸️ Visibility change refresh skipped (refresh already in progress)');
+                        return;
+                    }
 
-                // Tab became visible - check if token needs refresh
-                const now = new Date();
-                const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
+                    // Tab became visible - check if token needs refresh
+                    const now = new Date();
+                    const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
 
-                // If more than 5 minutes since last refresh, refresh immediately
-                // BUGFIX: Align threshold with 5-minute auto-refresh interval (was 10, caused 403s)
-                if (timeSinceLastRefresh > 5) {
-                    console.log(`🔄 Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refreshing token`);
-                    this.refreshToken(true); // Force refresh
+                    // If more than 5 minutes since last refresh, refresh immediately
+                    // BUGFIX: Align threshold with 5-minute auto-refresh interval (was 10, caused 403s)
+                    if (timeSinceLastRefresh > 5) {
+                        console.log(`🔄 Starting token refresh...`);
+                        await this.refreshToken(true); // Force refresh
+                        console.log('✅ Visibility change refresh complete');
+                    }
                 }
+            } finally {
+                // Always clear pending flag after debounce completes
+                this.refreshPending = false;
             }
         }, 1000); // 1 second debounce
     }
@@ -505,6 +526,10 @@ class AdminAuth {
         if (this.visibilityChangeDebounceTimer) {
             clearTimeout(this.visibilityChangeDebounceTimer);
         }
+
+        // Clear refresh flags
+        this.isRefreshingToken = false;
+        this.refreshPending = false;
 
         // Remove event listeners
         const loginForm = document.getElementById('loginForm');
