@@ -98,20 +98,27 @@ class AdminAPI {
     }
 
     /**
-     * Wait for any in-progress token refresh to complete
-     * Prevents race condition where API call uses old token
+     * Wait for any in-progress OR pending token refresh to complete
+     * Prevents race condition where API call uses old token during:
+     * 1. Active refresh (isRefreshingToken = true)
+     * 2. Visibility change debounce period (refreshPending = true)
      */
     async waitForTokenRefresh() {
-        if (window.adminAuth && window.adminAuth.isRefreshingToken) {
-            console.log('⏸️ Waiting for token refresh to complete...');
-            const maxWait = 10000; // 10 seconds max
+        const isRefreshActive = () => window.adminAuth?.isRefreshingToken;
+        const isRefreshPending = () => window.adminAuth?.refreshPending;
+
+        if (isRefreshActive() || isRefreshPending()) {
+            const reason = isRefreshActive() ? '(in progress)' : '(pending)';
+            console.log(`⏸️ Waiting for token refresh to complete... ${reason}`);
+
+            const maxWait = 15000; // 15 seconds max (1s debounce + 10s refresh + buffer)
             const startTime = Date.now();
 
-            while (window.adminAuth.isRefreshingToken && (Date.now() - startTime) < maxWait) {
+            while ((isRefreshActive() || isRefreshPending()) && (Date.now() - startTime) < maxWait) {
                 await new Promise(resolve => setTimeout(resolve, 100)); // Check every 100ms
             }
 
-            if (window.adminAuth.isRefreshingToken) {
+            if (isRefreshActive() || isRefreshPending()) {
                 console.warn('⚠️ Token refresh taking too long, proceeding anyway');
             } else {
                 console.log('✅ Token refresh complete, proceeding with API call');
