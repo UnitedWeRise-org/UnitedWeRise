@@ -1,10 +1,54 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: December 12, 2025
+**Last Updated**: December 30, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2025-12-30] - Candidate Hub Overhaul
+
+### Added
+
+**Hierarchy Browser**
+- New navigation system: Federal → State → Local → Municipal level selection
+- Office type cards with candidate counts per level
+- Candidate grid with checkbox selection for comparison
+- Breadcrumb navigation for easy backtracking
+
+**Candidate Comparison Tools**
+- Floating comparison bar (appears when 2+ candidates selected)
+- Comparison Matrix modal with side-by-side position analysis
+- AI-generated issue headings for structured comparison
+
+**Candidate Detail Modal**
+- Tabbed interface: Overview, Positions, Background, Campaign
+- Hero section with photo, party badge, office info
+- Quick actions: Endorse, Contact, Add to Comparison
+
+**New API Endpoints**
+- `GET /api/candidates/by-level/:level` - Office types with candidate counts by government level
+- `GET /api/candidates/by-office-type` - Candidates filtered by level and office type
+
+**Enhanced Elections Display**
+- Elections grouped by date with registration deadline warnings
+- Countdown badges (urgent/soon/upcoming)
+- Race cards with candidate preview chips
+- Integration with hierarchy browser via "Explore candidates" links
+
+### Changed
+
+**Feature Card Content**
+- Replaced developer-focused descriptions with user-friendly language
+- Removed technical jargon (e.g., "Qwen3 Integration", "API Fallback")
+- New benefit-focused tags: "Side-by-side positions", "Local races", "Quick responses"
+
+### UI/UX
+- Subtle color accents by government level (blue=federal, green=state, orange=local, teal=municipal)
+- Clean card-based design with hover effects
+- Mobile-responsive layouts for all new components
 
 ---
 
