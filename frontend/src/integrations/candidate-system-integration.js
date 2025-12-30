@@ -159,6 +159,39 @@ class CandidateSystemIntegration {
                 case 'closeModal':
                     target.closest('.modal-overlay')?.remove();
                     break;
+                // Hierarchy Browser Actions
+                case 'selectLevel':
+                    const level = target.dataset.level;
+                    if (level) this.selectLevel(level);
+                    break;
+                case 'selectOfficeType':
+                    const officeType = target.dataset.officeType;
+                    if (officeType) this.selectOfficeType(officeType);
+                    break;
+                case 'toggleCandidateSelect':
+                    if (candidateId) this.toggleCandidateSelect(candidateId);
+                    break;
+                case 'viewCandidateDetail':
+                    if (candidateId) this.viewCandidateDetail(candidateId);
+                    break;
+                case 'openComparison':
+                    this.openComparisonMatrix();
+                    break;
+                case 'clearSelection':
+                    this.clearCandidateSelection();
+                    break;
+                case 'showCompareInfo':
+                    this.showCompareInfo();
+                    break;
+                case 'showContactInfo':
+                    this.showContactInfo();
+                    break;
+                case 'backToOfficeTypes':
+                    this.backToOfficeTypes();
+                    break;
+                case 'backToLevels':
+                    this.backToLevels();
+                    break;
             }
         });
     }
@@ -426,127 +459,171 @@ class CandidateSystemIntegration {
             mainContent.dataset.originalContent = mainContent.innerHTML;
         }
 
-        // Create full-width candidate interface
+        // Initialize hierarchy browser state
+        this.hierarchyState = this.hierarchyState || {
+            currentLevel: null,
+            currentOfficeType: null,
+            selectedCandidates: new Set()
+        };
+
+        // Create full-width candidate interface with hierarchy browser
         mainContent.innerHTML = `
             <div class="candidate-main-view">
                 <div class="candidate-header">
                     <div class="header-content">
-                        <h1>🤖 Candidate Hub</h1>
-                        <p class="subtitle">Intelligent candidate analysis, comparison, and communication</p>
+                        <h1>Candidate Hub</h1>
+                        <p class="subtitle">Discover candidates, compare positions, and make informed decisions</p>
                         <div class="header-actions">
-                            <button class="header-btn primary" data-candidate-action="loadElections">
-                                🗳️ Load Elections
-                            </button>
-                            ${this.isCandidate ? 
+                            ${this.isCandidate ?
                                 `<button class="header-btn primary dashboard" data-candidate-action="showCandidateDashboard">
-                                    📊 Candidate Dashboard
-                                </button>` : 
+                                    Candidate Dashboard
+                                </button>` :
                                 `<button class="header-btn register" data-candidate-action="showCandidateRegistration">
-                                    🏆 Register as Candidate
+                                    Run for Office
                                 </button>`
                             }
-                            <button class="header-btn secondary" data-candidate-action="showAIAnalysis">
-                                🤖 AI Capabilities
-                            </button>
                             <button class="header-btn secondary" data-candidate-action="restoreMainContent">
-                                ← Back to Map
+                                Back to Map
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <div class="candidate-content">
-                    <div class="content-grid">
-                        <!-- Feature Cards -->
-                        <div class="feature-cards">
-                            <div class="feature-card ai-comparison">
-                                <div class="card-icon">🤖</div>
-                                <h3>AI-Powered Comparison</h3>
-                                <p>Compare candidates using neutral AI analysis of their policy positions</p>
-                                <div class="card-features">
-                                    <span class="feature-tag">Qwen3 Integration</span>
-                                    <span class="feature-tag">Policy Analysis</span>
-                                    <span class="feature-tag">Neutral AI</span>
+                    <!-- Level Selector Pills -->
+                    <div class="level-selector">
+                        <button class="level-pill ${this.hierarchyState.currentLevel === 'FEDERAL' ? 'active' : ''}"
+                                data-candidate-action="selectLevel" data-level="FEDERAL">
+                            Federal
+                        </button>
+                        <button class="level-pill ${this.hierarchyState.currentLevel === 'STATE' ? 'active' : ''}"
+                                data-candidate-action="selectLevel" data-level="STATE">
+                            State
+                        </button>
+                        <button class="level-pill ${this.hierarchyState.currentLevel === 'LOCAL' ? 'active' : ''}"
+                                data-candidate-action="selectLevel" data-level="LOCAL">
+                            Local
+                        </button>
+                        <button class="level-pill ${this.hierarchyState.currentLevel === 'MUNICIPAL' ? 'active' : ''}"
+                                data-candidate-action="selectLevel" data-level="MUNICIPAL">
+                            Municipal
+                        </button>
+                    </div>
+
+                    <div class="hierarchy-content">
+                        <!-- Quick Actions Row -->
+                        <div class="quick-actions">
+                            <div class="feature-card compare" data-candidate-action="showCompareInfo">
+                                <div class="card-icon-small">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="7" height="18" rx="1"/>
+                                        <rect x="14" y="3" width="7" height="18" rx="1"/>
+                                    </svg>
+                                </div>
+                                <div class="card-text">
+                                    <h4>Compare Candidates</h4>
+                                    <p>See where candidates stand on issues that matter to you</p>
                                 </div>
                             </div>
 
-                            <div class="feature-card messaging">
-                                <div class="card-icon">💬</div>
-                                <h3>Direct Communication</h3>
-                                <p>Contact candidates directly about policy positions with staff delegation</p>
-                                <div class="card-features">
-                                    <span class="feature-tag">Anonymous Options</span>
-                                    <span class="feature-tag">Staff Delegation</span>
-                                    <span class="feature-tag">Public Q&A</span>
+                            <div class="feature-card contact" data-candidate-action="showContactInfo">
+                                <div class="card-icon-small">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="card-text">
+                                    <h4>Contact Candidates</h4>
+                                    <p>Ask questions directly to candidates and their teams</p>
                                 </div>
                             </div>
 
-                            <div class="feature-card elections">
-                                <div class="card-icon">🗳️</div>
-                                <h3>Enhanced Elections</h3>
-                                <p>Multi-tier election system that never fails to load candidate information</p>
-                                <div class="card-features">
-                                    <span class="feature-tag">Cache System</span>
-                                    <span class="feature-tag">API Fallback</span>
-                                    <span class="feature-tag">Never Fails</span>
+                            <div class="feature-card find-elections" data-candidate-action="loadElections">
+                                <div class="card-icon-small">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <path d="M21 21l-4.35-4.35"/>
+                                    </svg>
+                                </div>
+                                <div class="card-text">
+                                    <h4>Find Your Elections</h4>
+                                    <p>Discover who's running for office in your area</p>
                                 </div>
                             </div>
 
-                            <div class="feature-card photos">
-                                <div class="card-icon">📸</div>
-                                <h3>Professional Photos</h3>
-                                <p>Campaign headshots and personal photos with AI optimization</p>
-                                <div class="card-features">
-                                    <span class="feature-tag">Auto-Optimize</span>
-                                    <span class="feature-tag">WebP Conversion</span>
-                                    <span class="feature-tag">Smart Sizing</span>
+                            <div class="feature-card run-for-office" data-candidate-action="showCandidateRegistration">
+                                <div class="card-icon-small">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="8.5" cy="7" r="4"/>
+                                        <line x1="20" y1="8" x2="20" y2="14"/>
+                                        <line x1="23" y1="11" x2="17" y2="11"/>
+                                    </svg>
                                 </div>
-                            </div>
-                            
-                            <div class="feature-card registration" data-candidate-action="showCandidateRegistration">
-                                <div class="card-icon">🏆</div>
-                                <h3>Run for Office</h3>
-                                <p>Register as a candidate with ID.me verification and secure payment</p>
-                                <div class="card-features">
-                                    <span class="feature-tag register-tag">ID.me Verified</span>
-                                    <span class="feature-tag register-tag">Secure Payment</span>
-                                    <span class="feature-tag register-tag">Admin Approved</span>
+                                <div class="card-text">
+                                    <h4>Run for Office</h4>
+                                    <p>Register your candidacy and connect with voters</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Elections Content Area -->
-                        <div class="elections-content">
-                            <div class="content-header">
-                                <h2>Elections & Candidates</h2>
-                                <div class="loading-indicator" id="electionsLoading" style="display: none;">
-                                    <div class="spinner"></div>
-                                    <span>Loading election data...</span>
-                                </div>
+                        <!-- Main Browse Area -->
+                        <div class="browse-area">
+                            <div class="browse-header">
+                                <h2 id="browseTitle">Select a government level to browse candidates</h2>
+                                <div class="browse-breadcrumb" id="browseBreadcrumb"></div>
                             </div>
-                            <div class="enhanced-elections-container">
-                                <div class="elections-placeholder">
-                                    <div class="placeholder-icon">🗳️</div>
-                                    <h3>Find Candidates in Your Area</h3>
-                                    <p>Enter your address to discover candidates running for office in your district</p>
-                                    <div class="placeholder-address-input">
-                                        <input type="text" 
-                                               id="placeholderAddressInput" 
-                                               placeholder="Enter your address (street, city, state)"
-                                               class="address-input">
-                                        <button class="placeholder-btn" data-candidate-action="searchFromPlaceholder">
-                                            🔍 Find Candidates
-                                        </button>
-                                    </div>
-                                    <div class="placeholder-alt">
-                                        <span>or</span>
-                                        <button class="placeholder-btn secondary" data-candidate-action="loadElections">
-                                            Use My Profile Address
-                                        </button>
-                                    </div>
+
+                            <div class="loading-indicator" id="hierarchyLoading" style="display: none;">
+                                <div class="spinner"></div>
+                                <span>Loading...</span>
+                            </div>
+
+                            <!-- Office Types Grid (shown after level selection) -->
+                            <div class="office-types-grid" id="officeTypesGrid" style="display: none;"></div>
+
+                            <!-- Candidates Grid (shown after office type selection) -->
+                            <div class="candidates-grid" id="candidatesGrid" style="display: none;"></div>
+
+                            <!-- Empty State -->
+                            <div class="empty-state" id="emptyState">
+                                <div class="empty-icon">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                        <line x1="16" y1="2" x2="16" y2="6"/>
+                                        <line x1="8" y1="2" x2="8" y2="6"/>
+                                        <line x1="3" y1="10" x2="21" y2="10"/>
+                                    </svg>
+                                </div>
+                                <h3>Browse by Government Level</h3>
+                                <p>Select Federal, State, Local, or Municipal above to see available offices and candidates</p>
+                                <div class="empty-hint">
+                                    <span class="hint-tag federal">Federal</span> President, Senate, House
+                                </div>
+                                <div class="empty-hint">
+                                    <span class="hint-tag state">State</span> Governor, State Legislature
+                                </div>
+                                <div class="empty-hint">
+                                    <span class="hint-tag local">Local</span> Mayor, City Council, School Board
+                                </div>
+                                <div class="empty-hint">
+                                    <span class="hint-tag municipal">Municipal</span> Township, Districts
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Floating Comparison Bar (hidden until candidates selected) -->
+                <div class="comparison-bar" id="comparisonBar" style="display: none;">
+                    <span class="comparison-count"><span id="selectedCount">0</span> candidates selected</span>
+                    <div class="comparison-actions">
+                        <button class="comparison-btn primary" data-candidate-action="openComparison" id="compareBtn" disabled>
+                            Compare Selected
+                        </button>
+                        <button class="comparison-btn secondary" data-candidate-action="clearSelection">
+                            Clear
+                        </button>
                     </div>
                 </div>
             </div>
@@ -561,6 +638,807 @@ class CandidateSystemIntegration {
         // Adjust map if needed (make it smaller/overlay)
         this.adjustMapForCandidateView();
     }
+
+    // ==========================================
+    // HIERARCHY BROWSER METHODS
+    // ==========================================
+
+    /**
+     * Handle level selection (Federal, State, Local, Municipal)
+     */
+    async selectLevel(level) {
+        adminDebugLog(`Selecting level: ${level}`);
+
+        // Update state
+        this.hierarchyState.currentLevel = level;
+        this.hierarchyState.currentOfficeType = null;
+
+        // Update UI - pills
+        document.querySelectorAll('.level-pill').forEach(pill => {
+            pill.classList.toggle('active', pill.dataset.level === level);
+        });
+
+        // Show loading
+        const loading = document.getElementById('hierarchyLoading');
+        const emptyState = document.getElementById('emptyState');
+        const officeGrid = document.getElementById('officeTypesGrid');
+        const candidatesGrid = document.getElementById('candidatesGrid');
+        const browseTitle = document.getElementById('browseTitle');
+
+        if (loading) loading.style.display = 'flex';
+        if (emptyState) emptyState.style.display = 'none';
+        if (officeGrid) officeGrid.style.display = 'none';
+        if (candidatesGrid) candidatesGrid.style.display = 'none';
+
+        try {
+            // Fetch office types for this level
+            const response = await apiCall(`/api/candidates/by-level/${level}`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+
+            if (response.ok && response.data?.success) {
+                this.displayOfficeTypes(response.data.officeTypes, level);
+            } else {
+                // Fallback to static data if endpoint not ready
+                this.displayOfficeTypesFallback(level);
+            }
+        } catch (error) {
+            adminDebugError('Error loading office types:', error);
+            // Use fallback data
+            this.displayOfficeTypesFallback(level);
+        } finally {
+            if (loading) loading.style.display = 'none';
+        }
+    }
+
+    /**
+     * Display office types for selected level
+     */
+    displayOfficeTypes(officeTypes, level) {
+        const grid = document.getElementById('officeTypesGrid');
+        const browseTitle = document.getElementById('browseTitle');
+        const breadcrumb = document.getElementById('browseBreadcrumb');
+
+        const levelNames = {
+            'FEDERAL': 'Federal',
+            'STATE': 'State',
+            'LOCAL': 'Local',
+            'MUNICIPAL': 'Municipal'
+        };
+
+        if (browseTitle) browseTitle.textContent = `${levelNames[level]} Offices`;
+        if (breadcrumb) {
+            breadcrumb.innerHTML = `
+                <button class="breadcrumb-link" data-candidate-action="backToLevels">All Levels</button>
+                <span class="breadcrumb-separator">›</span>
+                <span class="breadcrumb-current">${levelNames[level]}</span>
+            `;
+        }
+
+        if (grid) {
+            grid.innerHTML = officeTypes.map(office => `
+                <div class="office-type-card level-${level.toLowerCase()}"
+                     data-candidate-action="selectOfficeType"
+                     data-office-type="${office.type}">
+                    <div class="office-type-header">
+                        <h3>${office.title}</h3>
+                        <span class="candidate-count">${office.candidateCount} candidate${office.candidateCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    <p class="office-type-desc">${office.description || ''}</p>
+                </div>
+            `).join('');
+            grid.style.display = 'grid';
+        }
+    }
+
+    /**
+     * Fallback office types when API endpoint not ready
+     */
+    displayOfficeTypesFallback(level) {
+        const fallbackData = {
+            'FEDERAL': [
+                { type: 'president', title: 'President', description: 'Head of state and government', candidateCount: 0 },
+                { type: 'us_senate', title: 'U.S. Senate', description: '2 senators per state, 6-year terms', candidateCount: 0 },
+                { type: 'us_house', title: 'U.S. House of Representatives', description: 'Based on district population', candidateCount: 0 }
+            ],
+            'STATE': [
+                { type: 'governor', title: 'Governor', description: 'Chief executive of the state', candidateCount: 0 },
+                { type: 'lt_governor', title: 'Lieutenant Governor', description: 'Second-in-command executive', candidateCount: 0 },
+                { type: 'state_senate', title: 'State Senate', description: 'Upper chamber of state legislature', candidateCount: 0 },
+                { type: 'state_house', title: 'State House', description: 'Lower chamber of state legislature', candidateCount: 0 },
+                { type: 'attorney_general', title: 'Attorney General', description: 'Chief legal officer of the state', candidateCount: 0 },
+                { type: 'secretary_state', title: 'Secretary of State', description: 'Oversees elections and records', candidateCount: 0 }
+            ],
+            'LOCAL': [
+                { type: 'mayor', title: 'Mayor', description: 'Chief executive of the city', candidateCount: 0 },
+                { type: 'city_council', title: 'City Council', description: 'Local legislative body', candidateCount: 0 },
+                { type: 'county_commissioner', title: 'County Commissioner', description: 'County executive board member', candidateCount: 0 },
+                { type: 'school_board', title: 'School Board', description: 'Oversees local public education', candidateCount: 0 },
+                { type: 'sheriff', title: 'Sheriff', description: 'Chief law enforcement officer', candidateCount: 0 }
+            ],
+            'MUNICIPAL': [
+                { type: 'township_trustee', title: 'Township Trustee', description: 'Local township governance', candidateCount: 0 },
+                { type: 'water_district', title: 'Water District Board', description: 'Manages water resources', candidateCount: 0 },
+                { type: 'fire_district', title: 'Fire District Board', description: 'Oversees fire protection services', candidateCount: 0 },
+                { type: 'park_district', title: 'Park District Board', description: 'Manages parks and recreation', candidateCount: 0 }
+            ]
+        };
+
+        this.displayOfficeTypes(fallbackData[level] || [], level);
+    }
+
+    /**
+     * Handle office type selection
+     */
+    async selectOfficeType(officeType) {
+        adminDebugLog(`Selecting office type: ${officeType}`);
+
+        this.hierarchyState.currentOfficeType = officeType;
+
+        const loading = document.getElementById('hierarchyLoading');
+        const officeGrid = document.getElementById('officeTypesGrid');
+        const candidatesGrid = document.getElementById('candidatesGrid');
+        const browseTitle = document.getElementById('browseTitle');
+        const breadcrumb = document.getElementById('browseBreadcrumb');
+
+        if (loading) loading.style.display = 'flex';
+        if (officeGrid) officeGrid.style.display = 'none';
+
+        const levelNames = {
+            'FEDERAL': 'Federal',
+            'STATE': 'State',
+            'LOCAL': 'Local',
+            'MUNICIPAL': 'Municipal'
+        };
+
+        const officeTitle = officeType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+        if (browseTitle) browseTitle.textContent = `${officeTitle} Candidates`;
+        if (breadcrumb) {
+            breadcrumb.innerHTML = `
+                <button class="breadcrumb-link" data-candidate-action="backToLevels">All Levels</button>
+                <span class="breadcrumb-separator">›</span>
+                <button class="breadcrumb-link" data-candidate-action="backToOfficeTypes">${levelNames[this.hierarchyState.currentLevel]}</button>
+                <span class="breadcrumb-separator">›</span>
+                <span class="breadcrumb-current">${officeTitle}</span>
+            `;
+        }
+
+        try {
+            // Fetch candidates for this office type
+            const response = await apiCall(`/api/candidates/by-office-type?level=${this.hierarchyState.currentLevel}&officeType=${encodeURIComponent(officeType)}`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+
+            if (response.ok && response.data?.success) {
+                this.displayCandidatesGrid(response.data.candidates);
+            } else {
+                // Show empty state for now
+                this.displayCandidatesGrid([]);
+            }
+        } catch (error) {
+            adminDebugError('Error loading candidates:', error);
+            this.displayCandidatesGrid([]);
+        } finally {
+            if (loading) loading.style.display = 'none';
+        }
+    }
+
+    /**
+     * Display candidates grid with checkboxes for comparison
+     */
+    displayCandidatesGrid(candidates) {
+        const grid = document.getElementById('candidatesGrid');
+        if (!grid) return;
+
+        if (candidates.length === 0) {
+            grid.innerHTML = `
+                <div class="no-candidates-state">
+                    <div class="empty-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="8.5" cy="7" r="4"/>
+                            <line x1="23" y1="11" x2="17" y2="11"/>
+                        </svg>
+                    </div>
+                    <h3>No Candidates Found</h3>
+                    <p>No declared candidates for this office yet. Check back as the election approaches.</p>
+                </div>
+            `;
+        } else {
+            grid.innerHTML = candidates.map(candidate => this.renderCandidateCard(candidate)).join('');
+        }
+
+        grid.style.display = 'grid';
+    }
+
+    /**
+     * Render a single candidate card with checkbox
+     */
+    renderCandidateCard(candidate) {
+        const isSelected = this.hierarchyState.selectedCandidates.has(candidate.id);
+        const stanceTags = candidate.stanceTags || [];
+
+        // Generate initials if no photo
+        const initials = candidate.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+        const photoHTML = candidate.photoUrl
+            ? `<img src="${candidate.photoUrl}" alt="${candidate.name}" class="candidate-photo"/>`
+            : `<div class="candidate-initials">${initials}</div>`;
+
+        // Party color mapping
+        const partyColors = {
+            'Democratic': '#3b5998',
+            'Democrat': '#3b5998',
+            'Republican': '#c94a4a',
+            'Independent': '#6b7280',
+            'Libertarian': '#fbbf24',
+            'Green': '#22c55e'
+        };
+        const partyColor = partyColors[candidate.party] || '#6b7280';
+
+        return `
+            <div class="candidate-card-v2 ${isSelected ? 'selected' : ''}" data-candidate-id="${candidate.id}">
+                <label class="card-checkbox">
+                    <input type="checkbox"
+                           ${isSelected ? 'checked' : ''}
+                           data-candidate-action="toggleCandidateSelect"
+                           data-candidate-id="${candidate.id}">
+                    <span class="checkbox-custom"></span>
+                </label>
+
+                <div class="card-photo-area">
+                    ${photoHTML}
+                </div>
+
+                <div class="card-content">
+                    <h4 class="candidate-name">${candidate.name}</h4>
+                    <span class="party-badge" style="background-color: ${partyColor}">${candidate.party || 'Independent'}</span>
+
+                    ${stanceTags.length > 0 ? `
+                        <div class="stance-tags">
+                            ${stanceTags.slice(0, 3).map(tag => `<span class="stance-tag">${tag}</span>`).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${candidate.platformSummary ? `
+                        <p class="platform-preview">${candidate.platformSummary.substring(0, 100)}${candidate.platformSummary.length > 100 ? '...' : ''}</p>
+                    ` : ''}
+                </div>
+
+                <button class="view-details-btn" data-candidate-action="viewCandidateDetail" data-candidate-id="${candidate.id}">
+                    View Details
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Toggle candidate selection for comparison
+     */
+    toggleCandidateSelect(candidateId) {
+        if (this.hierarchyState.selectedCandidates.has(candidateId)) {
+            this.hierarchyState.selectedCandidates.delete(candidateId);
+        } else {
+            // Limit to 6 candidates
+            if (this.hierarchyState.selectedCandidates.size >= 6) {
+                this.showToast('Maximum 6 candidates can be compared at once');
+                return;
+            }
+            this.hierarchyState.selectedCandidates.add(candidateId);
+        }
+
+        // Update card visual state
+        const card = document.querySelector(`.candidate-card-v2[data-candidate-id="${candidateId}"]`);
+        if (card) {
+            card.classList.toggle('selected', this.hierarchyState.selectedCandidates.has(candidateId));
+        }
+
+        // Update comparison bar
+        this.updateComparisonBar();
+    }
+
+    /**
+     * Update floating comparison bar
+     */
+    updateComparisonBar() {
+        const bar = document.getElementById('comparisonBar');
+        const countSpan = document.getElementById('selectedCount');
+        const compareBtn = document.getElementById('compareBtn');
+
+        const count = this.hierarchyState.selectedCandidates.size;
+
+        if (bar) {
+            bar.style.display = count > 0 ? 'flex' : 'none';
+        }
+        if (countSpan) {
+            countSpan.textContent = count;
+        }
+        if (compareBtn) {
+            compareBtn.disabled = count < 2;
+        }
+    }
+
+    /**
+     * Clear all selected candidates
+     */
+    clearCandidateSelection() {
+        this.hierarchyState.selectedCandidates.clear();
+
+        // Update all card visuals
+        document.querySelectorAll('.candidate-card-v2.selected').forEach(card => {
+            card.classList.remove('selected');
+            const checkbox = card.querySelector('input[type="checkbox"]');
+            if (checkbox) checkbox.checked = false;
+        });
+
+        this.updateComparisonBar();
+    }
+
+    /**
+     * Navigate back to office types
+     */
+    backToOfficeTypes() {
+        if (this.hierarchyState.currentLevel) {
+            this.selectLevel(this.hierarchyState.currentLevel);
+        }
+    }
+
+    /**
+     * Navigate back to level selection
+     */
+    backToLevels() {
+        this.hierarchyState.currentLevel = null;
+        this.hierarchyState.currentOfficeType = null;
+
+        // Reset UI
+        document.querySelectorAll('.level-pill').forEach(pill => pill.classList.remove('active'));
+
+        const browseTitle = document.getElementById('browseTitle');
+        const breadcrumb = document.getElementById('browseBreadcrumb');
+        const emptyState = document.getElementById('emptyState');
+        const officeGrid = document.getElementById('officeTypesGrid');
+        const candidatesGrid = document.getElementById('candidatesGrid');
+
+        if (browseTitle) browseTitle.textContent = 'Select a government level to browse candidates';
+        if (breadcrumb) breadcrumb.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        if (officeGrid) officeGrid.style.display = 'none';
+        if (candidatesGrid) candidatesGrid.style.display = 'none';
+    }
+
+    /**
+     * Show compare info modal
+     */
+    showCompareInfo() {
+        this.showInfoModal(
+            'Compare Candidates',
+            `<p>Select 2-6 candidates to compare their positions side-by-side.</p>
+             <p>Use the checkboxes on candidate cards to select who you want to compare, then click "Compare Selected" in the bar at the bottom.</p>
+             <p>The comparison will show you where candidates agree and differ on key issues.</p>`
+        );
+    }
+
+    /**
+     * Show contact info modal
+     */
+    showContactInfo() {
+        this.showInfoModal(
+            'Contact Candidates',
+            `<p>You can send questions directly to candidates who have registered with United We Rise.</p>
+             <p>Click on a candidate to view their profile, then use the "Contact" button to send them a message.</p>
+             <p>Candidates or their staff will receive your message and can respond directly.</p>`
+        );
+    }
+
+    /**
+     * Generic info modal helper
+     */
+    showInfoModal(title, content) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="info-modal">
+                <div class="modal-header">
+                    <h3>${title}</h3>
+                    <button class="close-btn" data-candidate-action="closeModal">&times;</button>
+                </div>
+                <div class="modal-content">
+                    ${content}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    /**
+     * Show toast notification
+     */
+    showToast(message) {
+        const existing = document.querySelector('.toast-notification');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // ==========================================
+    // END HIERARCHY BROWSER METHODS
+    // ==========================================
+
+    // ==========================================
+    // COMPARISON MATRIX METHODS
+    // ==========================================
+
+    /**
+     * Open the comparison matrix modal for selected candidates
+     */
+    async openComparisonMatrix() {
+        const selectedIds = Array.from(this.hierarchyState.selectedCandidates);
+
+        if (selectedIds.length < 2) {
+            this.showToast('Select at least 2 candidates to compare');
+            return;
+        }
+
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay comparison-modal-overlay';
+        modal.innerHTML = `
+            <div class="comparison-modal">
+                <div class="modal-header">
+                    <h2>Candidate Comparison</h2>
+                    <button class="close-btn" data-candidate-action="closeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="comparison-loading">
+                        <div class="spinner"></div>
+                        <p>Analyzing candidate positions...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        try {
+            // Fetch comparison data from backend
+            const response = await apiCall('/api/candidates/compare', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ candidateIds: selectedIds })
+            });
+
+            if (response.ok && response.data) {
+                this.renderComparisonMatrix(modal, response.data);
+            } else {
+                throw new Error(response.data?.error || 'Failed to compare candidates');
+            }
+        } catch (error) {
+            adminDebugError('Comparison error:', error);
+            modal.querySelector('.modal-body').innerHTML = `
+                <div class="error-state">
+                    <h3>Unable to Compare</h3>
+                    <p>${error.message}</p>
+                    <button class="btn secondary" data-candidate-action="closeModal">Close</button>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Render the comparison matrix table
+     */
+    renderComparisonMatrix(modal, data) {
+        const { candidates, comparison } = data;
+
+        // Build matrix HTML
+        const candidateHeaders = candidates.map(c => `
+            <th class="candidate-column">
+                <div class="candidate-header-cell">
+                    <div class="candidate-avatar">
+                        ${c.photoUrl ? `<img src="${c.photoUrl}" alt="${c.name}"/>` :
+                          `<div class="initials">${c.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</div>`}
+                    </div>
+                    <div class="candidate-name">${c.name}</div>
+                    <div class="candidate-party">${c.party || 'Independent'}</div>
+                </div>
+            </th>
+        `).join('');
+
+        // Build issue rows
+        const issueRows = (comparison?.sharedIssues || []).map(issue => `
+            <tr class="issue-row">
+                <td class="issue-name">
+                    <strong>${issue.issue}</strong>
+                    ${issue.agreement ? `<span class="agreement-badge ${issue.agreement}">${issue.agreement}</span>` : ''}
+                </td>
+                ${(issue.positions || []).map(pos => `
+                    <td class="position-cell ${pos.stance || 'unknown'}">
+                        <div class="position-content">
+                            ${pos.position || 'No stated position'}
+                        </div>
+                        ${pos.confidence ? `<div class="confidence">${Math.round(pos.confidence * 100)}% confidence</div>` : ''}
+                    </td>
+                `).join('')}
+            </tr>
+        `).join('');
+
+        // Fallback if no issues
+        const issueContent = issueRows || `
+            <tr>
+                <td colspan="${candidates.length + 1}" class="no-issues">
+                    <p>No shared policy positions found for comparison.</p>
+                    <p>Try selecting candidates from the same office or with more detailed policy statements.</p>
+                </td>
+            </tr>
+        `;
+
+        modal.querySelector('.modal-body').innerHTML = `
+            <div class="comparison-matrix-container">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th class="issue-column">Issue</th>
+                            ${candidateHeaders}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${issueContent}
+                    </tbody>
+                </table>
+
+                ${comparison?.overallSummary ? `
+                    <div class="comparison-summary">
+                        <h4>Summary</h4>
+                        <p>${comparison.overallSummary}</p>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    // ==========================================
+    // CANDIDATE DETAIL MODAL METHODS
+    // ==========================================
+
+    /**
+     * View detailed candidate information
+     */
+    async viewCandidateDetail(candidateId) {
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay candidate-detail-overlay';
+        modal.innerHTML = `
+            <div class="candidate-detail-modal">
+                <div class="modal-header">
+                    <button class="close-btn" data-candidate-action="closeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Loading candidate profile...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        try {
+            // Fetch candidate details
+            const response = await apiCall(`/api/candidates/${candidateId}/enhanced`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+
+            if (response.ok && response.data) {
+                this.renderCandidateDetail(modal, response.data);
+            } else {
+                // Fallback to basic endpoint
+                const basicResponse = await apiCall(`/api/candidates/${candidateId}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (basicResponse.ok && basicResponse.data) {
+                    this.renderCandidateDetail(modal, basicResponse.data);
+                } else {
+                    throw new Error('Candidate not found');
+                }
+            }
+        } catch (error) {
+            adminDebugError('Candidate detail error:', error);
+            modal.querySelector('.modal-body').innerHTML = `
+                <div class="error-state">
+                    <h3>Unable to Load Profile</h3>
+                    <p>${error.message}</p>
+                    <button class="btn secondary" data-candidate-action="closeModal">Close</button>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Render candidate detail modal content
+     */
+    renderCandidateDetail(modal, candidate) {
+        const initials = candidate.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        const partyColors = {
+            'Democratic': '#3b5998',
+            'Democrat': '#3b5998',
+            'Republican': '#c94a4a',
+            'Independent': '#6b7280',
+            'Libertarian': '#fbbf24',
+            'Green': '#22c55e'
+        };
+        const partyColor = partyColors[candidate.party] || '#6b7280';
+
+        modal.querySelector('.modal-body').innerHTML = `
+            <div class="candidate-detail-content">
+                <!-- Hero Section -->
+                <div class="detail-hero">
+                    <div class="hero-photo">
+                        ${candidate.photoUrl || candidate.user?.avatar
+                            ? `<img src="${candidate.photoUrl || candidate.user?.avatar}" alt="${candidate.name}"/>`
+                            : `<div class="hero-initials">${initials}</div>`}
+                    </div>
+                    <div class="hero-info">
+                        <h1>${candidate.name}</h1>
+                        <span class="party-badge" style="background-color: ${partyColor}">${candidate.party || 'Independent'}</span>
+                        ${candidate.isIncumbent ? '<span class="incumbent-badge">Incumbent</span>' : ''}
+                        <p class="office-info">${candidate.office?.title || 'Office'}</p>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="detail-tabs">
+                    <button class="tab-btn active" data-tab="overview">Overview</button>
+                    <button class="tab-btn" data-tab="positions">Positions</button>
+                    <button class="tab-btn" data-tab="background">Background</button>
+                    <button class="tab-btn" data-tab="campaign">Campaign</button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content active" id="tab-overview">
+                    ${candidate.platformSummary ? `
+                        <div class="section">
+                            <h3>Platform Summary</h3>
+                            <p>${candidate.platformSummary}</p>
+                        </div>
+                    ` : ''}
+
+                    ${candidate.keyIssues && candidate.keyIssues.length > 0 ? `
+                        <div class="section">
+                            <h3>Key Issues</h3>
+                            <ul class="key-issues-list">
+                                ${candidate.keyIssues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+
+                    ${candidate.endorsements && candidate.endorsements.length > 0 ? `
+                        <div class="section">
+                            <h3>Endorsements</h3>
+                            <div class="endorsements-list">
+                                ${candidate.endorsements.slice(0, 5).map(e => `
+                                    <div class="endorsement">
+                                        <strong>${e.user?.firstName} ${e.user?.lastName}</strong>
+                                        ${e.reason ? `<p>${e.reason}</p>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="tab-content" id="tab-positions" style="display: none;">
+                    ${candidate.policyPositions && candidate.policyPositions.length > 0 ? `
+                        <div class="positions-grid">
+                            ${candidate.policyPositions.map(pos => `
+                                <div class="position-card">
+                                    <div class="position-category">${pos.category || 'Policy'}</div>
+                                    <h4>${pos.title}</h4>
+                                    <p>${pos.summary || pos.content}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : '<p class="empty-message">No detailed policy positions available yet.</p>'}
+                </div>
+
+                <div class="tab-content" id="tab-background" style="display: none;">
+                    ${candidate.biography || candidate.externalBiography ? `
+                        <div class="section">
+                            <h3>Biography</h3>
+                            <p>${candidate.biography || candidate.externalBiography}</p>
+                        </div>
+                    ` : '<p class="empty-message">No biography available.</p>'}
+                </div>
+
+                <div class="tab-content" id="tab-campaign" style="display: none;">
+                    <div class="campaign-links">
+                        ${candidate.campaignWebsite ? `
+                            <a href="${candidate.campaignWebsite}" target="_blank" rel="noopener" class="campaign-link">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="2" y1="12" x2="22" y2="12"/>
+                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                </svg>
+                                Visit Campaign Website
+                            </a>
+                        ` : ''}
+
+                        ${candidate.campaignEmail ? `
+                            <a href="mailto:${candidate.campaignEmail}" class="campaign-link">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                    <polyline points="22,6 12,13 2,6"/>
+                                </svg>
+                                ${candidate.campaignEmail}
+                            </a>
+                        ` : ''}
+
+                        ${candidate.campaignPhone ? `
+                            <a href="tel:${candidate.campaignPhone}" class="campaign-link">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                </svg>
+                                ${candidate.campaignPhone}
+                            </a>
+                        ` : ''}
+                    </div>
+
+                    ${!candidate.campaignWebsite && !candidate.campaignEmail && !candidate.campaignPhone ?
+                        '<p class="empty-message">No campaign contact information available.</p>' : ''}
+                </div>
+
+                <!-- Actions -->
+                <div class="detail-actions">
+                    ${this.hierarchyState.selectedCandidates.has(candidate.id) ? `
+                        <button class="btn secondary" data-candidate-action="toggleCandidateSelect" data-candidate-id="${candidate.id}">
+                            Remove from Comparison
+                        </button>
+                    ` : `
+                        <button class="btn primary" data-candidate-action="toggleCandidateSelect" data-candidate-id="${candidate.id}">
+                            Add to Comparison
+                        </button>
+                    `}
+                    <button class="btn secondary" data-candidate-action="closeModal">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add tab switching logic
+        modal.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+
+                // Update button states
+                modal.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Show correct tab content
+                modal.querySelectorAll('.tab-content').forEach(content => {
+                    content.style.display = content.id === `tab-${tabName}` ? 'block' : 'none';
+                });
+            });
+        });
+    }
+
+    // ==========================================
+    // END MODAL METHODS
+    // ==========================================
 
     async loadElections() {
         adminDebugLog('🗳️ Loading candidates for your area...');
@@ -606,101 +1484,307 @@ class CandidateSystemIntegration {
     }
 
     /**
-     * Display candidate races grouped by office with address controls
+     * Display candidate races grouped by ELECTION with registration deadlines
      */
     displayCandidateRaces(races, currentAddress, container) {
         if (!container) return;
 
-        const racesHTML = races.length === 0 ? `
-            <div class="no-candidates">
-                <div class="no-candidates-icon">🗳️</div>
-                <h3>No Candidates Found</h3>
-                <p>No candidates found for this address. Try a different address or check back later as election data is updated.</p>
-            </div>
-        ` : races.map(race => {
-            const candidatesHTML = race.candidates.map(candidate => `
-                <div class="candidate-card ${candidate.isRegistered ? 'registered-candidate' : 'external-candidate'}">
-                    <div class="candidate-header">
-                        <h4 class="candidate-name">${this.escapeHtml(candidate.name)}</h4>
-                        <div class="candidate-badges">
-                            ${candidate.party ? `<span class="party-badge">${this.escapeHtml(candidate.party)}</span>` : ''}
-                            ${candidate.isRegistered ? '<span class="source-badge registered">👤 Registered</span>' : '<span class="source-badge external">🌐 External</span>'}
-                        </div>
-                    </div>
-                    ${candidate.isRegistered ? `
-                        <div class="candidate-actions">
-                            <button class="btn primary small" data-candidate-action="viewCandidateProfile" data-username="${candidate.username}">
-                                View Profile
-                            </button>
-                            <button class="btn secondary small" data-candidate-action="contactCandidate" data-candidate-id="${candidate.id}">
-                                💬 Contact
-                            </button>
-                        </div>
-                    ` : `
-                        <div class="candidate-actions">
-                            <button class="btn outline small" data-candidate-action="viewExternalCandidate" data-candidate-id="${candidate.id}">
-                                View Details
-                            </button>
-                            ${candidate.campaignWebsite ? `
-                                <a href="${candidate.campaignWebsite}" target="_blank" class="btn secondary small">
-                                    🌐 Website
-                                </a>
-                            ` : ''}
-                        </div>
-                    `}
-                </div>
-            `).join('');
+        if (races.length === 0) {
+            container.innerHTML = this.renderEmptyElectionsState(currentAddress);
+            this.addCandidateRacesStyles();
+            return;
+        }
+
+        // Group races by election
+        const electionMap = new Map();
+        races.forEach(race => {
+            const electionKey = race.election?.name || race.election?.date || 'Unknown Election';
+            if (!electionMap.has(electionKey)) {
+                electionMap.set(electionKey, {
+                    name: race.election?.name || `Election on ${race.election?.date}`,
+                    date: race.election?.date,
+                    registrationDeadline: race.election?.registrationDeadline,
+                    type: race.election?.type || 'General',
+                    races: []
+                });
+            }
+            electionMap.get(electionKey).races.push(race);
+        });
+
+        // Sort elections by date (soonest first)
+        const sortedElections = Array.from(electionMap.values()).sort((a, b) => {
+            const dateA = a.date ? new Date(a.date) : new Date('2099-12-31');
+            const dateB = b.date ? new Date(b.date) : new Date('2099-12-31');
+            return dateA - dateB;
+        });
+
+        // Render elections with their races
+        const electionsHTML = sortedElections.map(election => {
+            const daysUntilElection = this.calculateDaysUntil(election.date);
+            const daysUntilDeadline = this.calculateDaysUntil(election.registrationDeadline);
+            const isDeadlineUrgent = daysUntilDeadline !== null && daysUntilDeadline <= 14;
+            const isDeadlinePassed = daysUntilDeadline !== null && daysUntilDeadline < 0;
+
+            // Count total candidates across all races in this election
+            const totalCandidates = election.races.reduce((sum, r) => sum + r.candidates.length, 0);
+
+            // Render races under this election
+            const racesHTML = election.races.map(race => this.renderRaceCard(race)).join('');
 
             return `
-                <div class="race-group">
-                    <div class="race-header">
-                        <div class="race-info">
-                            <h3 class="race-title">${this.escapeHtml(race.office)}</h3>
-                            <div class="race-meta">
-                                <span class="election-date">📅 ${race.election.date}</span>
-                                <span class="office-level">🏛️ ${race.level}</span>
-                                ${race.district ? `<span class="district">📍 ${this.escapeHtml(race.district)}</span>` : ''}
+                <div class="election-group">
+                    <div class="election-header">
+                        <div class="election-main-info">
+                            <h3 class="election-name">${this.escapeHtml(election.name)}</h3>
+                            <div class="election-meta">
+                                <span class="election-type-badge">${election.type}</span>
+                                <span class="election-date-display">
+                                    ${election.date ? this.formatElectionDate(election.date) : 'Date TBD'}
+                                    ${daysUntilElection !== null && daysUntilElection >= 0 ?
+                                        `<span class="days-badge">${daysUntilElection === 0 ? 'Today!' : `${daysUntilElection} days`}</span>` : ''}
+                                </span>
                             </div>
                         </div>
-                        <div class="candidate-count">${race.candidates.length} candidate${race.candidates.length === 1 ? '' : 's'}</div>
+                        <div class="election-stats">
+                            <span class="contest-count">${election.races.length} contest${election.races.length !== 1 ? 's' : ''}</span>
+                            <span class="total-candidates">${totalCandidates} candidate${totalCandidates !== 1 ? 's' : ''}</span>
+                        </div>
                     </div>
-                    <div class="candidates-grid">
-                        ${candidatesHTML}
+
+                    ${election.registrationDeadline ? `
+                        <div class="registration-deadline ${isDeadlineUrgent ? 'urgent' : ''} ${isDeadlinePassed ? 'passed' : ''}">
+                            <span class="deadline-icon">${isDeadlinePassed ? '⚠️' : '📋'}</span>
+                            <span class="deadline-text">
+                                ${isDeadlinePassed ?
+                                    'Registration deadline has passed' :
+                                    `Registration Deadline: ${this.formatElectionDate(election.registrationDeadline)}`}
+                            </span>
+                            ${!isDeadlinePassed && daysUntilDeadline !== null ? `
+                                <span class="deadline-countdown ${isDeadlineUrgent ? 'urgent' : ''}">
+                                    ${daysUntilDeadline === 0 ? 'Last day to register!' :
+                                      daysUntilDeadline === 1 ? '1 day left' :
+                                      `${daysUntilDeadline} days left`}
+                                </span>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+
+                    <div class="election-contests">
+                        ${racesHTML}
+                    </div>
+
+                    <div class="election-actions">
+                        <button class="explore-more-btn" data-candidate-action="selectLevel" data-level="${this.inferLevelFromRaces(election.races)}">
+                            Explore all ${this.inferLevelFromRaces(election.races)} candidates
+                        </button>
                     </div>
                 </div>
             `;
         }).join('');
 
         container.innerHTML = `
-            <div class="candidate-races-display">
+            <div class="elections-display-v2">
                 <div class="address-controls">
                     <div class="address-header">
-                        <h3>🏠 Find Candidates for Your Area</h3>
+                        <h3>Your Upcoming Elections</h3>
+                        <p class="address-subtitle">Based on your location</p>
                     </div>
                     <div class="address-input-group">
-                        <input type="text" 
-                               id="candidateAddressInput" 
-                               placeholder="Enter your address..."
+                        <input type="text"
+                               id="candidateAddressInput"
+                               placeholder="Enter a different address..."
                                value="${currentAddress || ''}"
                                class="address-input">
                         <button class="btn primary" data-candidate-action="searchCandidatesByAddress">
-                            🔍 Search
+                            Update
                         </button>
                     </div>
                     ${currentAddress ? `
                         <div class="current-address">
-                            <span>📍 Showing candidates for: <strong>${this.escapeHtml(currentAddress)}</strong></span>
+                            <span class="address-icon">📍</span>
+                            <span>${this.escapeHtml(currentAddress)}</span>
                         </div>
                     ` : ''}
                 </div>
-                
-                <div class="races-container">
-                    ${racesHTML}
+
+                <div class="elections-list">
+                    ${electionsHTML}
                 </div>
             </div>
         `;
 
         this.addCandidateRacesStyles();
+    }
+
+    /**
+     * Render empty state when no elections found
+     */
+    renderEmptyElectionsState(currentAddress) {
+        return `
+            <div class="elections-display-v2">
+                <div class="address-controls">
+                    <div class="address-header">
+                        <h3>Your Upcoming Elections</h3>
+                    </div>
+                    <div class="address-input-group">
+                        <input type="text"
+                               id="candidateAddressInput"
+                               placeholder="Enter your address..."
+                               value="${currentAddress || ''}"
+                               class="address-input">
+                        <button class="btn primary" data-candidate-action="searchCandidatesByAddress">
+                            Search
+                        </button>
+                    </div>
+                </div>
+                <div class="no-elections-state">
+                    <div class="empty-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                    </div>
+                    <h3>No Upcoming Elections Found</h3>
+                    <p>We couldn't find election data for this address. Try a different address or check back as election data is updated.</p>
+                    <button class="btn secondary" data-candidate-action="backToLevels">
+                        Browse All Candidates
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render a single race card within an election
+     */
+    renderRaceCard(race) {
+        const candidatesPreview = race.candidates.slice(0, 4);
+        const remainingCount = race.candidates.length - 4;
+
+        return `
+            <div class="race-card">
+                <div class="race-card-header">
+                    <div class="race-title-area">
+                        <h4 class="race-title">${this.escapeHtml(race.office)}</h4>
+                        <div class="race-badges">
+                            <span class="level-badge level-${race.level?.toLowerCase() || 'local'}">${race.level || 'Local'}</span>
+                            ${race.district ? `<span class="district-badge">${this.escapeHtml(race.district)}</span>` : ''}
+                        </div>
+                    </div>
+                    <span class="race-candidate-count">${race.candidates.length}</span>
+                </div>
+
+                <div class="race-candidates-preview">
+                    ${candidatesPreview.map(c => `
+                        <div class="candidate-chip ${c.isRegistered ? 'registered' : 'external'}">
+                            <span class="candidate-chip-name">${this.escapeHtml(c.name)}</span>
+                            ${c.party ? `<span class="candidate-chip-party">${c.party.substring(0, 1)}</span>` : ''}
+                        </div>
+                    `).join('')}
+                    ${remainingCount > 0 ? `<span class="more-candidates">+${remainingCount} more</span>` : ''}
+                </div>
+
+                <button class="race-view-btn" data-candidate-action="viewRaceDetail" data-race-office="${this.escapeHtml(race.office)}">
+                    View Candidates
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Calculate days until a date
+     */
+    calculateDaysUntil(dateStr) {
+        if (!dateStr) return null;
+        const targetDate = new Date(dateStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        targetDate.setHours(0, 0, 0, 0);
+        const diffTime = targetDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+    }
+
+    /**
+     * Format election date for display
+     */
+    formatElectionDate(dateStr) {
+        if (!dateStr) return 'Date TBD';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+
+    /**
+     * Infer the primary level from a set of races
+     */
+    inferLevelFromRaces(races) {
+        const levels = races.map(r => r.level?.toUpperCase()).filter(Boolean);
+        if (levels.includes('FEDERAL')) return 'FEDERAL';
+        if (levels.includes('STATE')) return 'STATE';
+        if (levels.includes('LOCAL')) return 'LOCAL';
+        return 'LOCAL';
+    }
+
+    // Legacy method for backwards compatibility
+    renderLegacyRaceGroup(race) {
+        const candidatesHTML = race.candidates.map(candidate => `
+            <div class="candidate-card ${candidate.isRegistered ? 'registered-candidate' : 'external-candidate'}">
+                <div class="candidate-header">
+                    <h4 class="candidate-name">${this.escapeHtml(candidate.name)}</h4>
+                    <div class="candidate-badges">
+                        ${candidate.party ? `<span class="party-badge">${this.escapeHtml(candidate.party)}</span>` : ''}
+                        ${candidate.isRegistered ? '<span class="source-badge registered">Registered</span>' : '<span class="source-badge external">External</span>'}
+                    </div>
+                </div>
+                ${candidate.isRegistered ? `
+                    <div class="candidate-actions">
+                        <button class="btn primary small" data-candidate-action="viewCandidateProfile" data-username="${candidate.username}">
+                            View Profile
+                        </button>
+                        <button class="btn secondary small" data-candidate-action="contactCandidate" data-candidate-id="${candidate.id}">
+                            Contact
+                        </button>
+                    </div>
+                ` : `
+                    <div class="candidate-actions">
+                        <button class="btn outline small" data-candidate-action="viewExternalCandidate" data-candidate-id="${candidate.id}">
+                            View Details
+                        </button>
+                        ${candidate.campaignWebsite ? `
+                            <a href="${candidate.campaignWebsite}" target="_blank" class="btn secondary small">
+                                Website
+                            </a>
+                        ` : ''}
+                    </div>
+                `}
+            </div>
+        `).join('');
+
+        return `
+            <div class="race-group">
+                <div class="race-header">
+                    <div class="race-info">
+                        <h3 class="race-title">${this.escapeHtml(race.office)}</h3>
+                        <div class="race-meta">
+                            <span class="election-date">${race.election.date}</span>
+                            <span class="office-level">${race.level}</span>
+                            ${race.district ? `<span class="district">${this.escapeHtml(race.district)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="candidate-count">${race.candidates.length} candidate${race.candidates.length === 1 ? '' : 's'}</div>
+                </div>
+                <div class="candidates-grid">
+                    ${candidatesHTML}
+                </div>
+            </div>
+        `;
     }
 
     /**

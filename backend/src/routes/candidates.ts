@@ -278,6 +278,289 @@ router.get('/pricing', (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/candidates/by-level/{level}:
+ *   get:
+ *     tags: [Candidates]
+ *     summary: Get office types by government level
+ *     description: Returns office types with candidate counts for a specific government level
+ *     parameters:
+ *       - in: path
+ *         name: level
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [FEDERAL, STATE, LOCAL, MUNICIPAL]
+ *         description: Government level
+ *     responses:
+ *       200:
+ *         description: Office types for the level
+ */
+router.get('/by-level/:level', async (req, res) => {
+  try {
+    const { level } = req.params;
+    const validLevels = ['FEDERAL', 'STATE', 'LOCAL', 'MUNICIPAL'];
+
+    if (!validLevels.includes(level.toUpperCase())) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid level. Must be FEDERAL, STATE, LOCAL, or MUNICIPAL'
+      });
+    }
+
+    // Get all offices at this level with candidate counts
+    const offices = await prisma.office.findMany({
+      where: {
+        level: level.toUpperCase() as any
+      },
+      include: {
+        _count: {
+          select: { candidates: true }
+        }
+      }
+    });
+
+    // Group by office title/type and aggregate counts
+    const officeTypeMap = new Map<string, { title: string; description: string; candidateCount: number; type: string }>();
+
+    offices.forEach(office => {
+      const normalizedTitle = office.title.toLowerCase().replace(/\s+/g, '_');
+
+      if (officeTypeMap.has(normalizedTitle)) {
+        const existing = officeTypeMap.get(normalizedTitle)!;
+        existing.candidateCount += office._count.candidates;
+      } else {
+        officeTypeMap.set(normalizedTitle, {
+          title: office.title,
+          description: office.description || '',
+          candidateCount: office._count.candidates,
+          type: normalizedTitle
+        });
+      }
+    });
+
+    // If no offices found in database, return fallback data
+    if (officeTypeMap.size === 0) {
+      const fallbackOffices = getFallbackOfficeTypes(level.toUpperCase());
+      return res.json({
+        success: true,
+        level: level.toUpperCase(),
+        officeTypes: fallbackOffices,
+        source: 'fallback'
+      });
+    }
+
+    res.json({
+      success: true,
+      level: level.toUpperCase(),
+      officeTypes: Array.from(officeTypeMap.values()),
+      source: 'database'
+    });
+  } catch (error) {
+    logger.error({ error, level: req.params.level }, 'Error fetching offices by level');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch office types'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/candidates/by-office-type:
+ *   get:
+ *     tags: [Candidates]
+ *     summary: Get candidates by office type
+ *     description: Returns candidates for a specific office type at a given level
+ *     parameters:
+ *       - in: query
+ *         name: level
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Government level (FEDERAL, STATE, LOCAL, MUNICIPAL)
+ *       - in: query
+ *         name: officeType
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Office type (e.g., president, us_senate, mayor)
+ *       - in: query
+ *         name: state
+ *         schema:
+ *           type: string
+ *         description: Optional state filter
+ *     responses:
+ *       200:
+ *         description: Candidates for the office type
+ */
+router.get('/by-office-type', async (req, res) => {
+  try {
+    const { level, officeType, state } = req.query;
+
+    if (!level || !officeType) {
+      return res.status(400).json({
+        success: false,
+        error: 'level and officeType are required parameters'
+      });
+    }
+
+    // Normalize office type for matching
+    const normalizedType = (officeType as string).toLowerCase().replace(/\s+/g, '_');
+
+    // Build query
+    const whereClause: any = {
+      office: {
+        level: (level as string).toUpperCase()
+      },
+      isWithdrawn: false,
+      status: 'ACTIVE'
+    };
+
+    if (state) {
+      whereClause.office.election = {
+        state: {
+          equals: state as string,
+          mode: 'insensitive'
+        }
+      };
+    }
+
+    // Get candidates matching the office type
+    const candidates = await prisma.candidate.findMany({
+      where: whereClause,
+      include: {
+        office: {
+          include: {
+            election: true
+          }
+        },
+        policyPositions: {
+          take: 5
+        },
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true
+          }
+        }
+      },
+      orderBy: [
+        { isIncumbent: 'desc' },
+        { name: 'asc' }
+      ]
+    });
+
+    // Filter by office type (title matching)
+    const filteredCandidates = candidates.filter(c => {
+      const candidateOfficeType = c.office.title.toLowerCase().replace(/\s+/g, '_');
+      return candidateOfficeType.includes(normalizedType) || normalizedType.includes(candidateOfficeType);
+    });
+
+    // Transform to frontend format with stance tags
+    const transformedCandidates = filteredCandidates.map(c => ({
+      id: c.id,
+      name: c.name,
+      party: c.party,
+      isIncumbent: c.isIncumbent,
+      photoUrl: c.user?.avatar || null,
+      platformSummary: c.platformSummary,
+      keyIssues: c.keyIssues,
+      stanceTags: generateStanceTags(c),
+      office: {
+        title: c.office.title,
+        level: c.office.level,
+        state: c.office.election?.state || null
+      },
+      campaignWebsite: c.campaignWebsite
+    }));
+
+    res.json({
+      success: true,
+      level: level,
+      officeType: officeType,
+      candidates: transformedCandidates,
+      count: transformedCandidates.length
+    });
+  } catch (error) {
+    logger.error({ error, query: req.query }, 'Error fetching candidates by office type');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch candidates'
+    });
+  }
+});
+
+/**
+ * Helper function to generate stance tags from candidate data
+ * Will be enhanced with AI service later
+ */
+function generateStanceTags(candidate: any): string[] {
+  const tags: string[] = [];
+
+  // Extract from key issues
+  if (candidate.keyIssues && Array.isArray(candidate.keyIssues)) {
+    candidate.keyIssues.slice(0, 3).forEach((issue: string) => {
+      if (issue.length <= 25) {
+        tags.push(issue);
+      } else {
+        // Shorten long issues
+        const shortened = issue.substring(0, 22) + '...';
+        tags.push(shortened);
+      }
+    });
+  }
+
+  // Extract from policy positions if available
+  if (candidate.policyPositions && candidate.policyPositions.length > 0) {
+    candidate.policyPositions.slice(0, 2).forEach((pos: any) => {
+      if (pos.category && !tags.includes(pos.category)) {
+        tags.push(pos.category);
+      }
+    });
+  }
+
+  return tags.slice(0, 3);
+}
+
+/**
+ * Fallback office types when database has no data
+ */
+function getFallbackOfficeTypes(level: string): Array<{ type: string; title: string; description: string; candidateCount: number }> {
+  const fallbackData: Record<string, Array<{ type: string; title: string; description: string; candidateCount: number }>> = {
+    'FEDERAL': [
+      { type: 'president', title: 'President', description: 'Head of state and government', candidateCount: 0 },
+      { type: 'us_senate', title: 'U.S. Senate', description: '2 senators per state, 6-year terms', candidateCount: 0 },
+      { type: 'us_house', title: 'U.S. House of Representatives', description: 'Based on district population', candidateCount: 0 }
+    ],
+    'STATE': [
+      { type: 'governor', title: 'Governor', description: 'Chief executive of the state', candidateCount: 0 },
+      { type: 'lt_governor', title: 'Lieutenant Governor', description: 'Second-in-command executive', candidateCount: 0 },
+      { type: 'state_senate', title: 'State Senate', description: 'Upper chamber of state legislature', candidateCount: 0 },
+      { type: 'state_house', title: 'State House', description: 'Lower chamber of state legislature', candidateCount: 0 },
+      { type: 'attorney_general', title: 'Attorney General', description: 'Chief legal officer of the state', candidateCount: 0 },
+      { type: 'secretary_state', title: 'Secretary of State', description: 'Oversees elections and records', candidateCount: 0 }
+    ],
+    'LOCAL': [
+      { type: 'mayor', title: 'Mayor', description: 'Chief executive of the city', candidateCount: 0 },
+      { type: 'city_council', title: 'City Council', description: 'Local legislative body', candidateCount: 0 },
+      { type: 'county_commissioner', title: 'County Commissioner', description: 'County executive board member', candidateCount: 0 },
+      { type: 'school_board', title: 'School Board', description: 'Oversees local public education', candidateCount: 0 },
+      { type: 'sheriff', title: 'Sheriff', description: 'Chief law enforcement officer', candidateCount: 0 }
+    ],
+    'MUNICIPAL': [
+      { type: 'township_trustee', title: 'Township Trustee', description: 'Local township governance', candidateCount: 0 },
+      { type: 'water_district', title: 'Water District Board', description: 'Manages water resources', candidateCount: 0 },
+      { type: 'fire_district', title: 'Fire District Board', description: 'Oversees fire protection services', candidateCount: 0 },
+      { type: 'park_district', title: 'Park District Board', description: 'Manages parks and recreation', candidateCount: 0 }
+    ]
+  };
+
+  return fallbackData[level] || [];
+}
+
 // Get candidate profile
 router.get('/:id', async (req, res) => {
   try {
