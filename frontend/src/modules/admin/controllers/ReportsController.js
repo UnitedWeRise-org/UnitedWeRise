@@ -1336,8 +1336,15 @@ ${item.notes ? `Notes: ${item.notes}` : ''}
 
     /**
      * Show error message
+     * Suppresses errors during wake-from-sleep recovery to prevent transient error popups
      */
     showError(message) {
+        // Suppress errors during recovery mode (wake-from-sleep token refresh)
+        if (window.adminAuth?.isRecovering) {
+            console.warn('ReportsController: Error suppressed during recovery:', message);
+            return;
+        }
+
         console.error('ReportsController Error:', message);
 
         const errorContainer = document.getElementById('reportsError');

@@ -977,8 +977,15 @@ Request Headers: ${login.suspiciousHeaders ? 'Suspicious detected' : 'Normal'}
 
     /**
      * Show error message
+     * Suppresses errors during wake-from-sleep recovery to prevent transient error popups
      */
     showError(message) {
+        // Suppress errors during recovery mode (wake-from-sleep token refresh)
+        if (window.adminAuth?.isRecovering) {
+            console.warn('SecurityController: Error suppressed during recovery:', message);
+            return;
+        }
+
         console.error('SecurityController Error:', message);
 
         const errorContainer = document.getElementById('securityError');

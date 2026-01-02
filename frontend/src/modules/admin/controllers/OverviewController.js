@@ -528,8 +528,15 @@ class OverviewController {
 
     /**
      * Show error message
+     * Suppresses errors during wake-from-sleep recovery to prevent transient error popups
      */
     showError(message) {
+        // Suppress errors during recovery mode (wake-from-sleep token refresh)
+        if (window.adminAuth?.isRecovering) {
+            console.warn('OverviewController: Error suppressed during recovery:', message);
+            return;
+        }
+
         console.error('OverviewController Error:', message);
 
         const errorContainer = document.getElementById('overviewError');

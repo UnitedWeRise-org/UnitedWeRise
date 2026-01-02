@@ -1,10 +1,48 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: December 30, 2025
+**Last Updated**: January 2, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-02] - Admin Dashboard Graceful Resume Fix
+
+### Fixed
+
+**Wake-from-Sleep Error Popups**
+- Fixed error popups appearing when Admin Dashboard wakes from sleep despite eventual recovery
+- Root cause: Network briefly unavailable during device wake caused token refresh failures
+- API calls would proceed with stale tokens after timeout, triggering 401 errors and error popups
+
+### Added
+
+**Network Availability Detection (AdminAuth.js)**
+- New `waitForNetworkReady(maxWaitMs)` method waits up to 5 seconds for network reconnection
+- Listens for browser `online` event with 200ms polling fallback
+- Used before token refresh attempts during wake-from-sleep recovery
+
+**Recovery Mode Flag (AdminAuth.js)**
+- New `isRecovering` flag set immediately when tab wakes after 5+ minutes idle
+- Signals error display methods to suppress transient errors during recovery
+- Cleared after token refresh completes (success or failure)
+
+**Error Suppression During Recovery**
+- `AdminState.showError()` - suppresses errors during recovery mode
+- `ReportsController.showError()` - suppresses errors during recovery mode
+- `OverviewController.showError()` - suppresses errors during recovery mode
+- `SecurityController.showError()` - suppresses errors during recovery mode
+- `DeploymentController.showError()` - suppresses errors during recovery mode
+
+### Files Modified
+- `frontend/src/modules/admin/auth/AdminAuth.js`
+- `frontend/src/modules/admin/state/AdminState.js`
+- `frontend/src/modules/admin/controllers/ReportsController.js`
+- `frontend/src/modules/admin/controllers/OverviewController.js`
+- `frontend/src/modules/admin/controllers/SecurityController.js`
+- `frontend/src/modules/admin/controllers/DeploymentController.js`
 
 ---
 
