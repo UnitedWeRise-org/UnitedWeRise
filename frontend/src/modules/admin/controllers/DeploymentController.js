@@ -827,8 +827,15 @@ class DeploymentController {
 
     /**
      * Show error message
+     * Suppresses errors during wake-from-sleep recovery to prevent transient error popups
      */
     showError(message) {
+        // Suppress errors during recovery mode (wake-from-sleep token refresh)
+        if (window.adminAuth?.isRecovering) {
+            console.warn('DeploymentController: Error suppressed during recovery:', message);
+            return;
+        }
+
         console.error('DeploymentController Error:', message);
 
         const consoleDiv = document.getElementById('deploymentConsole');

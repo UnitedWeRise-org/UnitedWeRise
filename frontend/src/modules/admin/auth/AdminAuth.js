@@ -23,6 +23,7 @@ class AdminAuth {
         this.lastTokenRefresh = new Date(); // Initialize to current time to prevent "Infinity minutes" bug
         this.isRefreshingToken = false; // Flag to prevent concurrent refreshes
         this.refreshPending = false; // Flag to signal refresh is about to start (during debounce)
+        this.isRecovering = false; // Flag to suppress error displays during wake recovery
         this.visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this.API_BASE = this.getApiBase();
         this.BACKEND_URL = this.getBackendUrl();
@@ -60,6 +61,53 @@ class AdminAuth {
      */
     getBackendUrl() {
         return this.API_BASE.replace(/\/api$/, '');
+    }
+
+    /**
+     * Wait for network to become available
+     * Used during wake-from-sleep recovery to avoid "Load failed" errors
+     * @param {number} maxWaitMs - Maximum time to wait for network (default 5000ms)
+     * @returns {Promise<boolean>} True if network is available, false if timeout
+     */
+    async waitForNetworkReady(maxWaitMs = 5000) {
+        // If already online, return immediately
+        if (navigator.onLine) {
+            return true;
+        }
+
+        console.log('⏳ Waiting for network to reconnect...');
+        const startTime = Date.now();
+
+        return new Promise(resolve => {
+            let interval = null;
+
+            const cleanup = () => {
+                if (interval) clearInterval(interval);
+                window.removeEventListener('online', handleOnline);
+            };
+
+            const handleOnline = () => {
+                cleanup();
+                console.log('✅ Network reconnected');
+                resolve(true);
+            };
+
+            // Listen for online event
+            window.addEventListener('online', handleOnline);
+
+            // Also poll in case event doesn't fire (some browsers)
+            interval = setInterval(() => {
+                if (navigator.onLine) {
+                    cleanup();
+                    console.log('✅ Network ready (detected via polling)');
+                    resolve(true);
+                } else if (Date.now() - startTime > maxWaitMs) {
+                    cleanup();
+                    console.warn('⚠️ Network wait timeout - proceeding anyway');
+                    resolve(false);
+                }
+            }, 200);
+        });
     }
 
     /**
@@ -104,6 +152,14 @@ class AdminAuth {
             // The refresh endpoint will return 401 if cookie is missing/invalid
 
             for (let attempt = 0; attempt < maxRetries; attempt++) {
+                // Wait for network before each attempt (helps with wake-from-sleep)
+                if (!navigator.onLine) {
+                    const networkAvailable = await this.waitForNetworkReady(5000);
+                    if (!networkAvailable) {
+                        console.warn(`⚠️ Network unavailable for attempt ${attempt + 1}, trying anyway...`);
+                    }
+                }
+
                 try {
                     console.log(`🔄 Attempting token refresh (${attempt + 1}/${maxRetries})...`);
 
@@ -177,6 +233,7 @@ class AdminAuth {
      * Handle tab visibility change - refresh token when tab becomes visible after being hidden
      * Debounced to prevent rapid-fire refreshes from multiple visibility events
      * FIXED: Sets refreshPending immediately so API calls wait during debounce period
+     * FIXED: Uses isRecovering flag to suppress error displays during wake recovery
      */
     handleVisibilityChange() {
         // Clear any pending debounce timer and reset pending flag
@@ -185,15 +242,17 @@ class AdminAuth {
             this.refreshPending = false;
         }
 
-        // Set refreshPending IMMEDIATELY if refresh will be needed
+        // Set refreshPending and isRecovering IMMEDIATELY if refresh will be needed
         // This signals API calls to wait during the 1-second debounce period
+        // and suppresses error displays until recovery completes
         if (!document.hidden && this.isAuthenticated()) {
             const now = new Date();
             const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
 
             if (timeSinceLastRefresh > 5) {
                 this.refreshPending = true;
-                console.log(`⏳ Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refresh pending`);
+                this.isRecovering = true; // Enter recovery mode - suppress error displays
+                console.log(`⏳ Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - entering recovery mode`);
             }
         }
 
@@ -214,14 +273,18 @@ class AdminAuth {
                     // If more than 5 minutes since last refresh, refresh immediately
                     // BUGFIX: Align threshold with 5-minute auto-refresh interval (was 10, caused 403s)
                     if (timeSinceLastRefresh > 5) {
+                        // Wait for network before attempting refresh (helps with wake-from-sleep)
+                        await this.waitForNetworkReady(5000);
+
                         console.log(`🔄 Starting token refresh...`);
                         await this.refreshToken(true); // Force refresh
-                        console.log('✅ Visibility change refresh complete');
+                        console.log('✅ Recovery mode complete');
                     }
                 }
             } finally {
-                // Always clear pending flag after debounce completes
+                // Always clear pending and recovery flags after debounce completes
                 this.refreshPending = false;
+                this.isRecovering = false;
             }
         }, 1000); // 1 second debounce
     }
@@ -527,9 +590,10 @@ class AdminAuth {
             clearTimeout(this.visibilityChangeDebounceTimer);
         }
 
-        // Clear refresh flags
+        // Clear refresh and recovery flags
         this.isRefreshingToken = false;
         this.refreshPending = false;
+        this.isRecovering = false;
 
         // Remove event listeners
         const loginForm = document.getElementById('loginForm');

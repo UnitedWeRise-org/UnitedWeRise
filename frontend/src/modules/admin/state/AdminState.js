@@ -60,8 +60,15 @@ class AdminState {
 
     /**
      * Show error message in UI
+     * Suppresses errors during wake-from-sleep recovery to prevent transient error popups
      */
     showError(message) {
+        // Suppress errors during recovery mode (wake-from-sleep token refresh)
+        if (window.adminAuth?.isRecovering) {
+            console.warn('AdminState: Error suppressed during recovery:', message);
+            return;
+        }
+
         console.error('AdminState Error:', message);
 
         // Try to show in error element, fallback to alert
