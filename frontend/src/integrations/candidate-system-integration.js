@@ -3015,7 +3015,7 @@ class CandidateSystemIntegration {
                                 <label class="terms-checkbox">
                                     <input type="checkbox" id="agreeToTerms" name="agreeToTerms">
                                     <span class="checkmark"></span>
-                                    I agree to the <a href="#" target="_blank">Terms and Conditions</a> and <a href="#" target="_blank">Privacy Policy</a>
+                                    I agree to the <a href="#" data-action="open-legal-terms">Terms and Conditions</a> and <a href="#" data-action="open-legal-privacy">Privacy Policy</a>
                                 </label>
                             </div>
                         </div>
