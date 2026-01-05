@@ -34,32 +34,21 @@ class FollowUtils {
      */
     static async followUser(userId, onSuccess = null, onError = null) {
         try {
-            const token = getAuthToken();
-            if (!token) {
-                throw new Error('Authentication required');
-            }
-
-            const response = await fetch(`${getApiBase()}/users/follow/${userId}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            const response = await apiCall(`/users/follow/${userId}`, {
+                method: 'POST'
             });
-
-            const data = await response.json();
 
             if (response.ok) {
                 // Update UI state
                 this.updateFollowUI(userId, true);
-                
+
                 // Show success notification
                 this.showNotification('Successfully followed user', 'success');
-                
+
                 if (onSuccess) onSuccess(userId, true);
-                return { success: true, data };
+                return { success: true, data: response.data };
             } else {
-                throw new Error(data.error || 'Failed to follow user');
+                throw new Error(response.data?.error || 'Failed to follow user');
             }
 
         } catch (error) {
@@ -78,32 +67,21 @@ class FollowUtils {
      */
     static async unfollowUser(userId, onSuccess = null, onError = null) {
         try {
-            const token = getAuthToken();
-            if (!token) {
-                throw new Error('Authentication required');
-            }
-
-            const response = await fetch(`${getApiBase()}/users/follow/${userId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            const response = await apiCall(`/users/follow/${userId}`, {
+                method: 'DELETE'
             });
-
-            const data = await response.json();
 
             if (response.ok) {
                 // Update UI state
                 this.updateFollowUI(userId, false);
-                
+
                 // Show success notification
                 this.showNotification('Successfully unfollowed user', 'success');
-                
+
                 if (onSuccess) onSuccess(userId, false);
-                return { success: true, data };
+                return { success: true, data: response.data };
             } else {
-                throw new Error(data.error || 'Failed to unfollow user');
+                throw new Error(response.data?.error || 'Failed to unfollow user');
             }
 
         } catch (error) {
@@ -135,20 +113,10 @@ class FollowUtils {
      */
     static async getFollowStatus(userId) {
         try {
-            const token = getAuthToken();
-            if (!token) {
-                return { isFollowing: false };
-            }
-
-            const response = await fetch(`${getApiBase()}/users/follow-status/${userId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await apiCall(`/users/follow-status/${userId}`);
 
             if (response.ok) {
-                const data = await response.json();
-                return data;
+                return response.data;
             } else {
                 return { isFollowing: false };
             }
@@ -272,29 +240,18 @@ class FriendUtils {
      */
     static async sendFriendRequest(userId, onSuccess = null, onError = null) {
         try {
-            const token = getAuthToken();
-            if (!token) {
-                throw new Error('Authentication required');
-            }
-
-            const response = await fetch(`${getApiBase()}/users/friend-request/${userId}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            const response = await apiCall(`/users/friend-request/${userId}`, {
+                method: 'POST'
             });
-
-            const data = await response.json();
 
             if (response.ok) {
                 this.updateFriendUI(userId, 'request_sent');
                 this.showNotification('Friend request sent successfully', 'success');
-                
+
                 if (onSuccess) onSuccess(userId, 'request_sent');
-                return { success: true, data };
+                return { success: true, data: response.data };
             } else {
-                throw new Error(data.error || 'Failed to send friend request');
+                throw new Error(response.data?.error || 'Failed to send friend request');
             }
 
         } catch (error) {
@@ -313,29 +270,18 @@ class FriendUtils {
      */
     static async acceptFriendRequest(userId, onSuccess = null, onError = null) {
         try {
-            const token = getAuthToken();
-            if (!token) {
-                throw new Error('Authentication required');
-            }
-
-            const response = await fetch(`${getApiBase()}/users/friend-request/${userId}/accept`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            const response = await apiCall(`/users/friend-request/${userId}/accept`, {
+                method: 'POST'
             });
-
-            const data = await response.json();
 
             if (response.ok) {
                 this.updateFriendUI(userId, 'friends');
                 this.showNotification('Friend request accepted', 'success');
-                
+
                 if (onSuccess) onSuccess(userId, 'friends');
-                return { success: true, data };
+                return { success: true, data: response.data };
             } else {
-                throw new Error(data.error || 'Failed to accept friend request');
+                throw new Error(response.data?.error || 'Failed to accept friend request');
             }
 
         } catch (error) {
@@ -354,29 +300,18 @@ class FriendUtils {
      */
     static async rejectFriendRequest(userId, onSuccess = null, onError = null) {
         try {
-            const token = getAuthToken();
-            if (!token) {
-                throw new Error('Authentication required');
-            }
-
-            const response = await fetch(`${getApiBase()}/users/friend-request/${userId}/reject`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            const response = await apiCall(`/users/friend-request/${userId}/reject`, {
+                method: 'POST'
             });
-
-            const data = await response.json();
 
             if (response.ok) {
                 this.updateFriendUI(userId, 'none');
                 this.showNotification('Friend request rejected', 'info');
-                
+
                 if (onSuccess) onSuccess(userId, 'none');
-                return { success: true, data };
+                return { success: true, data: response.data };
             } else {
-                throw new Error(data.error || 'Failed to reject friend request');
+                throw new Error(response.data?.error || 'Failed to reject friend request');
             }
 
         } catch (error) {
@@ -398,29 +333,18 @@ class FriendUtils {
             const confirmed = confirm('Are you sure you want to remove this friend?');
             if (!confirmed) return { success: false, cancelled: true };
 
-            const token = getAuthToken();
-            if (!token) {
-                throw new Error('Authentication required');
-            }
-
-            const response = await fetch(`${getApiBase()}/users/friend/${userId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            const response = await apiCall(`/users/friend/${userId}`, {
+                method: 'DELETE'
             });
-
-            const data = await response.json();
 
             if (response.ok) {
                 this.updateFriendUI(userId, 'none');
                 this.showNotification('Friend removed successfully', 'info');
-                
+
                 if (onSuccess) onSuccess(userId, 'none');
-                return { success: true, data };
+                return { success: true, data: response.data };
             } else {
-                throw new Error(data.error || 'Failed to remove friend');
+                throw new Error(response.data?.error || 'Failed to remove friend');
             }
 
         } catch (error) {
@@ -437,20 +361,10 @@ class FriendUtils {
      */
     static async getFriendStatus(userId) {
         try {
-            const token = getAuthToken();
-            if (!token) {
-                return { isFriend: false, friendshipStatus: 'none' };
-            }
-
-            const response = await fetch(`${getApiBase()}/users/friend-status/${userId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await apiCall(`/users/friend-status/${userId}`);
 
             if (response.ok) {
-                const data = await response.json();
-                return data;
+                return response.data;
             } else {
                 return { isFriend: false, friendshipStatus: 'none' };
             }

@@ -159,7 +159,9 @@ export class ModalHandlers {
                         break;
                     case 'support-mission':
                         this.closeAboutModal();
-                        window.location.href = '/donate.html';
+                        if (window.donationSystem?.openDonationModal) {
+                            window.donationSystem.openDonationModal();
+                        }
                         break;
                     case 'volunteer-skills':
                         this.closeAboutModal();

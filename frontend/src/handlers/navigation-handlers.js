@@ -523,9 +523,7 @@ class NavigationHandlers {
 
             // Mobile navigation
             case 'mobile-feed':
-                if (typeof window.showMobileFeed === 'function') {
-                    window.showMobileFeed();
-                }
+                this.showMyFeedInMain();
                 break;
             case 'mobile-discover':
                 // Show posts container with discover feed
@@ -543,23 +541,29 @@ class NavigationHandlers {
                 }
                 break;
             case 'mobile-search':
-                if (typeof window.showMobileSearch === 'function') {
-                    window.showMobileSearch();
+                {
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.focus();
+                        searchInput.scrollIntoView({ behavior: 'smooth' });
+                    }
                 }
                 break;
             case 'mobile-map':
-                if (typeof window.showMobileMap === 'function') {
-                    window.showMobileMap();
-                }
+                this.showMapFromSidebar();
                 break;
             case 'mobile-profile':
-                if (typeof window.showMobileProfile === 'function') {
-                    window.showMobileProfile();
+                if (typeof window.toggleProfile === 'function') {
+                    window.toggleProfile();
                 }
                 break;
             case 'mobile-messages':
-                if (typeof window.showMobileMessages === 'function') {
-                    window.showMobileMessages();
+                this.toggleMessages();
+                break;
+            case 'mobile-settings':
+                // Open profile panel (settings are in profile)
+                if (typeof window.toggleProfile === 'function') {
+                    window.toggleProfile();
                 }
                 break;
             case 'mobile-post':
@@ -610,12 +614,8 @@ class NavigationHandlers {
                 }
                 break;
             case 'feed-trending':
-                // Show trending topics in feed
-                if (typeof window.showTrendingTopics === 'function') {
-                    window.showTrendingTopics();
-                } else {
-                    console.warn('Trending topics not implemented yet');
-                }
+                // Show trending panel (admin-gated)
+                this.handleGatedFeature('trending', () => this.toggleTrendingPanel());
                 break;
             case 'feed-saved':
                 // Show saved posts view
@@ -629,32 +629,28 @@ class NavigationHandlers {
 
             // Civic actions
             case 'civic-elections':
-                if (typeof window.showElections === 'function') {
-                    window.showElections();
-                } else {
-                    console.warn('Elections system not available');
-                }
+                this.handleGatedFeature('elections', () => {
+                    if (window.electionsSystemIntegration?.toggleElectionsPanel) {
+                        window.electionsSystemIntegration.toggleElectionsPanel();
+                    }
+                });
                 break;
             case 'civic-officials':
-                if (typeof window.showOfficials === 'function') {
-                    window.showOfficials();
-                } else {
-                    console.warn('Officials system not available');
-                }
+                this.handleGatedFeature('officials', () => {
+                    if (window.officialsSystemIntegration?.toggleOfficialsPanel) {
+                        window.officialsSystemIntegration.toggleOfficialsPanel();
+                    }
+                });
                 break;
             case 'civic-candidates':
-                if (typeof window.showCandidates === 'function') {
-                    window.showCandidates();
-                } else {
-                    console.warn('Candidates system not available');
-                }
+                this.handleGatedFeature('candidates', () => {
+                    if (window.candidateSystemIntegration?.toggleCandidatePanel) {
+                        window.candidateSystemIntegration.toggleCandidatePanel();
+                    }
+                });
                 break;
             case 'civic-organizing':
-                if (typeof window.showCivicOrganizing === 'function') {
-                    window.showCivicOrganizing();
-                } else {
-                    console.warn('Civic organizing not available');
-                }
+                this.handleGatedFeature('organizing', () => this.openCivicOrganizing());
                 break;
 
             // Combined alerts (messages + notifications)
