@@ -420,10 +420,10 @@ class UserCard {
         try {
             if (window.FollowUtils) {
                 await window.FollowUtils.toggleFollow(userId, isCurrentlyFollowing);
-                // Refresh the card to show updated status
+                // Refresh the card to show updated status (preserve context for Report button)
                 setTimeout(() => {
                     if (this.currentTrigger) {
-                        this.showCard(this.currentTrigger, userId);
+                        this.showCard(this.currentTrigger, userId, this.currentContext);
                     }
                 }, 500);
             }
@@ -453,10 +453,10 @@ class UserCard {
                     // request_sent is disabled, no action
                 }
 
-                // Refresh the card to show updated status
+                // Refresh the card to show updated status (preserve context for Report button)
                 setTimeout(() => {
                     if (this.currentTrigger) {
-                        this.showCard(this.currentTrigger, userId);
+                        this.showCard(this.currentTrigger, userId, this.currentContext);
                     }
                 }, 500);
             }

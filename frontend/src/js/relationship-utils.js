@@ -240,7 +240,7 @@ class FriendUtils {
      */
     static async sendFriendRequest(userId, onSuccess = null, onError = null) {
         try {
-            const response = await apiCall(`/users/friend-request/${userId}`, {
+            const response = await apiCall(`/relationships/friend-request/${userId}`, {
                 method: 'POST'
             });
 
@@ -270,7 +270,7 @@ class FriendUtils {
      */
     static async acceptFriendRequest(userId, onSuccess = null, onError = null) {
         try {
-            const response = await apiCall(`/users/friend-request/${userId}/accept`, {
+            const response = await apiCall(`/relationships/friend-request/${userId}/accept`, {
                 method: 'POST'
             });
 
@@ -300,7 +300,7 @@ class FriendUtils {
      */
     static async rejectFriendRequest(userId, onSuccess = null, onError = null) {
         try {
-            const response = await apiCall(`/users/friend-request/${userId}/reject`, {
+            const response = await apiCall(`/relationships/friend-request/${userId}/reject`, {
                 method: 'POST'
             });
 
@@ -333,7 +333,7 @@ class FriendUtils {
             const confirmed = confirm('Are you sure you want to remove this friend?');
             if (!confirmed) return { success: false, cancelled: true };
 
-            const response = await apiCall(`/users/friend/${userId}`, {
+            const response = await apiCall(`/relationships/friend/${userId}`, {
                 method: 'DELETE'
             });
 
