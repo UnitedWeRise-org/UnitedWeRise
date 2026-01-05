@@ -53,7 +53,7 @@ export class AuthHandlers {
 
     /**
      * Google OAuth Login Handler
-     * Extracted from index.html handleGoogleLogin function
+     * Fixed for iOS Safari compatibility - uses prompt() instead of programmatic click
      */
     async handleGoogleLogin() {
         try {
@@ -77,55 +77,207 @@ export class AuthHandlers {
                     } else {
                         showAuthMessage('Google Sign-In is temporarily unavailable. Please try again later.', 'error');
                     }
+                    // Report error to backend for admin visibility
+                    this.reportOAuthError('google', 'sdk_load_failed', errorMessage);
                     return;
                 }
             }
 
-            await adminDebugLog('AuthHandlers', 'Creating Google Sign-In button');
+            await adminDebugLog('AuthHandlers', 'Triggering Google Sign-In prompt');
 
-            // Use the One Tap prompt with immediate fallback to button render
-            const buttonContainer = document.createElement('div');
-            buttonContainer.style.position = 'fixed';
-            buttonContainer.style.top = '50%';
-            buttonContainer.style.left = '50%';
-            buttonContainer.style.transform = 'translate(-50%, -50%)';
-            buttonContainer.style.zIndex = '10000';
-            buttonContainer.style.display = 'none';
-            document.body.appendChild(buttonContainer);
+            // Use Google One Tap prompt - works on iOS Safari unlike programmatic click
+            // The prompt() method opens the account chooser dialog
+            try {
+                google.accounts.id.prompt((notification) => {
+                    this.handleGooglePromptNotification(notification);
+                });
+                await adminDebugLog('AuthHandlers', 'Google prompt triggered successfully');
+            } catch (promptError) {
+                await adminDebugLog('AuthHandlers', 'Prompt failed, trying fallback', { error: promptError?.message });
+                // Fallback: show a visible button for user to click (required for iOS)
+                this.showGoogleSignInFallback();
+            }
 
-            // Render the Google Sign-In button
+        } catch (error) {
+            console.error('❌ Google login error:', error);
+            showAuthMessage('Google Sign-In encountered an error. Please try again later.', 'error');
+            this.reportOAuthError('google', 'login_error', error?.message || 'Unknown error');
+        }
+    }
+
+    /**
+     * Handle Google prompt notifications
+     * Called when the One Tap prompt changes state
+     */
+    async handleGooglePromptNotification(notification) {
+        await adminDebugLog('AuthHandlers', 'Google prompt notification', {
+            momentType: notification.getMomentType(),
+            isDismissedMoment: notification.isDismissedMoment?.(),
+            isSkippedMoment: notification.isSkippedMoment?.(),
+            isNotDisplayed: notification.isNotDisplayed?.()
+        });
+
+        if (notification.isNotDisplayed()) {
+            const reason = notification.getNotDisplayedReason();
+            await adminDebugLog('AuthHandlers', 'Prompt not displayed', { reason });
+
+            // If prompt can't display (e.g., browser blocks it), show fallback button
+            if (reason === 'opt_out_or_no_session' || reason === 'suppressed_by_user') {
+                // User has opted out or dismissed before - show fallback
+                this.showGoogleSignInFallback();
+            } else if (reason === 'browser_not_supported') {
+                showAuthMessage('Your browser does not support Google Sign-In. Please try a different browser.', 'warning');
+                this.reportOAuthError('google', 'browser_not_supported', reason);
+            }
+        } else if (notification.isDismissedMoment()) {
+            const reason = notification.getDismissedReason();
+            await adminDebugLog('AuthHandlers', 'Prompt dismissed', { reason });
+
+            // User dismissed the prompt - they can try again if they want
+            if (reason === 'credential_returned') {
+                // Success - credential was returned, handleGoogleCredentialResponse will be called
+                await adminDebugLog('AuthHandlers', 'Credential returned successfully');
+            }
+        } else if (notification.isSkippedMoment()) {
+            await adminDebugLog('AuthHandlers', 'Prompt skipped');
+            // Show fallback for manual selection
+            this.showGoogleSignInFallback();
+        }
+    }
+
+    /**
+     * Show a visible Google Sign-In button as fallback
+     * Required for iOS Safari and browsers that block automatic prompts
+     */
+    showGoogleSignInFallback() {
+        adminDebugLog('AuthHandlers', 'Showing Google Sign-In fallback button');
+
+        // Check if fallback already exists
+        if (document.getElementById('google-signin-fallback-overlay')) {
+            return;
+        }
+
+        // Create overlay for the fallback button
+        const overlay = document.createElement('div');
+        overlay.id = 'google-signin-fallback-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+        `;
+
+        // Create container for button and close option
+        const container = document.createElement('div');
+        container.style.cssText = `
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 320px;
+        `;
+
+        // Add instruction text
+        const instruction = document.createElement('p');
+        instruction.textContent = 'Click below to sign in with Google:';
+        instruction.style.cssText = 'margin: 0 0 16px 0; color: #333; font-size: 14px;';
+        container.appendChild(instruction);
+
+        // Create button container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.id = 'google-signin-fallback-button';
+        buttonContainer.style.cssText = 'display: flex; justify-content: center; margin-bottom: 16px;';
+        container.appendChild(buttonContainer);
+
+        // Add cancel link
+        const cancelLink = document.createElement('a');
+        cancelLink.textContent = 'Cancel';
+        cancelLink.href = '#';
+        cancelLink.style.cssText = 'color: #666; font-size: 12px; text-decoration: none;';
+        cancelLink.onclick = (e) => {
+            e.preventDefault();
+            overlay.remove();
+        };
+        container.appendChild(cancelLink);
+
+        overlay.appendChild(container);
+        document.body.appendChild(overlay);
+
+        // Close on overlay click (but not on container click)
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        };
+
+        // Render the actual Google Sign-In button - user must click this manually
+        if (window.google?.accounts?.id) {
             google.accounts.id.renderButton(buttonContainer, {
                 type: 'standard',
                 size: 'large',
                 text: 'signin_with',
                 shape: 'rectangular',
                 logo_alignment: 'left',
-                width: 250
+                width: 280
+            });
+        } else {
+            buttonContainer.innerHTML = '<p style="color: #c00;">Google Sign-In failed to load. Please refresh and try again.</p>';
+        }
+    }
+
+    /**
+     * Report OAuth errors to backend for admin visibility
+     * @param {string} provider - OAuth provider (e.g., 'google')
+     * @param {string} stage - Error stage (e.g., 'sdk_load_failed', 'login_error')
+     * @param {string} message - Error message
+     */
+    async reportOAuthError(provider, stage, message) {
+        try {
+            const apiBase = getApiBaseUrl();
+            await fetch(`${apiBase}/oauth/report-error`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    provider,
+                    stage,
+                    message,
+                    userAgent: navigator.userAgent,
+                    timestamp: new Date().toISOString()
+                })
+            });
+        } catch (e) {
+            // Silently fail - this is just telemetry
+            console.warn('Failed to report OAuth error:', e);
+        }
+    }
+
+    /**
+     * Verify cookies were set after OAuth success
+     * Detects third-party cookie blocking (common on iOS Safari)
+     */
+    async verifyCookiesSet() {
+        try {
+            const apiBase = getApiBaseUrl();
+            const response = await fetch(`${apiBase}/auth/me`, {
+                credentials: 'include'
             });
 
-            await adminDebugLog('AuthHandlers', 'Triggering Google Sign-In dialog');
-
-            // Click the rendered button programmatically
-            setTimeout(async () => {
-                const googleButton = buttonContainer.querySelector('[role="button"]');
-                if (googleButton) {
-                    await adminDebugLog('AuthHandlers', 'Google Sign-In button found, clicking');
-                    googleButton.click();
-                } else {
-                    console.error('❌ Google Sign-In button not found in container');
-                    showAuthMessage('Google Sign-In button failed to load. Please try again.', 'error');
-                }
-                // Clean up
-                setTimeout(() => {
-                    if (document.body.contains(buttonContainer)) {
-                        document.body.removeChild(buttonContainer);
-                    }
-                }, 100);
-            }, 100);
-
+            if (response.status === 401) {
+                // Cookies weren't set - likely blocked by browser
+                await adminDebugLog('AuthHandlers', 'Cookie verification failed - cookies may be blocked');
+                return false;
+            }
+            return true;
         } catch (error) {
-            console.error('❌ Google login error:', error);
-            showAuthMessage('Google Sign-In encountered an error. Please try again later.', 'error');
+            await adminDebugLog('AuthHandlers', 'Cookie verification error', { error: error.message });
+            return false;
         }
     }
 
@@ -136,6 +288,12 @@ export class AuthHandlers {
     async handleGoogleCredentialResponse(response) {
         try {
             await adminDebugLog('AuthHandlers', 'Google credential response received');
+
+            // Remove fallback overlay if it exists
+            const fallbackOverlay = document.getElementById('google-signin-fallback-overlay');
+            if (fallbackOverlay) {
+                fallbackOverlay.remove();
+            }
 
             // Debug API configuration
             await adminDebugLog('AuthHandlers', 'Current hostname', { hostname: window.location.hostname });
@@ -158,6 +316,19 @@ export class AuthHandlers {
             const data = await result.json();
 
             if (result.ok) {
+                // Verify cookies were actually set (detects third-party cookie blocking)
+                const cookiesSet = await this.verifyCookiesSet();
+                if (!cookiesSet) {
+                    await adminDebugLog('AuthHandlers', 'Cookies blocked by browser');
+                    showAuthMessage(
+                        'Your browser is blocking cookies required for sign-in. ' +
+                        'Please enable cookies for this site or try a different browser.',
+                        'warning'
+                    );
+                    this.reportOAuthError('google', 'cookies_blocked', 'Third-party cookies blocked by browser');
+                    return;
+                }
+
                 // Check if user needs to complete onboarding (select username)
                 if (data.user && data.user.onboardingCompleted === false) {
                     await adminDebugLog('AuthHandlers', 'User needs to complete onboarding (select username)');
@@ -181,11 +352,17 @@ export class AuthHandlers {
                     // unified-manager handles app reinitialization automatically
                 }
             } else {
-                showAuthMessage(data.error || 'Google sign-in failed. Please try again.', 'error');
+                // Show specific error code if available
+                const errorMessage = data.error || 'Google sign-in failed. Please try again.';
+                const errorCode = data.code || 'unknown';
+                await adminDebugLog('AuthHandlers', 'OAuth error', { error: errorMessage, code: errorCode, errorId: data.errorId });
+                showAuthMessage(errorMessage, 'error');
+                this.reportOAuthError('google', 'backend_error', `${errorCode}: ${errorMessage}`);
             }
         } catch (error) {
             console.error('Google login error:', error);
             showAuthMessage('Google sign-in failed. Please try again.', 'error');
+            this.reportOAuthError('google', 'network_error', error?.message || 'Network error');
         }
     }
 
