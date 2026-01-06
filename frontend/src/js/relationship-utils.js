@@ -40,7 +40,7 @@ class FollowUtils {
 
             if (response.ok) {
                 // Invalidate cached follow status so UI refresh gets fresh data
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/users/follow-status/${userId}`);
                 }
 
@@ -78,7 +78,7 @@ class FollowUtils {
 
             if (response.ok) {
                 // Invalidate cached follow status so UI refresh gets fresh data
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/users/follow-status/${userId}`);
                 }
 
@@ -256,7 +256,7 @@ class FriendUtils {
 
             if (response.ok) {
                 // Invalidate cached friend status so UI refresh gets fresh data
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
                 }
 
@@ -291,7 +291,7 @@ class FriendUtils {
 
             if (response.ok) {
                 // Invalidate cached friend status so UI refresh gets fresh data
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
                 }
 
@@ -326,7 +326,7 @@ class FriendUtils {
 
             if (response.ok) {
                 // Invalidate cached friend status so UI refresh gets fresh data
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
                 }
 
@@ -362,7 +362,7 @@ class FriendUtils {
 
             if (response.ok) {
                 // Invalidate cached friend status so UI refresh gets fresh data
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
                 }
 
@@ -400,7 +400,7 @@ class FriendUtils {
 
             if (response.ok) {
                 // Invalidate cached friend status so UI refresh gets fresh data
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
                 }
 
@@ -564,7 +564,7 @@ class SubscriptionUtils {
 
             if (response.ok) {
                 // Invalidate cached subscription status so UI refresh gets fresh data
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/relationships/subscription-status/${userId}`);
                 }
 
@@ -607,7 +607,7 @@ class SubscriptionUtils {
 
             if (response.ok) {
                 // Invalidate cached subscription status so UI refresh gets fresh data
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/relationships/subscription-status/${userId}`);
                 }
 
@@ -944,7 +944,7 @@ class BlockUtils {
 
             if (response.ok) {
                 // Invalidate all relationship caches for this user
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/relationships/block-status/${userId}`);
                     window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
                     window.apiClient.invalidateCache(`/users/follow-status/${userId}`);
@@ -980,7 +980,7 @@ class BlockUtils {
 
             if (response.ok) {
                 // Invalidate block status cache
-                if (window.apiClient?.invalidateCache) {
+                if (window.apiManager?.invalidateCache) {
                     window.apiClient.invalidateCache(`/relationships/block-status/${userId}`);
                 }
 
