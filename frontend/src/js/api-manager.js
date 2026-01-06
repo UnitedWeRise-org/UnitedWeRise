@@ -218,6 +218,25 @@ class APIRequestManager {
         return keyParts.join('_');
     }
 
+    /**
+     * Invalidate cache entries matching a pattern
+     * @param {string} pattern - Endpoint pattern to match (e.g., '/users/friend-status/userId')
+     * @returns {number} Number of entries invalidated
+     */
+    invalidateCache(pattern) {
+        let count = 0;
+        for (const key of this.cache.keys()) {
+            if (key.includes(pattern)) {
+                this.cache.delete(key);
+                count++;
+            }
+        }
+        if (count > 0) {
+            console.log(`🗑️ APIManager cache invalidated: ${count} entries matching pattern: ${pattern}`);
+        }
+        return count;
+    }
+
     getFromCache(key) {
         const cached = this.cache.get(key);
         if (cached && Date.now() - cached.timestamp < cached.timeout) {
