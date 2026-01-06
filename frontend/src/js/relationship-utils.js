@@ -313,7 +313,7 @@ class FriendUtils {
     }
 
     /**
-     * Reject friend request
+     * Reject friend request (decline a request received from another user)
      * @param {string} userId - ID of user who sent the request
      * @param {Function} onSuccess - Callback on success
      * @param {Function} onError - Callback on error
@@ -331,16 +331,52 @@ class FriendUtils {
                 }
 
                 this.updateFriendUI(userId, 'none');
-                this.showNotification('Friend request rejected', 'info');
+                this.showNotification('Friend request declined', 'info');
 
                 if (onSuccess) onSuccess(userId, 'none');
                 return { success: true, data: response.data };
             } else {
-                throw new Error(response.data?.error || 'Failed to reject friend request');
+                throw new Error(response.data?.error || 'Failed to decline friend request');
             }
 
         } catch (error) {
             console.error('Reject friend request error:', error);
+            this.showNotification(error.message, 'error');
+            if (onError) onError(error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Cancel a friend request that you sent
+     * @param {string} userId - ID of user the request was sent to
+     * @param {Function} onSuccess - Callback on success
+     * @param {Function} onError - Callback on error
+     */
+    static async cancelFriendRequest(userId, onSuccess = null, onError = null) {
+        try {
+            // Backend reject endpoint works for both directions (cancel our own request)
+            const response = await apiCall(`/relationships/friend-request/${userId}/reject`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                // Invalidate cached friend status so UI refresh gets fresh data
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
+                }
+
+                this.updateFriendUI(userId, 'none');
+                this.showNotification('Friend request cancelled', 'info');
+
+                if (onSuccess) onSuccess(userId, 'none');
+                return { success: true, data: response.data };
+            } else {
+                throw new Error(response.data?.error || 'Failed to cancel friend request');
+            }
+
+        } catch (error) {
+            console.error('Cancel friend request error:', error);
             this.showNotification(error.message, 'error');
             if (onError) onError(error);
             return { success: false, error: error.message };
@@ -888,6 +924,119 @@ class SubscriptionUtils {
 }
 
 /**
+ * BLOCK SYSTEM - Reusable Functions
+ */
+
+class BlockUtils {
+    /**
+     * Block a user
+     * @param {string} userId - ID of user to block
+     * @param {string} reason - Optional reason for blocking
+     * @param {Function} onSuccess - Callback on success
+     * @param {Function} onError - Callback on error
+     */
+    static async blockUser(userId, reason = null, onSuccess = null, onError = null) {
+        try {
+            const response = await apiCall(`/relationships/block/${userId}`, {
+                method: 'POST',
+                body: JSON.stringify({ reason })
+            });
+
+            if (response.ok) {
+                // Invalidate all relationship caches for this user
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/relationships/block-status/${userId}`);
+                    window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
+                    window.apiClient.invalidateCache(`/users/follow-status/${userId}`);
+                }
+
+                this.showNotification('User blocked successfully', 'info');
+
+                if (onSuccess) onSuccess(userId);
+                return { success: true, data: response.data };
+            } else {
+                throw new Error(response.data?.error || 'Failed to block user');
+            }
+
+        } catch (error) {
+            console.error('Block user error:', error);
+            this.showNotification(error.message, 'error');
+            if (onError) onError(error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Unblock a user
+     * @param {string} userId - ID of user to unblock
+     * @param {Function} onSuccess - Callback on success
+     * @param {Function} onError - Callback on error
+     */
+    static async unblockUser(userId, onSuccess = null, onError = null) {
+        try {
+            const response = await apiCall(`/relationships/block/${userId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Invalidate block status cache
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/relationships/block-status/${userId}`);
+                }
+
+                this.showNotification('User unblocked successfully', 'info');
+
+                if (onSuccess) onSuccess(userId);
+                return { success: true, data: response.data };
+            } else {
+                throw new Error(response.data?.error || 'Failed to unblock user');
+            }
+
+        } catch (error) {
+            console.error('Unblock user error:', error);
+            this.showNotification(error.message, 'error');
+            if (onError) onError(error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Get block status between current user and target user
+     * @param {string} userId - ID of target user
+     * @returns {Object} { isBlocked: boolean, isBlockedBy: boolean }
+     */
+    static async getBlockStatus(userId) {
+        try {
+            const response = await apiCall(`/relationships/block-status/${userId}`);
+
+            if (response.ok) {
+                return {
+                    isBlocked: response.data?.isBlocked || false,
+                    isBlockedBy: response.data?.isBlockedBy || false
+                };
+            } else {
+                return { isBlocked: false, isBlockedBy: false };
+            }
+
+        } catch (error) {
+            console.error('Get block status error:', error);
+            return { isBlocked: false, isBlockedBy: false };
+        }
+    }
+
+    /**
+     * Show notification message
+     */
+    static showNotification(message, type = 'info') {
+        if (window.showNotification) {
+            window.showNotification(message, type);
+        } else {
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+    }
+}
+
+/**
  * COMBINED UTILITIES
  */
 
@@ -897,18 +1046,20 @@ class RelationshipUtils {
      * @param {string} userId - Target user ID
      */
     static async getCombinedStatus(userId) {
-        const [followStatus, friendStatus, subscriptionStatus] = await Promise.all([
+        const [followStatus, friendStatus, subscriptionStatus, blockStatus] = await Promise.all([
             FollowUtils.getFollowStatus(userId),
             FriendUtils.getFriendStatus(userId),
-            SubscriptionUtils.getSubscriptionStatus(userId)
+            SubscriptionUtils.getSubscriptionStatus(userId),
+            BlockUtils.getBlockStatus(userId)
         ]);
 
         return {
             follow: followStatus,
             friend: friendStatus,
             subscription: subscriptionStatus,
-            canMessage: friendStatus.isFriend,
-            displayPriority: friendStatus.isFriend ? 'friend' : (subscriptionStatus.isSubscribed ? 'subscribed' : (followStatus.isFollowing ? 'following' : 'none'))
+            block: blockStatus,
+            canMessage: friendStatus.isFriend && !blockStatus.isBlocked && !blockStatus.isBlockedBy,
+            displayPriority: blockStatus.isBlocked ? 'blocked' : (friendStatus.isFriend ? 'friend' : (subscriptionStatus.isSubscribed ? 'subscribed' : (followStatus.isFollowing ? 'following' : 'none')))
         };
     }
 
@@ -959,6 +1110,7 @@ class RelationshipUtils {
 window.FollowUtils = FollowUtils;
 window.FriendUtils = FriendUtils;
 window.SubscriptionUtils = SubscriptionUtils;
+window.BlockUtils = BlockUtils;
 window.RelationshipUtils = RelationshipUtils;
 
 // Example usage functions for easy integration
@@ -966,10 +1118,13 @@ window.toggleUserFollow = (userId, isFollowing) => FollowUtils.toggleFollow(user
 window.sendFriendRequest = (userId) => FriendUtils.sendFriendRequest(userId);
 window.acceptFriendRequest = (userId) => FriendUtils.acceptFriendRequest(userId);
 window.rejectFriendRequest = (userId) => FriendUtils.rejectFriendRequest(userId);
+window.cancelFriendRequest = (userId) => FriendUtils.cancelFriendRequest(userId);
 window.toggleUserSubscription = (userId, isSubscribed) => SubscriptionUtils.toggleSubscription(userId, isSubscribed);
 window.subscribeToUser = (userId) => SubscriptionUtils.subscribeToUser(userId);
 window.unsubscribeFromUser = (userId) => SubscriptionUtils.unsubscribeFromUser(userId);
 window.updateSubscriptionNotifications = (userId, enabled) => SubscriptionUtils.updateNotificationPreference(userId, enabled);
+window.blockUser = (userId, reason) => BlockUtils.blockUser(userId, reason);
+window.unblockUser = (userId) => BlockUtils.unblockUser(userId);
 
 // ES6 Module Exports
-export { FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils };
+export { FollowUtils, FriendUtils, SubscriptionUtils, BlockUtils, RelationshipUtils };
