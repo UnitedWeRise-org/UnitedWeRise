@@ -1,10 +1,58 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 2, 2026
+**Last Updated**: January 6, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-06] - Mobile UX & Relationship System Fixes
+
+### Fixed
+
+**Mobile Navigation Dead Links**
+- Fixed 11+ dead action handlers in mobile bottom navigation
+- `mobile-feed`, `mobile-search`, `mobile-map`, `mobile-profile`, `mobile-messages`, `mobile-settings`
+- Civic actions: `civic-elections`, `civic-officials`, `civic-candidates`, `civic-organizing`
+- `feed-trending`, donate link in volunteer modal, terms/privacy links
+
+**Follow/Friend "Authentication Required" Bug**
+- Root cause: `getAuthToken()` returns null (deprecated) but relationship methods still checked it
+- Migrated FollowUtils, FriendUtils, SubscriptionUtils from `getAuthToken()` + `fetch()` to `apiCall()` which uses cookie-based auth
+
+**Friend Request 404 Errors**
+- Root cause: Frontend called `/users/friend-request/` but backend has `/relationships/friend-request/`
+- Fixed 4 API paths in relationship-utils.js:
+  - `sendFriendRequest`: `/users/` → `/relationships/`
+  - `acceptFriendRequest`: `/users/` → `/relationships/`
+  - `rejectFriendRequest`: `/users/` → `/relationships/`
+  - `removeFriend`: `/users/` → `/relationships/`
+
+**Report Post Disappearing After Follow**
+- Root cause: `toggleFollow()` and `toggleFriend()` called `showCard()` without passing `this.currentContext`
+- Without context, `postId` was undefined and Report Post button conditional failed
+- Fixed by adding `this.currentContext` parameter to both methods
+
+**UI Not Reflecting Relationship State Changes**
+- Root cause: API client caches GET responses for 5 minutes; after mutations, refresh got stale data
+- Added cache invalidation after each successful relationship mutation:
+  - Follow/Unfollow → invalidates `/users/follow-status/{userId}`
+  - Friend actions → invalidates `/users/friend-status/{userId}`
+  - Subscribe actions → invalidates `/relationships/subscription-status/{userId}`
+
+### Removed
+
+**Legacy Mobile Navigation**
+- Deleted `frontend/src/js/mobile-navigation.js` (fully deprecated, replaced by MobileBottomBar.js)
+
+### Files Modified
+- `frontend/src/js/relationship-utils.js` - Auth migration, API path fixes, cache invalidation
+- `frontend/src/components/UserCard.js` - Context preservation for toggleFollow/toggleFriend
+- `frontend/src/handlers/navigation-handlers.js` - Mobile action handlers
+- `frontend/src/handlers/modal-handlers.js` - Donate link fix
+- `frontend/src/integrations/candidate-system-integration.js` - Terms/privacy link fixes
 
 ---
 

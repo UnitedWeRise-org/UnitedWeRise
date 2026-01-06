@@ -60,10 +60,16 @@ class UserCard {
                 this.toggleFollow(userId, param1 === 'true');
                 break;
             case 'toggleFriend':
-                this.toggleFriend(userId, param1);
+                this.toggleFriend(userId, param1, param2 === 'true');
                 break;
             case 'toggleSubscribe':
                 this.toggleSubscribe(userId, param1 === 'true');
+                break;
+            case 'toggleBlock':
+                this.toggleBlock(userId, param1 === 'true');
+                break;
+            case 'declineFriend':
+                this.declineFriendRequest(userId);
                 break;
             case 'reportPost':
                 this.reportPost(param1);
@@ -298,6 +304,22 @@ class UserCard {
         const userName = user.firstName || user.username || 'Unknown';
         const userInitial = userName[0].toUpperCase();
 
+        // Extract block status
+        const isBlocked = relationship.block?.isBlocked || false;
+        const isBlockedBy = relationship.block?.isBlockedBy || false;
+
+        // Map backend status to UI status
+        // Backend returns: PENDING, ACCEPTED, REJECTED, BLOCKED
+        // Frontend uses: none, request_sent, request_received, friends
+        let friendStatus = 'none';
+        const rawStatus = relationship.friend?.friendshipStatus;
+        if (rawStatus === 'ACCEPTED') {
+            friendStatus = 'friends';
+        } else if (rawStatus === 'PENDING') {
+            // Use requestSentByCurrentUser to determine direction
+            friendStatus = relationship.friend?.requestSentByCurrentUser ? 'request_sent' : 'request_received';
+        }
+
         this.currentCard.innerHTML = `
             <div class="user-card-content">
                 <div class="user-card-header">
@@ -329,20 +351,40 @@ class UserCard {
                         <button data-card-action="viewSettings" class="user-card-btn outline">
                             ⚙️ Settings
                         </button>
-                    ` : isAuthenticated ? `
+                    ` : isAuthenticated ? (isBlockedBy ? `
+                        <p class="blocked-notice">This user has blocked you</p>
+                    ` : isBlocked ? `
+                        <button data-card-action="toggleBlock" data-user-id="${user.id}" data-param1="true"
+                                class="user-card-btn danger">
+                            🚫 Unblock User
+                        </button>
+                    ` : `
                         <button data-card-action="toggleFollow" data-user-id="${user.id}" data-param1="${relationship.follow?.isFollowing || false}"
                                 class="user-card-btn ${relationship.follow?.isFollowing ? 'secondary' : 'primary'}">
                             ${relationship.follow?.isFollowing ? '✓ Following' : '+ Follow'}
                         </button>
 
-                        <button data-card-action="toggleFriend" data-user-id="${user.id}" data-param1="${relationship.friend?.friendshipStatus || 'none'}"
+                        <button data-card-action="toggleFriend" data-user-id="${user.id}"
+                                data-param1="${friendStatus}" data-param2="${isBlocked}"
                                 class="user-card-btn ${relationship.friend?.isFriend ? 'success' : 'outline'}">
-                            ${this.getFriendButtonText(relationship.friend?.friendshipStatus || 'none')}
+                            ${this.getFriendButtonText(friendStatus, isBlocked)}
                         </button>
 
-                        <button data-card-action="toggleSubscribe" data-user-id="${user.id}" data-param1="${relationship.isSubscribed || false}"
-                                class="user-card-btn ${relationship.isSubscribed ? 'warning' : 'outline'}">
-                            ${relationship.isSubscribed ? '🔔 Subscribed' : '🔔 Subscribe'}
+                        ${friendStatus === 'request_received' ? `
+                            <button data-card-action="declineFriend" data-user-id="${user.id}"
+                                    class="user-card-btn outline">
+                                ❌ Decline
+                            </button>
+                        ` : ''}
+
+                        <button data-card-action="toggleSubscribe" data-user-id="${user.id}" data-param1="${relationship.subscription?.isSubscribed || false}"
+                                class="user-card-btn ${relationship.subscription?.isSubscribed ? 'warning' : 'outline'}">
+                            ${relationship.subscription?.isSubscribed ? '🔔 Subscribed' : '🔔 Subscribe'}
+                        </button>
+
+                        <button data-card-action="toggleBlock" data-user-id="${user.id}" data-param1="false"
+                                class="user-card-btn outline-danger">
+                            🚫 Block
                         </button>
 
                         ${context.postId ? `
@@ -350,7 +392,7 @@ class UserCard {
                                 🚨 Report Post
                             </button>
                         ` : ''}
-                    ` : `
+                    `) : `
                         <p class="login-prompt">
                             <a href="#" data-card-action="openAuthModal" data-param1="login">Log in</a> to interact with users
                         </p>
@@ -363,13 +405,15 @@ class UserCard {
     /**
      * Get appropriate friend button text based on status
      * @param {string} status
+     * @param {boolean} isBlocked - Whether we have blocked this user
      */
-    getFriendButtonText(status) {
+    getFriendButtonText(status, isBlocked = false) {
+        if (isBlocked) return '🚫 Blocked';
         switch (status) {
             case 'none': return '👥 Add Friend';
-            case 'request_sent': return '⏳ Request Sent';
+            case 'request_sent': return '❌ Cancel Request';
             case 'request_received': return '✅ Accept Request';
-            case 'friends': return '👥 Friends';
+            case 'friends': return '👥 Friends ✓';
             default: return '👥 Add Friend';
         }
     }
@@ -420,10 +464,10 @@ class UserCard {
         try {
             if (window.FollowUtils) {
                 await window.FollowUtils.toggleFollow(userId, isCurrentlyFollowing);
-                // Refresh the card to show updated status
+                // Refresh the card to show updated status (preserve context for Report button)
                 setTimeout(() => {
                     if (this.currentTrigger) {
-                        this.showCard(this.currentTrigger, userId);
+                        this.showCard(this.currentTrigger, userId, this.currentContext);
                     }
                 }, 500);
             }
@@ -436,13 +480,31 @@ class UserCard {
      * Handle friend toggle
      * @param {string} userId
      * @param {string} currentStatus
+     * @param {boolean} isBlocked - Whether we have blocked this user
      */
-    async toggleFriend(userId, currentStatus) {
+    async toggleFriend(userId, currentStatus, isBlocked = false) {
         try {
+            // Handle blocked state first
+            if (isBlocked) {
+                if (window.BlockUtils) {
+                    await window.BlockUtils.unblockUser(userId);
+                }
+                // Refresh the card to show updated status
+                setTimeout(() => {
+                    if (this.currentTrigger) {
+                        this.showCard(this.currentTrigger, userId, this.currentContext);
+                    }
+                }, 500);
+                return;
+            }
+
             if (window.FriendUtils) {
                 switch (currentStatus) {
                     case 'none':
                         await window.FriendUtils.sendFriendRequest(userId);
+                        break;
+                    case 'request_sent':
+                        await window.FriendUtils.cancelFriendRequest(userId);
                         break;
                     case 'request_received':
                         await window.FriendUtils.acceptFriendRequest(userId);
@@ -450,13 +512,12 @@ class UserCard {
                     case 'friends':
                         await window.FriendUtils.removeFriend(userId);
                         break;
-                    // request_sent is disabled, no action
                 }
 
-                // Refresh the card to show updated status
+                // Refresh the card to show updated status (preserve context for Report button)
                 setTimeout(() => {
                     if (this.currentTrigger) {
-                        this.showCard(this.currentTrigger, userId);
+                        this.showCard(this.currentTrigger, userId, this.currentContext);
                     }
                 }, 500);
             }
@@ -491,6 +552,59 @@ class UserCard {
             if (window.showNotification) {
                 window.showNotification('Failed to update subscription', 'error');
             }
+        }
+    }
+
+    /**
+     * Handle block toggle
+     * @param {string} userId
+     * @param {boolean} isCurrentlyBlocked
+     */
+    async toggleBlock(userId, isCurrentlyBlocked) {
+        if (!window.BlockUtils) {
+            console.error('UserCard: BlockUtils not available');
+            return;
+        }
+
+        try {
+            if (isCurrentlyBlocked) {
+                await window.BlockUtils.unblockUser(userId);
+            } else {
+                await window.BlockUtils.blockUser(userId);
+            }
+
+            // Refresh the card to show updated block status
+            setTimeout(() => {
+                if (this.currentTrigger) {
+                    this.showCard(this.currentTrigger, userId, this.currentContext);
+                }
+            }, 500);
+        } catch (error) {
+            console.error('UserCard: Error toggling block', error);
+            if (window.showNotification) {
+                window.showNotification('Failed to update block status', 'error');
+            }
+        }
+    }
+
+    /**
+     * Handle declining a friend request
+     * @param {string} userId
+     */
+    async declineFriendRequest(userId) {
+        try {
+            if (window.FriendUtils) {
+                await window.FriendUtils.rejectFriendRequest(userId);
+
+                // Refresh the card to show updated status
+                setTimeout(() => {
+                    if (this.currentTrigger) {
+                        this.showCard(this.currentTrigger, userId, this.currentContext);
+                    }
+                }, 500);
+            }
+        } catch (error) {
+            console.error('UserCard: Error declining friend request', error);
         }
     }
 
@@ -739,6 +853,28 @@ class UserCard {
             .user-card-btn.outline:hover {
                 background: #4b5c09;
                 color: white;
+            }
+
+            .user-card-btn.outline-danger {
+                background: transparent;
+                color: #dc3545;
+                border-color: #dc3545;
+            }
+
+            .user-card-btn.outline-danger:hover {
+                background: #dc3545;
+                color: white;
+            }
+
+            .blocked-notice {
+                text-align: center;
+                color: #6c757d;
+                font-size: 14px;
+                font-style: italic;
+                margin: 10px 0;
+                padding: 8px;
+                background: #f8f9fa;
+                border-radius: 4px;
             }
 
             .user-card-loading {
