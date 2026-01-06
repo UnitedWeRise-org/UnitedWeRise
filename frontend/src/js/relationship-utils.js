@@ -39,6 +39,11 @@ class FollowUtils {
             });
 
             if (response.ok) {
+                // Invalidate cached follow status so UI refresh gets fresh data
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/users/follow-status/${userId}`);
+                }
+
                 // Update UI state
                 this.updateFollowUI(userId, true);
 
@@ -72,6 +77,11 @@ class FollowUtils {
             });
 
             if (response.ok) {
+                // Invalidate cached follow status so UI refresh gets fresh data
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/users/follow-status/${userId}`);
+                }
+
                 // Update UI state
                 this.updateFollowUI(userId, false);
 
@@ -245,6 +255,11 @@ class FriendUtils {
             });
 
             if (response.ok) {
+                // Invalidate cached friend status so UI refresh gets fresh data
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
+                }
+
                 this.updateFriendUI(userId, 'request_sent');
                 this.showNotification('Friend request sent successfully', 'success');
 
@@ -275,6 +290,11 @@ class FriendUtils {
             });
 
             if (response.ok) {
+                // Invalidate cached friend status so UI refresh gets fresh data
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
+                }
+
                 this.updateFriendUI(userId, 'friends');
                 this.showNotification('Friend request accepted', 'success');
 
@@ -305,6 +325,11 @@ class FriendUtils {
             });
 
             if (response.ok) {
+                // Invalidate cached friend status so UI refresh gets fresh data
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
+                }
+
                 this.updateFriendUI(userId, 'none');
                 this.showNotification('Friend request rejected', 'info');
 
@@ -338,6 +363,11 @@ class FriendUtils {
             });
 
             if (response.ok) {
+                // Invalidate cached friend status so UI refresh gets fresh data
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/users/friend-status/${userId}`);
+                }
+
                 this.updateFriendUI(userId, 'none');
                 this.showNotification('Friend removed successfully', 'info');
 
@@ -497,6 +527,11 @@ class SubscriptionUtils {
             });
 
             if (response.ok) {
+                // Invalidate cached subscription status so UI refresh gets fresh data
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/relationships/subscription-status/${userId}`);
+                }
+
                 // Update UI state
                 this.updateSubscriptionUI(userId, true);
 
@@ -535,6 +570,11 @@ class SubscriptionUtils {
             });
 
             if (response.ok) {
+                // Invalidate cached subscription status so UI refresh gets fresh data
+                if (window.apiClient?.invalidateCache) {
+                    window.apiClient.invalidateCache(`/relationships/subscription-status/${userId}`);
+                }
+
                 // Update UI state
                 this.updateSubscriptionUI(userId, false);
 
