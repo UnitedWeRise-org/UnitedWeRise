@@ -1,10 +1,36 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 6, 2026
+**Last Updated**: January 7, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-07] - Auth: Prevent Logout on Transient Network Issues
+
+### Fixed
+
+**Unexpected Logouts on Page Wake/Network Reconnect**
+- Root cause: 401 handler treated ALL non-200 responses from `/auth/me` verification as "token expired"
+- Server errors (500, 503) and network issues were incorrectly causing permanent logout
+- Same issue in token refresh: any non-200 triggered logout
+
+**Solution implemented:**
+- Only logout when `/auth/me` returns exactly 401 (token truly expired)
+- Keep user logged in for server errors (500, 503) - will retry later
+- Keep user logged in for network errors - handled by catch block
+- Added retry logic with exponential backoff (1s, 2s) before concluding session invalid
+- Token refresh now only logs out on 401/403, not server errors
+
+**Session Expired Popup Removed**
+- Replaced aggressive popup notification with silent UI update
+- User can click login when ready (no auto-opening modal)
+
+### Files Modified
+- `frontend/src/integrations/backend-integration.js` - 401 handler fix, retry logic, silent logout
+- `frontend/src/modules/core/auth/unified-manager.js` - Token refresh fix
 
 ---
 

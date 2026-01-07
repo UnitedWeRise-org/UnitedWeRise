@@ -170,6 +170,8 @@ class BackendIntegration {
 
     /**
      * Sleep helper for retry backoff
+     * @param {number} ms - Milliseconds to sleep
+     * @returns {Promise<void>}
      */
     _sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
