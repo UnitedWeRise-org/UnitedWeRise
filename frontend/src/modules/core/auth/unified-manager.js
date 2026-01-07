@@ -119,12 +119,21 @@ class UnifiedAuthManager {
                 this._startProactiveRefreshTimer();
 
                 return true;
-            } else {
-                console.warn('⚠️ Token refresh failed - refresh token expired');
+            } else if (response.status === 401 || response.status === 403) {
+                // Refresh token truly expired or invalid - logout is correct
+                console.log('🔒 Token refresh returned 401/403 - refresh token expired, logging out');
                 this._isRefreshingToken = false;
 
                 // Refresh token expired - force logout
                 await this.logout();
+                return false;
+            } else {
+                // Server error (500, 503, etc) - NOT a token issue, will retry later
+                console.warn(`⚠️ Token refresh returned ${response.status} - server error, keeping user logged in`);
+                this._isRefreshingToken = false;
+
+                // Don't logout - server error doesn't mean token is invalid
+                // Proactive refresh timer will retry automatically
                 return false;
             }
         } catch (error) {
