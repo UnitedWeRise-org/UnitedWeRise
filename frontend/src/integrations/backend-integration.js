@@ -118,6 +118,63 @@ class BackendIntegration {
         }
     }
 
+    /**
+     * Verify session with retry logic to handle transient network issues
+     * @param {number} maxRetries - Maximum number of retry attempts
+     * @returns {Promise<{valid: boolean, status?: number, error?: string}>}
+     */
+    async _verifySessionWithRetry(maxRetries = 2) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const response = await fetch(`${this.API_BASE}/auth/me`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    return { valid: true, status: response.status };
+                }
+
+                if (response.status === 401) {
+                    // Token truly expired - no need to retry
+                    return { valid: false, status: 401, expired: true };
+                }
+
+                // Server error (500, 503, etc) - retry if we have attempts left
+                if (attempt < maxRetries) {
+                    console.log(`⏳ Session verification returned ${response.status}, retrying (${attempt}/${maxRetries})...`);
+                    await this._sleep(1000 * attempt); // Exponential backoff: 1s, 2s
+                    continue;
+                }
+
+                // All retries exhausted with server errors - keep user logged in
+                return { valid: true, status: response.status, uncertain: true };
+
+            } catch (error) {
+                // Network error - retry if we have attempts left
+                if (attempt < maxRetries) {
+                    console.log(`⏳ Session verification network error, retrying (${attempt}/${maxRetries})...`);
+                    await this._sleep(1000 * attempt);
+                    continue;
+                }
+
+                // All retries exhausted with network errors - keep user logged in
+                return { valid: true, error: error.message, uncertain: true };
+            }
+        }
+
+        // Should never reach here, but default to keeping user logged in
+        return { valid: true, uncertain: true };
+    }
+
+    /**
+     * Sleep helper for retry backoff
+     */
+    _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     enhanceErrorHandling() {
         // Enhance global error handling for backend errors
         const originalFetch = window.fetch;
@@ -138,18 +195,23 @@ class BackendIntegration {
                     );
 
                     if (!isInitializationCall && window.appInitializer && window.appInitializer.isAppInitialized()) {
-                        // Verify session before logging out
-                        console.warn('⚠️ Received 401 - verifying session...');
+                        // Verify session with retry logic before logging out
+                        console.warn('⚠️ Received 401 - verifying session with retry...');
 
-                        try {
-                            const verifyResponse = await originalFetch(`${this.API_BASE}/auth/me`, {
-                                method: 'GET',
-                                credentials: 'include',
-                                headers: { 'Content-Type': 'application/json' }
-                            });
+                        const verifyResult = await this._verifySessionWithRetry(2);
 
-                            if (verifyResponse.ok) {
-                                // Session is still valid - 401 was likely connection error
+                        if (verifyResult.valid) {
+                            if (verifyResult.uncertain) {
+                                // Uncertain result (server errors or network issues) - keep user logged in
+                                console.warn('⚠️ Session verification uncertain (server/network issues) - keeping user logged in');
+                                if (typeof adminDebugWarn !== 'undefined') {
+                                    adminDebugWarn('BackendIntegration', 'Session verification uncertain - not logging out', {
+                                        result: verifyResult,
+                                        originalUrl: args[0]
+                                    });
+                                }
+                            } else {
+                                // Session confirmed valid
                                 console.log('✅ Session verified valid - 401 was likely connection error');
                                 if (typeof adminDebugLog !== 'undefined') {
                                     adminDebugLog('BackendIntegration', '401 error but session valid - connection timeout suspected', {
@@ -157,25 +219,17 @@ class BackendIntegration {
                                         method: args[1]?.method || 'GET'
                                     });
                                 }
-                                // Don't call handleAuthError - let caller handle retry
-                            } else {
-                                // Session is truly invalid - log out
-                                console.error('🔒 Session verification failed - logging out');
-                                if (typeof adminDebugError !== 'undefined') {
-                                    adminDebugError('BackendIntegration', 'Authentication failed - session invalid', {
-                                        verifyStatus: verifyResponse.status
-                                    });
-                                }
-                                this.handleAuthError();
                             }
-                        } catch (verifyError) {
-                            // Network error during verification - don't log out
-                            console.warn('⚠️ Could not verify session due to network error - keeping user logged in');
-                            if (typeof adminDebugWarn !== 'undefined') {
-                                adminDebugWarn('BackendIntegration', 'Session verification failed due to network error', {
-                                    error: verifyError.message
+                            // Don't call handleAuthError - keep user logged in
+                        } else if (verifyResult.expired) {
+                            // Token truly expired (401 from /auth/me) - log out silently
+                            console.log('🔒 Session verification confirmed token expired - updating UI');
+                            if (typeof adminDebugLog !== 'undefined') {
+                                adminDebugLog('BackendIntegration', 'Token confirmed expired - silent logout', {
+                                    verifyStatus: verifyResult.status
                                 });
                             }
+                            this.handleAuthError();
                         }
                     }
                     // Otherwise let the initialization system handle it with fallbacks
@@ -219,22 +273,16 @@ class BackendIntegration {
             window.authToken = null;
         }
 
+        // Silent logout - update UI to logged-out state without popup
+        // User can click login when they're ready
         if (window.setUserLoggedOut) {
             setUserLoggedOut();
         }
 
-        // More user-friendly session expiry notification
-        const expiredMsg = document.createElement('div');
-        expiredMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; z-index: 10000; border: 1px solid #f5c6cb; max-width: 300px;';
-        expiredMsg.innerHTML = '⏰ Your session has expired. Please log in again to continue.';
-        document.body.appendChild(expiredMsg);
-
-        setTimeout(() => {
-            expiredMsg.remove();
-            if (typeof openAuthModal !== 'undefined') {
-                openAuthModal('login');
-            }
-        }, 3000);
+        // Log for debugging but don't show popup to user
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('BackendIntegration', 'Session expired - UI updated silently');
+        }
     }
 
     handleSuspensionError(errorData) {
