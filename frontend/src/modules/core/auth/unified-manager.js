@@ -70,6 +70,7 @@ class UnifiedAuthManager {
 
     /**
      * Refresh authentication token (called on visibility change or 401 error)
+     * Includes retry logic to handle transient network issues on page wake
      */
     async refreshToken(forceRefresh = false) {
         // Prevent concurrent refresh attempts
@@ -91,56 +92,108 @@ class UnifiedAuthManager {
         }
 
         this._isRefreshingToken = true;
+        const maxRetries = 2;
+        const apiBase = window.API_CONFIG?.BASE_URL || 'https://api.unitedwerise.org/api';
 
-        try {
-            console.log('🔄 Attempting token refresh...');
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`🔄 Attempting token refresh (attempt ${attempt}/${maxRetries})...`);
 
-            const response = await fetch(`${window.API_CONFIG?.BASE_URL || 'https://api.unitedwerise.org/api'}/auth/refresh`, {
-                method: 'POST',
-                credentials: 'include'
-            });
+                const response = await fetch(`${apiBase}/auth/refresh`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
 
-            if (response.ok) {
-                const data = await response.json();
+                if (response.ok) {
+                    const data = await response.json();
 
-                // Update CSRF token if provided
-                if (data.csrfToken) {
-                    window.csrfToken = data.csrfToken;
-                    if (window.apiClient) {
-                        window.apiClient.csrfToken = data.csrfToken;
+                    // Update CSRF token if provided
+                    if (data.csrfToken) {
+                        window.csrfToken = data.csrfToken;
+                        if (window.apiClient) {
+                            window.apiClient.csrfToken = data.csrfToken;
+                        }
+                        this._currentAuthState.csrfToken = data.csrfToken;
                     }
-                    this._currentAuthState.csrfToken = data.csrfToken;
+
+                    console.log('✅ Token refreshed successfully');
+                    this._isRefreshingToken = false;
+
+                    // Reset proactive refresh timer to prevent redundant refreshes
+                    this._startProactiveRefreshTimer();
+
+                    return true;
+                } else if (response.status === 401 || response.status === 403) {
+                    // Got 401/403 - but on page wake this could be a false positive
+                    // Retry once before giving up (network may not be fully ready)
+                    if (attempt < maxRetries) {
+                        console.log(`⏳ Token refresh returned ${response.status}, retrying after delay (${attempt}/${maxRetries})...`);
+                        await this._sleep(1500 * attempt); // 1.5s, 3s backoff
+                        continue;
+                    }
+
+                    // All retries exhausted - verify with /auth/me before logging out
+                    console.log('🔍 Verifying session before logout...');
+                    try {
+                        const verifyResponse = await fetch(`${apiBase}/auth/me`, {
+                            method: 'GET',
+                            credentials: 'include'
+                        });
+
+                        if (verifyResponse.ok) {
+                            // Session is actually valid! Don't logout
+                            console.log('✅ Session verified valid despite refresh 401 - keeping user logged in');
+                            this._isRefreshingToken = false;
+                            return false; // Return false but don't logout
+                        }
+                    } catch (verifyError) {
+                        // Network error on verify - keep user logged in
+                        console.warn('⚠️ Could not verify session (network error) - keeping user logged in');
+                        this._isRefreshingToken = false;
+                        return false;
+                    }
+
+                    // Session truly expired - logout
+                    console.log('🔒 Session confirmed expired - logging out');
+                    this._isRefreshingToken = false;
+                    await this.logout();
+                    return false;
+                } else {
+                    // Server error (500, 503, etc) - NOT a token issue, will retry later
+                    console.warn(`⚠️ Token refresh returned ${response.status} - server error, keeping user logged in`);
+                    this._isRefreshingToken = false;
+
+                    // Don't logout - server error doesn't mean token is invalid
+                    // Proactive refresh timer will retry automatically
+                    return false;
+                }
+            } catch (error) {
+                // Network error - retry if we have attempts left
+                if (attempt < maxRetries) {
+                    console.log(`⏳ Token refresh network error, retrying (${attempt}/${maxRetries})...`);
+                    await this._sleep(1500 * attempt);
+                    continue;
                 }
 
-                console.log('✅ Token refreshed successfully');
+                // All retries exhausted with network errors - keep user logged in
+                console.warn('⚠️ Token refresh failed (network) - keeping user logged in, will retry later');
                 this._isRefreshingToken = false;
-
-                // Reset proactive refresh timer to prevent redundant refreshes
-                this._startProactiveRefreshTimer();
-
-                return true;
-            } else if (response.status === 401 || response.status === 403) {
-                // Refresh token truly expired or invalid - logout is correct
-                console.log('🔒 Token refresh returned 401/403 - refresh token expired, logging out');
-                this._isRefreshingToken = false;
-
-                // Refresh token expired - force logout
-                await this.logout();
-                return false;
-            } else {
-                // Server error (500, 503, etc) - NOT a token issue, will retry later
-                console.warn(`⚠️ Token refresh returned ${response.status} - server error, keeping user logged in`);
-                this._isRefreshingToken = false;
-
-                // Don't logout - server error doesn't mean token is invalid
-                // Proactive refresh timer will retry automatically
                 return false;
             }
-        } catch (error) {
-            console.error('❌ Token refresh error:', error);
-            this._isRefreshingToken = false;
-            return false;
         }
+
+        // Should never reach here
+        this._isRefreshingToken = false;
+        return false;
+    }
+
+    /**
+     * Sleep helper for retry backoff
+     * @param {number} ms - Milliseconds to sleep
+     * @returns {Promise<void>}
+     */
+    _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     /**
