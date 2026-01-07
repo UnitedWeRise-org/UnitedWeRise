@@ -7,6 +7,9 @@
  * - Response status, duration
  * - User ID (if authenticated)
  * - Unique request ID for tracing
+ *
+ * Security: Automatically redacts sensitive OAuth tokens, authorization codes,
+ * and other sensitive query parameters from logged URLs.
  */
 
 import { Request, Response } from 'express';
@@ -14,6 +17,7 @@ import pinoHttp from 'pino-http';
 import crypto from 'crypto';
 import { logger } from '../services/logger';
 import { enableRequestLogging } from '../utils/environment';
+import { redactSensitiveParams, redactSensitiveQuery } from '../utils/urlSanitizer';
 
 /**
  * Pino HTTP middleware configuration
@@ -35,12 +39,15 @@ export const requestLoggingMiddleware = pinoHttp({
   },
 
   // Serialize request with user context
+  // Security: URL and query parameters are sanitized to redact OAuth tokens and sensitive data
   serializers: {
     req: (req: Request) => ({
       id: req.id,
       method: req.method,
-      url: req.url,
-      query: req.query,
+      // Security: Redact sensitive query parameters (OAuth tokens, codes, etc.) from URL
+      url: redactSensitiveParams(req.url),
+      // Security: Redact sensitive values from query object
+      query: redactSensitiveQuery(req.query as Record<string, any>),
       // @ts-ignore - userId added by auth middleware
       userId: req.userId,
       headers: {

@@ -8,6 +8,53 @@
 
 ---
 
+## [2026-01-07] - Security Remediation: Complete 37-Issue Audit Fix
+
+### Security Fixes
+
+**Critical (C1-C6)**
+- Fixed XSS vulnerabilities via innerHTML in 5 frontend files (search-handlers, global-search, auth-handlers, map-maplibre, donation-system)
+- Added postMessage origin verification in VerificationFlow.js
+- Removed TOTP debug info from login response
+- Added safe JSON parsing utility with validation
+- Added unhandled rejection handlers to server.ts
+
+**High Priority (H1-H12)**
+- CSRF path matching now uses exact match (Set) instead of startsWith
+- Removed implicit admin route authorization from requireAuth middleware
+- Fixed localStorage JSON.parse error handling
+- Added URL validation before rendering external links
+- Added pagination limits (MAX_OFFSET=10000, MAX_FETCH=1000) to all routes
+- Added OAuth token log redaction
+- Added event listener cleanup to map-maplibre.js
+- Fixed admin dashboard to always verify with server before showing UI
+- Fixed refresh token grace period bug in sessionManager.ts
+
+**Medium Priority (M1-M11)**
+- Removed role info from 403 error messages (11 files)
+- Token validation now requires exact 64-char hex format
+- Client IDs redacted in logs
+- Replaced console.log with proper logger calls
+- Added security headers (Permissions-Policy, updated Referrer-Policy)
+- Standardized admin error responses
+- Added safePaginationParams to 17 route files
+
+**Low Priority (L1-L8)**
+- Created security documentation (docs/SECURITY_NOTES.md)
+- Added parseInt bounds validation to 11 route files
+- Documented future work: database indexes, Redis rate limiting, logger migration
+
+### New Files
+- `frontend/src/utils/security.js` - XSS prevention utilities
+- `backend/src/utils/safeJson.ts` - Safe JSON parsing & pagination
+- `backend/src/utils/urlSanitizer.ts` - Log redaction for sensitive URLs
+- `docs/SECURITY_NOTES.md` - Security design documentation
+
+### Handoff
+- `.claude/handoffs/2026-01-07-security-remediation-complete.md`
+
+---
+
 ## [2026-01-07] - Auth: Prevent Logout on Transient Network Issues
 
 ### Fixed

@@ -586,8 +586,8 @@ async function verifyGoogleToken(idToken: string): Promise<TokenVerificationResu
     // Verify the token is for our app
     if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
       logger.warn({
-        receivedAud: payload.aud,
-        expectedAud: process.env.GOOGLE_CLIENT_ID?.substring(0, 20) + '...'
+        receivedAudPrefix: typeof payload.aud === 'string' ? payload.aud.substring(0, 8) + '...' : '[invalid]',
+        expectedAudPrefix: process.env.GOOGLE_CLIENT_ID?.substring(0, 8) + '...'
       }, 'Google token audience mismatch');
       return {
         error: 'Invalid Google ID token',

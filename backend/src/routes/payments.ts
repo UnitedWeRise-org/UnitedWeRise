@@ -5,6 +5,7 @@ import { DonationType, FeeType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { body, validationResult } from 'express-validator';
 import { logger } from '../services/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = Router();
 // Using singleton prisma from lib/prisma.ts
@@ -264,7 +265,11 @@ router.post('/fee',
 router.get('/history', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthRequest).user!.id;
-    const { type, limit = 10, offset = 0 } = req.query;
+    const { type } = req.query;
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
 
     const where: any = { userId };
     if (type) {
@@ -274,8 +279,8 @@ router.get('/history', requireAuth, async (req: Request, res: Response) => {
     const payments = await prisma.payment.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      take: Number(limit),
-      skip: Number(offset),
+      take: limit,
+      skip: offset,
       include: {
         refunds: true
       }
@@ -288,7 +293,7 @@ router.get('/history', requireAuth, async (req: Request, res: Response) => {
       data: {
         payments,
         total,
-        hasMore: Number(offset) + payments.length < total
+        hasMore: offset + payments.length < total
       }
     });
   } catch (error) {
@@ -534,7 +539,8 @@ router.get('/receipt/:paymentId', requireAuth, async (req: Request, res: Respons
 router.get('/tax-summary/:year', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthRequest).user!.id;
-    const year = parseInt(req.params.year);
+    const rawYear = parseInt(req.params.year);
+    const year = Number.isNaN(rawYear) || rawYear < 1900 || rawYear > 2100 ? new Date().getFullYear() : rawYear;
 
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year + 1, 0, 1);

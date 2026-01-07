@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma';
 import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { logger } from '../services/logger';
-;
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -155,7 +155,7 @@ router.get('/topics', async (req, res) => {
       }
     ];
     
-    const limitNum = parseInt(limit.toString()) || 7;
+    const { limit: limitNum } = safePaginationParams(limit as string | undefined, undefined);
     const topics = mockTopics.slice(0, limitNum);
     
     res.json({
@@ -284,7 +284,8 @@ router.get('/map-topics', async (req, res) => {
       }
     ];
     
-    const countNum = parseInt(count.toString()) || 3;
+    const rawCount = parseInt(count as string);
+    const countNum = Number.isNaN(rawCount) || rawCount < 1 || rawCount > 100 ? 3 : rawCount;
     const topics = mapTopics.slice(0, countNum);
     
     res.json({

@@ -5,6 +5,7 @@
 
 import { getApiBaseUrl } from '../utils/environment.js';
 import { adminDebugLog } from '../../js/adminDebugger.js';
+import { escapeHTML } from '../utils/security.js';
 
 class UWRMapLibre {
     constructor(containerId = 'map') {
@@ -51,6 +52,30 @@ class UWRMapLibre {
         this.civicGroups = new Map();
         this.userCivicActions = [];
         this.civicEvents = [];
+
+        // Event listener cleanup tracking
+        this.eventCleanupFunctions = [];
+        this.resizeObserver = null;
+    }
+
+    /**
+     * Add a tracked event listener that will be automatically cleaned up on destroy
+     * @param {EventTarget} element - The element to attach the listener to
+     * @param {string} event - The event type
+     * @param {Function} handler - The event handler function
+     * @param {Object|boolean} options - Event listener options
+     */
+    addTrackedEventListener(element, event, handler, options) {
+        element.addEventListener(event, handler, options);
+        this.eventCleanupFunctions.push(() => element.removeEventListener(event, handler, options));
+    }
+
+    /**
+     * Clean up all tracked event listeners
+     */
+    cleanupEventListeners() {
+        this.eventCleanupFunctions.forEach(fn => fn());
+        this.eventCleanupFunctions.length = 0;
     }
 
     async initialize() {
@@ -194,9 +219,10 @@ class UWRMapLibre {
 
     /**
      * Setup event delegation for map UI elements
+     * Uses tracked event listener for proper cleanup on destroy
      */
     setupEventDelegation() {
-        document.addEventListener('click', (e) => {
+        const delegationHandler = (e) => {
             const target = e.target.closest('[data-map-action]');
             if (!target) return;
 
@@ -248,7 +274,8 @@ class UWRMapLibre {
                     break;
                 }
             }
-        });
+        };
+        this.addTrackedEventListener(document, 'click', delegationHandler);
     }
 
     setupResponsiveBehavior() {
@@ -256,25 +283,26 @@ class UWRMapLibre {
         this.map.on('load', () => {
             this.initialBounds = this.map.getBounds();
             this.lastZoom = this.map.getZoom(); // Initialize zoom tracking
-            
+
             // Fit to US bounds initially
             this.fitUSBounds();
         });
 
-        // Handle container resize
-        const resizeObserver = new ResizeObserver(() => {
+        // Handle container resize - store reference for cleanup
+        this.resizeObserver = new ResizeObserver(() => {
             this.handleResize();
         });
-        
+
         const container = document.getElementById(this.containerId);
         if (container) {
-            resizeObserver.observe(container);
+            this.resizeObserver.observe(container);
         }
 
-        // Also handle window resize
-        window.addEventListener('resize', () => {
+        // Also handle window resize - use tracked listener for cleanup
+        const resizeHandler = () => {
             this.handleResize();
-        });
+        };
+        this.addTrackedEventListener(window, 'resize', resizeHandler);
     }
 
     handleResize() {
@@ -449,7 +477,7 @@ class UWRMapLibre {
         let html = '<div class="popup-content">';
         for (const [key, value] of Object.entries(properties)) {
             if (value && key !== 'geometry') {
-                html += `<p><strong>${key}:</strong> ${value}</p>`;
+                html += `<p><strong>${escapeHTML(String(key))}:</strong> ${escapeHTML(String(value))}</p>`;
             }
         }
         html += '</div>';
@@ -807,7 +835,7 @@ class UWRMapLibre {
             el.className = 'civic-event-marker';
             el.innerHTML = `
                 <div style="
-                    background: ${event.type === 'council_meeting' ? '#4b5c09' : 
+                    background: ${event.type === 'council_meeting' ? '#4b5c09' :
                                event.type === 'town_hall' ? '#2c5aa0' :
                                event.type === 'rally' ? '#dc3545' :
                                event.type === 'school_board' ? '#6f42c1' :
@@ -821,7 +849,7 @@ class UWRMapLibre {
                     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                     white-space: nowrap;
                 ">
-                    📅 ${event.title.substring(0, 20)}...
+                    📅 ${escapeHTML(event.title.substring(0, 20))}...
                 </div>
             `;
             
@@ -851,11 +879,11 @@ class UWRMapLibre {
             .setLngLat(event.coordinates)
             .setHTML(`
                 <div style="max-width: 300px; padding: 10px;">
-                    <h3 style="margin: 0 0 10px 0; color: #4b5c09;">${event.title}</h3>
-                    <p style="margin: 5px 0;"><strong>📅 Date:</strong> ${event.date}</p>
-                    <p style="margin: 5px 0;"><strong>📍 Location:</strong> ${event.location}</p>
-                    <p style="margin: 10px 0;">${event.description}</p>
-                    <p style="margin: 5px 0;"><strong>👥 Expected Attendees:</strong> ${event.attendees}</p>
+                    <h3 style="margin: 0 0 10px 0; color: #4b5c09;">${escapeHTML(event.title)}</h3>
+                    <p style="margin: 5px 0;"><strong>📅 Date:</strong> ${escapeHTML(event.date)}</p>
+                    <p style="margin: 5px 0;"><strong>📍 Location:</strong> ${escapeHTML(event.location)}</p>
+                    <p style="margin: 10px 0;">${escapeHTML(event.description)}</p>
+                    <p style="margin: 5px 0;"><strong>👥 Expected Attendees:</strong> ${escapeHTML(String(event.attendees))}</p>
                     <div style="margin-top: 15px; display: flex; gap: 10px;">
                         <button data-map-action="rsvp" style="
                             background: #4b5c09;
@@ -1045,13 +1073,35 @@ class UWRMapLibre {
 
         document.body.appendChild(modal);
 
-        // Add escape key listener
+        // Add escape key listener with proper cleanup
         const handleEscape = (e) => {
             if (e.key === 'Escape') {
+                cleanupModalListeners();
                 modal.remove();
-                document.removeEventListener('keydown', handleEscape);
             }
         };
+
+        // Cleanup function to remove all modal-related listeners
+        const cleanupModalListeners = () => {
+            document.removeEventListener('keydown', handleEscape);
+            if (modalObserver) {
+                modalObserver.disconnect();
+            }
+        };
+
+        // Watch for modal removal (e.g., via button click) to clean up escape listener
+        const modalObserver = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                for (const removedNode of mutation.removedNodes) {
+                    if (removedNode === modal || removedNode.contains?.(modal)) {
+                        cleanupModalListeners();
+                        return;
+                    }
+                }
+            }
+        });
+        modalObserver.observe(document.body, { childList: true, subtree: true });
+
         document.addEventListener('keydown', handleEscape);
 
         if (typeof adminDebugLog !== 'undefined') {
@@ -1706,10 +1756,10 @@ class UWRMapLibre {
             <div class="trending-bubble" data-map-action="trendingBubble"
                  data-is-dummy="${isDummyData}"
                  data-is-ai-topic="${isAITopic}"
-                 title="${clickTitle}"
-                 data-comment-id="${comment.id}" ${isAITopic ? `data-topic-id="${topicIdentifier}"` : ''}>
+                 title="${escapeHTML(clickTitle)}"
+                 data-comment-id="${escapeHTML(String(comment.id))}" ${isAITopic ? `data-topic-id="${escapeHTML(String(topicIdentifier))}"` : ''}>
                 <div class="bubble-content">
-                    ${displayText}
+                    ${escapeHTML(displayText)}
                 </div>
             </div>
         `;
@@ -1916,13 +1966,13 @@ class UWRMapLibre {
             <div class="civic-modal-overlay" data-map-action="closeOverlay">
                 <div class="civic-modal" data-map-action="stopPropagation">
                     <div class="civic-modal-header">
-                        <h3>💬 ${topic} Community</h3>
+                        <h3>💬 ${escapeHTML(topic)} Community</h3>
                         <span class="civic-modal-close" data-map-action="closeModal">&times;</span>
                     </div>
                     <div class="civic-modal-content">
                         <div class="civic-group-info">
-                            <div class="jurisdiction-badge">${jurisdiction.charAt(0).toUpperCase() + jurisdiction.slice(1)} Level</div>
-                            <p>Connect with others in your area discussing <strong>${topic}</strong>.</p>
+                            <div class="jurisdiction-badge">${escapeHTML(jurisdiction.charAt(0).toUpperCase() + jurisdiction.slice(1))} Level</div>
+                            <p>Connect with others in your area discussing <strong>${escapeHTML(topic)}</strong>.</p>
                             
                             <div class="civic-group-features">
                                 <div class="feature-item">
@@ -1975,12 +2025,12 @@ class UWRMapLibre {
                     </div>
                     <div class="civic-modal-content">
                         <div class="action-info">
-                            <h4>${actionSteps.title}</h4>
+                            <h4>${escapeHTML(actionSteps.title)}</h4>
                             <div class="action-steps">
                                 ${actionSteps.steps.map((step, index) => `
                                     <div class="action-step">
                                         <div class="step-number">${index + 1}</div>
-                                        <div class="step-content">${step}</div>
+                                        <div class="step-content">${escapeHTML(step)}</div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -2045,15 +2095,56 @@ class UWRMapLibre {
         };
     }
 
-    // Cleanup method
+    /**
+     * Cleanup method - removes all event listeners, observers, intervals, and map resources
+     * Call this when the map component is being destroyed/unmounted to prevent memory leaks
+     */
     destroy() {
+        // Clean up all tracked event listeners (document, window listeners)
+        this.cleanupEventListeners();
+
+        // Clean up ResizeObserver
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+            this.resizeObserver = null;
+        }
+
+        // Clean up trending interval
         if (this.trendingInterval) {
             clearInterval(this.trendingInterval);
+            this.trendingInterval = null;
         }
+
+        // Clean up layer intervals
+        if (this.layerIntervals) {
+            this.layerIntervals.forEach(interval => clearInterval(interval));
+            this.layerIntervals.clear();
+        }
+
+        // Clean up active animations
+        this.cleanupActiveAnimations();
+
+        // Clear popups and markers (this also cleans up their element-attached listeners)
         this.clearTrendingPopups();
+        this.clearEventMarkers();
+
+        // Clear layer popups
+        if (this.layerPopups) {
+            this.layerPopups.forEach(popups => {
+                popups.forEach(popup => popup.remove());
+            });
+            this.layerPopups.clear();
+        }
+
+        // Remove the map instance
         if (this.map) {
             this.map.remove();
             this.map = null;
+        }
+
+        // Clear global reference
+        if (window.mapLibre === this.map) {
+            window.mapLibre = null;
         }
     }
 }
@@ -2525,17 +2616,17 @@ window.navigateToComment = async function(commentId) {
                     <div class="conversation-header">
                         <button data-map-action="goBackToFeed" class="back-btn">← Back to Feed</button>
                         <div class="conversation-meta">
-                            <h2 class="conversation-title">${topicData.title}</h2>
+                            <h2 class="conversation-title">${escapeHTML(topicData.title)}</h2>
                             <div class="conversation-location">
-                                📍 ${topicData.location} • 
-                                <span class="engagement-count">💬 ${topicData.engagement} people discussing</span>
+                                📍 ${escapeHTML(topicData.location)} •
+                                <span class="engagement-count">💬 ${escapeHTML(String(topicData.engagement))} people discussing</span>
                             </div>
                             <div class="conversation-tags">
-                                ${topicData.tags.map(tag => `<span class="tag">#${tag}</span>`).join(' ')}
+                                ${topicData.tags.map(tag => `<span class="tag">#${escapeHTML(tag)}</span>`).join(' ')}
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="conversation-content">
                         <div class="main-post">
                             <div class="post-header">
@@ -2548,7 +2639,7 @@ window.navigateToComment = async function(commentId) {
                                 </div>
                             </div>
                             <div class="post-body">
-                                <p>${topicData.content}</p>
+                                <p>${escapeHTML(topicData.content)}</p>
                             </div>
                             <div class="post-actions">
                                 <button class="action-btn like-btn">❤️ Like</button>
@@ -2639,12 +2730,12 @@ window.navigateToComment = async function(commentId) {
                         <button data-map-action="goBackToFeed" class="back-btn">← Back to Feed</button>
                         <h2 class="conversation-title">Join the Discussion</h2>
                     </div>
-                    
+
                     <div class="conversation-content">
                         <div class="main-post">
                             <div class="post-body">
-                                <p>💬 <strong>Looking for discussion ID: ${commentId}</strong></p>
-                                <p>This conversation is part of the trending political discussions in your area. 
+                                <p>💬 <strong>Looking for discussion ID: ${escapeHTML(String(commentId))}</strong></p>
+                                <p>This conversation is part of the trending political discussions in your area.
                                    Check out the latest trending topics below or start your own discussion.</p>
                             </div>
                             <div class="post-actions">

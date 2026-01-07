@@ -35,7 +35,9 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
 
   // CRITICAL: Exempt authentication routes from CSRF protection
   // These routes are accessed before users have CSRF tokens or during logout
-  const exemptedPaths = [
+  // SECURITY: Use Set for O(1) exact matching - prevents bypass via URL manipulation
+  // (e.g., /api/auth/login-admin would NOT be exempted just because /api/auth/login is)
+  const exemptedPathsExact = new Set([
     '/api/auth/login',
     '/api/auth/register',
     '/api/auth/check-email',  // Email validation during registration (before session)
@@ -48,10 +50,10 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
     '/api/auth/reset-password',
     '/health',
     '/api/health'
-  ];
+  ]);
 
-  // Check if current path is exempted
-  const isExempted = exemptedPaths.some(path => req.path === path || req.path.startsWith(path));
+  // Check if current path is exempted using exact match only
+  const isExempted = exemptedPathsExact.has(req.path);
   if (isExempted) {
     req.log.debug({ requestId, path: req.path }, 'CSRF Skip: Exempted path');
     return next();

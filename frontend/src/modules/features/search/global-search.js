@@ -10,6 +10,7 @@
 
 import { apiClient } from '../../core/api/client.js';
 import { userState } from '../../core/state/user.js';
+import { escapeHTML, isValidURL } from '../../../utils/security.js';
 
 // Search state management
 let currentSearchQuery = '';
@@ -255,9 +256,10 @@ function displayAllSearchResults() {
         return;
     }
 
+    const safeQuery = escapeHTML(currentSearchQuery);
     let html = `
         <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9; font-weight: bold; color: #4b5c09;">
-            Found ${totalResults} results for "${currentSearchQuery}"
+            Found ${totalResults} results for "${safeQuery}"
         </div>
     `;
 
@@ -351,34 +353,42 @@ function renderSearchSection(title, results, renderFunction) {
  */
 function renderUserResult(user) {
     const currentUser = window.currentUser;
+    const safeFirstName = escapeHTML(user.firstName);
+    const safeLastName = escapeHTML(user.lastName);
+    const safeUsername = escapeHTML(user.username);
+    const safeState = escapeHTML(user.state);
+    const safeDistrict = escapeHTML(user.district);
+    const safeInitial = escapeHTML((user.firstName?.[0] || user.username[0]).toUpperCase());
+    const safeDisplayName = user.firstName ? `${safeFirstName} ${safeLastName || ''}` : safeUsername;
+
     return `
-        <div class="search-result-item search-result-hover" data-search-result-action="openUserProfile" data-user-id="${user.id}" data-username="${user.username}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
-            <div class="user-avatar user-card-trigger" data-search-result-action="showUserCard" data-user-id="${user.id}" data-username="${user.username}"
+        <div class="search-result-item search-result-hover" data-search-result-action="openUserProfile" data-user-id="${escapeHTML(user.id)}" data-username="${safeUsername}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="user-avatar user-card-trigger" data-search-result-action="showUserCard" data-user-id="${escapeHTML(user.id)}" data-username="${safeUsername}"
                  style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;"
                  title="Click to view profile card">
-                ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
+                ${safeInitial}
             </div>
             <div style="flex: 1;">
-                <div class="user-card-trigger" data-search-result-action="showUserCard" data-user-id="${user.id}" data-username="${user.username}"
+                <div class="user-card-trigger" data-search-result-action="showUserCard" data-user-id="${escapeHTML(user.id)}" data-username="${safeUsername}"
                      style="font-weight: bold; font-size: 1rem; cursor: pointer;"
                      title="Click to view profile card">
-                    ${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}
+                    ${safeDisplayName}
                 </div>
-                <div style="color: #666; font-size: 0.9rem;">@${user.username}</div>
-                <div style="color: #666; font-size: 0.8rem;">${user.followersCount || 0} followers${user.state ? ` • ${user.state}` : ''}${user.district ? ` • District ${user.district}` : ''}</div>
+                <div style="color: #666; font-size: 0.9rem;">@${safeUsername}</div>
+                <div style="color: #666; font-size: 0.8rem;">${user.followersCount || 0} followers${user.state ? ` • ${safeState}` : ''}${user.district ? ` • District ${safeDistrict}` : ''}</div>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;" data-search-result-action="stopPropagation">
                 ${user.verified ? '<span style="color: #1d9bf0; margin-right: 0.5rem;">✓</span>' : ''}
                 ${user.id !== currentUser?.id ? `
-                    <button data-search-result-action="toggleFollow" data-user-id="${user.id}" data-is-following="${user.isFollowing || false}"
+                    <button data-search-result-action="toggleFollow" data-user-id="${escapeHTML(user.id)}" data-is-following="${user.isFollowing || false}"
                         style="padding: 0.25rem 0.5rem; background: ${user.isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
                         ${user.isFollowing ? 'Following' : 'Follow'}
                     </button>
-                    <button data-search-result-action="sendFriendRequest" data-user-id="${user.id}"
+                    <button data-search-result-action="sendFriendRequest" data-user-id="${escapeHTML(user.id)}"
                         style="padding: 0.25rem 0.5rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
                         Add Friend
                     </button>
-                    <button data-search-result-action="startConversation" data-user-id="${user.id}" data-username="${user.username}"
+                    <button data-search-result-action="startConversation" data-user-id="${escapeHTML(user.id)}" data-username="${safeUsername}"
                         style="padding: 0.25rem 0.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                         Message
                     </button>
@@ -390,24 +400,33 @@ function renderUserResult(user) {
 
 function renderPostResult(post) {
     const timeAgo = window.getTimeAgo ? window.getTimeAgo(new Date(post.createdAt)) : new Date(post.createdAt).toLocaleDateString();
+    const safeAuthorFirstName = escapeHTML(post.author?.firstName);
+    const safeAuthorLastName = escapeHTML(post.author?.lastName);
+    const safeAuthorUsername = escapeHTML(post.author?.username || 'unknown');
+    const safeContent = escapeHTML(post.content);
+    const safeAuthorInitial = escapeHTML((post.author?.firstName?.[0] || post.author?.username?.[0] || 'U').toUpperCase());
+    const safeAuthorDisplayName = post.author?.firstName ? `${safeAuthorFirstName} ${safeAuthorLastName || ''}` : (safeAuthorUsername !== 'unknown' ? safeAuthorUsername : 'Unknown User');
+    const safeContentPreview = safeContent.length > 150 ? safeContent.substring(0, 150) + '...' : safeContent;
+    const safeTopics = post.topics ? escapeHTML(post.topics.slice(0, 2).join(', ')) : '';
+
     return `
-        <div class="search-result-item search-result-hover" data-search-result-action="showPost" data-post-id="${post.id}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+        <div class="search-result-item search-result-hover" data-search-result-action="showPost" data-post-id="${escapeHTML(post.id)}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
             <div style="display: flex; align-items: start; gap: 0.75rem;">
                 <div class="user-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
-                    ${(post.author?.firstName?.[0] || post.author?.username?.[0] || 'U').toUpperCase()}
+                    ${safeAuthorInitial}
                 </div>
                 <div style="flex: 1;">
                     <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">
-                        ${post.author?.firstName ? `${post.author.firstName} ${post.author.lastName || ''}` : post.author?.username || 'Unknown User'}
-                        <span style="color: #666; font-weight: normal;">@${post.author?.username || 'unknown'} • ${timeAgo}</span>
+                        ${safeAuthorDisplayName}
+                        <span style="color: #666; font-weight: normal;">@${safeAuthorUsername} • ${timeAgo}</span>
                     </div>
                     <div style="color: #333; line-height: 1.4; margin-bottom: 0.5rem;">
-                        ${post.content.length > 150 ? post.content.substring(0, 150) + '...' : post.content}
+                        ${safeContentPreview}
                     </div>
                     <div style="color: #666; font-size: 0.8rem; display: flex; gap: 1rem;">
                         <span>❤️ ${post.likesCount || 0}</span>
                         <span>💬 ${post.commentsCount || 0}</span>
-                        ${post.topics ? `<span>🏷️ ${post.topics.slice(0, 2).join(', ')}</span>` : ''}
+                        ${post.topics ? `<span>🏷️ ${safeTopics}</span>` : ''}
                     </div>
                 </div>
             </div>
@@ -417,26 +436,38 @@ function renderPostResult(post) {
 
 function renderOfficialResult(official) {
     const isCandidate = official.politicalProfileType === 'CANDIDATE';
+    const safeName = escapeHTML(official.name);
+    const safeFirstName = escapeHTML(official.firstName);
+    const safeLastName = escapeHTML(official.lastName);
+    const safeUsername = escapeHTML(official.username || '');
+    const safeOffice = escapeHTML(official.office || official.officialTitle || official.title || 'Office Unknown');
+    const safeParty = escapeHTML(official.party);
+    const safeState = escapeHTML(official.state);
+    const safeDistrict = escapeHTML(official.district);
+    const safeChamber = escapeHTML(official.chamber);
+    const safeDisplayName = safeName || (official.firstName ? `${safeFirstName} ${safeLastName || ''}` : safeUsername || 'Unknown');
+    const safeLocation = official.state ? safeState : (official.district ? safeDistrict : 'Federal');
+
     return `
-        <div class="search-result-item search-result-hover" data-search-result-action="${isCandidate ? 'openUserProfile' : 'showOfficialDetails'}" data-user-id="${official.id}" data-username="${official.username || ''}" data-official-id="${official.id}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+        <div class="search-result-item search-result-hover" data-search-result-action="${isCandidate ? 'openUserProfile' : 'showOfficialDetails'}" data-user-id="${escapeHTML(official.id)}" data-username="${safeUsername}" data-official-id="${escapeHTML(official.id)}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
             <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #1976d2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                 🏛️
             </div>
             <div style="flex: 1;">
-                <div style="font-weight: bold; font-size: 1rem;">${official.name || (official.firstName ? `${official.firstName} ${official.lastName || ''}` : official.username || 'Unknown')}</div>
-                <div style="color: #666; font-size: 0.9rem;">${official.office || official.officialTitle || official.title || 'Office Unknown'} ${official.politicalProfileType === 'ELECTED_OFFICIAL' ? '(Incumbent)' : ''}</div>
+                <div style="font-weight: bold; font-size: 1rem;">${safeDisplayName}</div>
+                <div style="color: #666; font-size: 0.9rem;">${safeOffice} ${official.politicalProfileType === 'ELECTED_OFFICIAL' ? '(Incumbent)' : ''}</div>
                 <div style="color: #666; font-size: 0.8rem;">
-                    ${official.party ? `${official.party} • ` : ''}${official.state || official.district || 'Federal'}
-                    ${official.chamber ? ` • ${official.chamber}` : ''}
+                    ${official.party ? `${safeParty} • ` : ''}${safeLocation}
+                    ${official.chamber ? ` • ${safeChamber}` : ''}
                 </div>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;" data-search-result-action="stopPropagation">
-                <button data-search-result-action="viewOfficialProfile" data-official-id="${official.id}"
+                <button data-search-result-action="viewOfficialProfile" data-official-id="${escapeHTML(official.id)}"
                     style="padding: 0.25rem 0.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                     View Profile
                 </button>
                 ${official.contactInfo ? `
-                    <button data-search-result-action="contactOfficial" data-official-id="${official.id}"
+                    <button data-search-result-action="contactOfficial" data-official-id="${escapeHTML(official.id)}"
                         style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                         Contact
                     </button>
@@ -447,21 +478,29 @@ function renderOfficialResult(official) {
 }
 
 function renderCandidateResult(candidate) {
+    const safeFirstName = escapeHTML(candidate.firstName);
+    const safeLastName = escapeHTML(candidate.lastName);
+    const safeUsername = escapeHTML(candidate.username);
+    const safeOffice = escapeHTML(candidate.office || candidate.officialTitle || 'Office Unknown');
+    const safeState = escapeHTML(candidate.state || 'Location Unknown');
+    const safeCandidateStatus = escapeHTML(candidate.candidateStatus);
+    const safeDisplayName = candidate.firstName ? `${safeFirstName} ${safeLastName || ''}` : safeUsername;
+
     return `
-        <div class="search-result-item search-result-hover" data-search-result-action="openCandidateProfile" data-candidate-id="${candidate.id}" data-username="${candidate.username}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+        <div class="search-result-item search-result-hover" data-search-result-action="openCandidateProfile" data-candidate-id="${escapeHTML(candidate.id)}" data-username="${safeUsername}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
             <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                 🗳️
             </div>
             <div style="flex: 1;">
-                <div style="font-weight: bold; font-size: 1rem;">${candidate.firstName ? `${candidate.firstName} ${candidate.lastName || ''}` : candidate.username}</div>
-                <div style="color: #666; font-size: 0.9rem;">${candidate.office || candidate.officialTitle || 'Office Unknown'} Candidate</div>
+                <div style="font-weight: bold; font-size: 1rem;">${safeDisplayName}</div>
+                <div style="color: #666; font-size: 0.9rem;">${safeOffice} Candidate</div>
                 <div style="color: #666; font-size: 0.8rem;">
-                    ${candidate.state || 'Location Unknown'}
-                    ${candidate.candidateStatus ? ` • ${candidate.candidateStatus}` : ''}
+                    ${safeState}
+                    ${candidate.candidateStatus ? ` • ${safeCandidateStatus}` : ''}
                 </div>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;" data-search-result-action="stopPropagation">
-                <button data-search-result-action="viewCandidateProfile" data-candidate-id="${candidate.id}" data-username="${candidate.username}"
+                <button data-search-result-action="viewCandidateProfile" data-candidate-id="${escapeHTML(candidate.id)}" data-username="${safeUsername}"
                     style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                     View Profile
                 </button>
@@ -476,15 +515,18 @@ function renderCandidateResult(candidate) {
 }
 
 function renderTopicResult(topic) {
+    const safeName = escapeHTML(topic.name);
+    const safeDescription = escapeHTML(topic.description || 'Political discussion topic');
+
     return `
-        <div class="search-result-item search-result-hover" data-search-result-action="enterTopic" data-topic-id="${topic.id}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+        <div class="search-result-item search-result-hover" data-search-result-action="enterTopic" data-topic-id="${escapeHTML(topic.id)}" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
             <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #ff9800; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                 🏷️
             </div>
             <div style="flex: 1;">
-                <div style="font-weight: bold; font-size: 1rem;">${topic.name}</div>
+                <div style="font-weight: bold; font-size: 1rem;">${safeName}</div>
                 <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">
-                    ${topic.description || 'Political discussion topic'}
+                    ${safeDescription}
                 </div>
                 <div style="color: #666; font-size: 0.8rem; display: flex; gap: 1rem;">
                     <span>📝 ${topic.postCount || 0} posts</span>
@@ -493,7 +535,7 @@ function renderTopicResult(topic) {
                 </div>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;" data-search-result-action="stopPropagation">
-                <button data-search-result-action="viewTopic" data-topic-id="${topic.id}"
+                <button data-search-result-action="viewTopic" data-topic-id="${escapeHTML(topic.id)}"
                     style="padding: 0.25rem 0.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                     View Topic
                 </button>
@@ -508,13 +550,14 @@ function renderTopicResult(topic) {
 export async function openUserProfile(userId, username) {
     try {
         closeSearch();
-        
+
         // Show loading state
         const mainContent = document.getElementById('mainContent');
+        const safeUsername = escapeHTML(username);
         if (mainContent) {
             mainContent.innerHTML = `
                 <div style="text-align: center; padding: 2rem;">
-                    <h2>Loading @${username}'s Profile</h2>
+                    <h2>Loading @${safeUsername}'s Profile</h2>
                     <p>Loading profile and posts...</p>
                 </div>
             `;
@@ -527,7 +570,7 @@ export async function openUserProfile(userId, username) {
             // Fallback to basic profile view
             await openUserFeed(userId, username);
         }
-        
+
     } catch (error) {
         console.error('Failed to open user profile:', error);
         if (window.showToast) {
@@ -620,7 +663,23 @@ export async function showOfficialDetails(officialId) {
 function displayOfficialProfile(official) {
     const mainContent = document.getElementById('mainContent');
     if (!mainContent) return;
-    
+
+    const safeName = escapeHTML(official.name);
+    const safeOffice = escapeHTML(official.office || official.title);
+    const safeParty = escapeHTML(official.party);
+    const safeState = escapeHTML(official.state);
+    const safeDistrict = escapeHTML(official.district);
+    const safeChamber = escapeHTML(official.chamber);
+    const safePhone = escapeHTML(official.phone);
+    const safeEmail = escapeHTML(official.email);
+    const safeWebsite = escapeHTML(official.website);
+    const safeAddress = escapeHTML(official.address);
+    const safeNextElection = escapeHTML(official.nextElection);
+    const safeTermStart = escapeHTML(official.termStart);
+    const safeTermEnd = escapeHTML(official.termEnd);
+    const safeCommittees = official.committees ? escapeHTML(official.committees.join(', ')) : '';
+    const safeLocation = official.state ? safeState : (official.district ? safeDistrict : 'Federal');
+
     mainContent.innerHTML = `
         <div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
             <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -629,42 +688,42 @@ function displayOfficialProfile(official) {
                         🏛️
                     </div>
                     <div>
-                        <h1 style="margin: 0; font-size: 2rem; color: #333;">${official.name}</h1>
-                        <h2 style="margin: 0.5rem 0; font-size: 1.3rem; color: #666; font-weight: normal;">${official.office || official.title}</h2>
+                        <h1 style="margin: 0; font-size: 2rem; color: #333;">${safeName}</h1>
+                        <h2 style="margin: 0.5rem 0; font-size: 1.3rem; color: #666; font-weight: normal;">${safeOffice}</h2>
                         <div style="color: #666; font-size: 1rem;">
-                            ${official.party ? `${official.party} • ` : ''}${official.state || official.district || 'Federal'}
-                            ${official.chamber ? ` • ${official.chamber}` : ''}
+                            ${official.party ? `${safeParty} • ` : ''}${safeLocation}
+                            ${official.chamber ? ` • ${safeChamber}` : ''}
                         </div>
                     </div>
                 </div>
-                
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
                     <div>
                         <h3 style="color: #4b5c09; border-bottom: 2px solid #4b5c09; padding-bottom: 0.5rem;">Contact Information</h3>
-                        ${official.phone ? `<p><strong>Phone:</strong> ${official.phone}</p>` : ''}
-                        ${official.email ? `<p><strong>Email:</strong> ${official.email}</p>` : ''}
-                        ${official.website ? `<p><strong>Website:</strong> <a href="${official.website}" target="_blank">${official.website}</a></p>` : ''}
-                        ${official.address ? `<p><strong>Address:</strong> ${official.address}</p>` : ''}
+                        ${official.phone ? `<p><strong>Phone:</strong> ${safePhone}</p>` : ''}
+                        ${official.email ? `<p><strong>Email:</strong> ${safeEmail}</p>` : ''}
+                        ${official.website && isValidURL(official.website) ? `<p><strong>Website:</strong> <a href="${safeWebsite}" target="_blank" rel="noopener noreferrer">${safeWebsite}</a></p>` : ''}
+                        ${official.address ? `<p><strong>Address:</strong> ${safeAddress}</p>` : ''}
                     </div>
                     <div>
                         <h3 style="color: #4b5c09; border-bottom: 2px solid #4b5c09; padding-bottom: 0.5rem;">Political Information</h3>
-                        ${official.nextElection ? `<p><strong>Next Election:</strong> ${official.nextElection}</p>` : ''}
-                        ${official.termStart ? `<p><strong>Term Start:</strong> ${official.termStart}</p>` : ''}
-                        ${official.termEnd ? `<p><strong>Term End:</strong> ${official.termEnd}</p>` : ''}
-                        ${official.committees ? `<p><strong>Committees:</strong> ${official.committees.join(', ')}</p>` : ''}
+                        ${official.nextElection ? `<p><strong>Next Election:</strong> ${safeNextElection}</p>` : ''}
+                        ${official.termStart ? `<p><strong>Term Start:</strong> ${safeTermStart}</p>` : ''}
+                        ${official.termEnd ? `<p><strong>Term End:</strong> ${safeTermEnd}</p>` : ''}
+                        ${official.committees ? `<p><strong>Committees:</strong> ${safeCommittees}</p>` : ''}
                     </div>
                 </div>
-                
+
                 <div style="display: flex; gap: 1rem; justify-content: center;">
                     ${official.contactInfo ? `
-                        <button data-search-result-action="contactOfficial" data-official-id="${official.id}" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
-                            Contact ${official.name}
+                        <button data-search-result-action="contactOfficial" data-official-id="${escapeHTML(official.id)}" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                            Contact ${safeName}
                         </button>
                     ` : ''}
-                    <button data-search-result-action="viewVotingRecords" data-bioguide-id="${official.bioguideId || official.id}" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                    <button data-search-result-action="viewVotingRecords" data-bioguide-id="${escapeHTML(official.bioguideId || official.id)}" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
                         View Voting Records
                     </button>
-                    <button data-search-result-action="viewOfficialNews" data-official-name="${official.name}" style="padding: 0.75rem 1.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                    <button data-search-result-action="viewOfficialNews" data-official-name="${safeName}" style="padding: 0.75rem 1.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
                         Recent News
                     </button>
                 </div>
@@ -732,13 +791,14 @@ function viewOfficialNews(officialName) {
 async function openUserFeed(userId, username) {
     try {
         closeSearch();
-        
+
         // Show loading state
         const feedElement = document.getElementById('postsFeed');
+        const safeUsername = escapeHTML(username);
         if (feedElement) {
             feedElement.innerHTML = `
                 <div style="text-align: center; padding: 2rem;">
-                    <h2>Loading @${username}'s Profile</h2>
+                    <h2>Loading @${safeUsername}'s Profile</h2>
                     <p>Loading profile and posts...</p>
                 </div>
             `;
@@ -749,30 +809,36 @@ async function openUserFeed(userId, username) {
             apiClient.call(`/users/${userId}`),
             apiClient.call(`/posts/user/${userId}`)
         ]);
-        
+
         if (profileResponse.ok && postsResponse.ok) {
             const userProfile = profileResponse.data.user;
             const posts = postsResponse.data.posts || [];
-            
+
             // Display basic profile information
+            const safeFirstName = escapeHTML(userProfile.firstName);
+            const safeLastName = escapeHTML(userProfile.lastName);
+            const safeProfileUsername = escapeHTML(userProfile.username);
+            const safeBio = escapeHTML(userProfile.bio);
+            const safeDisplayName = userProfile.firstName ? `${safeFirstName} ${safeLastName || ''}` : safeProfileUsername;
+
             if (feedElement) {
                 feedElement.innerHTML = `
                     <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 2rem; margin-bottom: 1rem; border-radius: 8px;">
-                        <h1>${userProfile.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}` : userProfile.username}</h1>
-                        <p>@${userProfile.username}</p>
+                        <h1>${safeDisplayName}</h1>
+                        <p>@${safeProfileUsername}</p>
                         <p>${userProfile.followersCount || 0} followers • ${userProfile.followingCount || 0} following</p>
-                        ${userProfile.bio ? `<p>${userProfile.bio}</p>` : ''}
+                        ${userProfile.bio ? `<p>${safeBio}</p>` : ''}
                     </div>
                     <div id="userPostsList"></div>
                 `;
-                
+
                 // Display posts if available
                 if (posts.length > 0 && typeof window.displayPosts === 'function') {
                     window.displayPosts(posts, 'userPostsList');
                 }
             }
         }
-        
+
     } catch (error) {
         console.error('Failed to load user profile:', error);
         if (window.showToast) {

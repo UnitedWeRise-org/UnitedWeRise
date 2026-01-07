@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 /**
  * Reputation API Routes
- * 
+ *
  * Handles reputation scores, content warnings, reports, and appeals
  */
 
@@ -10,6 +10,7 @@ import express from 'express';
 import { requireAuth, requireStagingAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import { reputationService } from '../services/reputationService';
 import logger from '../utils/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -51,18 +52,18 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
 router.get('/history', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { limit = 20, offset = 0 } = req.query;
-    
-    const limitNum = parseInt(limit.toString());
-    const offsetNum = parseInt(offset.toString());
-    
+    const { limit: limitNum, offset: offsetNum } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
+
     const events = await prisma.reputationEvent.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: limitNum,
       skip: offsetNum
     });
-    
+
     res.json({
       events,
       pagination: {
@@ -314,10 +315,9 @@ router.get('/stats', requireStagingAuth, requireAdmin, async (req: AuthRequest, 
 // Get low reputation users for admin review (admin only)
 router.get('/low-reputation', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const { threshold = 30, limit = 20 } = req.query;
-    
-    const thresholdNum = parseInt(threshold.toString());
-    const limitNum = parseInt(limit.toString());
+    const rawThreshold = parseInt(req.query.threshold as string);
+    const thresholdNum = Number.isNaN(rawThreshold) || rawThreshold < 0 || rawThreshold > 100 ? 30 : rawThreshold;
+    const { limit: limitNum } = safePaginationParams(req.query.limit as string | undefined, undefined);
     
     const users = await prisma.user.findMany({
       where: {

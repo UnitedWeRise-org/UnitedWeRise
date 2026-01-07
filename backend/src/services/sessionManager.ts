@@ -258,10 +258,21 @@ class SessionManager {
 
   /**
    * Validate refresh token and return user data
+   *
+   * SECURITY: Implements proper grace period handling for token rotation.
+   * During rotation, the old token has revokedAt set to a future timestamp.
+   * The token remains valid until that timestamp passes.
+   *
    * @param token - Plaintext refresh token from cookie
    * @returns User data and token record, or null if invalid
    */
   async validateRefreshToken(token: string) {
+    // SECURITY: Validate token format before hashing (64-char hex from crypto.randomBytes(32))
+    // Defense-in-depth against cookie tampering or injection
+    if (!token || token.length !== 64 || !/^[a-f0-9]+$/i.test(token)) {
+      return null;
+    }
+
     const tokenHash = hashRefreshToken(token);
 
     const refreshToken = await prisma.refreshToken.findUnique({
@@ -269,15 +280,51 @@ class SessionManager {
       include: { user: true }
     });
 
-    // Token doesn't exist, is revoked, or expired
-    if (!refreshToken || refreshToken.revokedAt || refreshToken.expiresAt < new Date()) {
+    // Token doesn't exist
+    if (!refreshToken) {
       return null;
+    }
+
+    const now = new Date();
+
+    // Token has expired (past its expiresAt timestamp)
+    if (refreshToken.expiresAt < now) {
+      logger.debug({
+        tokenId: refreshToken.id,
+        userId: refreshToken.userId,
+        expiresAt: refreshToken.expiresAt
+      }, 'Refresh token expired');
+      return null;
+    }
+
+    // Token has been revoked - check if grace period has passed
+    // During rotation, revokedAt is set to a future timestamp (grace period)
+    // Token remains valid until that grace period timestamp passes
+    if (refreshToken.revokedAt) {
+      if (refreshToken.revokedAt <= now) {
+        // Grace period has passed - token is now fully invalid
+        // Log this as it could indicate a replay attack (someone using old rotated token)
+        logger.warn({
+          tokenId: refreshToken.id,
+          userId: refreshToken.userId,
+          revokedAt: refreshToken.revokedAt,
+          attemptTime: now
+        }, 'SECURITY: Attempted use of revoked refresh token after grace period - possible replay attack');
+        return null;
+      }
+      // Token is within grace period - still valid but log for monitoring
+      logger.debug({
+        tokenId: refreshToken.id,
+        userId: refreshToken.userId,
+        revokedAt: refreshToken.revokedAt,
+        gracePeriodRemaining: Math.round((refreshToken.revokedAt.getTime() - now.getTime()) / 1000)
+      }, 'Refresh token used within grace period');
     }
 
     // Update lastUsedAt timestamp
     await prisma.refreshToken.update({
       where: { id: refreshToken.id },
-      data: { lastUsedAt: new Date() }
+      data: { lastUsedAt: now }
     });
 
     return refreshToken;
@@ -285,9 +332,16 @@ class SessionManager {
 
   /**
    * Rotate refresh token (invalidate old, create new) - SECURITY BEST PRACTICE
+   *
+   * SECURITY: Implements token rotation with grace period to prevent token theft attacks.
+   * - Old token is marked as "rotating" with a future revocation timestamp
+   * - Old token remains valid during grace period (handles concurrent requests)
+   * - After grace period expires, old token is fully rejected
+   * - All rotation events are logged for security monitoring
+   *
    * @param oldToken - Current refresh token to invalidate
    * @param newToken - New refresh token to store
-   * @param gracePeriodSeconds - Keep old token valid for N seconds (handles concurrent refresh)
+   * @param gracePeriodSeconds - Keep old token valid for N seconds (default: 30s, handles concurrent refresh)
    * @returns New token record
    */
   async rotateRefreshToken(
@@ -304,23 +358,48 @@ class SessionManager {
     });
 
     if (!oldRefreshToken) {
+      // SECURITY: Log attempted rotation with invalid token
+      logger.warn({
+        oldTokenHashPrefix: oldTokenHash.substring(0, 8) + '...'
+      }, 'SECURITY: Token rotation attempted with non-existent token');
       throw new Error('Refresh token not found');
     }
 
+    // Check if this token was already rotated (potential replay attack)
+    if (oldRefreshToken.revokedAt) {
+      logger.warn({
+        tokenId: oldRefreshToken.id,
+        userId: oldRefreshToken.userId,
+        revokedAt: oldRefreshToken.revokedAt
+      }, 'SECURITY: Token rotation attempted on already-revoked token - possible token theft');
+      throw new Error('Refresh token already revoked');
+    }
+
+    const now = new Date();
     // Revoke old token (with grace period for concurrent requests)
-    const revokeAt = new Date(Date.now() + gracePeriodSeconds * 1000);
+    const revokeAt = new Date(now.getTime() + gracePeriodSeconds * 1000);
+
     await prisma.refreshToken.update({
       where: { id: oldRefreshToken.id },
       data: { revokedAt: revokeAt }
     });
+
+    // SECURITY: Log successful token rotation
+    logger.info({
+      tokenId: oldRefreshToken.id,
+      userId: oldRefreshToken.userId,
+      gracePeriodSeconds,
+      gracePeriodEndsAt: revokeAt.toISOString(),
+      rememberMe: oldRefreshToken.rememberMe
+    }, 'Refresh token rotated successfully');
 
     // Create new token with same settings
     return await this.storeRefreshToken(
       oldRefreshToken.userId,
       newToken,
       oldRefreshToken.rememberMe
-        ? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // 90 days
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        ? new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000) // 90 days
+        : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days
       oldRefreshToken.deviceInfo as any,
       oldRefreshToken.rememberMe
     );

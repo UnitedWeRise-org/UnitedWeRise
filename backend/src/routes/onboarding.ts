@@ -342,9 +342,9 @@ router.post('/welcome', requireAuth, async (req: AuthRequest, res) => {
  */
 router.get('/analytics', requireAuth, async (req: AuthRequest, res) => {
   try {
-    // Check if user is admin
+    // Check if user is admin (role info logged server-side only)
     if (!req.user?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     const analytics = await onboardingService.getOnboardingAnalytics();

@@ -19,6 +19,7 @@ import { closeAuthModal, showAuthMessage } from '../modules/core/auth/modal.js';
 import { unifiedAuthManager } from '../modules/core/auth/unified-manager.js';
 import { usernameModal } from '../modules/core/auth/username-modal.js';
 import { adminDebugLog } from '../../js/adminDebugger.js';
+import { escapeHTML } from '../utils/security.js';
 
 export class AuthHandlers {
     constructor() {
@@ -644,11 +645,11 @@ export class AuthHandlers {
         if (validation) {
             if (validation.type === 'success') {
                 statusElement.style.display = 'block';
-                messageElement.innerHTML = `<span style="color: #27ae60;">${validation.message}</span>`;
+                messageElement.innerHTML = `<span style="color: #27ae60;">${escapeHTML(validation.message)}</span>`;
                 messageElement.style.display = 'block';
             } else if (validation.type === 'error') {
                 errorElement.style.display = 'block';
-                messageElement.innerHTML = `<span style="color: #e74c3c;">${validation.message}</span>`;
+                messageElement.innerHTML = `<span style="color: #e74c3c;">${escapeHTML(validation.message)}</span>`;
                 messageElement.style.display = 'block';
             }
         }

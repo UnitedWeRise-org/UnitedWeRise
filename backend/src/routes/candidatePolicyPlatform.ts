@@ -4,6 +4,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { EmbeddingService } from '../services/embeddingService';
 import { azureOpenAI } from '../services/azureOpenAIService';
 import { logger } from '../services/logger';
+import { safeJSONParse } from '../utils/safeJson';
 
 const router = express.Router();
 
@@ -689,14 +690,21 @@ INSTRUCTIONS:
       systemMessage: "You are a policy analysis system for political candidates. Extract structured data from policy positions objectively and accurately."
     });
 
-    // Parse JSON response
+    // Parse JSON response from AI
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('No JSON found in AI response');
     }
 
-    const analysis = JSON.parse(jsonMatch[0]);
-    
+    // Safely parse AI response with default fallback structure
+    const defaultAnalysis = {
+      keywords: [] as string[],
+      category: 'other',
+      stance: 'NEUTRAL',
+      generatedSummary: ''
+    };
+    const analysis = safeJSONParse(jsonMatch[0], defaultAnalysis);
+
     return {
       keywords: Array.isArray(analysis.keywords) ? analysis.keywords : [],
       category: analysis.category || 'other',

@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { CandidateInboxService } from '../services/candidateInboxService';
 import { metricsService } from '../services/metricsService';
 import { logger } from '../services/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -227,13 +228,17 @@ router.get('/:candidateId/inbox', requireAuth, async (req: AuthRequest, res) => 
   try {
     const { candidateId } = req.params;
     const userId = req.user!.id;
-    
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
+
     const filters = {
       status: req.query.status ? (Array.isArray(req.query.status) ? req.query.status : [req.query.status]) as string[] : undefined,
       category: req.query.category ? (Array.isArray(req.query.category) ? req.query.category : [req.query.category]) as string[] : undefined,
       priority: req.query.priority ? (Array.isArray(req.query.priority) ? req.query.priority : [req.query.priority]) as string[] : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
-      offset: req.query.offset ? parseInt(req.query.offset as string) : 0
+      limit,
+      offset
     };
 
     const inboxData = await CandidateInboxService.getCandidateInbox(candidateId, userId, filters);
@@ -500,12 +505,16 @@ router.post('/inquiry/:inquiryId/respond', requireAuth, async (req: AuthRequest,
 router.get('/:candidateId/public-qa', async (req, res) => {
   try {
     const { candidateId } = req.params;
-    
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
+
     const filters = {
       category: req.query.category ? (Array.isArray(req.query.category) ? req.query.category : [req.query.category]) as string[] : undefined,
       pinned: req.query.pinned ? req.query.pinned === 'true' : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
-      offset: req.query.offset ? parseInt(req.query.offset as string) : 0
+      limit,
+      offset
     };
 
     const qaData = await CandidateInboxService.getPublicQA(candidateId, filters);

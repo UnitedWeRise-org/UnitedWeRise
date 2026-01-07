@@ -1,8 +1,8 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
-;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { logger } from '../services/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -206,14 +206,14 @@ const router = express.Router();
 // Replaces: /search/users + /search/posts + /search/officials + /search/topics
 router.get('/unified', requireAuth, async (req: AuthRequest, res) => {
     try {
-        const { q, types = 'all', limit = 10 } = req.query;
-        
+        const { q, types = 'all' } = req.query;
+
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
 
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = safePaginationParams(req.query.limit as string | undefined, undefined);
         const currentUserId = req.user!.id;
         const searchTypes = types.toString().split(',');
         const includeAll = searchTypes.includes('all');
@@ -683,14 +683,14 @@ router.get('/unified', requireAuth, async (req: AuthRequest, res) => {
 // Legacy individual search endpoints for backward compatibility
 router.get('/users', requireAuth, async (req: AuthRequest, res) => {
     try {
-        const { q, limit = 10 } = req.query;
-        
+        const { q } = req.query;
+
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
 
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = safePaginationParams(req.query.limit as string | undefined, undefined);
         const currentUserId = req.user!.id;
         
         const users = await prisma.user.findMany({
@@ -819,14 +819,14 @@ router.get('/users', requireAuth, async (req: AuthRequest, res) => {
  */
 router.get('/posts', requireAuth, async (req: AuthRequest, res) => {
     try {
-        const { q, limit = 10 } = req.query;
-        
+        const { q } = req.query;
+
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
 
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = safePaginationParams(req.query.limit as string | undefined, undefined);
         
         const posts = await prisma.post.findMany({
             where: {
@@ -948,14 +948,14 @@ router.get('/posts', requireAuth, async (req: AuthRequest, res) => {
  */
 router.get('/officials', requireAuth, async (req: AuthRequest, res) => {
     try {
-        const { q, limit = 10 } = req.query;
-        
+        const { q } = req.query;
+
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
 
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = safePaginationParams(req.query.limit as string | undefined, undefined);
         
         const officials = await prisma.user.findMany({
             where: {
@@ -1086,14 +1086,14 @@ router.get('/officials', requireAuth, async (req: AuthRequest, res) => {
  */
 router.get('/topics', requireAuth, async (req: AuthRequest, res) => {
     try {
-        const { q, limit = 10 } = req.query;
-        
+        const { q } = req.query;
+
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
 
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = safePaginationParams(req.query.limit as string | undefined, undefined);
         
         // Search for posts containing the topic term
         const topicPosts = await prisma.post.findMany({

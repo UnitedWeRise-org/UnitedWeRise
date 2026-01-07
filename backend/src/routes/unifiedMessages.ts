@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { MessageType } from '../types/messaging';
 import { logger } from '../services/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 
@@ -67,8 +68,10 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
   try {
     const userId = req.user!.id;
     const { conversationId } = req.params;
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
 
     // Verify user is participant in this conversation
     const conversation = await prisma.conversationMeta.findUnique({
@@ -300,8 +303,10 @@ router.get('/admin/candidate/:candidateId', requireAuth, async (req: AuthRequest
   try {
     const userId = req.user!.id;
     const { candidateId } = req.params;
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
@@ -374,8 +379,10 @@ router.get('/admin/candidate/:candidateId', requireAuth, async (req: AuthRequest
 router.get('/candidate/admin-messages', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
 
     // Get candidate profile for this user
     const candidate = await prisma.candidate.findUnique({
@@ -436,8 +443,10 @@ router.get('/candidate/admin-messages', requireAuth, async (req: AuthRequest, re
 router.get('/candidate/user-messages', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
 
     // Get candidate profile for this user
     const candidate = await prisma.candidate.findUnique({
