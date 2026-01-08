@@ -194,63 +194,12 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       }
     }
 
-    // SECURITY FIX: Always enforce admin access for admin routes (not just in staging)
-    const adminOnlyRoutes = [
-      '/api/admin/', '/api/motd/admin/', '/api/moderation/',
-      '/api/candidate-verification/', '/api/appeals/'
-    ];
-
-    const requiresAdminAccess = adminOnlyRoutes.some(route =>
-      req.path.startsWith(route)
-    );
-
-    if (enableRequestLogging()) {
-      logger.info({
-        requestId,
-        path: req.path,
-        requiresAdminAccess,
-        adminOnlyRoutes,
-        matchedRoute: adminOnlyRoutes.find(route => req.path.startsWith(route)) || 'none'
-      }, 'AUTH Admin Route Check');
-
-      // Show admin access check for admin routes
-      if (requiresAdminAccess) {
-        logger.info({
-          requestId,
-          path: req.path,
-          requiresAdminAccess,
-          reqUserIsAdmin: req.user?.isAdmin,
-          userIsAdmin: user.isAdmin,
-          reqUserIsSuperAdmin: req.user?.isSuperAdmin,
-          reqUserTotpVerified: req.user?.totpVerified,
-          willReturn403: !req.user?.isAdmin
-        }, 'AUTH Admin Access Evaluation');
-      }
-    }
-
-    if (requiresAdminAccess && !req.user?.isAdmin) {
-      // SECURITY EVENT: Always log admin access denials
-      logger.error({
-        requestId,
-        path: req.path,
-        method: req.method,
-        userId: req.user?.id,
-        username: req.user?.username,
-        reqUserIsAdmin: req.user?.isAdmin,
-        reqUserIsSuperAdmin: req.user?.isSuperAdmin,
-        reqUserTotpVerified: req.user?.totpVerified,
-        rawDatabaseUser: {
-          isAdmin: user.isAdmin,
-          isSuperAdmin: user.isSuperAdmin
-        },
-        reason: 'USER_NOT_ADMIN',
-        event: 'admin_access_denied'
-      }, 'AUTH 403: Admin access denied');
-      return res.status(403).json({
-        error: 'Admin access required for this endpoint.',
-        requiredRole: 'admin'
-      });
-    }
+    // NOTE: Admin route authorization removed from requireAuth (H2 security fix)
+    // Admin routes must explicitly use requireAdmin middleware instead of relying
+    // on implicit path-based detection. This prevents authorization bypass via
+    // path manipulation and ensures explicit, auditable access control.
+    // All admin routes in admin.ts, moderation.ts, motd.ts, appeals.ts, etc.
+    // already use requireAdmin middleware explicitly.
 
     if (enableRequestLogging()) {
       logger.info({
@@ -296,7 +245,7 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
       reason: 'NOT_ADMIN',
       event: 'admin_access_denied'
     }, 'AUTH 403: requireAdmin - User not admin');
-    return res.status(403).json({ error: 'Admin access required.' });
+    return res.status(403).json({ error: 'Access denied' });
   }
 
   // Check TOTP verification for admin users
@@ -316,7 +265,7 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
     }, 'AUTH 403: requireAdmin - TOTP not verified');
     return res.status(403).json({
       error: 'TOTP_REQUIRED',
-      message: 'Two-factor authentication required for admin access. Please log in with TOTP.'
+      message: 'Two-factor authentication required. Please log in with TOTP.'
     });
   }
 
@@ -348,8 +297,7 @@ export const requireStagingAuth = async (req: AuthRequest, res: Response, next: 
     // After successful auth, check for admin status in development
     if (!req.user?.isAdmin) {
       return res.status(403).json({
-        error: 'This is a staging environment - admin access required.',
-        environment: 'staging'
+        error: 'Access denied - staging environment'
       });
     }
 

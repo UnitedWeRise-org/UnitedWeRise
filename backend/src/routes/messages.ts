@@ -7,6 +7,7 @@ import { messageLimiter } from '../middleware/rateLimiting';
 import { logger } from '../services/logger';
 import { createNotification } from './notifications';
 import { FriendService } from '../services/relationshipService';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -114,10 +115,10 @@ const router = express.Router();
 router.get('/conversations', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { limit = 20, offset = 0 } = req.query;
-
-    const limitNum = parseInt(limit.toString());
-    const offsetNum = parseInt(offset.toString());
+    const { limit: limitNum, offset: offsetNum } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
 
     const conversations = await prisma.conversationParticipant.findMany({
       where: { userId },
@@ -498,10 +499,11 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
   try {
     const userId = req.user!.id;
     const { conversationId } = req.params;
-    const { limit = 50, offset = 0, before } = req.query;
-
-    const limitNum = parseInt(limit.toString());
-    const offsetNum = parseInt(offset.toString());
+    const { before } = req.query;
+    const { limit: limitNum, offset: offsetNum } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
 
     // Verify user is participant in conversation
     const participant = await prisma.conversationParticipant.findUnique({

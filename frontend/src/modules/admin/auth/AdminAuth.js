@@ -293,11 +293,12 @@ class AdminAuth {
      * Check authentication status and admin privileges
      * Primary entry point for authentication flow
      *
-     * CRITICAL: Always verifies with backend even if localStorage has user data,
-     * because httpOnly auth cookies may have expired while localStorage persists.
+     * SECURITY: Always verifies admin status with server before showing admin UI.
+     * Never trusts client-side state (localStorage) for admin access decisions.
      */
     async checkAuthStatus() {
-        // Always verify with backend - localStorage may be stale while httpOnly cookie expired
+        // SECURITY: Always verify with server first - never trust client-side state
+        // Client-side localStorage can be manipulated by attackers
         try {
             const response = await fetch(`${this.API_BASE}/auth/me`, {
                 method: 'GET',
@@ -310,10 +311,12 @@ class AdminAuth {
             if (response.ok) {
                 const userData = await response.json();
                 if (userData.success && userData.data) {
+                    // Update local state with server-verified data
                     // Set via window.currentUser - routes through userState → localStorage
                     window.currentUser = userData.data;
 
-                    if (window.currentUser.isAdmin) {
+                    // SECURITY: Use server-verified isAdmin value, not cached value
+                    if (userData.data.isAdmin) {
                         this.showDashboard();
                     } else {
                         this.showError('Admin access required. Please log in with an admin account.');
@@ -321,17 +324,20 @@ class AdminAuth {
                         this.showLogin();
                     }
                 } else {
-                    this.clearStoredUser();
+                    // Clear any stale cached user data
+                    window.currentUser = null;
                     this.showLogin();
                 }
             } else {
-                // Not authenticated via cookies - clear stale localStorage
-                this.clearStoredUser();
+                // Not authenticated via cookies - clear any stale cached data
+                window.currentUser = null;
                 this.showLogin();
             }
         } catch (error) {
             console.error('Auth check error:', error);
-            this.clearStoredUser();
+            // On network error, clear cached data and show login
+            // SECURITY: Don't fall back to cached admin status on errors
+            window.currentUser = null;
             this.showLogin();
         }
     }

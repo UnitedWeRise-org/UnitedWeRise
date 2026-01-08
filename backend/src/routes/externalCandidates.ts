@@ -5,6 +5,7 @@ import { metricsService } from '../services/metricsService';
 import { apiLimiter } from '../middleware/rateLimiting';
 import { prisma } from '../lib/prisma';
 import { logger } from '../services/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 
@@ -14,7 +15,8 @@ const router = express.Router();
 router.post('/import-address', requireAuth, apiLimiter, async (req: AuthRequest, res) => {
   try {
     if (!req.user?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+      // Role info logged server-side only
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     const { address } = req.body;
@@ -45,7 +47,8 @@ router.post('/import-address', requireAuth, apiLimiter, async (req: AuthRequest,
 router.post('/bulk-import', requireAuth, apiLimiter, async (req: AuthRequest, res) => {
   try {
     if (!req.user?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+      // Role info logged server-side only
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     // Start bulk import (this could take a while)
@@ -186,18 +189,18 @@ router.post('/:id/claim', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// GET /api/external-candidates/search - Search external candidates  
+// GET /api/external-candidates/search - Search external candidates
 router.get('/search', async (req, res) => {
   try {
-    const { q, limit = 10 } = req.query;
-    
+    const { q } = req.query;
+    const { limit: limitNum } = safePaginationParams(req.query.limit as string | undefined, undefined);
+
     if (!q) {
       return res.status(400).json({ error: 'Search query is required' });
     }
 
     const searchTerm = q.toString();
-    const limitNum = parseInt(limit.toString());
-    
+
     const candidates = await ExternalCandidateService.searchExternalCandidates(searchTerm, limitNum);
     
     res.json({
@@ -253,7 +256,8 @@ router.get('/health', async (req, res) => {
 router.post('/cache/clear', requireAuth, async (req: AuthRequest, res) => {
   try {
     if (!req.user?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+      // Role info logged server-side only
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     const { provider } = req.body;

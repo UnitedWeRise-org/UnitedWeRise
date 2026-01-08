@@ -3,7 +3,7 @@ import express from 'express';
 ;
 import { hashPassword, comparePassword, generateToken, generateResetToken, generateRefreshToken, hashResetToken } from '../utils/auth';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { validateRegistration, validateLogin } from '../middleware/validation';
+import { validateRegistration, validateLogin, validatePasswordReset } from '../middleware/validation';
 import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiting';
 import { sessionManager } from '../services/sessionManager';
 import { verifyToken } from '../utils/auth';
@@ -448,8 +448,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         return res.status(200).json({
           requiresTOTP: true,
           message: 'Two-factor authentication required',
-          userId: user.id, // Temporary ID for TOTP verification
-          totpDebug: { ...totpDebug, requiresTOTP: true, reason: 'No TOTP token provided' }
+          userId: user.id // Temporary ID for TOTP verification
         });
       }
 
@@ -595,7 +594,6 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
 
     res.json({
       message: 'Login successful',
-      totpDebug: totpDebug, // Temporary debug info
       user: {
         id: user.id,
         email: user.email,
@@ -760,13 +758,10 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // Reset password
-router.post('/reset-password', async (req, res) => {
+// SECURITY: validatePasswordReset enforces exact 64-char hex token length
+router.post('/reset-password', validatePasswordReset, async (req, res) => {
   try {
     const { token, newPassword } = req.body;
-
-    if (!token || !newPassword) {
-      return res.status(400).json({ error: 'Token and new password are required' });
-    }
 
     // SECURITY FIX: Hash incoming token to compare with stored hash
     const hashedToken = hashResetToken(token);

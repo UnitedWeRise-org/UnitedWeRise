@@ -13,6 +13,7 @@
 
 import { getApiBaseUrl } from '../utils/environment.js';
 import { apiCall } from '../js/api-compatibility-shim.js';
+import { safeLocalStorageGet } from '../utils/security.js';
 
 export class ContentHandlers {
     constructor() {
@@ -145,7 +146,7 @@ export class ContentHandlers {
                     localStorage.setItem('motd-dismissal-token', this.dismissalToken);
 
                     // Check if this MOTD was already dismissed locally
-                    const dismissedMOTDs = JSON.parse(localStorage.getItem('dismissed-motds') || '[]');
+                    const dismissedMOTDs = safeLocalStorageGet('dismissed-motds', []);
                     if (!dismissedMOTDs.includes(this.currentMOTDData.id)) {
                         this.displayMOTD(this.currentMOTDData);
                     }
@@ -203,7 +204,7 @@ export class ContentHandlers {
      */
     async dismissMOTD(motdId) {
         // Store locally first for immediate UI feedback
-        const dismissedMOTDs = JSON.parse(localStorage.getItem('dismissed-motds') || '[]');
+        const dismissedMOTDs = safeLocalStorageGet('dismissed-motds', []);
         if (!dismissedMOTDs.includes(motdId)) {
             dismissedMOTDs.push(motdId);
             localStorage.setItem('dismissed-motds', JSON.stringify(dismissedMOTDs));
@@ -225,12 +226,14 @@ export class ContentHandlers {
             await new Promise(resolve => setTimeout(resolve, checkInterval));
         }
 
-        // If CSRF token still not available, log warning and skip server update
+        // If CSRF token still not available, don't proceed with server call
         if (!window.csrfToken) {
-            console.warn('⚠️ CSRF token not available after 5s wait. MOTD dismissed locally but not recorded on server.');
-            console.warn('  This may happen if page loaded and MOTD was dismissed before authentication completed.');
-            console.warn('  Local dismissal still works - MOTD will not show again on this device.');
-            return; // Exit early, local dismissal already complete
+            console.error('CSRF token not available - cannot dismiss MOTD on server');
+            // Show user feedback if showToast is available
+            if (typeof window.showToast === 'function') {
+                window.showToast('Unable to save preference. Please refresh and try again.', 'warning');
+            }
+            return; // Don't proceed without CSRF
         }
 
         // CSRF token is now available, proceed with server update

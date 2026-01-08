@@ -12,6 +12,7 @@ import { RiseAIAgentService } from '../services/riseAIAgentService';
 import { ArgumentLedgerService } from '../services/argumentLedgerService';
 import { FactClaimService } from '../services/factClaimService';
 import logger from '../utils/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 
@@ -89,7 +90,7 @@ router.get('/interaction/:id', requireAuth, async (req: AuthRequest, res) => {
  */
 router.get('/my-interactions', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 10;
+    const { limit } = safePaginationParams(req.query.limit as string | undefined, undefined);
     const interactions = await RiseAIMentionService.getUserInteractions(req.user!.id, limit);
     return res.json(interactions);
   } catch (error) {
@@ -180,7 +181,7 @@ router.get('/admin/settings', requireAuth, requireAdmin, async (req: AuthRequest
  */
 router.get('/arguments', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 20;
+    const { limit } = safePaginationParams(req.query.limit as string | undefined, undefined);
     const arguments_ = await ArgumentLedgerService.getTopArguments(limit);
     return res.json(arguments_);
   } catch (error) {
@@ -266,14 +267,15 @@ router.post('/arguments/:id/refute', requireAuth, async (req: AuthRequest, res) 
  */
 router.get('/facts', async (req, res) => {
   try {
-    const { query, limit = '10' } = req.query;
+    const { query } = req.query;
+    const { limit } = safePaginationParams(req.query.limit as string | undefined, undefined);
 
     if (query) {
-      const facts = await FactClaimService.searchFacts(query as string, parseInt(limit as string));
+      const facts = await FactClaimService.searchFacts(query as string, limit);
       return res.json(facts);
     }
 
-    const facts = await FactClaimService.getEstablishedFacts(0.5, parseInt(limit as string));
+    const facts = await FactClaimService.getEstablishedFacts(0.5, limit);
     return res.json(facts);
   } catch (error) {
     logger.error('Search facts failed', error);

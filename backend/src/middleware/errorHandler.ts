@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { isDevelopment } from '../utils/environment';
 import { logger } from '../services/logger';
+import { redactSensitiveParams } from '../utils/urlSanitizer';
 
 export interface CustomError extends Error {
   statusCode?: number;
@@ -15,6 +16,7 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   // Log error details using Pino
+  // Security: Sanitize URL to redact sensitive query parameters (OAuth tokens, etc.)
   req.log.error({
     error: {
       message: err.message,
@@ -22,7 +24,7 @@ export const errorHandler = (
       statusCode: err.statusCode
     },
     method: req.method,
-    url: req.url,
+    url: redactSensitiveParams(req.url),
     ip: req.ip,
     userAgent: req.get('User-Agent')
   }, 'Error occurred');
@@ -55,17 +57,21 @@ export const errorHandler = (
 
 // 404 handler for undefined routes
 export const notFoundHandler = (req: Request, res: Response) => {
+  // Security: Sanitize URL in response to prevent token leakage
+  const sanitizedUrl = redactSensitiveParams(req.url);
+
   const error = {
     error: 'Route not found', // Consistent with other error responses
-    path: req.url,
+    path: sanitizedUrl,
     method: req.method,
     timestamp: new Date().toISOString()
   };
 
   // Security event: Log 404s to detect scanning/probing
+  // URL sanitized to redact any OAuth tokens in query params
   req.log.warn({
     method: req.method,
-    url: req.url,
+    url: sanitizedUrl,
     ip: req.ip,
     userAgent: req.get('User-Agent')
   }, '404 - Route not found');
@@ -83,6 +89,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
 
 // Security event logger
 // Uses Pino structured logging for security events
+// Security: URLs are sanitized to prevent OAuth token leakage in logs
 export const securityLogger = (event: string, details: any, req?: Request) => {
   if (req) {
     // Use request logger if available
@@ -90,7 +97,7 @@ export const securityLogger = (event: string, details: any, req?: Request) => {
       event,
       ip: req.ip,
       userAgent: req.get('User-Agent'),
-      url: req.url,
+      url: redactSensitiveParams(req.url),
       method: req.method,
       ...details
     }, 'SECURITY EVENT');

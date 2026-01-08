@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 /**
  * Feedback Management Routes
- * 
+ *
  * API endpoints for managing site feedback detected through AI analysis
  * Provides admin dashboard capabilities and feedback response system
  */
@@ -11,6 +11,7 @@ import express from 'express';
 import { requireAuth, requireStagingAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import { feedbackAnalysisService } from '../services/feedbackAnalysisService';
 import logger from '../utils/logger';
+import { safePaginationParams, PAGINATION_LIMITS } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -21,14 +22,12 @@ const router = express.Router();
  */
 router.get('/', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
-        const { 
-            type, 
-            category, 
-            priority, 
-            status = 'new',
-            page = 1, 
-            limit = 20 
-        } = req.query;
+        const { type, category, priority, status = 'new' } = req.query;
+        const { limit, offset } = safePaginationParams(
+            req.query.limit as string | undefined,
+            req.query.offset as string | undefined
+        );
+        const page = Math.floor(offset / limit) + 1;
 
         const where: any = {
             containsFeedback: true
@@ -39,8 +38,6 @@ router.get('/', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) 
         if (category) where.feedbackCategory = category;
         if (priority) where.feedbackPriority = priority;
         if (status) where.feedbackStatus = status;
-
-        const offset = (Number(page) - 1) * Number(limit);
 
         const [posts, totalCount] = await Promise.all([
             prisma.post.findMany({
@@ -66,7 +63,7 @@ router.get('/', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) 
                     { createdAt: 'desc' }
                 ],
                 skip: offset,
-                take: Number(limit)
+                take: limit
             }),
             prisma.post.count({ where })
         ]);
@@ -92,10 +89,10 @@ router.get('/', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) 
         res.json({
             feedback: feedbackPosts,
             pagination: {
-                page: Number(page),
-                limit: Number(limit),
+                page,
+                limit,
                 total: totalCount,
-                pages: Math.ceil(totalCount / Number(limit))
+                pages: Math.ceil(totalCount / limit)
             }
         });
 

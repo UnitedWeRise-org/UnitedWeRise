@@ -9,6 +9,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { FollowService, FriendService, SubscriptionService, RelationshipUtils } from '../services/relationshipService';
 import { logger } from '../services/logger';
 import { prisma } from '../lib/prisma';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 
@@ -206,13 +207,12 @@ router.get('/follow-status/:userId', requireAuth, async (req: AuthRequest, res) 
 router.get('/:userId/followers', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-
-        const result = await FollowService.getFollowers(
-            userId, 
-            parseInt(limit.toString()), 
-            parseInt(offset.toString())
+        const { limit, offset } = safePaginationParams(
+            req.query.limit as string | undefined,
+            req.query.offset as string | undefined
         );
+
+        const result = await FollowService.getFollowers(userId, limit, offset);
 
         if (result.success) {
             res.json(result.data);
@@ -257,13 +257,12 @@ router.get('/:userId/followers', async (req, res) => {
 router.get('/:userId/following', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-
-        const result = await FollowService.getFollowing(
-            userId, 
-            parseInt(limit.toString()), 
-            parseInt(offset.toString())
+        const { limit, offset } = safePaginationParams(
+            req.query.limit as string | undefined,
+            req.query.offset as string | undefined
         );
+
+        const result = await FollowService.getFollowing(userId, limit, offset);
 
         if (result.success) {
             res.json(result.data);
@@ -433,13 +432,12 @@ router.put('/subscribe/:userId/notifications', requireAuth, async (req: AuthRequ
 router.get('/:userId/subscribers', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-
-        const result = await SubscriptionService.getSubscribers(
-            userId,
-            parseInt(limit.toString()),
-            parseInt(offset.toString())
+        const { limit, offset } = safePaginationParams(
+            req.query.limit as string | undefined,
+            req.query.offset as string | undefined
         );
+
+        const result = await SubscriptionService.getSubscribers(userId, limit, offset);
 
         if (result.success) {
             res.json(result.data);
@@ -456,13 +454,12 @@ router.get('/:userId/subscribers', async (req, res) => {
 router.get('/:userId/subscriptions', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-
-        const result = await SubscriptionService.getSubscriptions(
-            userId,
-            parseInt(limit.toString()),
-            parseInt(offset.toString())
+        const { limit, offset } = safePaginationParams(
+            req.query.limit as string | undefined,
+            req.query.offset as string | undefined
         );
+
+        const result = await SubscriptionService.getSubscriptions(userId, limit, offset);
 
         if (result.success) {
             res.json(result.data);
@@ -715,13 +712,12 @@ router.get('/friend-status/:userId', requireAuth, async (req: AuthRequest, res) 
 router.get('/:userId/friends', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-
-        const result = await FriendService.getFriends(
-            userId,
-            parseInt(limit.toString()),
-            parseInt(offset.toString())
+        const { limit, offset } = safePaginationParams(
+            req.query.limit as string | undefined,
+            req.query.offset as string | undefined
         );
+
+        const result = await FriendService.getFriends(userId, limit, offset);
 
         if (result.success) {
             res.json(result.data);
@@ -842,7 +838,7 @@ router.get('/status/:userId', requireAuth, async (req: AuthRequest, res) => {
 router.get('/suggestions/:type', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { type } = req.params; // 'follow' or 'friend'
-        const { limit = 10 } = req.query;
+        const { limit } = safePaginationParams(req.query.limit as string | undefined, undefined);
         const currentUserId = req.user!.id;
 
         if (type !== 'follow' && type !== 'friend') {
@@ -850,9 +846,9 @@ router.get('/suggestions/:type', requireAuth, async (req: AuthRequest, res) => {
         }
 
         const result = await RelationshipUtils.getSuggestions(
-            currentUserId, 
-            type as 'follow' | 'friend', 
-            parseInt(limit.toString())
+            currentUserId,
+            type as 'follow' | 'friend',
+            limit
         );
 
         if (result.success) {

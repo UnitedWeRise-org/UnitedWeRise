@@ -5,6 +5,7 @@
 
 import { getEnvironment } from '../utils/environment.js';
 import { apiCall } from '../js/api-compatibility-shim.js';
+import { escapeHTML } from '../utils/security.js';
 
 class SearchHandlers {
     constructor() {
@@ -250,9 +251,10 @@ class SearchHandlers {
             console.error('Search error:', error);
             const resultsContainer = document.getElementById('globalSearchResults');
             if (resultsContainer) {
+                // XSS FIX: Escape error message to prevent injection
                 resultsContainer.innerHTML = `
                     <div style="text-align: center; color: #d32f2f; padding: 2rem;">
-                        Search error: ${error.message}
+                        Search error: ${escapeHTML(error.message)}
                     </div>
                 `;
             }
@@ -267,16 +269,18 @@ class SearchHandlers {
         const totalResults = users.length + posts.length + officials.length + topics.length + candidates.length;
 
         if (totalResults === 0) {
+            // XSS FIX: Escape query to prevent injection
             resultsContainer.innerHTML = `
                 <div style="text-align: center; color: #666; padding: 2rem;">
-                    <h3>No results found for "${query}"</h3>
+                    <h3>No results found for "${escapeHTML(query)}"</h3>
                     <p>Try adjusting your search filters or using different keywords.</p>
                 </div>
             `;
             return;
         }
 
-        let html = `<div style="padding: 1rem; color: #4b5c09; font-weight: bold;">Found ${totalResults} results for "${query}"</div>`;
+        // XSS FIX: Escape query to prevent injection
+        let html = `<div style="padding: 1rem; color: #4b5c09; font-weight: bold;">Found ${totalResults} results for "${escapeHTML(query)}"</div>`;
 
         // Render each section if it has results
         if (users.length > 0) {
@@ -312,14 +316,20 @@ class SearchHandlers {
     }
 
     renderUserResult(user) {
+        // XSS FIX: Escape all user-controlled data
+        const safeUsername = escapeHTML(user.username);
+        const safeDisplayName = escapeHTML(user.displayName || user.username);
+        const safeLocation = user.location ? escapeHTML(user.location) : '';
+        const safeProfilePicture = escapeHTML(user.profilePicture || '/images/default-avatar.png');
+
         return `
-            <div class="search-result-item" data-search-action="openUserProfile" data-user-id="${user.id}" data-username="${user.username}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="openUserProfile" data-user-id="${escapeHTML(user.id)}" data-username="${safeUsername}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <img src="${user.profilePicture || '/images/default-avatar.png'}" alt="${user.username}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                    <img src="${safeProfilePicture}" alt="${safeUsername}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                     <div>
-                        <div style="font-weight: bold; color: #333;">${user.displayName || user.username}</div>
-                        <div style="color: #666; font-size: 0.9rem;">@${user.username}</div>
-                        ${user.location ? `<div style="color: #888; font-size: 0.8rem;">📍 ${user.location}</div>` : ''}
+                        <div style="font-weight: bold; color: #333;">${safeDisplayName}</div>
+                        <div style="color: #666; font-size: 0.9rem;">@${safeUsername}</div>
+                        ${safeLocation ? `<div style="color: #888; font-size: 0.8rem;">📍 ${safeLocation}</div>` : ''}
                     </div>
                 </div>
             </div>
@@ -327,18 +337,24 @@ class SearchHandlers {
     }
 
     renderPostResult(post) {
-        const truncatedContent = post.content.length > 150 ? post.content.substring(0, 150) + '...' : post.content;
+        // XSS FIX: Escape all user-controlled data
+        const rawContent = post.content || '';
+        const truncatedContent = rawContent.length > 150 ? rawContent.substring(0, 150) + '...' : rawContent;
+        const safeContent = escapeHTML(truncatedContent);
         const timeAgo = this.formatTimeAgo(new Date(post.createdAt));
+        const safeUsername = escapeHTML(post.user?.username || 'unknown');
+        const safeDisplayName = escapeHTML(post.user?.displayName || post.user?.username || 'Unknown');
+        const safeProfilePicture = escapeHTML(post.user?.profilePicture || '/images/default-avatar.png');
 
         return `
-            <div class="search-result-item" data-search-action="showPostInFeed" data-post-id="${post.id}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="showPostInFeed" data-post-id="${escapeHTML(post.id)}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
-                    <img src="${post.user?.profilePicture || '/images/default-avatar.png'}" alt="${post.user?.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    <img src="${safeProfilePicture}" alt="${safeUsername}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
                     <div style="flex: 1;">
                         <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.25rem;">
-                            <strong>${post.user?.displayName || post.user?.username}</strong> • ${timeAgo}
+                            <strong>${safeDisplayName}</strong> • ${escapeHTML(timeAgo)}
                         </div>
-                        <div style="color: #333; line-height: 1.4;">${truncatedContent}</div>
+                        <div style="color: #333; line-height: 1.4;">${safeContent}</div>
                         ${post.mediaUrl ? '<div style="color: #4b5c09; font-size: 0.8rem; margin-top: 0.25rem;">📷 Has media</div>' : ''}
                     </div>
                 </div>
@@ -347,14 +363,20 @@ class SearchHandlers {
     }
 
     renderOfficialResult(official) {
+        // XSS FIX: Escape all user-controlled data
+        const safeName = escapeHTML(official.name || 'Unknown Official');
+        const safeTitle = escapeHTML(official.title || '');
+        const safeState = official.state ? escapeHTML(official.state) : '';
+        const safePhoto = escapeHTML(official.photo || '/images/default-official.png');
+
         return `
-            <div class="search-result-item" data-search-action="showOfficialDetails" data-official-id="${official.id}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="showOfficialDetails" data-official-id="${escapeHTML(official.id)}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <img src="${official.photo || '/images/default-official.png'}" alt="${official.name}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                    <img src="${safePhoto}" alt="${safeName}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                     <div>
-                        <div style="font-weight: bold; color: #333;">${official.name}</div>
-                        <div style="color: #4b5c09; font-size: 0.9rem;">${official.title}</div>
-                        ${official.state ? `<div style="color: #888; font-size: 0.8rem;">📍 ${official.state}</div>` : ''}
+                        <div style="font-weight: bold; color: #333;">${safeName}</div>
+                        <div style="color: #4b5c09; font-size: 0.9rem;">${safeTitle}</div>
+                        ${safeState ? `<div style="color: #888; font-size: 0.8rem;">📍 ${safeState}</div>` : ''}
                     </div>
                 </div>
             </div>
@@ -362,14 +384,20 @@ class SearchHandlers {
     }
 
     renderCandidateResult(candidate) {
+        // XSS FIX: Escape all user-controlled data
+        const safeFullName = escapeHTML(candidate.fullName || 'Unknown Candidate');
+        const safeOffice = escapeHTML(candidate.office || 'Office');
+        const safeState = candidate.state ? escapeHTML(candidate.state) : '';
+        const safeProfilePicture = escapeHTML(candidate.profilePicture || '/images/default-candidate.png');
+
         return `
-            <div class="search-result-item" data-search-action="showCandidateDetails" data-candidate-id="${candidate.id}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="showCandidateDetails" data-candidate-id="${escapeHTML(candidate.id)}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <img src="${candidate.profilePicture || '/images/default-candidate.png'}" alt="${candidate.fullName}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                    <img src="${safeProfilePicture}" alt="${safeFullName}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                     <div>
-                        <div style="font-weight: bold; color: #333;">${candidate.fullName}</div>
-                        <div style="color: #4b5c09; font-size: 0.9rem;">${candidate.office} Candidate</div>
-                        ${candidate.state ? `<div style="color: #888; font-size: 0.8rem;">📍 ${candidate.state}</div>` : ''}
+                        <div style="font-weight: bold; color: #333;">${safeFullName}</div>
+                        <div style="color: #4b5c09; font-size: 0.9rem;">${safeOffice} Candidate</div>
+                        ${safeState ? `<div style="color: #888; font-size: 0.8rem;">📍 ${safeState}</div>` : ''}
                     </div>
                 </div>
             </div>
@@ -377,16 +405,20 @@ class SearchHandlers {
     }
 
     renderTopicResult(topic) {
+        // XSS FIX: Escape all user-controlled data
+        const safeName = escapeHTML(topic.name || 'Unknown Topic');
+        const safeDescription = topic.description ? escapeHTML(topic.description) : '';
+
         return `
-            <div class="search-result-item" data-search-action="enterTopicMode" data-topic-id="${topic.id}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
+            <div class="search-result-item" data-search-action="enterTopicMode" data-topic-id="${escapeHTML(topic.id)}" style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <div style="width: 40px; height: 40px; background: #4b5c09; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem;">
                         🏷️
                     </div>
                     <div>
-                        <div style="font-weight: bold; color: #333;">${topic.name}</div>
+                        <div style="font-weight: bold; color: #333;">${safeName}</div>
                         <div style="color: #666; font-size: 0.9rem;">${topic.postCount || 0} posts</div>
-                        ${topic.description ? `<div style="color: #888; font-size: 0.8rem;">${topic.description}</div>` : ''}
+                        ${safeDescription ? `<div style="color: #888; font-size: 0.8rem;">${safeDescription}</div>` : ''}
                     </div>
                 </div>
             </div>
@@ -566,9 +598,10 @@ class SearchHandlers {
             return;
         }
 
+        // XSS FIX: Escape query to prevent injection
         let html = `
             <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9; font-weight: bold; color: #4b5c09;">
-                Found ${totalResults} results for "${this.currentQuery}"
+                Found ${totalResults} results for "${escapeHTML(this.currentQuery)}"
             </div>
         `;
 
@@ -649,9 +682,10 @@ class SearchHandlers {
             // Show loading state
             const mainContent = document.getElementById('mainContent');
             if (mainContent) {
+                // XSS FIX: Escape username to prevent injection
                 mainContent.innerHTML = `
                     <div style="text-align: center; padding: 2rem;">
-                        <h2>Loading @${username}'s Profile</h2>
+                        <h2>Loading @${escapeHTML(username)}'s Profile</h2>
                         <p>Loading profile and posts...</p>
                     </div>
                 `;
@@ -731,9 +765,10 @@ class SearchHandlers {
             // Show loading state
             const feedElement = document.getElementById('postsFeed');
             if (feedElement) {
+                // XSS FIX: Escape username to prevent injection
                 feedElement.innerHTML = `
                     <div style="text-align: center; padding: 2rem;">
-                        <h2>Loading @${username}'s Profile</h2>
+                        <h2>Loading @${escapeHTML(username)}'s Profile</h2>
                         <p>Loading profile and posts...</p>
                     </div>
                 `;
@@ -749,14 +784,20 @@ class SearchHandlers {
                 const userProfile = profileResponse.data.user;
                 const posts = postsResponse.data.posts || [];
 
+                // XSS FIX: Escape all user-controlled data
+                const safeFirstName = escapeHTML(userProfile.firstName || '');
+                const safeLastName = escapeHTML(userProfile.lastName || '');
+                const safeUsername = escapeHTML(userProfile.username || 'unknown');
+                const displayName = safeFirstName ? `${safeFirstName} ${safeLastName}` : safeUsername;
+
                 // Create profile header (simplified for space)
                 let html = `
                     <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 2rem; margin-bottom: 1rem; border-radius: 8px;">
-                        <h1>${userProfile.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}` : userProfile.username}</h1>
-                        <p>@${userProfile.username} • ${userProfile.followersCount || 0} followers</p>
+                        <h1>${displayName}</h1>
+                        <p>@${safeUsername} • ${userProfile.followersCount || 0} followers</p>
                         ${userId !== window.currentUser?.id ? `
-                            <button data-search-action="toggleFollow" data-user-id="${userId}" style="padding: 0.5rem 1rem; background: #fff; color: #4b5c09; border: none; border-radius: 4px;">Follow</button>
-                            <button data-search-action="startConversation" data-user-id="${userId}" data-username="${username}" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 4px; margin-left: 0.5rem;">Message</button>
+                            <button data-search-action="toggleFollow" data-user-id="${escapeHTML(userId)}" style="padding: 0.5rem 1rem; background: #fff; color: #4b5c09; border: none; border-radius: 4px;">Follow</button>
+                            <button data-search-action="startConversation" data-user-id="${escapeHTML(userId)}" data-username="${safeUsername}" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 4px; margin-left: 0.5rem;">Message</button>
                         ` : ''}
                     </div>
                     <div style="border-bottom: 2px solid #4b5c09; margin-bottom: 1rem; padding-bottom: 0.5rem;">
@@ -768,10 +809,13 @@ class SearchHandlers {
                     html += `<div style="text-align: center; padding: 2rem; color: #666;"><p>This user hasn't posted anything yet.</p></div>`;
                 } else {
                     posts.forEach(post => {
+                        // XSS FIX: Escape post content and author data
+                        const safeAuthorName = escapeHTML(post.author.firstName || post.author.username || 'Unknown');
+                        const safeContent = escapeHTML(post.content || '');
                         html += `
-                            <div class="post-item" data-post-id="${post.id}" style="background: white; padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                <div style="font-weight: bold; margin-bottom: 0.5rem;">${post.author.firstName || post.author.username}</div>
-                                <div style="margin-bottom: 1rem;">${post.content}</div>
+                            <div class="post-item" data-post-id="${escapeHTML(post.id)}" style="background: white; padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="font-weight: bold; margin-bottom: 0.5rem;">${safeAuthorName}</div>
+                                <div style="margin-bottom: 1rem;">${safeContent}</div>
                                 <div style="color: #666; font-size: 0.9rem;">👍 ${post.likesCount || 0} • 💬 ${post.commentsCount || 0} • ${new Date(post.createdAt).toLocaleDateString()}</div>
                             </div>
                         `;

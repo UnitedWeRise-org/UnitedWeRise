@@ -38,7 +38,7 @@ const requireCandidate = async (req: AuthRequest, res: express.Response, next: e
   });
   
   if (!candidate) {
-    return res.status(403).json({ error: 'Must be a registered candidate' });
+    return res.status(403).json({ error: 'Access denied' });
   }
   
   req.candidate = candidate;
@@ -198,7 +198,8 @@ router.get('/requested-documents', requireAuth, requireCandidate, async (req: Au
 // Admin routes
 const requireAdmin = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
   if (!req.user?.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
+    // Role info logged server-side only
+    return res.status(403).json({ error: 'Access denied' });
   }
   next();
 };

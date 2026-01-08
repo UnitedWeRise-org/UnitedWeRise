@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { DistrictIdentificationService } from '../services/districtIdentificationService';
 import { createNotification } from './notifications';
 import { logger } from '../services/logger';
+import { safePaginationParams, PAGINATION_LIMITS } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -525,11 +526,11 @@ router.post('/districts/:districtId/conflicts', requireAuth, async (req: AuthReq
 router.get('/my-contributions', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { page = 1, limit = 20 } = req.query;
-    
-    const pageNum = parseInt(page.toString());
-    const limitNum = Math.min(parseInt(limit.toString()), 100);
-    const offset = (pageNum - 1) * limitNum;
+    const { limit: limitNum, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
+    const pageNum = Math.floor(offset / limitNum) + 1;
     
     const [districts, offices, officials, conflicts] = await Promise.all([
       prisma.electoralDistrict.findMany({

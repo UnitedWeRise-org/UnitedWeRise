@@ -462,11 +462,10 @@ router.post('/cache/refresh', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { user } = req;
     
-    // Only admins can refresh cache
+    // Only admins can refresh cache (role info logged server-side only)
     if (!user?.isAdmin) {
       return res.status(403).json({
-        error: 'Forbidden',
-        message: 'Admin access required'
+        error: 'Access denied'
       });
     }
     

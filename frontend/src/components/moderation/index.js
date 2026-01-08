@@ -10,6 +10,7 @@
 
 import { ContentWarningScreen } from './ContentWarningScreen.js';
 import { SensitiveContentViewer } from './SensitiveContentViewer.js';
+import { safeLocalStorageGet } from '../../utils/security.js';
 
 /**
  * Content Moderation Manager
@@ -70,14 +71,14 @@ class ContentModerationManager {
      */
     async loadUserPreferences() {
         try {
-            const stored = localStorage.getItem('content-moderation-preferences');
-            this.userPreferences = stored ? JSON.parse(stored) : {
+            const defaultPreferences = {
                 showGraphicNews: false,
                 showMedicalContent: false,
                 showDisturbingContent: false,
                 autoHideSensitiveContent: true,
                 rememberChoices: false
             };
+            this.userPreferences = safeLocalStorageGet('content-moderation-preferences', defaultPreferences);
 
             // Apply preferences to components
             if (this.warningScreen) {

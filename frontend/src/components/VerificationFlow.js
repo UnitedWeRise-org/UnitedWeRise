@@ -5,6 +5,8 @@
  * Migrated to ES6 modules: October 11, 2025 (Batch 6)
  */
 
+import { isAllowedOrigin, ALLOWED_ORIGINS } from '../utils/security.js';
+
 class VerificationFlow {
     constructor() {
         this.currentStep = 'welcome';
@@ -61,23 +63,30 @@ class VerificationFlow {
     setupMessageListeners() {
         // Listen for email verification completion from verify-email.html
         window.addEventListener('message', (event) => {
+            // SECURITY FIX C2: Verify origin before processing
+            if (!isAllowedOrigin(event.origin)) {
+                console.warn('Rejected postMessage from untrusted origin:', event.origin);
+                return;
+            }
+
             if (event.data.type === 'EMAIL_VERIFIED' && event.data.success) {
                 console.log('Email verification detected, refreshing status...');
-                
-                // Update auth token if provided
-                if (event.data.token) {
-                    localStorage.setItem('authToken', event.data.token);
-                    window.authToken = event.data.token;
-                    console.log('Auth token updated from verification response');
+
+                // SECURITY FIX C3: Don't store tokens in localStorage
+                // Tokens should be in httpOnly cookies set by the backend
+                // Only store non-sensitive display data
+                if (event.data.user && typeof event.data.user === 'object') {
+                    const safeUserData = {
+                        id: event.data.user.id,
+                        username: event.data.user.username,
+                        displayName: event.data.user.displayName,
+                        avatarUrl: event.data.user.avatarUrl
+                    };
+                    localStorage.setItem('userDisplayData', JSON.stringify(safeUserData));
+                    window.currentUser = safeUserData;
+                    console.log('User display data updated from verification response');
                 }
-                
-                // Update user data if provided
-                if (event.data.user) {
-                    localStorage.setItem('currentUser', JSON.stringify(event.data.user));
-                    window.currentUser = event.data.user;
-                    console.log('User data updated from verification response');
-                }
-                
+
                 this.checkEmailVerification();
             }
         });

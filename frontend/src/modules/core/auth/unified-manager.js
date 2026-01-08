@@ -31,6 +31,7 @@ class UnifiedAuthManager {
         this._isInitialized = false;
         this._isLoggingOut = false; // Prevent re-auth during logout
         this._isRefreshingToken = false; // Flag to prevent concurrent refreshes
+        this._refreshPending = false; // Flag set IMMEDIATELY on visibility change (before debounce)
         this._visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this._proactiveRefreshTimer = null; // Timer for proactive token refresh (14-min interval)
         this._currentAuthState = {
@@ -70,6 +71,7 @@ class UnifiedAuthManager {
 
     /**
      * Refresh authentication token (called on visibility change or 401 error)
+     * Includes retry logic to handle transient network issues on page wake
      */
     async refreshToken(forceRefresh = false) {
         // Prevent concurrent refresh attempts
@@ -91,66 +93,163 @@ class UnifiedAuthManager {
         }
 
         this._isRefreshingToken = true;
+        const maxRetries = 2;
+        const apiBase = window.API_CONFIG?.BASE_URL || 'https://api.unitedwerise.org/api';
 
-        try {
-            console.log('🔄 Attempting token refresh...');
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`🔄 Attempting token refresh (attempt ${attempt}/${maxRetries})...`);
 
-            const response = await fetch(`${window.API_CONFIG?.BASE_URL || 'https://api.unitedwerise.org/api'}/auth/refresh`, {
-                method: 'POST',
-                credentials: 'include'
-            });
+                const response = await fetch(`${apiBase}/auth/refresh`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
 
-            if (response.ok) {
-                const data = await response.json();
+                if (response.ok) {
+                    const data = await response.json();
 
-                // Update CSRF token if provided
-                if (data.csrfToken) {
-                    window.csrfToken = data.csrfToken;
-                    if (window.apiClient) {
-                        window.apiClient.csrfToken = data.csrfToken;
+                    // Update CSRF token if provided
+                    if (data.csrfToken) {
+                        window.csrfToken = data.csrfToken;
+                        if (window.apiClient) {
+                            window.apiClient.csrfToken = data.csrfToken;
+                        }
+                        this._currentAuthState.csrfToken = data.csrfToken;
                     }
-                    this._currentAuthState.csrfToken = data.csrfToken;
+
+                    console.log('✅ Token refreshed successfully');
+                    this._isRefreshingToken = false;
+
+                    // Reset proactive refresh timer to prevent redundant refreshes
+                    this._startProactiveRefreshTimer();
+
+                    return true;
+                } else if (response.status === 401 || response.status === 403) {
+                    // Got 401/403 - but on page wake this could be a false positive
+                    // Retry once before giving up (network may not be fully ready)
+                    if (attempt < maxRetries) {
+                        console.log(`⏳ Token refresh returned ${response.status}, retrying after delay (${attempt}/${maxRetries})...`);
+                        await this._sleep(1500 * attempt); // 1.5s, 3s backoff
+                        continue;
+                    }
+
+                    // All retries exhausted - verify with /auth/me before logging out
+                    console.log('🔍 Verifying session before logout...');
+                    try {
+                        const verifyResponse = await fetch(`${apiBase}/auth/me`, {
+                            method: 'GET',
+                            credentials: 'include'
+                        });
+
+                        if (verifyResponse.ok) {
+                            // Session is actually valid! Don't logout
+                            console.log('✅ Session verified valid despite refresh 401 - keeping user logged in');
+                            this._isRefreshingToken = false;
+                            return false; // Return false but don't logout
+                        }
+                    } catch (verifyError) {
+                        // Network error on verify - keep user logged in
+                        console.warn('⚠️ Could not verify session (network error) - keeping user logged in');
+                        this._isRefreshingToken = false;
+                        return false;
+                    }
+
+                    // Session truly expired - logout
+                    console.log('🔒 Session confirmed expired - logging out');
+                    this._isRefreshingToken = false;
+                    await this.logout();
+                    return false;
+                } else {
+                    // Server error (500, 503, etc) - NOT a token issue, will retry later
+                    console.warn(`⚠️ Token refresh returned ${response.status} - server error, keeping user logged in`);
+                    this._isRefreshingToken = false;
+
+                    // Don't logout - server error doesn't mean token is invalid
+                    // Proactive refresh timer will retry automatically
+                    return false;
+                }
+            } catch (error) {
+                // Network error - retry if we have attempts left
+                if (attempt < maxRetries) {
+                    console.log(`⏳ Token refresh network error, retrying (${attempt}/${maxRetries})...`);
+                    await this._sleep(1500 * attempt);
+                    continue;
                 }
 
-                console.log('✅ Token refreshed successfully');
+                // All retries exhausted with network errors - keep user logged in
+                console.warn('⚠️ Token refresh failed (network) - keeping user logged in, will retry later');
                 this._isRefreshingToken = false;
-
-                // Reset proactive refresh timer to prevent redundant refreshes
-                this._startProactiveRefreshTimer();
-
-                return true;
-            } else if (response.status === 401 || response.status === 403) {
-                // Refresh token truly expired or invalid - logout is correct
-                console.log('🔒 Token refresh returned 401/403 - refresh token expired, logging out');
-                this._isRefreshingToken = false;
-
-                // Refresh token expired - force logout
-                await this.logout();
-                return false;
-            } else {
-                // Server error (500, 503, etc) - NOT a token issue, will retry later
-                console.warn(`⚠️ Token refresh returned ${response.status} - server error, keeping user logged in`);
-                this._isRefreshingToken = false;
-
-                // Don't logout - server error doesn't mean token is invalid
-                // Proactive refresh timer will retry automatically
                 return false;
             }
-        } catch (error) {
-            console.error('❌ Token refresh error:', error);
-            this._isRefreshingToken = false;
-            return false;
         }
+
+        // Should never reach here
+        this._isRefreshingToken = false;
+        return false;
+    }
+
+    /**
+     * Sleep helper for retry backoff
+     * @param {number} ms - Milliseconds to sleep
+     * @returns {Promise<void>}
+     */
+    _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Check if a token refresh is pending or in progress
+     * Used by other code to detect ongoing refresh before making logout decisions
+     * @returns {boolean} True if refresh is pending or in progress
+     */
+    isRefreshPending() {
+        return this._refreshPending || this._isRefreshingToken;
+    }
+
+    /**
+     * Wait for any pending token refresh to complete
+     * Used by 401 handlers to wait before verifying session
+     * @param {number} timeoutMs - Maximum time to wait (default 5 seconds)
+     * @returns {Promise<boolean>} True if refresh completed, false if timeout
+     */
+    async waitForPendingRefresh(timeoutMs = 5000) {
+        if (!this._refreshPending && !this._isRefreshingToken) {
+            return true; // No refresh pending
+        }
+
+        console.log('⏳ Waiting for pending token refresh...');
+        const startTime = Date.now();
+
+        while (this._refreshPending || this._isRefreshingToken) {
+            if (Date.now() - startTime > timeoutMs) {
+                console.warn('⚠️ Timeout waiting for token refresh');
+                return false;
+            }
+            await this._sleep(100);
+        }
+
+        console.log('✅ Token refresh completed');
+        return true;
     }
 
     /**
      * Handle tab visibility change - refresh token when tab becomes visible after being hidden
      * Debounced to prevent rapid-fire refreshes from multiple visibility events
+     *
+     * CRITICAL: Sets _refreshPending = true IMMEDIATELY (before debounce) so other code
+     * can detect that a refresh is about to happen and wait for it, preventing race conditions
+     * where API calls fire before the refresh completes.
      */
     _handleVisibilityChange() {
         // Clear any pending debounce timer
         if (this._visibilityChangeDebounceTimer) {
             clearTimeout(this._visibilityChangeDebounceTimer);
+        }
+
+        // Set pending flag IMMEDIATELY so other code knows refresh is coming
+        // This prevents race conditions where 401 handlers fire before refresh
+        if (!document.hidden && this.isAuthenticated()) {
+            this._refreshPending = true;
         }
 
         // Debounce visibility changes by 1 second to prevent rapid-fire refreshes
@@ -159,12 +258,17 @@ class UnifiedAuthManager {
                 // Prevent concurrent refreshes from visibility changes
                 if (this._isRefreshingToken) {
                     console.log('⏸️ Visibility change refresh skipped (refresh already in progress)');
+                    this._refreshPending = false;
                     return;
                 }
 
                 // Tab became visible - refresh token to ensure it's still valid
                 console.log('🔄 Tab visible - refreshing token');
-                this.refreshToken(true); // Force refresh
+                this.refreshToken(true).finally(() => {
+                    this._refreshPending = false;
+                });
+            } else {
+                this._refreshPending = false;
             }
         }, 1000); // 1 second debounce
     }

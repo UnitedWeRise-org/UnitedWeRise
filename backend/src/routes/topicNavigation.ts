@@ -1,9 +1,9 @@
 /**
  * Topic Navigation API Routes
- * 
+ *
  * Implements the complete topic discovery and navigation system:
  * - GET /trending - Discover trending topics
- * - POST /enter/:topicId - Enter topic mode  
+ * - POST /enter/:topicId - Enter topic mode
  * - POST /exit - Exit topic mode back to algorithm feed
  * - GET /:topicId/posts - Get posts for a specific topic
  */
@@ -12,6 +12,7 @@ import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import TopicDiscoveryService, { TopicNavigationState } from '../services/topicDiscoveryService';
 import logger from '../utils/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 
@@ -151,24 +152,24 @@ router.post('/exit', requireAuth, async (req: AuthRequest, res) => {
 router.get('/:topicId/posts', async (req, res) => {
     try {
         const { topicId } = req.params;
-        const { 
-            offset = 0, 
-            limit = 20 
-        } = req.query;
+        const { limit, offset } = safePaginationParams(
+            req.query.limit as string | undefined,
+            req.query.offset as string | undefined
+        );
 
         const topicPosts = await TopicDiscoveryService.getTopicPosts(
             topicId,
-            Number(offset),
-            Number(limit)
+            offset,
+            limit
         );
 
         res.json({
             success: true,
             posts: topicPosts,
             pagination: {
-                offset: Number(offset),
-                limit: Number(limit),
-                hasMore: topicPosts.length === Number(limit)
+                offset,
+                limit,
+                hasMore: topicPosts.length === limit
             }
         });
 

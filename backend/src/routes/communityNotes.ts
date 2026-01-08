@@ -9,6 +9,7 @@ import express from 'express';
 import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import { CommunityNotesService } from '../services/communityNotesService';
 import logger from '../utils/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 
@@ -215,7 +216,7 @@ router.get('/admin/pending-appeals', requireAuth, requireAdmin, async (req: Auth
  */
 router.get('/user/notes', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 20;
+    const { limit } = safePaginationParams(req.query.limit as string | undefined, undefined);
     const notes = await CommunityNotesService.getUserNotes(req.user!.id, limit);
     return res.json(notes);
   } catch (error) {
@@ -230,7 +231,7 @@ router.get('/user/notes', requireAuth, async (req: AuthRequest, res) => {
  */
 router.get('/user/votes', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 50;
+    const { limit } = safePaginationParams(req.query.limit as string | undefined, undefined);
     const votes = await CommunityNotesService.getUserVotes(req.user!.id, limit);
     return res.json(votes);
   } catch (error) {

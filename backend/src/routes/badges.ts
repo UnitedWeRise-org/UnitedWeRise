@@ -3,6 +3,7 @@ import multer from 'multer';
 import badgeService from '../services/badge.service';
 import { requireAuth, requireStagingAuth, AuthRequest } from '../middleware/auth';
 import { requireAdmin } from '../middleware/admin';
+import { safeJSONParse } from '../utils/safeJson';
 
 const router = Router();
 const upload = multer({
@@ -357,9 +358,24 @@ router.post('/create', requireAuth, requireAdmin, upload.single('image'), async 
   try {
     const { name, description, qualificationCriteria, isAutoAwarded, maxAwards, displayOrder } = req.body;
 
+    // Safely parse qualification criteria - use empty object as fallback for invalid JSON
     const criteria = typeof qualificationCriteria === 'string'
-      ? JSON.parse(qualificationCriteria)
+      ? safeJSONParse(qualificationCriteria, {})
       : qualificationCriteria;
+
+    // Parse and validate maxAwards (0 = unlimited, positive integers allowed)
+    let parsedMaxAwards: number | undefined;
+    if (maxAwards) {
+      const rawMaxAwards = parseInt(maxAwards);
+      parsedMaxAwards = Number.isNaN(rawMaxAwards) || rawMaxAwards < 0 || rawMaxAwards > 1000000 ? undefined : rawMaxAwards;
+    }
+
+    // Parse and validate displayOrder (positive integers only)
+    let parsedDisplayOrder: number | undefined;
+    if (displayOrder) {
+      const rawDisplayOrder = parseInt(displayOrder);
+      parsedDisplayOrder = Number.isNaN(rawDisplayOrder) || rawDisplayOrder < 0 || rawDisplayOrder > 10000 ? undefined : rawDisplayOrder;
+    }
 
     const badge = await badgeService.createBadge({
       name,
@@ -367,8 +383,8 @@ router.post('/create', requireAuth, requireAdmin, upload.single('image'), async 
       imageFile: req.file as Express.Multer.File,
       qualificationCriteria: criteria,
       isAutoAwarded: isAutoAwarded === 'true',
-      maxAwards: maxAwards ? parseInt(maxAwards) : undefined,
-      displayOrder: displayOrder ? parseInt(displayOrder) : undefined,
+      maxAwards: parsedMaxAwards,
+      displayOrder: parsedDisplayOrder,
       createdBy: req.user!.id
     });
 
@@ -457,13 +473,24 @@ router.put('/:badgeId', requireAuth, requireAdmin, upload.single('image'), async
     if (name) updates.name = name;
     if (description) updates.description = description;
     if (qualificationCriteria) {
+      // Safely parse qualification criteria - use empty object as fallback for invalid JSON
       updates.qualificationCriteria = typeof qualificationCriteria === 'string'
-        ? JSON.parse(qualificationCriteria)
+        ? safeJSONParse(qualificationCriteria, {})
         : qualificationCriteria;
     }
     if (isAutoAwarded !== undefined) updates.isAutoAwarded = isAutoAwarded === 'true';
-    if (maxAwards !== undefined) updates.maxAwards = parseInt(maxAwards);
-    if (displayOrder !== undefined) updates.displayOrder = parseInt(displayOrder);
+    if (maxAwards !== undefined) {
+      const rawMaxAwards = parseInt(maxAwards);
+      if (!Number.isNaN(rawMaxAwards) && rawMaxAwards >= 0 && rawMaxAwards <= 1000000) {
+        updates.maxAwards = rawMaxAwards;
+      }
+    }
+    if (displayOrder !== undefined) {
+      const rawDisplayOrder = parseInt(displayOrder);
+      if (!Number.isNaN(rawDisplayOrder) && rawDisplayOrder >= 0 && rawDisplayOrder <= 10000) {
+        updates.displayOrder = rawDisplayOrder;
+      }
+    }
     if (req.file) updates.imageFile = req.file;
 
     const badge = await badgeService.updateBadge(badgeId, updates);

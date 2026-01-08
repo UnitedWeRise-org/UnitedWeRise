@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { logger } from '../services/logger';
+import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 
@@ -129,10 +130,11 @@ const getWebSocketService = async () => {
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { limit = 20, offset = 0, unreadOnly } = req.query;
-
-    const limitNum = parseInt(limit.toString());
-    const offsetNum = parseInt(offset.toString());
+    const { unreadOnly } = req.query;
+    const { limit: limitNum, offset: offsetNum } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
 
     const whereClause: any = { receiverId: userId };
     if (unreadOnly === 'true') {

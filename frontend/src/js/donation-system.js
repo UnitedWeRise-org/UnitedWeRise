@@ -4,6 +4,7 @@
  * ES6 Module Version
  */
 import { apiCall } from './api-compatibility-shim.js';
+import { escapeHTML } from '../utils/security.js';
 
 export class DonationSystem {
     constructor() {
@@ -734,7 +735,7 @@ export class DonationSystem {
                         loadingDiv.innerHTML = `
                             <div class="spinner"></div>
                             <p>If you're not redirected automatically:</p>
-                            <a href="${checkoutUrl}" target="_blank" style="
+                            <a href="${escapeHTML(checkoutUrl)}" target="_blank" style="
                                 display: inline-block;
                                 margin-top: 10px;
                                 padding: 10px 20px;
@@ -785,7 +786,7 @@ export class DonationSystem {
             console.error('Donation error:', error);
             errorDiv.innerHTML = `
                 <strong>Unable to process donation</strong><br>
-                ${error.message || 'Failed to connect to payment processor.'}<br>
+                ${escapeHTML(error.message) || 'Failed to connect to payment processor.'}<br>
                 <small style="display: block; margin-top: 10px;">
                     If you have an ad blocker enabled, please try:
                     <ul style="text-align: left; margin-top: 5px;">

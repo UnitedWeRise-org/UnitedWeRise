@@ -6,6 +6,7 @@ import { body, validationResult } from 'express-validator';
 import { apiLimiter } from '../middleware/rateLimiting';
 import { emailService } from '../services/emailService';
 import { logger } from '../services/logger';
+import { safePaginationParams, PAGINATION_LIMITS } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -28,7 +29,8 @@ const validateAppeal = [
 
 const requireModerator = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
   if (!req.user?.isModerator && !req.user?.isAdmin) {
-    return res.status(403).json({ error: 'Moderator access required' });
+    // Role info logged server-side only
+    return res.status(403).json({ error: 'Access denied' });
   }
   next();
 };
@@ -111,9 +113,12 @@ router.post('/', requireAuth, apiLimiter, validateAppeal, async (req: AuthReques
 router.get('/my', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-    const offset = (page - 1) * limit;
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined,
+      50 // Max limit for appeals
+    );
+    const page = Math.floor(offset / limit) + 1;
 
     const appeals = await prisma.appeal.findMany({
       where: { userId },
@@ -200,10 +205,13 @@ router.get('/:appealId', requireAuth, async (req: AuthRequest, res) => {
 // Get appeals queue
 router.get('/queue/all', requireAuth, requireModerator, async (req: AuthRequest, res) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined,
+      50 // Max limit for appeals queue
+    );
+    const page = Math.floor(offset / limit) + 1;
     const status = req.query.status as string || 'PENDING';
-    const offset = (page - 1) * limit;
 
     const where: any = {};
     if (status) where.status = status;

@@ -16,23 +16,58 @@ import crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
 import { logger } from '../services/logger';
 import { AuditService, AUDIT_ACTIONS } from '../services/auditService';
+import { safePaginationParams, PAGINATION_LIMITS } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
 
+/**
+ * Maximum page number for page-based pagination
+ * With MAX_OFFSET of 10000 and typical limit of 50, max page = 200
+ */
+const MAX_PAGE = 200;
+
+/**
+ * Helper to convert page-based pagination to safe limit/offset
+ * Ensures page doesn't exceed MAX_PAGE to prevent deep pagination attacks
+ */
+function safePagePagination(
+  page: string | number | undefined,
+  limit: string | number | undefined,
+  maxLimit: number = PAGINATION_LIMITS.MAX_LIMIT
+): { page: number; limit: number; offset: number } {
+  const parsedPage = typeof page === 'string' ? parseInt(page, 10) : (page ?? 1);
+  const parsedLimit = typeof limit === 'string' ? parseInt(limit, 10) : (limit ?? 50);
+
+  const safePage = Math.min(Math.max(1, isNaN(parsedPage) ? 1 : parsedPage), MAX_PAGE);
+  const safeLimit = Math.min(Math.max(1, isNaN(parsedLimit) ? 50 : parsedLimit), maxLimit);
+  const offset = (safePage - 1) * safeLimit;
+
+  return { page: safePage, limit: safeLimit, offset };
+}
+
 // Admin-only middleware
 const requireAdmin = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
   if (!req.user?.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
+    // Role info logged server-side only
+    return res.status(403).json({ error: 'Access denied' });
   }
   next();
 };
 
-// Validation middleware
+// Validation middleware - returns sanitized field names only, no internal details
 const handleValidationErrors = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ error: 'Validation failed', details: errors.array() });
+    // Log full validation errors server-side for debugging
+    logger.warn({
+      endpoint: req.path,
+      method: req.method,
+      validationErrors: errors.array()
+    }, 'Admin validation failed');
+    // Return sanitized error to client - only field names, no internal details
+    const invalidFields = errors.array().map(e => e.type === 'field' ? (e as { path?: string }).path : 'unknown').filter(Boolean);
+    return res.status(400).json({ error: 'Validation failed', fields: invalidFields });
   }
   next();
 };
@@ -426,12 +461,13 @@ router.get('/batch/dashboard-init', requireStagingAuth, requireAdmin, async (req
 // User Management
 router.get('/users', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const { page, limit, offset } = safePagePagination(
+      req.query.page as string | undefined,
+      req.query.limit as string | undefined
+    );
     const search = req.query.search as string;
     const status = req.query.status as string; // 'active', 'suspended', 'verified'
     const role = req.query.role as string; // 'user', 'moderator', 'admin'
-    const offset = (page - 1) * limit;
 
     const where: any = {};
 
@@ -690,7 +726,7 @@ router.post('/users/:userId/suspend',
       }
 
       if (user.isAdmin) {
-        return res.status(403).json({ error: 'Cannot suspend admin users' });
+        return res.status(403).json({ error: 'This action is not permitted' });
       }
 
       let endsAt: Date | undefined;
@@ -985,10 +1021,10 @@ router.delete('/messages/:messageId',
   ],
   async (req: AuthRequest, res) => {
     try {
-      // Super-admin check
+      // Super-admin check (role logged server-side only)
       if (!req.user?.isSuperAdmin) {
         return res.status(403).json({
-          error: 'Super admin access required for message deletion'
+          error: 'Access denied'
         });
       }
 
@@ -1100,11 +1136,12 @@ router.delete('/messages/:messageId',
 // Content Management
 router.get('/content/flagged', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const { page, limit, offset } = safePagePagination(
+      req.query.page as string | undefined,
+      req.query.limit as string | undefined
+    );
     const flagType = req.query.flagType as string;
     const confidence = parseFloat(req.query.minConfidence as string) || 0;
-    const offset = (page - 1) * limit;
 
     const where: any = { resolved: false };
     if (flagType) where.flagType = flagType;
@@ -1217,7 +1254,8 @@ router.post('/content/flags/:flagId/resolve', requireStagingAuth, requireAdmin, 
 // System Analytics - Enhanced with comprehensive metrics
 router.get('/analytics', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const days = parseInt(req.query.days as string) || 30;
+    const rawDays = parseInt(req.query.days as string);
+    const days = Number.isNaN(rawDays) || rawDays < 1 || rawDays > 365 ? 30 : rawDays;
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     
     // Pre-calculate date ranges for SQL queries
@@ -1511,14 +1549,17 @@ router.get('/settings', requireStagingAuth, requireAdmin, async (req: AuthReques
 // Security Events Endpoint
 router.get('/security/events', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const { page, limit, offset } = safePagePagination(
+      req.query.page as string | undefined,
+      req.query.limit as string | undefined
+    );
     const eventType = req.query.eventType as string;
-    const minRiskScore = parseInt(req.query.minRiskScore as string) || 0;
-    const days = parseInt(req.query.days as string) || 7;
-    
+    const rawMinRiskScore = parseInt(req.query.minRiskScore as string);
+    const minRiskScore = Number.isNaN(rawMinRiskScore) || rawMinRiskScore < 0 || rawMinRiskScore > 100 ? 0 : rawMinRiskScore;
+    const rawDays = parseInt(req.query.days as string);
+    const days = Number.isNaN(rawDays) || rawDays < 1 || rawDays > 365 ? 7 : rawDays;
+
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const offset = (page - 1) * limit;
 
     const events = await SecurityService.getSecurityEvents({
       limit,
@@ -1614,8 +1655,11 @@ router.get('/security/stats', requireStagingAuth, requireAdmin, async (req: Auth
 router.get('/security/blocked-ips', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const includeExpired = req.query.includeExpired === 'true';
-    const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
-    const offset = parseInt(req.query.offset as string) || 0;
+    const { limit, offset } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined,
+      500 // Higher limit for IP list
+    );
 
     const blockedIPs = await SecurityService.getBlockedIPs({
       includeExpired,
@@ -1697,17 +1741,24 @@ router.post('/security/block-ip',
       // Validate request
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
+        // Log full validation errors server-side
+        logger.warn({
+          endpoint: '/api/admin/security/block-ip',
+          validationErrors: errors.array()
+        }, 'Block IP validation failed');
+        // Return sanitized error to client
+        const invalidFields = errors.array().map(e => e.type === 'field' ? (e as { path?: string }).path : 'unknown').filter(Boolean);
+        return res.status(400).json({ success: false, error: 'Validation failed', fields: invalidFields });
       }
 
       const { ipAddress, reason, expiresAt } = req.body;
       const adminUser = req.user!;
 
-      // Require super admin for IP blocking
+      // Require super admin for IP blocking (role logged server-side only)
       if (!adminUser.isSuperAdmin) {
         return res.status(403).json({
           success: false,
-          error: 'Super admin access required for IP blocking'
+          error: 'Access denied'
         });
       }
 
@@ -1783,17 +1834,24 @@ router.delete('/security/unblock-ip',
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
+        // Log full validation errors server-side
+        logger.warn({
+          endpoint: '/api/admin/security/unblock-ip',
+          validationErrors: errors.array()
+        }, 'Unblock IP validation failed');
+        // Return sanitized error to client
+        const invalidFields = errors.array().map(e => e.type === 'field' ? (e as { path?: string }).path : 'unknown').filter(Boolean);
+        return res.status(400).json({ success: false, error: 'Validation failed', fields: invalidFields });
       }
 
       const { ipAddress } = req.body;
       const adminUser = req.user!;
 
-      // Require super admin
+      // Require super admin (role logged server-side only)
       if (!adminUser.isSuperAdmin) {
         return res.status(403).json({
           success: false,
-          error: 'Super admin access required for IP unblocking'
+          error: 'Access denied'
         });
       }
 
@@ -1849,7 +1907,7 @@ router.post('/security/clear-blocked-ips',
       if (!adminUser.isSuperAdmin) {
         return res.status(403).json({
           success: false,
-          error: 'Super admin access required to clear all blocked IPs'
+          error: 'Access denied'
         });
       }
 
@@ -2234,18 +2292,19 @@ const requireSuperAdmin = async (req: AuthRequest, res: express.Response, next: 
   // For now, require explicit super admin flag or additional verification
   // TODO: Implement TOTP verification here
   if (!req.user?.isAdmin) {
-    return res.status(403).json({ error: 'Super admin access required for database operations' });
+    // Role info logged server-side only
+    return res.status(403).json({ error: 'Access denied' });
   }
-  
+
   // Additional security check - could be TOTP, recent password verification, etc.
   const recentAuth = req.headers['x-recent-auth']; // Frontend should prompt for password again
   if (!recentAuth) {
-    return res.status(403).json({ 
-      error: 'Recent authentication required for sensitive operations',
-      requiresReauth: true 
+    return res.status(403).json({
+      error: 'Recent authentication required',
+      requiresReauth: true
     });
   }
-  
+
   next();
 };
 
@@ -2314,11 +2373,12 @@ router.get('/schema', requireStagingAuth, requireAdmin, requireSuperAdmin, async
 // GET /api/admin/candidates - Get all candidate registrations
 router.get('/candidates', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const { page, limit, offset } = safePagePagination(
+      req.query.page as string | undefined,
+      req.query.limit as string | undefined
+    );
     const status = req.query.status as string;
     const search = req.query.search as string;
-    const offset = (page - 1) * limit;
 
     // Build where clause
     const where: any = {};
@@ -2442,8 +2502,11 @@ router.get('/candidates', requireStagingAuth, requireAdmin, async (req: AuthRequ
 // GET /api/admin/candidates/profiles - Get candidate profiles for status management
 router.get('/candidates/profiles', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const { status, page = 1, limit = 50, search } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { status, search } = req.query;
+    const { page, limit, offset: skip } = safePagePagination(
+      req.query.page as string | undefined,
+      req.query.limit as string | undefined
+    );
 
     const where: any = {};
     if (status && status !== 'all') where.status = status;
@@ -2489,10 +2552,10 @@ router.get('/candidates/profiles', requireStagingAuth, requireAdmin, async (req:
       data: {
         candidates,
         pagination: {
-          page: Number(page),
-          limit: Number(limit),
+          page,
+          limit,
           total,
-          pages: Math.ceil(total / Number(limit))
+          pages: Math.ceil(total / limit)
         },
         summary
       }
@@ -3878,10 +3941,11 @@ router.post('/merge-accounts',
 // GET /api/admin/volunteers - Get volunteer inquiries
 router.get('/volunteers', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const { status = 'new', limit = 20, offset = 0 } = req.query;
-    
-    const limitNum = parseInt(limit.toString());
-    const offsetNum = parseInt(offset.toString());
+    const { status = 'new' } = req.query;
+    const { limit: limitNum, offset: offsetNum } = safePaginationParams(
+      req.query.limit as string | undefined,
+      req.query.offset as string | undefined
+    );
 
     // Get posts tagged as "Volunteer"
     const volunteerPosts = await prisma.post.findMany({
@@ -4108,7 +4172,7 @@ router.post('/users/:userId/reset-password', requireStagingAuth, requireAdmin, a
         targetUserId: userId,
         securityEvent: 'totp_not_configured'
       }, `Admin ${adminUsername} attempting password reset without TOTP configured`);
-      return res.status(403).json({ error: 'TOTP must be enabled for admin account to perform this action' });
+      return res.status(403).json({ error: 'TOTP must be enabled to perform this action' });
     }
 
     // Verify admin's TOTP token
@@ -4335,7 +4399,8 @@ router.get('/analytics/visitors/daily', requireStagingAuth, requireAdmin, async 
  *         description: Server error
  */
 router.get('/analytics/visitors/suspicious', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
-  const days = req.query.days ? parseInt(req.query.days as string) : 7;
+  const rawDays = parseInt(req.query.days as string);
+  const days = Number.isNaN(rawDays) || rawDays < 1 || rawDays > 365 ? 7 : rawDays;
   try {
     const suspiciousIPs = await visitorAnalytics.getSuspiciousIPs(days);
     res.json({ suspiciousIPs, days });
@@ -4756,7 +4821,15 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
             break;
 
           default:
-            results.push({ activityType, targetId, status: 'failed', error: `Unsupported activity type: ${activityType}` });
+            // Log the actual unsupported type server-side for debugging
+            logger.warn({
+              action: 'unsupported_activity_type',
+              adminId: adminUser.id,
+              activityType,
+              targetId
+            }, `Admin attempted to delete unsupported activity type`);
+            // Return generic error to client - don't echo user input
+            results.push({ activityType, targetId, status: 'failed', error: 'Unsupported activity type' });
             failedCount++;
             continue;
         }
@@ -4772,11 +4845,12 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
           activityType,
           targetId
         }, `Failed to delete activity ${activityType}:${targetId}`);
+        // Return generic error to client - don't expose internal error messages
         results.push({
           activityType,
           targetId,
           status: 'failed',
-          error: activityError instanceof Error ? activityError.message : 'Unknown error'
+          error: 'Deletion failed'
         });
         failedCount++;
       }
@@ -4873,14 +4947,11 @@ router.get('/reports/queue',
   handleValidationErrors,
   async (req: AuthRequest, res) => {
     try {
-      const {
-        status = 'all',
-        type = 'all',
-        priority = 'all',
-        dateRange = '7',
-        limit = 50,
-        offset = 0
-      } = req.query;
+      const { status = 'all', type = 'all', priority = 'all', dateRange = '7' } = req.query;
+      const { limit, offset } = safePaginationParams(
+        req.query.limit as string | undefined,
+        req.query.offset as string | undefined
+      );
 
       // Build where clause
       const where: any = {};
@@ -4914,8 +4985,8 @@ router.get('/reports/queue',
             { priority: 'desc' },
             { createdAt: 'desc' }
           ],
-          take: Number(limit),
-          skip: Number(offset),
+          take: limit,
+          skip: offset,
           include: {
             reporter: {
               select: { id: true, username: true, displayName: true, avatar: true }
@@ -4951,10 +5022,10 @@ router.get('/reports/queue',
           reports: formattedReports,
           total,
           pagination: {
-            page: Math.floor(Number(offset) / Number(limit)) + 1,
-            limit: Number(limit),
+            page: Math.floor(offset / limit) + 1,
+            limit,
             total,
-            pages: Math.ceil(total / Number(limit))
+            pages: Math.ceil(total / limit)
           }
         }
       });
@@ -5802,11 +5873,11 @@ router.post('/system/maintenance',
       const { enabled, message } = req.body;
       const adminUser = req.user!;
 
-      // Require super admin for maintenance mode
+      // Require super admin for maintenance mode (role logged server-side only)
       if (!adminUser.isSuperAdmin) {
         return res.status(403).json({
           success: false,
-          error: 'Super admin access required for maintenance mode'
+          error: 'Access denied'
         });
       }
 
@@ -6333,16 +6404,11 @@ router.get('/audit-logs',
   handleValidationErrors,
   async (req: AuthRequest, res) => {
     try {
-      const {
-        adminId,
-        action,
-        targetType,
-        targetId,
-        startDate,
-        endDate,
-        limit = 50,
-        offset = 0
-      } = req.query;
+      const { adminId, action, targetType, targetId, startDate, endDate } = req.query;
+      const { limit, offset } = safePaginationParams(
+        req.query.limit as string | undefined,
+        req.query.offset as string | undefined
+      );
 
       const result = await AuditService.getLogs({
         adminId: adminId as string,
@@ -6351,8 +6417,8 @@ router.get('/audit-logs',
         targetId: targetId as string,
         startDate: startDate ? new Date(startDate as string) : undefined,
         endDate: endDate ? new Date(endDate as string) : undefined,
-        limit: Number(limit),
-        offset: Number(offset),
+        limit,
+        offset,
       });
 
       logger.info({
@@ -6515,14 +6581,15 @@ router.get('/audit-logs/stats',
  */
 router.get('/payments', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const { page, limit, offset } = safePagePagination(
+      req.query.page as string | undefined,
+      req.query.limit as string | undefined
+    );
     const status = req.query.status as string;
     const type = req.query.type as string;
     const search = req.query.search as string;
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-    const offset = (page - 1) * limit;
 
     // Build where clause
     const where: any = {};

@@ -1,6 +1,6 @@
 /**
  * Civic Organizing API Routes
- * 
+ *
  * Handles petitions, events, signatures, and RSVPs
  * Provides search and filtering capabilities
  */
@@ -11,6 +11,7 @@ import civicOrganizingService from '../services/civicOrganizingService';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import rateLimit from 'express-rate-limit';
 import { logger } from '../services/logger';
+import { safePaginationParams, PAGINATION_LIMITS } from '../utils/safeJson';
 
 const router = express.Router();
 
@@ -287,15 +288,18 @@ router.get('/petitions',
         return res.status(400).json({ error: 'Validation failed', details: errors.array() });
       }
 
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const { limit, offset } = safePaginationParams(
+        req.query.limit as string | undefined,
+        req.query.offset as string | undefined
+      );
+      const page = Math.floor(offset / limit) + 1;
 
       const filters: any = {};
-      
+
       if (req.query.category) filters.category = req.query.category;
       if (req.query.geographicScope) filters.geographicScope = req.query.geographicScope;
       if (req.query.status) filters.status = req.query.status;
-      
+
       if (req.query.proximity && req.query.lat && req.query.lon) {
         filters.proximity = parseFloat(req.query.proximity as string);
         filters.coordinates = {
@@ -772,16 +776,19 @@ router.get('/events',
         return res.status(400).json({ error: 'Validation failed', details: errors.array() });
       }
 
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const { limit, offset } = safePaginationParams(
+        req.query.limit as string | undefined,
+        req.query.offset as string | undefined
+      );
+      const page = Math.floor(offset / limit) + 1;
 
       const filters: any = {};
-      
+
       if (req.query.eventType) filters.eventType = req.query.eventType;
       if (req.query.category) filters.category = req.query.category;
       if (req.query.timeframe) filters.timeframe = req.query.timeframe;
       if (req.query.status) filters.status = req.query.status;
-      
+
       if (req.query.proximity && req.query.lat && req.query.lon) {
         filters.proximity = parseFloat(req.query.proximity as string);
         filters.coordinates = {
@@ -1060,15 +1067,18 @@ router.get('/search',
         return res.status(400).json({ error: 'Validation failed', details: errors.array() });
       }
 
-      const query = req.query.q as string;
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const searchQuery = req.query.q as string;
+      const { limit, offset } = safePaginationParams(
+        req.query.limit as string | undefined,
+        req.query.offset as string | undefined
+      );
+      const page = Math.floor(offset / limit) + 1;
 
       const filters: any = {};
       if (req.query.category) filters.category = req.query.category;
       if (req.query.eventType) filters.eventType = req.query.eventType;
 
-      const result = await civicOrganizingService.searchCivic(query, filters, page, limit);
+      const result = await civicOrganizingService.searchCivic(searchQuery, filters, page, limit);
 
       res.json({
         success: true,
