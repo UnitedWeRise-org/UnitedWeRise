@@ -31,6 +31,7 @@ class UnifiedAuthManager {
         this._isInitialized = false;
         this._isLoggingOut = false; // Prevent re-auth during logout
         this._isRefreshingToken = false; // Flag to prevent concurrent refreshes
+        this._refreshPending = false; // Flag set IMMEDIATELY on visibility change (before debounce)
         this._visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this._proactiveRefreshTimer = null; // Timer for proactive token refresh (14-min interval)
         this._currentAuthState = {
@@ -197,13 +198,58 @@ class UnifiedAuthManager {
     }
 
     /**
+     * Check if a token refresh is pending or in progress
+     * Used by other code to detect ongoing refresh before making logout decisions
+     * @returns {boolean} True if refresh is pending or in progress
+     */
+    isRefreshPending() {
+        return this._refreshPending || this._isRefreshingToken;
+    }
+
+    /**
+     * Wait for any pending token refresh to complete
+     * Used by 401 handlers to wait before verifying session
+     * @param {number} timeoutMs - Maximum time to wait (default 5 seconds)
+     * @returns {Promise<boolean>} True if refresh completed, false if timeout
+     */
+    async waitForPendingRefresh(timeoutMs = 5000) {
+        if (!this._refreshPending && !this._isRefreshingToken) {
+            return true; // No refresh pending
+        }
+
+        console.log('⏳ Waiting for pending token refresh...');
+        const startTime = Date.now();
+
+        while (this._refreshPending || this._isRefreshingToken) {
+            if (Date.now() - startTime > timeoutMs) {
+                console.warn('⚠️ Timeout waiting for token refresh');
+                return false;
+            }
+            await this._sleep(100);
+        }
+
+        console.log('✅ Token refresh completed');
+        return true;
+    }
+
+    /**
      * Handle tab visibility change - refresh token when tab becomes visible after being hidden
      * Debounced to prevent rapid-fire refreshes from multiple visibility events
+     *
+     * CRITICAL: Sets _refreshPending = true IMMEDIATELY (before debounce) so other code
+     * can detect that a refresh is about to happen and wait for it, preventing race conditions
+     * where API calls fire before the refresh completes.
      */
     _handleVisibilityChange() {
         // Clear any pending debounce timer
         if (this._visibilityChangeDebounceTimer) {
             clearTimeout(this._visibilityChangeDebounceTimer);
+        }
+
+        // Set pending flag IMMEDIATELY so other code knows refresh is coming
+        // This prevents race conditions where 401 handlers fire before refresh
+        if (!document.hidden && this.isAuthenticated()) {
+            this._refreshPending = true;
         }
 
         // Debounce visibility changes by 1 second to prevent rapid-fire refreshes
@@ -212,12 +258,17 @@ class UnifiedAuthManager {
                 // Prevent concurrent refreshes from visibility changes
                 if (this._isRefreshingToken) {
                     console.log('⏸️ Visibility change refresh skipped (refresh already in progress)');
+                    this._refreshPending = false;
                     return;
                 }
 
                 // Tab became visible - refresh token to ensure it's still valid
                 console.log('🔄 Tab visible - refreshing token');
-                this.refreshToken(true); // Force refresh
+                this.refreshToken(true).finally(() => {
+                    this._refreshPending = false;
+                });
+            } else {
+                this._refreshPending = false;
             }
         }, 1000); // 1 second debounce
     }

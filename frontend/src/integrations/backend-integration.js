@@ -197,6 +197,25 @@ class BackendIntegration {
                     );
 
                     if (!isInitializationCall && window.appInitializer && window.appInitializer.isAppInitialized()) {
+                        // Check if token refresh is pending (visibility change just happened)
+                        // If so, wait for it to complete before verifying session
+                        if (window.unifiedAuthManager && window.unifiedAuthManager.isRefreshPending()) {
+                            console.log('⏳ Token refresh pending - waiting before session verification...');
+                            await window.unifiedAuthManager.waitForPendingRefresh(5000);
+
+                            // After refresh completes, check if user is still authenticated
+                            if (window.unifiedAuthManager.isAuthenticated()) {
+                                console.log('✅ Token refresh completed - user still authenticated, skipping logout');
+                                if (typeof adminDebugLog !== 'undefined') {
+                                    adminDebugLog('BackendIntegration', 'Token refresh completed after 401 - session restored', {
+                                        originalUrl: args[0]
+                                    });
+                                }
+                                // Don't logout - the original request failed but session is now valid
+                                return response;
+                            }
+                        }
+
                         // Verify session with retry logic before logging out
                         console.warn('⚠️ Received 401 - verifying session with retry...');
 
