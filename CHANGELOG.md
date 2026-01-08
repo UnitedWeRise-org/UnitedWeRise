@@ -1,10 +1,26 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 7, 2026
+**Last Updated**: January 8, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-08] - Fix Page Wake Logout Race Condition
+
+### Bug Fix
+- **Root Cause**: Token refresh was debounced by 1 second on page wake, but API calls fired immediately with expired tokens, triggering logout before refresh could run
+- **Fix**: Added `_refreshPending` flag set IMMEDIATELY on visibility change (before debounce), allowing 401 handlers to wait for pending refresh before making logout decisions
+
+### Changes
+- `unified-manager.js`: Added `_refreshPending` flag, `isRefreshPending()`, `waitForPendingRefresh()` methods
+- `backend-integration.js`: Wait for pending refresh before verifying session on 401
+
+### Technical Details
+- Pattern ported from AdminAuth.js which already had this fix for admin dashboard
+- Coordinates between visibility change handler and global 401 handler to prevent race condition
 
 ---
 
