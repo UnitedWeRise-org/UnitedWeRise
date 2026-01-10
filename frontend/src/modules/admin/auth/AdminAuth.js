@@ -23,6 +23,7 @@ class AdminAuth {
         this.lastTokenRefresh = new Date(); // Initialize to current time to prevent "Infinity minutes" bug
         this.isRefreshingToken = false; // Flag to prevent concurrent refreshes
         this.refreshPending = false; // Flag to signal refresh is about to start (during debounce)
+        this.lastWakeTimestamp = null; // Timestamp of last visibility change (for race condition detection)
         this.isRecovering = false; // Flag to suppress error displays during wake recovery
         this.visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this.API_BASE = this.getApiBase();
@@ -242,9 +243,19 @@ class AdminAuth {
             this.refreshPending = false;
         }
 
+        // Set lastWakeTimestamp IMMEDIATELY and unconditionally when tab becomes visible
+        // This allows didJustWakeUp() to detect recent wake even if isAuthenticated() is false
+        // due to race condition where API calls fire before visibility change
+        if (!document.hidden) {
+            this.lastWakeTimestamp = Date.now();
+        }
+
         // Set refreshPending and isRecovering IMMEDIATELY if refresh will be needed
         // This signals API calls to wait during the 1-second debounce period
         // and suppresses error displays until recovery completes
+        // NOTE: We still check isAuthenticated() here for the refreshPending flag because
+        // the time-based logic (5 min check) requires knowing if we were authenticated
+        // The didJustWakeUp() fallback in AdminAPI.js handles the race condition case
         if (!document.hidden && this.isAuthenticated()) {
             const now = new Date();
             const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
@@ -499,6 +510,16 @@ class AdminAuth {
      */
     isAuthenticated() {
         return window.currentUser && window.currentUser.isAdmin;
+    }
+
+    /**
+     * Check if the page just woke up (became visible recently)
+     * Used as a fallback when refreshPending is false due to race conditions
+     * @param {number} thresholdMs - Time window to consider "just woke" (default 3 seconds)
+     * @returns {boolean} True if page became visible within threshold
+     */
+    didJustWakeUp(thresholdMs = 3000) {
+        return this.lastWakeTimestamp && (Date.now() - this.lastWakeTimestamp < thresholdMs);
     }
 
     /**

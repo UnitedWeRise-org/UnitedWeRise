@@ -197,11 +197,19 @@ class BackendIntegration {
                     );
 
                     if (!isInitializationCall && window.appInitializer && window.appInitializer.isAppInitialized()) {
-                        // Check if token refresh is pending (visibility change just happened)
-                        // If so, wait for it to complete before verifying session
-                        if (window.unifiedAuthManager && window.unifiedAuthManager.isRefreshPending()) {
-                            console.log('⏳ Token refresh pending - waiting before session verification...');
-                            await window.unifiedAuthManager.waitForPendingRefresh(5000);
+                        // Check if token refresh is pending OR if we just woke up (race condition fallback)
+                        // The didJustWakeUp() check handles cases where:
+                        // - Scheduled timers fire before visibility change event
+                        // - The isRefreshPending flag wasn't set due to race condition
+                        const manager = window.unifiedAuthManager;
+                        const shouldWaitForRefresh = manager && (
+                            manager.isRefreshPending() ||
+                            manager.didJustWakeUp(3000) // Within 3 seconds of tab becoming visible
+                        );
+
+                        if (shouldWaitForRefresh) {
+                            console.log('⏳ Token refresh pending or just woke - waiting before session verification...');
+                            await manager.waitForPendingRefresh(5000);
 
                             // After refresh completes, check if user is still authenticated
                             if (window.unifiedAuthManager.isAuthenticated()) {
