@@ -32,6 +32,7 @@ class UnifiedAuthManager {
         this._isLoggingOut = false; // Prevent re-auth during logout
         this._isRefreshingToken = false; // Flag to prevent concurrent refreshes
         this._refreshPending = false; // Flag set IMMEDIATELY on visibility change (before debounce)
+        this._lastWakeTimestamp = null; // Timestamp of last visibility change (for race condition detection)
         this._visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this._proactiveRefreshTimer = null; // Timer for proactive token refresh (14-min interval)
         this._currentAuthState = {
@@ -207,6 +208,16 @@ class UnifiedAuthManager {
     }
 
     /**
+     * Check if the page just woke up (became visible recently)
+     * Used as a fallback when isRefreshPending() returns false due to race conditions
+     * @param {number} thresholdMs - Time window to consider "just woke" (default 3 seconds)
+     * @returns {boolean} True if page became visible within threshold
+     */
+    didJustWakeUp(thresholdMs = 3000) {
+        return this._lastWakeTimestamp && (Date.now() - this._lastWakeTimestamp < thresholdMs);
+    }
+
+    /**
      * Wait for any pending token refresh to complete
      * Used by 401 handlers to wait before verifying session
      * @param {number} timeoutMs - Maximum time to wait (default 5 seconds)
@@ -246,10 +257,16 @@ class UnifiedAuthManager {
             clearTimeout(this._visibilityChangeDebounceTimer);
         }
 
-        // Set pending flag IMMEDIATELY so other code knows refresh is coming
+        // Set pending flag and timestamp IMMEDIATELY so other code knows refresh is coming
         // This prevents race conditions where 401 handlers fire before refresh
-        if (!document.hidden && this.isAuthenticated()) {
+        // NOTE: We DO NOT check isAuthenticated() here because:
+        // 1. API calls may fire before visibility change (scheduled timers)
+        // 2. Those 401s can trigger logout, setting isAuthenticated() to false
+        // 3. Then this flag is never set, defeating the purpose
+        // The debounced refresh below still checks isAuthenticated()
+        if (!document.hidden) {
             this._refreshPending = true;
+            this._lastWakeTimestamp = Date.now();
         }
 
         // Debounce visibility changes by 1 second to prevent rapid-fire refreshes

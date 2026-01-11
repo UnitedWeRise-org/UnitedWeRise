@@ -102,19 +102,25 @@ class AdminAPI {
      * Prevents race condition where API call uses old token during:
      * 1. Active refresh (isRefreshingToken = true)
      * 2. Visibility change debounce period (refreshPending = true)
+     * 3. Recent wake (didJustWakeUp = true) - fallback for race conditions
      */
     async waitForTokenRefresh() {
         const isRefreshActive = () => window.adminAuth?.isRefreshingToken;
         const isRefreshPending = () => window.adminAuth?.refreshPending;
+        // Fallback check: if we just woke up, wait for refresh even if flags aren't set
+        // This handles race conditions where scheduled timers fire before visibility change
+        const didJustWakeUp = () => window.adminAuth?.didJustWakeUp?.(3000);
 
-        if (isRefreshActive() || isRefreshPending()) {
-            const reason = isRefreshActive() ? '(in progress)' : '(pending)';
+        if (isRefreshActive() || isRefreshPending() || didJustWakeUp()) {
+            const reason = isRefreshActive() ? '(in progress)' : isRefreshPending() ? '(pending)' : '(just woke)';
             console.log(`⏸️ Waiting for token refresh to complete... ${reason}`);
 
             const maxWait = 15000; // 15 seconds max (1s debounce + 10s refresh + buffer)
             const startTime = Date.now();
 
-            while ((isRefreshActive() || isRefreshPending()) && (Date.now() - startTime) < maxWait) {
+            // Wait for refresh to complete OR wake grace period to pass
+            // Include didJustWakeUp in condition so we wait for potential refresh to start
+            while ((isRefreshActive() || isRefreshPending() || didJustWakeUp()) && (Date.now() - startTime) < maxWait) {
                 await new Promise(resolve => setTimeout(resolve, 100)); // Check every 100ms
             }
 

@@ -1,20 +1,20 @@
 # Handoff: Page Wake Logout Race Condition Fix
 
 **Date**: 2026-01-08
-**Branch**: development
-**Last Commit**: bbb9059 fix(auth): Prevent logout race condition on page wake
+**Branch**: main (production)
+**Production Commit**: 3dde1a9 (merge commit)
 
 ## Completed Phases
 - [x] Audit: Confirmed root cause from production console logs
 - [x] Plan: Created plan at `.claude/plans/nifty-squishing-manatee.md`
 - [x] Execute: Implemented _refreshPending pattern
-- [x] Test: Pending - needs user verification on staging
+- [x] Test: Verified on staging - 16+ min sleep, stayed logged in
 - [x] Document: Updated CHANGELOG.md
-- [x] Deploy: Pushed to development, awaiting GitHub Actions
+- [x] Deploy: Deployed to staging (bbb9059) and production (3dde1a9)
 
-## Pending Items
-- [ ] Verify fix works on staging (dev.unitedwerise.org)
-- [ ] If verified, merge to main for production
+## Status: DEPLOYED TO PRODUCTION
+- Staging: Verified working (16+ min sleep test passed)
+- Production: Deployed 2026-01-08, awaiting long-term verification
 
 ## Root Cause
 
