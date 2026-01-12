@@ -1,4 +1,13 @@
 # Fix Container Apps deployment with proper ACR authentication
+# SECURITY: Database URL must be set from environment variable
+
+# Validate required environment variable
+if (-not $env:PROD_DATABASE_URL) {
+    Write-Host "ERROR: PROD_DATABASE_URL environment variable not set." -ForegroundColor Red
+    Write-Host "Please set it before running this script:" -ForegroundColor Yellow
+    Write-Host '  $env:PROD_DATABASE_URL = "postgresql://user:pass@host:5432/db?sslmode=require"' -ForegroundColor Gray
+    exit 1
+}
 
 Write-Host "Fixing Container Apps deployment..." -ForegroundColor Green
 
@@ -40,7 +49,7 @@ az containerapp create `
     --env-vars `
         "NODE_ENV=production" `
         "PORT=3001" `
-        "DATABASE_URL=Server=unitedwerise-db.postgres.database.azure.com;Database=postgres;Port=5432;User Id=uwradmin;Password=UWR-Secure2024!;Ssl Mode=Require;" `
+        "DATABASE_URL=$env:PROD_DATABASE_URL" `
         "AZURE_STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --resource-group unitedwerise-rg --name uwrstorage2425 --query connectionString -o tsv)" `
         "JWT_SECRET=UWR-JWT-Secret-$(Get-Random)-$(Get-Date -Format 'yyyyMMdd')"
 

@@ -41,6 +41,7 @@ const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Import webSocketService for real-time notifications
 let webSocketService = null;
@@ -166,9 +167,8 @@ const getWebSocketService = async () => {
 router.get('/', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { limit = 20, offset = 0, unreadOnly } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { unreadOnly } = req.query;
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const whereClause = { receiverId: userId };
         if (unreadOnly === 'true') {
             whereClause.read = false;

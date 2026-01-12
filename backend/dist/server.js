@@ -100,14 +100,33 @@ app.use((0, helmet_1.default)({
         includeSubDomains: true,
         preload: true
     },
+    // X-Frame-Options: DENY - Prevents clickjacking attacks
     frameguard: { action: 'deny' },
+    // X-Content-Type-Options: nosniff - Prevents MIME type sniffing
     noSniff: true,
+    // X-XSS-Protection: 1; mode=block - Legacy XSS protection (deprecated but still useful)
     xssFilter: true,
-    referrerPolicy: { policy: 'same-origin' },
+    // Referrer-Policy: strict-origin-when-cross-origin - Balances privacy with functionality
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    // Cross-origin policies for API responses
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: { policy: 'same-origin' },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    // X-Permitted-Cross-Domain-Policies: none - Prevents Adobe products from loading data
+    permittedCrossDomainPolicies: { permittedPolicies: 'none' },
 }));
+// Permissions-Policy header - Controls browser features available to the page
+// NOTE: Helmet does not provide Permissions-Policy, so we add it manually
+app.use((req, res, next) => {
+    // Restrict potentially dangerous browser features
+    // - geolocation: Allow only from same origin (users can share location if needed)
+    // - microphone/camera: Disabled (not used in this application)
+    // - payment: Disabled (payments handled via Stripe redirect, not Payment Request API)
+    // - usb/bluetooth: Disabled (not needed)
+    // - accelerometer/gyroscope: Disabled (not needed)
+    res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(), camera=(), payment=(), usb=(), bluetooth=(), accelerometer=(), gyroscope=()');
+    next();
+});
 // Apply burst limiter first (shorter window, catches rapid requests)
 app.use(rateLimiting_1.burstLimiter);
 // Then apply general API rate limiting (longer window, more permissive)
@@ -401,6 +420,55 @@ const gracefulShutdown = async () => {
 // Listen for shutdown signals
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    logger_2.logger.error({
+        err: error,
+        stack: error.stack,
+        event: 'uncaught_exception'
+    }, 'Uncaught exception - initiating shutdown');
+    // Give time for logs to flush, then exit
+    setTimeout(() => {
+        process.exit(1);
+    }, 1000);
+});
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    logger_2.logger.error({
+        reason: reason instanceof Error ? reason.message : String(reason),
+        stack: reason instanceof Error ? reason.stack : undefined,
+        event: 'unhandled_rejection'
+    }, 'Unhandled promise rejection');
+    // Check if this is a critical error that should trigger shutdown
+    if (isCriticalError(reason)) {
+        logger_2.logger.error('Critical unhandled rejection - initiating shutdown');
+        setTimeout(() => process.exit(1), 1000);
+    }
+});
+// Helper to determine if an error is critical enough to warrant shutdown
+function isCriticalError(error) {
+    if (error instanceof Error) {
+        // Database connection lost
+        if (error.message.includes('ECONNREFUSED') ||
+            error.message.includes('Connection terminated')) {
+            return true;
+        }
+        // Out of memory
+        if (error.message.includes('ENOMEM')) {
+            return true;
+        }
+    }
+    return false;
+}
+// Also add warning for deprecation notices
+process.on('warning', (warning) => {
+    logger_2.logger.warn({
+        name: warning.name,
+        message: warning.message,
+        stack: warning.stack,
+        event: 'process_warning'
+    }, 'Node.js process warning');
+});
 /**
  * Validates that environment configuration is consistent
  * Prevents misconfigured deployments from starting

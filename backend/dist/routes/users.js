@@ -12,6 +12,7 @@ const relationshipService_1 = require("../services/relationshipService");
 const activityTracker_1 = require("../services/activityTracker");
 const client_1 = require("@prisma/client");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -627,13 +628,12 @@ router.delete('/follow/:userId', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/search', auth_1.requireAuth, async (req, res) => {
     try {
-        const { q, limit = 10, offset = 0 } = req.query;
+        const { q } = req.query;
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const currentUserId = req.user.id;
         const users = await prisma_1.prisma.user.findMany({
             where: {
@@ -778,9 +778,7 @@ router.get('/search', auth_1.requireAuth, async (req, res) => {
 router.get('/:userId/complete', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Get authenticated user ID if available
         const currentUserId = req.user?.id;
         // Parallel fetch all profile-related data
@@ -1048,9 +1046,7 @@ router.get('/by-username/:username', async (req, res) => {
 router.get('/:userId/followers', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const followers = await prisma_1.prisma.follow.findMany({
             where: { followingId: userId },
             include: {
@@ -1125,9 +1121,7 @@ router.get('/:userId/followers', async (req, res) => {
 router.get('/:userId/following', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const following = await prisma_1.prisma.follow.findMany({
             where: { followerId: userId },
             include: {
@@ -1704,7 +1698,9 @@ router.put('/notification-preferences', auth_1.requireAuth, async (req, res) => 
 router.get('/activity/me', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { types, search, offset = '0', limit = '20' } = req.query;
+        const { types, search } = req.query;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset, 50 // Max 50 items for activity
+        );
         // Parse activity types if provided
         let activityTypes;
         if (types && typeof types === 'string') {
@@ -1713,8 +1709,8 @@ router.get('/activity/me', auth_1.requireAuth, async (req, res) => {
         const activities = await activityTracker_1.ActivityTracker.getUserActivity(userId, {
             types: activityTypes,
             search: search,
-            offset: parseInt(offset),
-            limit: Math.min(parseInt(limit), 50), // Max 50 items
+            offset,
+            limit,
             includeTarget: true
         });
         // Get counts for filter UI
@@ -1725,9 +1721,9 @@ router.get('/activity/me', auth_1.requireAuth, async (req, res) => {
                 activities,
                 counts,
                 pagination: {
-                    offset: parseInt(offset),
-                    limit: parseInt(limit),
-                    hasMore: activities.length === parseInt(limit)
+                    offset,
+                    limit,
+                    hasMore: activities.length === limit
                 }
             }
         });
@@ -1859,7 +1855,9 @@ router.patch('/me/preferences', auth_1.requireAuth, async (req, res) => {
 router.get('/activity/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { types, offset = '0', limit = '20' } = req.query;
+        const { types } = req.query;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset, 20 // Lower limit for public activity
+        );
         // For public activity, only show certain types and no deleted content
         const publicActivityTypes = ['POST_CREATED', 'COMMENT_CREATED', 'LIKE_ADDED', 'FOLLOW_ADDED'];
         let activityTypes = publicActivityTypes;
@@ -1871,8 +1869,8 @@ router.get('/activity/:userId', async (req, res) => {
         }
         const activities = await activityTracker_1.ActivityTracker.getUserActivity(userId, {
             types: activityTypes,
-            offset: parseInt(offset),
-            limit: Math.min(parseInt(limit), 20), // Lower limit for public
+            offset,
+            limit,
             includeTarget: true
         });
         // Filter out deleted content for public view
@@ -1889,9 +1887,9 @@ router.get('/activity/:userId', async (req, res) => {
             data: {
                 activities: publicActivities,
                 pagination: {
-                    offset: parseInt(offset),
-                    limit: parseInt(limit),
-                    hasMore: publicActivities.length === parseInt(limit)
+                    offset,
+                    limit,
+                    hasMore: publicActivities.length === limit
                 }
             }
         });

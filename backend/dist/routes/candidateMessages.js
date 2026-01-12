@@ -10,6 +10,7 @@ const auth_1 = require("../middleware/auth");
 const candidateInboxService_1 = require("../services/candidateInboxService");
 const metricsService_1 = require("../services/metricsService");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -220,12 +221,13 @@ router.get('/:candidateId/inbox', auth_1.requireAuth, async (req, res) => {
     try {
         const { candidateId } = req.params;
         const userId = req.user.id;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const filters = {
             status: req.query.status ? (Array.isArray(req.query.status) ? req.query.status : [req.query.status]) : undefined,
             category: req.query.category ? (Array.isArray(req.query.category) ? req.query.category : [req.query.category]) : undefined,
             priority: req.query.priority ? (Array.isArray(req.query.priority) ? req.query.priority : [req.query.priority]) : undefined,
-            limit: req.query.limit ? parseInt(req.query.limit) : 20,
-            offset: req.query.offset ? parseInt(req.query.offset) : 0
+            limit,
+            offset
         };
         const inboxData = await candidateInboxService_1.CandidateInboxService.getCandidateInbox(candidateId, userId, filters);
         // Track inbox access
@@ -470,11 +472,12 @@ router.post('/inquiry/:inquiryId/respond', auth_1.requireAuth, async (req, res) 
 router.get('/:candidateId/public-qa', async (req, res) => {
     try {
         const { candidateId } = req.params;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const filters = {
             category: req.query.category ? (Array.isArray(req.query.category) ? req.query.category : [req.query.category]) : undefined,
             pinned: req.query.pinned ? req.query.pinned === 'true' : undefined,
-            limit: req.query.limit ? parseInt(req.query.limit) : 20,
-            offset: req.query.offset ? parseInt(req.query.offset) : 0
+            limit,
+            offset
         };
         const qaData = await candidateInboxService_1.CandidateInboxService.getPublicQA(candidateId, filters);
         // Track public Q&A views

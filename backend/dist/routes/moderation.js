@@ -14,17 +14,20 @@ const rateLimiting_1 = require("../middleware/rateLimiting");
 const metricsService_1 = require("../services/metricsService");
 const candidateReportService_1 = require("../services/candidateReportService");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 const requireModerator = async (req, res, next) => {
     if (!req.user?.isModerator && !req.user?.isAdmin) {
-        return res.status(403).json({ error: 'Moderator access required' });
+        // Role info logged server-side only
+        return res.status(403).json({ error: 'Access denied' });
     }
     next();
 };
 const requireAdmin = async (req, res, next) => {
     if (!req.user?.isAdmin) {
-        return res.status(403).json({ error: 'Admin access required' });
+        // Role info logged server-side only
+        return res.status(403).json({ error: 'Access denied' });
     }
     next();
 };
@@ -211,9 +214,9 @@ router.post('/reports', auth_1.requireAuth, rateLimiting_1.apiLimiter, validatio
 router.get('/reports/my', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 20, 50);
-        const offset = (page - 1) * limit;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset, 50 // Max limit for user reports
+        );
+        const page = Math.floor(offset / limit) + 1;
         const reports = await prisma_1.prisma.report.findMany({
             where: { reporterId: userId },
             include: {
@@ -311,12 +314,12 @@ router.get('/reports/my', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/reports', auth_1.requireAuth, requireModerator, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset, 50 // Max limit for moderation reports
+        );
+        const page = Math.floor(offset / limit) + 1;
         const status = req.query.status || 'PENDING';
         const priority = req.query.priority;
         const targetType = req.query.targetType;
-        const offset = (page - 1) * limit;
         const where = {};
         if (status && status !== 'all')
             where.status = status;

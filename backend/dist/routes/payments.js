@@ -39,6 +39,7 @@ const stripeService_1 = require("../services/stripeService");
 const prisma_1 = require("../lib/prisma");
 const express_validator_1 = require("express-validator");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = (0, express_1.Router)();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -282,7 +283,8 @@ router.post('/fee', auth_1.requireAuth, [
 router.get('/history', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { type, limit = 10, offset = 0 } = req.query;
+        const { type } = req.query;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const where = { userId };
         if (type) {
             where.type = type;
@@ -290,8 +292,8 @@ router.get('/history', auth_1.requireAuth, async (req, res) => {
         const payments = await prisma_1.prisma.payment.findMany({
             where,
             orderBy: { createdAt: 'desc' },
-            take: Number(limit),
-            skip: Number(offset),
+            take: limit,
+            skip: offset,
             include: {
                 refunds: true
             }
@@ -302,7 +304,7 @@ router.get('/history', auth_1.requireAuth, async (req, res) => {
             data: {
                 payments,
                 total,
-                hasMore: Number(offset) + payments.length < total
+                hasMore: offset + payments.length < total
             }
         });
     }
@@ -541,7 +543,8 @@ router.get('/receipt/:paymentId', auth_1.requireAuth, async (req, res) => {
 router.get('/tax-summary/:year', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const year = parseInt(req.params.year);
+        const rawYear = parseInt(req.params.year);
+        const year = Number.isNaN(rawYear) || rawYear < 1900 || rawYear > 2100 ? new Date().getFullYear() : rawYear;
         const startDate = new Date(year, 0, 1);
         const endDate = new Date(year + 1, 0, 1);
         const donations = await prisma_1.prisma.payment.findMany({

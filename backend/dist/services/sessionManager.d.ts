@@ -40,6 +40,11 @@ declare class SessionManager {
     }>;
     /**
      * Validate refresh token and return user data
+     *
+     * SECURITY: Implements proper grace period handling for token rotation.
+     * During rotation, the old token has revokedAt set to a future timestamp.
+     * The token remains valid until that timestamp passes.
+     *
      * @param token - Plaintext refresh token from cookie
      * @returns User data and token record, or null if invalid
      */
@@ -131,9 +136,16 @@ declare class SessionManager {
     }>;
     /**
      * Rotate refresh token (invalidate old, create new) - SECURITY BEST PRACTICE
+     *
+     * SECURITY: Implements token rotation with grace period to prevent token theft attacks.
+     * - Old token is marked as "rotating" with a future revocation timestamp
+     * - Old token remains valid during grace period (handles concurrent requests)
+     * - After grace period expires, old token is fully rejected
+     * - All rotation events are logged for security monitoring
+     *
      * @param oldToken - Current refresh token to invalidate
      * @param newToken - New refresh token to store
-     * @param gracePeriodSeconds - Keep old token valid for N seconds (handles concurrent refresh)
+     * @param gracePeriodSeconds - Keep old token valid for N seconds (default: 30s, handles concurrent refresh)
      * @returns New token record
      */
     rotateRefreshToken(oldToken: string, newToken: string, gracePeriodSeconds?: number): Promise<{

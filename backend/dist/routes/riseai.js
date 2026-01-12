@@ -16,6 +16,7 @@ const riseAIAgentService_1 = require("../services/riseAIAgentService");
 const argumentLedgerService_1 = require("../services/argumentLedgerService");
 const factClaimService_1 = require("../services/factClaimService");
 const logger_1 = __importDefault(require("../utils/logger"));
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // ==========================================
 // RiseAI Core Endpoints
@@ -83,7 +84,7 @@ router.get('/interaction/:id', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/my-interactions', auth_1.requireAuth, async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 10;
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const interactions = await riseAIMentionService_1.RiseAIMentionService.getUserInteractions(req.user.id, limit);
         return res.json(interactions);
     }
@@ -170,7 +171,7 @@ router.get('/admin/settings', auth_1.requireAuth, auth_1.requireAdmin, async (re
  */
 router.get('/arguments', async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 20;
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const arguments_ = await argumentLedgerService_1.ArgumentLedgerService.getTopArguments(limit);
         return res.json(arguments_);
     }
@@ -247,12 +248,13 @@ router.post('/arguments/:id/refute', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/facts', async (req, res) => {
     try {
-        const { query, limit = '10' } = req.query;
+        const { query } = req.query;
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         if (query) {
-            const facts = await factClaimService_1.FactClaimService.searchFacts(query, parseInt(limit));
+            const facts = await factClaimService_1.FactClaimService.searchFacts(query, limit);
             return res.json(facts);
         }
-        const facts = await factClaimService_1.FactClaimService.getEstablishedFacts(0.5, parseInt(limit));
+        const facts = await factClaimService_1.FactClaimService.getEstablishedFacts(0.5, limit);
         return res.json(facts);
     }
     catch (error) {

@@ -11,6 +11,12 @@ const engagementScoringService_1 = require("../services/engagementScoringService
 const slotRollService_1 = require("../services/slotRollService");
 const riseAIEnrichmentService_1 = require("../services/riseAIEnrichmentService");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
+/**
+ * Maximum number of records to fetch from database in any single query.
+ * Prevents memory exhaustion attacks via large offset+limit combinations.
+ */
+const MAX_FETCH = 1000;
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -143,17 +149,17 @@ async function getFriendIds(userId) {
 router.get('/', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { limit = 50, offset = 0 } = req.query;
+        // Apply safe pagination limits to prevent memory exhaustion
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Parse custom weights if provided (for A/B testing or user preferences)
-        const customWeights = req.query.weights ? JSON.parse(req.query.weights) : undefined;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        // Uses safeJSONParse to handle malformed JSON gracefully
+        const customWeights = (0, safeJson_1.safeJSONParse)(req.query.weights, undefined);
         // Get friend IDs for audience filtering
         const friendIds = await getFriendIds(userId);
         // Generate larger feed and slice for pagination
-        // We need to fetch more than just limit+offset to ensure randomization
-        // Fetch extra posts to account for audience filtering
-        const fetchLimit = (limitNum + offsetNum + 50) * 1.5; // Get extra posts for audience filtering
+        // We need to fetch more than just limit to ensure randomization
+        // Fetch extra posts to account for audience filtering, but cap at MAX_FETCH
+        const fetchLimit = Math.min((limitNum + 50) * 1.5, MAX_FETCH);
         const feedResult = await probabilityFeedService_1.ProbabilityFeedService.generateFeed(userId, Math.ceil(fetchLimit), customWeights);
         // Apply audience filtering based on friendship status
         const audienceFilteredPosts = filterPostsByAudience(feedResult.posts, friendIds);
@@ -302,9 +308,8 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
 router.get('/following', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { limit = 50, offset = 0 } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        // Apply safe pagination limits to prevent memory exhaustion
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Fetch all relationship types in parallel for efficiency
         const [follows, subscriptions, friendships] = await Promise.all([
             prisma_1.prisma.follow.findMany({
@@ -343,7 +348,8 @@ router.get('/following', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Fetch more posts than needed for proper scoring and pagination
-        const fetchLimit = limitNum + offsetNum + 50;
+        // Cap at MAX_FETCH to prevent memory exhaustion
+        const fetchLimit = Math.min(limitNum + 50, MAX_FETCH);
         // Get posts from all related users (exclude thread continuations - only show heads/standalone)
         const posts = await prisma_1.prisma.post.findMany({
             where: {
@@ -538,9 +544,8 @@ router.get('/following', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/trending', async (req, res) => {
     try {
-        const { limit = 20, offset = 0 } = req.query;
-        const limitNum = Math.max(1, parseInt(limit.toString()) || 20);
-        const offsetNum = Math.max(0, parseInt(offset.toString()) || 0);
+        // Apply safe pagination limits to prevent memory exhaustion
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Check if any posts exist first
         const totalPosts = await prisma_1.prisma.post.count();
         if (totalPosts === 0) {
@@ -604,7 +609,7 @@ router.get('/trending', async (req, res) => {
             orderBy: [
                 { createdAt: 'desc' }
             ],
-            take: limitNum * 3 // Get more posts to calculate engagement scores
+            take: Math.min(limitNum * 3, MAX_FETCH) // Get more posts for scoring, capped at MAX_FETCH
         });
         // Calculate engagement scores for all posts
         const postsWithScores = trendingPosts.map(post => {
@@ -647,14 +652,12 @@ router.get('/trending', async (req, res) => {
     catch (error) {
         logger_1.logger.error({ error }, 'Get trending posts error');
         // Return safe fallback instead of 500 error
-        const { limit = 20, offset = 0 } = req.query;
-        const limitNum = Math.max(1, parseInt(limit.toString()) || 20);
-        const offsetNum = Math.max(0, parseInt(offset.toString()) || 0);
+        const { limit: fallbackLimit, offset: fallbackOffset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         res.json({
             posts: [],
             pagination: {
-                limit: limitNum,
-                offset: offsetNum,
+                limit: fallbackLimit,
+                offset: fallbackOffset,
                 count: 0
             },
             error: 'Trending posts temporarily unavailable'
@@ -823,6 +826,10 @@ router.get('/public', async (req, res) => {
             ? req.query.excludeIds.split(',').filter(id => id.trim())
             : [];
         const feedResult = await slotRollService_1.SlotRollService.generateFeed(null, { slots: limit, excludeIds });
+        // Get postIds for enrichment
+        const postIds = feedResult.posts.map(({ post }) => post.id);
+        // Enrich posts with RiseAI responses (no userId for public feed)
+        const riseAIResponses = await riseAIEnrichmentService_1.RiseAIEnrichmentService.enrichPostsWithResponses(postIds, undefined);
         // Transform posts for response (remove internal scoring fields)
         const posts = feedResult.posts.map(({ post, pool }) => ({
             id: post.id,
@@ -834,6 +841,7 @@ router.get('/public', async (req, res) => {
             sharesCount: post._count?.shares || 0,
             createdAt: post.createdAt,
             updatedAt: post.updatedAt,
+            riseAIResponse: riseAIResponses.get(post.id) || undefined,
             _pool: pool // Include pool type for debugging/analytics
         }));
         res.json({
@@ -923,6 +931,8 @@ router.get('/slot-roll', auth_1.requireAuth, async (req, res) => {
             select: { postId: true }
         });
         const likedPostIds = new Set(userLikes.map(like => like.postId));
+        // Enrich posts with RiseAI responses (batch for efficiency)
+        const riseAIResponses = await riseAIEnrichmentService_1.RiseAIEnrichmentService.enrichPostsWithResponses(postIds, userId);
         const posts = audienceFilteredPosts.map(({ post, pool }) => ({
             id: post.id,
             content: post.content,
@@ -934,6 +944,7 @@ router.get('/slot-roll', auth_1.requireAuth, async (req, res) => {
             isLiked: likedPostIds.has(post.id),
             createdAt: post.createdAt,
             updatedAt: post.updatedAt,
+            riseAIResponse: riseAIResponses.get(post.id) || undefined,
             _pool: pool
         }));
         res.json({

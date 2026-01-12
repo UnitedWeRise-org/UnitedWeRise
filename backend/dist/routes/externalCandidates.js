@@ -43,13 +43,15 @@ const metricsService_1 = require("../services/metricsService");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const prisma_1 = require("../lib/prisma");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Admin Routes
 // POST /api/external-candidates/import-address - Import candidates for specific address (Admin only)
 router.post('/import-address', auth_1.requireAuth, rateLimiting_1.apiLimiter, async (req, res) => {
     try {
         if (!req.user?.isAdmin) {
-            return res.status(403).json({ error: 'Admin access required' });
+            // Role info logged server-side only
+            return res.status(403).json({ error: 'Access denied' });
         }
         const { address } = req.body;
         if (!address) {
@@ -75,7 +77,8 @@ router.post('/import-address', auth_1.requireAuth, rateLimiting_1.apiLimiter, as
 router.post('/bulk-import', auth_1.requireAuth, rateLimiting_1.apiLimiter, async (req, res) => {
     try {
         if (!req.user?.isAdmin) {
-            return res.status(403).json({ error: 'Admin access required' });
+            // Role info logged server-side only
+            return res.status(403).json({ error: 'Access denied' });
         }
         // Start bulk import (this could take a while)
         const result = await externalCandidateService_1.ExternalCandidateService.bulkImportFromUserLocations();
@@ -191,15 +194,15 @@ router.post('/:id/claim', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to claim candidate profile' });
     }
 });
-// GET /api/external-candidates/search - Search external candidates  
+// GET /api/external-candidates/search - Search external candidates
 router.get('/search', async (req, res) => {
     try {
-        const { q, limit = 10 } = req.query;
+        const { q } = req.query;
+        const { limit: limitNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
         const searchTerm = q.toString();
-        const limitNum = parseInt(limit.toString());
         const candidates = await externalCandidateService_1.ExternalCandidateService.searchExternalCandidates(searchTerm, limitNum);
         res.json({
             candidates,
@@ -249,7 +252,8 @@ router.get('/health', async (req, res) => {
 router.post('/cache/clear', auth_1.requireAuth, async (req, res) => {
     try {
         if (!req.user?.isAdmin) {
-            return res.status(403).json({ error: 'Admin access required' });
+            // Role info logged server-side only
+            return res.status(403).json({ error: 'Access denied' });
         }
         const { provider } = req.body;
         const { ApiCacheService } = await Promise.resolve().then(() => __importStar(require('../services/apiCache')));

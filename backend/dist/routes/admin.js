@@ -53,20 +53,39 @@ const crypto_1 = __importDefault(require("crypto"));
 const speakeasy = __importStar(require("speakeasy"));
 const logger_1 = require("../services/logger");
 const auditService_1 = require("../services/auditService");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
-// Admin-only middleware
-const requireAdmin = async (req, res, next) => {
-    if (!req.user?.isAdmin) {
-        return res.status(403).json({ error: 'Admin access required' });
-    }
-    next();
-};
-// Validation middleware
+/**
+ * Maximum page number for page-based pagination
+ * With MAX_OFFSET of 10000 and typical limit of 50, max page = 200
+ */
+const MAX_PAGE = 200;
+/**
+ * Helper to convert page-based pagination to safe limit/offset
+ * Ensures page doesn't exceed MAX_PAGE to prevent deep pagination attacks
+ */
+function safePagePagination(page, limit, maxLimit = safeJson_1.PAGINATION_LIMITS.MAX_LIMIT) {
+    const parsedPage = typeof page === 'string' ? parseInt(page, 10) : (page ?? 1);
+    const parsedLimit = typeof limit === 'string' ? parseInt(limit, 10) : (limit ?? 50);
+    const safePage = Math.min(Math.max(1, isNaN(parsedPage) ? 1 : parsedPage), MAX_PAGE);
+    const safeLimit = Math.min(Math.max(1, isNaN(parsedLimit) ? 50 : parsedLimit), maxLimit);
+    const offset = (safePage - 1) * safeLimit;
+    return { page: safePage, limit: safeLimit, offset };
+}
+// Validation middleware - returns sanitized field names only, no internal details
 const handleValidationErrors = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ error: 'Validation failed', details: errors.array() });
+        // Log full validation errors server-side for debugging
+        logger_1.logger.warn({
+            endpoint: req.path,
+            method: req.method,
+            validationErrors: errors.array()
+        }, 'Admin validation failed');
+        // Return sanitized error to client - only field names, no internal details
+        const invalidFields = errors.array().map(e => e.type === 'field' ? e.path : 'unknown').filter(Boolean);
+        return res.status(400).json({ error: 'Validation failed', fields: invalidFields });
     }
     next();
 };
@@ -106,7 +125,7 @@ const handleValidationErrors = (req, res, next) => {
  *       500:
  *         description: Server error
  */
-router.get('/dashboard', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/dashboard', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     // Generate unique request ID for tracing
     const requestId = crypto_1.default.randomBytes(4).toString('hex');
     logger_1.logger.info({
@@ -245,7 +264,7 @@ router.get('/dashboard', auth_1.requireStagingAuth, requireAdmin, async (req, re
  *       500:
  *         description: Server error
  */
-router.get('/batch/dashboard-init', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/batch/dashboard-init', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         // Fetch all dashboard data in parallel for maximum performance
         const [dashboardStats, recentUsers, recentPosts, openReports] = await Promise.all([
@@ -427,14 +446,12 @@ router.get('/batch/dashboard-init', auth_1.requireStagingAuth, requireAdmin, asy
     }
 });
 // User Management
-router.get('/users', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/users', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+        const { page, limit, offset } = safePagePagination(req.query.page, req.query.limit);
         const search = req.query.search;
         const status = req.query.status; // 'active', 'suspended', 'verified'
         const role = req.query.role; // 'user', 'moderator', 'admin'
-        const offset = (page - 1) * limit;
         const where = {};
         if (search) {
             where.OR = [
@@ -546,7 +563,7 @@ router.get('/users', auth_1.requireStagingAuth, requireAdmin, async (req, res) =
     }
 });
 // Get detailed user info
-router.get('/users/:userId', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/users/:userId', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
         const user = await prisma_1.prisma.user.findUnique({
@@ -666,7 +683,7 @@ router.get('/users/:userId', auth_1.requireStagingAuth, requireAdmin, async (req
     }
 });
 // Suspend user
-router.post('/users/:userId/suspend', auth_1.requireAuth, requireAdmin, [
+router.post('/users/:userId/suspend', auth_1.requireAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('reason').notEmpty().trim().withMessage('Reason is required'),
     (0, express_validator_1.body)('type').isIn(['TEMPORARY', 'PERMANENT', 'POSTING_RESTRICTED', 'COMMENTING_RESTRICTED']),
     (0, express_validator_1.body)('duration').optional().isInt({ min: 1 }).withMessage('Duration must be positive number'),
@@ -681,7 +698,7 @@ router.post('/users/:userId/suspend', auth_1.requireAuth, requireAdmin, [
             return res.status(404).json({ error: 'User not found' });
         }
         if (user.isAdmin) {
-            return res.status(403).json({ error: 'Cannot suspend admin users' });
+            return res.status(403).json({ error: 'This action is not permitted' });
         }
         let endsAt;
         if (type === 'TEMPORARY' && duration) {
@@ -713,7 +730,7 @@ router.post('/users/:userId/suspend', auth_1.requireAuth, requireAdmin, [
     }
 });
 // Lift suspension
-router.post('/users/:userId/unsuspend', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/users/:userId/unsuspend', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
         // Deactivate all active suspensions
@@ -741,7 +758,7 @@ router.post('/users/:userId/unsuspend', auth_1.requireStagingAuth, requireAdmin,
     }
 });
 // Promote/demote user roles
-router.post('/users/:userId/role', auth_1.requireAuth, requireAdmin, [
+router.post('/users/:userId/role', auth_1.requireAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('role').isIn(['user', 'moderator', 'admin', 'super-admin']).withMessage('Invalid role'),
     handleValidationErrors
 ], async (req, res) => {
@@ -814,7 +831,7 @@ router.post('/users/:userId/role', auth_1.requireAuth, requireAdmin, [
     }
 });
 // Delete user account (requires fresh TOTP)
-router.delete('/users/:userId', auth_1.requireAuth, requireAdmin, [
+router.delete('/users/:userId', auth_1.requireAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('deletionType').optional().isIn(['soft', 'hard']).withMessage('Invalid deletion type'),
     (0, express_validator_1.body)('reason').isLength({ min: 10, max: 500 }).withMessage('Reason must be 10-500 characters'),
     handleValidationErrors
@@ -934,15 +951,15 @@ router.delete('/users/:userId', auth_1.requireAuth, requireAdmin, [
     }
 });
 // Permanently delete message (Super-Admin only with TOTP)
-router.delete('/messages/:messageId', auth_1.requireAuth, requireAdmin, [
+router.delete('/messages/:messageId', auth_1.requireAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('reason').isLength({ min: 10, max: 500 }).withMessage('Reason must be 10-500 characters'),
     handleValidationErrors
 ], async (req, res) => {
     try {
-        // Super-admin check
+        // Super-admin check (role logged server-side only)
         if (!req.user?.isSuperAdmin) {
             return res.status(403).json({
-                error: 'Super admin access required for message deletion'
+                error: 'Access denied'
             });
         }
         const { messageId } = req.params;
@@ -1043,13 +1060,11 @@ router.delete('/messages/:messageId', auth_1.requireAuth, requireAdmin, [
     }
 });
 // Content Management
-router.get('/content/flagged', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/content/flagged', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+        const { page, limit, offset } = safePagePagination(req.query.page, req.query.limit);
         const flagType = req.query.flagType;
         const confidence = parseFloat(req.query.minConfidence) || 0;
-        const offset = (page - 1) * limit;
         const where = { resolved: false };
         if (flagType)
             where.flagType = flagType;
@@ -1127,7 +1142,7 @@ router.get('/content/flagged', auth_1.requireStagingAuth, requireAdmin, async (r
     }
 });
 // Resolve content flag
-router.post('/content/flags/:flagId/resolve', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/content/flags/:flagId/resolve', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { flagId } = req.params;
         const adminId = req.user.id;
@@ -1153,9 +1168,10 @@ router.post('/content/flags/:flagId/resolve', auth_1.requireStagingAuth, require
     }
 });
 // System Analytics - Enhanced with comprehensive metrics
-router.get('/analytics', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/analytics', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const days = parseInt(req.query.days) || 30;
+        const rawDays = parseInt(req.query.days);
+        const days = Number.isNaN(rawDays) || rawDays < 1 || rawDays > 365 ? 30 : rawDays;
         const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
         // Pre-calculate date ranges for SQL queries
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -1383,7 +1399,7 @@ router.get('/analytics', auth_1.requireStagingAuth, requireAdmin, async (req, re
     }
 });
 // System Settings
-router.get('/settings', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/settings', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         // Return current system configuration
         const settings = {
@@ -1422,15 +1438,15 @@ router.get('/settings', auth_1.requireStagingAuth, requireAdmin, async (req, res
     }
 });
 // Security Events Endpoint
-router.get('/security/events', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/security/events', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+        const { page, limit, offset } = safePagePagination(req.query.page, req.query.limit);
         const eventType = req.query.eventType;
-        const minRiskScore = parseInt(req.query.minRiskScore) || 0;
-        const days = parseInt(req.query.days) || 7;
+        const rawMinRiskScore = parseInt(req.query.minRiskScore);
+        const minRiskScore = Number.isNaN(rawMinRiskScore) || rawMinRiskScore < 0 || rawMinRiskScore > 100 ? 0 : rawMinRiskScore;
+        const rawDays = parseInt(req.query.days);
+        const days = Number.isNaN(rawDays) || rawDays < 1 || rawDays > 365 ? 7 : rawDays;
         const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-        const offset = (page - 1) * limit;
         const events = await securityService_1.SecurityService.getSecurityEvents({
             limit,
             offset,
@@ -1466,7 +1482,7 @@ router.get('/security/events', auth_1.requireStagingAuth, requireAdmin, async (r
     }
 });
 // Security Statistics Endpoint
-router.get('/security/stats', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/security/stats', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const timeframe = req.query.timeframe || '24h';
         const stats = await securityService_1.SecurityService.getSecurityStats(timeframe);
@@ -1519,11 +1535,11 @@ router.get('/security/stats', auth_1.requireStagingAuth, requireAdmin, async (re
  *       403:
  *         description: Not authorized (admin required)
  */
-router.get('/security/blocked-ips', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/security/blocked-ips', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const includeExpired = req.query.includeExpired === 'true';
-        const limit = Math.min(parseInt(req.query.limit) || 100, 500);
-        const offset = parseInt(req.query.offset) || 0;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset, 500 // Higher limit for IP list
+        );
         const blockedIPs = await securityService_1.SecurityService.getBlockedIPs({
             includeExpired,
             limit,
@@ -1589,7 +1605,7 @@ router.get('/security/blocked-ips', auth_1.requireStagingAuth, requireAdmin, asy
  *       403:
  *         description: Super admin required
  */
-router.post('/security/block-ip', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/security/block-ip', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('ipAddress').isString().trim().notEmpty().withMessage('IP address is required'),
     (0, express_validator_1.body)('reason').isString().trim().isLength({ min: 5, max: 500 }).withMessage('Reason must be 5-500 characters'),
     (0, express_validator_1.body)('expiresAt').optional().isISO8601().withMessage('Invalid expiration date format')
@@ -1598,15 +1614,22 @@ router.post('/security/block-ip', auth_1.requireStagingAuth, requireAdmin, [
         // Validate request
         const errors = (0, express_validator_1.validationResult)(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ success: false, errors: errors.array() });
+            // Log full validation errors server-side
+            logger_1.logger.warn({
+                endpoint: '/api/admin/security/block-ip',
+                validationErrors: errors.array()
+            }, 'Block IP validation failed');
+            // Return sanitized error to client
+            const invalidFields = errors.array().map(e => e.type === 'field' ? e.path : 'unknown').filter(Boolean);
+            return res.status(400).json({ success: false, error: 'Validation failed', fields: invalidFields });
         }
         const { ipAddress, reason, expiresAt } = req.body;
         const adminUser = req.user;
-        // Require super admin for IP blocking
+        // Require super admin for IP blocking (role logged server-side only)
         if (!adminUser.isSuperAdmin) {
             return res.status(403).json({
                 success: false,
-                error: 'Super admin access required for IP blocking'
+                error: 'Access denied'
             });
         }
         const result = await securityService_1.SecurityService.blockIP({
@@ -1669,21 +1692,28 @@ router.post('/security/block-ip', auth_1.requireStagingAuth, requireAdmin, [
  *       403:
  *         description: Super admin required
  */
-router.delete('/security/unblock-ip', auth_1.requireStagingAuth, requireAdmin, [
+router.delete('/security/unblock-ip', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('ipAddress').isString().trim().notEmpty().withMessage('IP address is required')
 ], async (req, res) => {
     try {
         const errors = (0, express_validator_1.validationResult)(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ success: false, errors: errors.array() });
+            // Log full validation errors server-side
+            logger_1.logger.warn({
+                endpoint: '/api/admin/security/unblock-ip',
+                validationErrors: errors.array()
+            }, 'Unblock IP validation failed');
+            // Return sanitized error to client
+            const invalidFields = errors.array().map(e => e.type === 'field' ? e.path : 'unknown').filter(Boolean);
+            return res.status(400).json({ success: false, error: 'Validation failed', fields: invalidFields });
         }
         const { ipAddress } = req.body;
         const adminUser = req.user;
-        // Require super admin
+        // Require super admin (role logged server-side only)
         if (!adminUser.isSuperAdmin) {
             return res.status(403).json({
                 success: false,
-                error: 'Super admin access required for IP unblocking'
+                error: 'Access denied'
             });
         }
         const result = await securityService_1.SecurityService.unblockIP(ipAddress, adminUser.id);
@@ -1726,13 +1756,13 @@ router.delete('/security/unblock-ip', auth_1.requireStagingAuth, requireAdmin, [
  *       403:
  *         description: Super admin required
  */
-router.post('/security/clear-blocked-ips', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/security/clear-blocked-ips', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const adminUser = req.user;
         if (!adminUser.isSuperAdmin) {
             return res.status(403).json({
                 success: false,
-                error: 'Super admin access required to clear all blocked IPs'
+                error: 'Access denied'
             });
         }
         const result = await securityService_1.SecurityService.clearAllBlockedIPs(adminUser.id);
@@ -1761,7 +1791,7 @@ router.post('/security/clear-blocked-ips', auth_1.requireStagingAuth, requireAdm
     }
 });
 // Enhanced Dashboard with Security Metrics
-router.get('/dashboard/enhanced', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/dashboard/enhanced', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const [basicDashboard, securityStats, recentSecurityEvents] = await Promise.all([
             // Get basic dashboard data
@@ -1814,7 +1844,7 @@ router.get('/dashboard/enhanced', auth_1.requireStagingAuth, requireAdmin, async
     }
 });
 // Error Tracking Endpoints
-router.get('/errors', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/errors', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const severity = req.query.severity || 'all';
         const timeframe = req.query.timeframe || '24h';
@@ -1886,7 +1916,7 @@ router.get('/errors', auth_1.requireStagingAuth, requireAdmin, async (req, res) 
     }
 });
 // AI Insights - User Suggestions Endpoint (Now with REAL feedback data!)
-router.get('/ai-insights/suggestions', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/ai-insights/suggestions', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const category = req.query.category || 'all';
         const status = req.query.status || 'all';
@@ -1997,7 +2027,7 @@ router.get('/ai-insights/suggestions', auth_1.requireStagingAuth, requireAdmin, 
     }
 });
 // AI Insights - Content Analysis Endpoint
-router.get('/ai-insights/analysis', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/ai-insights/analysis', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         // Generate real AI analysis data based on actual database content
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -2077,23 +2107,23 @@ router.get('/ai-insights/analysis', auth_1.requireStagingAuth, requireAdmin, asy
 });
 // Enhanced admin middleware for sensitive operations
 const requireSuperAdmin = async (req, res, next) => {
-    // For now, require explicit super admin flag or additional verification
-    // TODO: Implement TOTP verification here
-    if (!req.user?.isAdmin) {
-        return res.status(403).json({ error: 'Super admin access required for database operations' });
+    // Require explicit super admin flag for sensitive operations
+    if (!req.user?.isSuperAdmin) {
+        // Role info logged server-side only
+        return res.status(403).json({ error: 'Access denied' });
     }
     // Additional security check - could be TOTP, recent password verification, etc.
     const recentAuth = req.headers['x-recent-auth']; // Frontend should prompt for password again
     if (!recentAuth) {
         return res.status(403).json({
-            error: 'Recent authentication required for sensitive operations',
+            error: 'Recent authentication required',
             requiresReauth: true
         });
     }
     next();
 };
 // Prisma Schema Viewer - Database Administration (Enhanced Security)
-router.get('/schema', auth_1.requireStagingAuth, requireAdmin, requireSuperAdmin, async (req, res) => {
+router.get('/schema', auth_1.requireStagingAuth, auth_1.requireAdmin, requireSuperAdmin, async (req, res) => {
     try {
         const schemaPath = path_1.default.join(__dirname, '../../prisma/schema.prisma');
         // Check if schema file exists
@@ -2148,13 +2178,11 @@ router.get('/schema', auth_1.requireStagingAuth, requireAdmin, requireSuperAdmin
     }
 });
 // GET /api/admin/candidates - Get all candidate registrations
-router.get('/candidates', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/candidates', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const { page, limit, offset } = safePagePagination(req.query.page, req.query.limit);
         const status = req.query.status;
         const search = req.query.search;
-        const offset = (page - 1) * limit;
         // Build where clause
         const where = {};
         if (status && status !== 'all') {
@@ -2269,10 +2297,10 @@ router.get('/candidates', auth_1.requireStagingAuth, requireAdmin, async (req, r
  *         description: Unauthorized
  */
 // GET /api/admin/candidates/profiles - Get candidate profiles for status management
-router.get('/candidates/profiles', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/candidates/profiles', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const { status, page = 1, limit = 50, search } = req.query;
-        const skip = (Number(page) - 1) * Number(limit);
+        const { status, search } = req.query;
+        const { page, limit, offset: skip } = safePagePagination(req.query.page, req.query.limit);
         const where = {};
         if (status && status !== 'all')
             where.status = status;
@@ -2312,10 +2340,10 @@ router.get('/candidates/profiles', auth_1.requireStagingAuth, requireAdmin, asyn
             data: {
                 candidates,
                 pagination: {
-                    page: Number(page),
-                    limit: Number(limit),
+                    page,
+                    limit,
                     total,
-                    pages: Math.ceil(total / Number(limit))
+                    pages: Math.ceil(total / limit)
                 },
                 summary
             }
@@ -2333,7 +2361,7 @@ router.get('/candidates/profiles', auth_1.requireStagingAuth, requireAdmin, asyn
     }
 });
 // GET /api/admin/candidates/:id - Get specific candidate registration details
-router.get('/candidates/:id', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/candidates/:id', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const registrationId = req.params.id;
         const registration = await prisma_1.prisma.candidateRegistration.findUnique({
@@ -2374,7 +2402,7 @@ router.get('/candidates/:id', auth_1.requireStagingAuth, requireAdmin, async (re
     }
 });
 // POST /api/admin/candidates/:id/approve - Approve candidate registration
-router.post('/candidates/:id/approve', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/candidates/:id/approve', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const registrationId = req.params.id;
         const { notes } = req.body;
@@ -2557,7 +2585,7 @@ router.post('/candidates/:id/approve', auth_1.requireStagingAuth, requireAdmin, 
     }
 });
 // POST /api/admin/candidates/:id/reject - Reject candidate registration
-router.post('/candidates/:id/reject', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/candidates/:id/reject', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const registrationId = req.params.id;
         const { reason, notes } = req.body;
@@ -2629,7 +2657,7 @@ router.post('/candidates/:id/reject', auth_1.requireStagingAuth, requireAdmin, a
     }
 });
 // POST /api/admin/candidates/:id/waiver - Process fee waiver request
-router.post('/candidates/:id/waiver', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/candidates/:id/waiver', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const registrationId = req.params.id;
         const { action, notes, waiverAmount } = req.body; // action: 'approve' | 'deny'
@@ -2775,7 +2803,7 @@ router.post('/candidates/:id/waiver', auth_1.requireStagingAuth, requireAdmin, a
  *         description: Candidate not found
  */
 // PUT /api/admin/candidates/profiles/:id/status - Update candidate status
-router.put('/candidates/profiles/:id/status', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.put('/candidates/profiles/:id/status', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { status, reason, suspendedUntil, appealDeadline, appealNotes } = req.body;
@@ -2918,7 +2946,7 @@ router.put('/candidates/profiles/:id/status', auth_1.requireStagingAuth, require
  *         description: Registration not found
  */
 // POST /api/admin/candidates/profiles/:registrationId/create - Create profile for approved candidate
-router.post('/candidates/profiles/:registrationId/create', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/candidates/profiles/:registrationId/create', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { registrationId } = req.params;
         const registration = await prisma_1.prisma.candidateRegistration.findUnique({
@@ -3098,7 +3126,7 @@ router.post('/candidates/profiles/:registrationId/create', auth_1.requireStaging
  *         description: Candidate not found
  */
 // GET /api/admin/candidates/:candidateId/messages - Get admin messages for candidate
-router.get('/candidates/:candidateId/messages', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/candidates/:candidateId/messages', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { candidateId } = req.params;
         const { limit = 50, before } = req.query;
@@ -3220,7 +3248,7 @@ router.get('/candidates/:candidateId/messages', auth_1.requireStagingAuth, requi
  *         description: Candidate not found
  */
 // POST /api/admin/candidates/:candidateId/messages - Send message from admin to candidate
-router.post('/candidates/:candidateId/messages', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/candidates/:candidateId/messages', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { candidateId } = req.params;
         const { content, messageType = 'GENERAL', priority = 'NORMAL', subject, replyToId } = req.body;
@@ -3333,7 +3361,7 @@ router.post('/candidates/:candidateId/messages', auth_1.requireStagingAuth, requ
  *         description: Messaging overview
  */
 // GET /api/admin/messages/overview - Get messaging overview for admin dashboard
-router.get('/messages/overview', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/messages/overview', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         // Get candidates with recent messages
         const candidatesWithMessages = await prisma_1.prisma.candidate.findMany({
@@ -3413,7 +3441,7 @@ router.get('/messages/overview', auth_1.requireStagingAuth, requireAdmin, async 
     }
 });
 // Merge duplicate user accounts (for OAuth email normalization issues)
-router.post('/merge-accounts', auth_1.requireAuth, requireAdmin, [
+router.post('/merge-accounts', auth_1.requireAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('primaryAccountId').matches(/^c[a-z0-9]{24}$/).withMessage('Primary account ID must be a valid CUID (starts with "c", 25 characters total)'),
     (0, express_validator_1.body)('duplicateAccountId').matches(/^c[a-z0-9]{24}$/).withMessage('Duplicate account ID must be a valid CUID (starts with "c", 25 characters total)')
 ], handleValidationErrors, async (req, res) => {
@@ -3545,11 +3573,10 @@ router.post('/merge-accounts', auth_1.requireAuth, requireAdmin, [
     }
 });
 // GET /api/admin/volunteers - Get volunteer inquiries
-router.get('/volunteers', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/volunteers', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const { status = 'new', limit = 20, offset = 0 } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { status = 'new' } = req.query;
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Get posts tagged as "Volunteer"
         const volunteerPosts = await prisma_1.prisma.post.findMany({
             where: {
@@ -3620,7 +3647,7 @@ router.get('/volunteers', auth_1.requireStagingAuth, requireAdmin, async (req, r
     }
 });
 // Admin action: Resend email verification for any user
-router.post('/users/:userId/resend-verification', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/users/:userId/resend-verification', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
         const adminId = req.user.id;
@@ -3730,7 +3757,7 @@ router.post('/users/:userId/resend-verification', auth_1.requireStagingAuth, req
  *       500:
  *         description: Server error
  */
-router.post('/users/:userId/reset-password', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.post('/users/:userId/reset-password', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
         const { totpToken } = req.body;
@@ -3753,7 +3780,7 @@ router.post('/users/:userId/reset-password', auth_1.requireStagingAuth, requireA
                 targetUserId: userId,
                 securityEvent: 'totp_not_configured'
             }, `Admin ${adminUsername} attempting password reset without TOTP configured`);
-            return res.status(403).json({ error: 'TOTP must be enabled for admin account to perform this action' });
+            return res.status(403).json({ error: 'TOTP must be enabled to perform this action' });
         }
         // Verify admin's TOTP token
         const validTOTP = speakeasy.totp.verify({
@@ -3866,7 +3893,7 @@ router.post('/users/:userId/reset-password', auth_1.requireStagingAuth, requireA
  *       500:
  *         description: Server error
  */
-router.get('/analytics/visitors/overview', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/analytics/visitors/overview', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const overview = await visitorAnalytics_1.default.getOverview();
         res.json(overview);
@@ -3913,7 +3940,7 @@ router.get('/analytics/visitors/overview', auth_1.requireStagingAuth, requireAdm
  *       500:
  *         description: Server error
  */
-router.get('/analytics/visitors/daily', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/analytics/visitors/daily', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         // Default to last 30 days if not specified
         const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
@@ -3961,8 +3988,9 @@ router.get('/analytics/visitors/daily', auth_1.requireStagingAuth, requireAdmin,
  *       500:
  *         description: Server error
  */
-router.get('/analytics/visitors/suspicious', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
-    const days = req.query.days ? parseInt(req.query.days) : 7;
+router.get('/analytics/visitors/suspicious', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
+    const rawDays = parseInt(req.query.days);
+    const days = Number.isNaN(rawDays) || rawDays < 1 || rawDays > 365 ? 7 : rawDays;
     try {
         const suspiciousIPs = await visitorAnalytics_1.default.getSuspiciousIPs(days);
         res.json({ suspiciousIPs, days });
@@ -3997,7 +4025,7 @@ router.get('/analytics/visitors/suspicious', auth_1.requireStagingAuth, requireA
  *       500:
  *         description: Server error
  */
-router.get('/analytics/visitors/config', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/analytics/visitors/config', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const config = await visitorAnalytics_1.default.getConfig();
         // Don't expose sensitive salt value
@@ -4100,7 +4128,7 @@ router.get('/analytics/visitors/config', auth_1.requireStagingAuth, requireAdmin
  *       500:
  *         description: Internal server error
  */
-router.delete('/activity/batch-delete', auth_1.requireAuth, requireAdmin, async (req, res) => {
+router.delete('/activity/batch-delete', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { activities, totpToken, reason } = req.body;
         const adminUser = req.user;
@@ -4352,7 +4380,15 @@ router.delete('/activity/batch-delete', auth_1.requireAuth, requireAdmin, async 
                         }
                         break;
                     default:
-                        results.push({ activityType, targetId, status: 'failed', error: `Unsupported activity type: ${activityType}` });
+                        // Log the actual unsupported type server-side for debugging
+                        logger_1.logger.warn({
+                            action: 'unsupported_activity_type',
+                            adminId: adminUser.id,
+                            activityType,
+                            targetId
+                        }, `Admin attempted to delete unsupported activity type`);
+                        // Return generic error to client - don't echo user input
+                        results.push({ activityType, targetId, status: 'failed', error: 'Unsupported activity type' });
                         failedCount++;
                         continue;
                 }
@@ -4367,11 +4403,12 @@ router.delete('/activity/batch-delete', auth_1.requireAuth, requireAdmin, async 
                     activityType,
                     targetId
                 }, `Failed to delete activity ${activityType}:${targetId}`);
+                // Return generic error to client - don't expose internal error messages
                 results.push({
                     activityType,
                     targetId,
                     status: 'failed',
-                    error: activityError instanceof Error ? activityError.message : 'Unknown error'
+                    error: 'Deletion failed'
                 });
                 failedCount++;
             }
@@ -4450,7 +4487,7 @@ router.delete('/activity/batch-delete', auth_1.requireAuth, requireAdmin, async 
  *       200:
  *         description: Reports queue retrieved successfully
  */
-router.get('/reports/queue', auth_1.requireStagingAuth, requireAdmin, [
+router.get('/reports/queue', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.query)('status').optional().isString(),
     (0, express_validator_1.query)('type').optional().isString(),
     (0, express_validator_1.query)('priority').optional().isString(),
@@ -4459,7 +4496,8 @@ router.get('/reports/queue', auth_1.requireStagingAuth, requireAdmin, [
     (0, express_validator_1.query)('offset').optional().isInt({ min: 0 }).toInt(),
 ], handleValidationErrors, async (req, res) => {
     try {
-        const { status = 'all', type = 'all', priority = 'all', dateRange = '7', limit = 50, offset = 0 } = req.query;
+        const { status = 'all', type = 'all', priority = 'all', dateRange = '7' } = req.query;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Build where clause
         const where = {};
         if (status !== 'all') {
@@ -4487,8 +4525,8 @@ router.get('/reports/queue', auth_1.requireStagingAuth, requireAdmin, [
                     { priority: 'desc' },
                     { createdAt: 'desc' }
                 ],
-                take: Number(limit),
-                skip: Number(offset),
+                take: limit,
+                skip: offset,
                 include: {
                     reporter: {
                         select: { id: true, username: true, displayName: true, avatar: true }
@@ -4522,10 +4560,10 @@ router.get('/reports/queue', auth_1.requireStagingAuth, requireAdmin, [
                 reports: formattedReports,
                 total,
                 pagination: {
-                    page: Math.floor(Number(offset) / Number(limit)) + 1,
-                    limit: Number(limit),
+                    page: Math.floor(offset / limit) + 1,
+                    limit,
                     total,
-                    pages: Math.ceil(total / Number(limit))
+                    pages: Math.ceil(total / limit)
                 }
             }
         });
@@ -4545,7 +4583,7 @@ router.get('/reports/queue', auth_1.requireStagingAuth, requireAdmin, [
  *     security:
  *       - cookieAuth: []
  */
-router.get('/reports/analytics', auth_1.requireStagingAuth, requireAdmin, [
+router.get('/reports/analytics', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.query)('dateRange').optional().isString(),
 ], handleValidationErrors, async (req, res) => {
     try {
@@ -4634,7 +4672,7 @@ router.get('/reports/analytics', auth_1.requireStagingAuth, requireAdmin, [
  *     summary: Get available report types (admin only)
  *     description: Returns all available report reasons/types.
  */
-router.get('/reports/types', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/reports/types', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         // Return the enum values as report types
         const reportTypes = [
@@ -4669,7 +4707,7 @@ router.get('/reports/types', auth_1.requireStagingAuth, requireAdmin, async (req
  *     summary: Get full report details (admin only)
  *     description: Retrieves complete details for a specific report including history.
  */
-router.get('/reports/:reportId/details', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/reports/:reportId/details', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { reportId } = req.params;
         const report = await prisma_1.prisma.report.findUnique({
@@ -4784,7 +4822,7 @@ router.get('/reports/:reportId/details', auth_1.requireStagingAuth, requireAdmin
  *     tags: [Admin]
  *     summary: Get report action history (admin only)
  */
-router.get('/reports/:reportId/history', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/reports/:reportId/history', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { reportId } = req.params;
         const report = await prisma_1.prisma.report.findUnique({
@@ -4821,7 +4859,7 @@ router.get('/reports/:reportId/history', auth_1.requireStagingAuth, requireAdmin
  *     tags: [Admin]
  *     summary: Take action on a report (admin only)
  */
-router.post('/reports/:reportId/action', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/reports/:reportId/action', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('action').isString().isIn(['dismiss', 'warn', 'suspend', 'delete', 'escalate', 'resolve']),
     (0, express_validator_1.body)('notes').optional().isString().trim(),
 ], handleValidationErrors, async (req, res) => {
@@ -4931,7 +4969,7 @@ router.post('/reports/:reportId/action', auth_1.requireStagingAuth, requireAdmin
  *     tags: [Admin]
  *     summary: Bulk action on multiple reports (admin only)
  */
-router.post('/reports/bulk-action', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/reports/bulk-action', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('reportIds').isArray({ min: 1 }),
     (0, express_validator_1.body)('action').isString().isIn(['dismiss', 'warn', 'suspend', 'escalate', 'resolve']),
     (0, express_validator_1.body)('notes').optional().isString().trim(),
@@ -5004,7 +5042,7 @@ router.post('/reports/bulk-action', auth_1.requireStagingAuth, requireAdmin, [
  *     tags: [Admin]
  *     summary: Export reports as CSV (admin only)
  */
-router.get('/reports/export', auth_1.requireStagingAuth, requireAdmin, [
+router.get('/reports/export', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.query)('status').optional().isString(),
     (0, express_validator_1.query)('type').optional().isString(),
     (0, express_validator_1.query)('dateRange').optional().isString(),
@@ -5082,7 +5120,7 @@ router.get('/reports/export', auth_1.requireStagingAuth, requireAdmin, [
  *     summary: Mark errors as resolved (admin only)
  *     description: Marks one or more application errors as resolved with optional notes.
  */
-router.post('/errors/resolve', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/errors/resolve', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('errorIds').isArray({ min: 1 }),
     (0, express_validator_1.body)('resolution').optional().isString().trim(),
 ], handleValidationErrors, async (req, res) => {
@@ -5132,7 +5170,7 @@ router.post('/errors/resolve', auth_1.requireStagingAuth, requireAdmin, [
  *     summary: Generate error analysis report (admin only)
  *     description: Generates a summary report of application errors.
  */
-router.post('/errors/report', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/errors/report', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('timeframe').optional().isIn(['1d', '7d', '30d', '90d']),
     (0, express_validator_1.body)('service').optional().isString(),
 ], handleValidationErrors, async (req, res) => {
@@ -5215,7 +5253,7 @@ router.post('/errors/report', auth_1.requireStagingAuth, requireAdmin, [
  *     summary: Get system configuration (admin only)
  *     description: Retrieves current system configuration settings.
  */
-router.get('/system/config', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/system/config', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         // Return system configuration (environment-based for now)
         const config = {
@@ -5256,18 +5294,18 @@ router.get('/system/config', auth_1.requireStagingAuth, requireAdmin, async (req
  *     summary: Toggle maintenance mode (super-admin only)
  *     description: Enables or disables maintenance mode.
  */
-router.post('/system/maintenance', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/system/maintenance', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('enabled').isBoolean(),
     (0, express_validator_1.body)('message').optional().isString().trim(),
 ], handleValidationErrors, async (req, res) => {
     try {
         const { enabled, message } = req.body;
         const adminUser = req.user;
-        // Require super admin for maintenance mode
+        // Require super admin for maintenance mode (role logged server-side only)
         if (!adminUser.isSuperAdmin) {
             return res.status(403).json({
                 success: false,
-                error: 'Super admin access required for maintenance mode'
+                error: 'Access denied'
             });
         }
         // In a real implementation, this would update a database setting or
@@ -5311,7 +5349,7 @@ router.post('/system/maintenance', auth_1.requireStagingAuth, requireAdmin, [
  *     summary: Generate custom analytics report (admin only)
  *     description: Generates a custom analytics report based on specified metrics.
  */
-router.post('/analytics/custom-report', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/analytics/custom-report', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('metrics').isArray({ min: 1 }),
     (0, express_validator_1.body)('startDate').optional().isISO8601(),
     (0, express_validator_1.body)('endDate').optional().isISO8601(),
@@ -5386,7 +5424,7 @@ router.post('/analytics/custom-report', auth_1.requireStagingAuth, requireAdmin,
  *     summary: Export analytics data (admin only)
  *     description: Exports analytics data in CSV or JSON format.
  */
-router.post('/analytics/export', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/analytics/export', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('dataType').isIn(['users', 'posts', 'reports', 'engagement']),
     (0, express_validator_1.body)('format').optional().isIn(['csv', 'json']),
     (0, express_validator_1.body)('startDate').optional().isISO8601(),
@@ -5485,7 +5523,7 @@ router.post('/analytics/export', auth_1.requireStagingAuth, requireAdmin, [
  *     summary: Get AI system metrics (admin only)
  *     description: Retrieves metrics about AI usage and performance.
  */
-router.get('/ai-insights/metrics', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/ai-insights/metrics', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         // Get RiseAI usage stats
@@ -5530,7 +5568,7 @@ router.get('/ai-insights/metrics', auth_1.requireStagingAuth, requireAdmin, asyn
  *     summary: Trigger AI analysis (admin only)
  *     description: Triggers an AI analysis of platform content or user behavior.
  */
-router.post('/ai-insights/run-analysis', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/ai-insights/run-analysis', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('analysisType').isIn(['content_moderation', 'trending_topics', 'user_engagement', 'sentiment']),
     (0, express_validator_1.body)('scope').optional().isIn(['recent', 'all']),
 ], handleValidationErrors, async (req, res) => {
@@ -5580,7 +5618,7 @@ router.post('/ai-insights/run-analysis', auth_1.requireStagingAuth, requireAdmin
  *     summary: Generate AI insights report (admin only)
  *     description: Generates a comprehensive AI-powered insights report.
  */
-router.post('/ai-insights/generate-report', auth_1.requireStagingAuth, requireAdmin, [
+router.post('/ai-insights/generate-report', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.body)('reportType').isIn(['weekly_summary', 'content_health', 'engagement_analysis', 'moderation_review']),
 ], handleValidationErrors, async (req, res) => {
     try {
@@ -5719,7 +5757,7 @@ router.post('/ai-insights/generate-report', auth_1.requireStagingAuth, requireAd
  *       500:
  *         description: Server error
  */
-router.get('/audit-logs', auth_1.requireStagingAuth, requireAdmin, [
+router.get('/audit-logs', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.query)('adminId').optional().isString().trim(),
     (0, express_validator_1.query)('action').optional().isString().trim(),
     (0, express_validator_1.query)('targetType').optional().isString().trim(),
@@ -5730,7 +5768,8 @@ router.get('/audit-logs', auth_1.requireStagingAuth, requireAdmin, [
     (0, express_validator_1.query)('offset').optional().isInt({ min: 0 }).toInt(),
 ], handleValidationErrors, async (req, res) => {
     try {
-        const { adminId, action, targetType, targetId, startDate, endDate, limit = 50, offset = 0 } = req.query;
+        const { adminId, action, targetType, targetId, startDate, endDate } = req.query;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const result = await auditService_1.AuditService.getLogs({
             adminId: adminId,
             action: action,
@@ -5738,8 +5777,8 @@ router.get('/audit-logs', auth_1.requireStagingAuth, requireAdmin, [
             targetId: targetId,
             startDate: startDate ? new Date(startDate) : undefined,
             endDate: endDate ? new Date(endDate) : undefined,
-            limit: Number(limit),
-            offset: Number(offset),
+            limit,
+            offset,
         });
         logger_1.logger.info({
             endpoint: '/api/admin/audit-logs',
@@ -5795,7 +5834,7 @@ router.get('/audit-logs', auth_1.requireStagingAuth, requireAdmin, [
  *       403:
  *         description: Forbidden - admin access required
  */
-router.get('/audit-logs/stats', auth_1.requireStagingAuth, requireAdmin, [
+router.get('/audit-logs/stats', auth_1.requireStagingAuth, auth_1.requireAdmin, [
     (0, express_validator_1.query)('startDate').optional().isISO8601(),
     (0, express_validator_1.query)('endDate').optional().isISO8601(),
 ], handleValidationErrors, async (req, res) => {
@@ -5887,16 +5926,14 @@ router.get('/audit-logs/stats', auth_1.requireStagingAuth, requireAdmin, [
  *       403:
  *         description: Not authorized (admin required)
  */
-router.get('/payments', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
+router.get('/payments', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+        const { page, limit, offset } = safePagePagination(req.query.page, req.query.limit);
         const status = req.query.status;
         const type = req.query.type;
         const search = req.query.search;
         const startDate = req.query.startDate ? new Date(req.query.startDate) : undefined;
         const endDate = req.query.endDate ? new Date(req.query.endDate) : undefined;
-        const offset = (page - 1) * limit;
         // Build where clause
         const where = {};
         if (status)

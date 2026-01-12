@@ -1,7 +1,16 @@
 const { PrismaClient } = require('@prisma/client');
+require('dotenv').config();
+
+// Validate required environment variable
+const databaseUrl = process.env.PROD_DATABASE_URL || process.env.DATABASE_URL;
+if (!databaseUrl) {
+  console.error('ERROR: Required environment variable not set.');
+  console.error('Please set PROD_DATABASE_URL or DATABASE_URL in your environment.');
+  process.exit(1);
+}
 
 const prisma = new PrismaClient({
-  datasources: { db: { url: 'postgresql://uwradmin:UWR-Secure2024\!@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require' } }
+  datasources: { db: { url: databaseUrl } }
 });
 
 async function verify() {

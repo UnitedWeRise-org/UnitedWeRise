@@ -1,16 +1,25 @@
 # Fix DATABASE_URL environment variable in container with proper escaping
+# SECURITY: Database URL must be set from environment variable
 Write-Host "Fixing DATABASE_URL in container app..." -ForegroundColor Green
 
 $CONTAINER_APP = "unitedwerise-backend"
 $RESOURCE_GROUP = "unitedwerise-rg"
 
+# Validate required environment variable
+if (-not $env:PROD_DATABASE_URL) {
+    Write-Host "ERROR: PROD_DATABASE_URL environment variable not set." -ForegroundColor Red
+    Write-Host "Please set it before running this script:" -ForegroundColor Yellow
+    Write-Host '  $env:PROD_DATABASE_URL = "postgresql://user:pass@host:5432/db?sslmode=require"' -ForegroundColor Gray
+    exit 1
+}
+
 Write-Host "Setting DATABASE_URL environment variable..." -ForegroundColor Cyan
 
-# Update container app with escaped DATABASE_URL
+# Update container app with DATABASE_URL from environment
 az containerapp update `
     --name $CONTAINER_APP `
     --resource-group $RESOURCE_GROUP `
-    --set-env-vars "DATABASE_URL=postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+    --set-env-vars "DATABASE_URL=$env:PROD_DATABASE_URL"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Environment variable updated successfully!" -ForegroundColor Green

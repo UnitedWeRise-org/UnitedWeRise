@@ -51,11 +51,18 @@ export declare class OAuthService {
      */
     private static generateUniqueUsername;
     /**
+     * Check if OAuth encryption key is configured
+     * Logs warning if not set (tokens will be stored unencrypted)
+     */
+    private static hasEncryptionKey;
+    /**
      * Encrypt OAuth tokens for secure storage
+     * If OAUTH_ENCRYPTION_KEY is not set, returns token with 'unencrypted:' prefix
      */
     private static encryptToken;
     /**
      * Decrypt OAuth tokens for use
+     * Handles both encrypted and unencrypted tokens (for backwards compatibility)
      */
     private static decryptToken;
 }

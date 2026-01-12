@@ -12,6 +12,7 @@ const rateLimiting_1 = require("../middleware/rateLimiting");
 const logger_1 = require("../services/logger");
 const notifications_1 = require("./notifications");
 const relationshipService_1 = require("../services/relationshipService");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -117,9 +118,7 @@ const router = express_1.default.Router();
 router.get('/conversations', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { limit = 20, offset = 0 } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const conversations = await prisma_1.prisma.conversationParticipant.findMany({
             where: { userId },
             include: {
@@ -488,9 +487,8 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
     try {
         const userId = req.user.id;
         const { conversationId } = req.params;
-        const { limit = 50, offset = 0, before } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { before } = req.query;
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Verify user is participant in conversation
         const participant = await prisma_1.prisma.conversationParticipant.findUnique({
             where: {

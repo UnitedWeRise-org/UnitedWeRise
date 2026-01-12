@@ -8,6 +8,7 @@ const multer_1 = __importDefault(require("multer"));
 const badge_service_1 = __importDefault(require("../services/badge.service"));
 const auth_1 = require("../middleware/auth");
 const admin_1 = require("../middleware/admin");
+const safeJson_1 = require("../utils/safeJson");
 const router = (0, express_1.Router)();
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
@@ -352,17 +353,30 @@ router.put('/display', auth_1.requireAuth, async (req, res) => {
 router.post('/create', auth_1.requireAuth, admin_1.requireAdmin, upload.single('image'), async (req, res) => {
     try {
         const { name, description, qualificationCriteria, isAutoAwarded, maxAwards, displayOrder } = req.body;
+        // Safely parse qualification criteria - use empty object as fallback for invalid JSON
         const criteria = typeof qualificationCriteria === 'string'
-            ? JSON.parse(qualificationCriteria)
+            ? (0, safeJson_1.safeJSONParse)(qualificationCriteria, {})
             : qualificationCriteria;
+        // Parse and validate maxAwards (0 = unlimited, positive integers allowed)
+        let parsedMaxAwards;
+        if (maxAwards) {
+            const rawMaxAwards = parseInt(maxAwards);
+            parsedMaxAwards = Number.isNaN(rawMaxAwards) || rawMaxAwards < 0 || rawMaxAwards > 1000000 ? undefined : rawMaxAwards;
+        }
+        // Parse and validate displayOrder (positive integers only)
+        let parsedDisplayOrder;
+        if (displayOrder) {
+            const rawDisplayOrder = parseInt(displayOrder);
+            parsedDisplayOrder = Number.isNaN(rawDisplayOrder) || rawDisplayOrder < 0 || rawDisplayOrder > 10000 ? undefined : rawDisplayOrder;
+        }
         const badge = await badge_service_1.default.createBadge({
             name,
             description,
             imageFile: req.file,
             qualificationCriteria: criteria,
             isAutoAwarded: isAutoAwarded === 'true',
-            maxAwards: maxAwards ? parseInt(maxAwards) : undefined,
-            displayOrder: displayOrder ? parseInt(displayOrder) : undefined,
+            maxAwards: parsedMaxAwards,
+            displayOrder: parsedDisplayOrder,
             createdBy: req.user.id
         });
         res.json({ success: true, data: badge });
@@ -451,16 +465,25 @@ router.put('/:badgeId', auth_1.requireAuth, admin_1.requireAdmin, upload.single(
         if (description)
             updates.description = description;
         if (qualificationCriteria) {
+            // Safely parse qualification criteria - use empty object as fallback for invalid JSON
             updates.qualificationCriteria = typeof qualificationCriteria === 'string'
-                ? JSON.parse(qualificationCriteria)
+                ? (0, safeJson_1.safeJSONParse)(qualificationCriteria, {})
                 : qualificationCriteria;
         }
         if (isAutoAwarded !== undefined)
             updates.isAutoAwarded = isAutoAwarded === 'true';
-        if (maxAwards !== undefined)
-            updates.maxAwards = parseInt(maxAwards);
-        if (displayOrder !== undefined)
-            updates.displayOrder = parseInt(displayOrder);
+        if (maxAwards !== undefined) {
+            const rawMaxAwards = parseInt(maxAwards);
+            if (!Number.isNaN(rawMaxAwards) && rawMaxAwards >= 0 && rawMaxAwards <= 1000000) {
+                updates.maxAwards = rawMaxAwards;
+            }
+        }
+        if (displayOrder !== undefined) {
+            const rawDisplayOrder = parseInt(displayOrder);
+            if (!Number.isNaN(rawDisplayOrder) && rawDisplayOrder >= 0 && rawDisplayOrder <= 10000) {
+                updates.displayOrder = rawDisplayOrder;
+            }
+        }
         if (req.file)
             updates.imageFile = req.file;
         const badge = await badge_service_1.default.updateBadge(badgeId, updates);

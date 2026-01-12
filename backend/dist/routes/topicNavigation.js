@@ -16,6 +16,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const topicDiscoveryService_1 = __importDefault(require("../services/topicDiscoveryService"));
 const logger_1 = __importDefault(require("../utils/logger"));
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Store navigation states per user (in production, use Redis or database)
 const userNavigationStates = new Map();
@@ -125,15 +126,15 @@ router.post('/exit', auth_1.requireAuth, async (req, res) => {
 router.get('/:topicId/posts', async (req, res) => {
     try {
         const { topicId } = req.params;
-        const { offset = 0, limit = 20 } = req.query;
-        const topicPosts = await topicDiscoveryService_1.default.getTopicPosts(topicId, Number(offset), Number(limit));
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const topicPosts = await topicDiscoveryService_1.default.getTopicPosts(topicId, offset, limit);
         res.json({
             success: true,
             posts: topicPosts,
             pagination: {
-                offset: Number(offset),
-                limit: Number(limit),
-                hasMore: topicPosts.length === Number(limit)
+                offset,
+                limit,
+                hasMore: topicPosts.length === limit
             }
         });
     }

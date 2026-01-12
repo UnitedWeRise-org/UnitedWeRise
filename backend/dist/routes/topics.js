@@ -556,9 +556,9 @@ router.post('/:id/subtopics/:subTopicId/comment', auth_1.requireAuth, async (req
 router.post('/analyze/recent', auth_1.requireAuth, async (req, res) => {
     try {
         const user = req.user;
-        // Check if user is admin or moderator
+        // Check if user is admin or moderator (role info logged server-side only)
         if (!user.isAdmin && !user.isModerator) {
-            return res.status(403).json({ error: 'Admin or moderator access required' });
+            return res.status(403).json({ error: 'Access denied' });
         }
         const { timeframe = 24, maxPosts = 500 } = req.body;
         logger_1.logger.info({ timeframe, maxPosts, userId: user.id }, 'Starting topic analysis');

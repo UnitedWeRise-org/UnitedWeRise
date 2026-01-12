@@ -2,15 +2,37 @@
  * Copy Complete Production Account to Development Database
  * Preserves TOTP keys, user ID, and all account data for seamless cross-environment access
  * Usage: node scripts/copy-full-account-prod-to-dev.js jeffrey@unitedwerise.org cmfx7z2jn00084o08xhyc5leo
+ *
+ * Required environment variables:
+ *   PROD_DATABASE_URL - Production database connection string
+ *   DEV_DATABASE_URL  - Development database connection string
  */
 
 const { PrismaClient } = require('@prisma/client');
+require('dotenv').config();
+
+// Validate required environment variables
+const prodUrl = process.env.PROD_DATABASE_URL;
+const devUrl = process.env.DEV_DATABASE_URL;
+
+if (!prodUrl || !devUrl) {
+  console.error('ERROR: Required environment variables not set.');
+  console.error('');
+  console.error('Please set the following in your environment or .env file:');
+  if (!prodUrl) console.error('  - PROD_DATABASE_URL');
+  if (!devUrl) console.error('  - DEV_DATABASE_URL');
+  console.error('');
+  console.error('Example:');
+  console.error('  PROD_DATABASE_URL="postgresql://user:pass@prod-host:5432/db?sslmode=require"');
+  console.error('  DEV_DATABASE_URL="postgresql://user:pass@dev-host:5432/db?sslmode=require"');
+  process.exit(1);
+}
 
 // Production database configuration
 const prodPrisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+      url: prodUrl
     }
   }
 });
@@ -19,7 +41,7 @@ const prodPrisma = new PrismaClient({
 const devPrisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+      url: devUrl
     }
   }
 });

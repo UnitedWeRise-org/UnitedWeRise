@@ -1,9 +1,18 @@
 # Create PostgreSQL in Central US
+# SECURITY: Database password must be set from environment variable
 
 Write-Host "Creating PostgreSQL Database in Central US..." -ForegroundColor Green
 Write-Host "This will take 5-10 minutes..." -ForegroundColor Yellow
 
-az postgres flexible-server create --resource-group unitedwerise-rg --name unitedwerise-db --location centralus --admin-user uwradmin --admin-password "UWR-Secure2024!" --sku-name Standard_B1ms --tier Burstable --storage-size 32 --version 14 --public-access 0.0.0.0-255.255.255.255 --yes
+# Validate required environment variable
+if (-not $env:DB_ADMIN_PASSWORD) {
+    Write-Host "ERROR: DB_ADMIN_PASSWORD environment variable not set." -ForegroundColor Red
+    Write-Host "Please set it before running this script:" -ForegroundColor Yellow
+    Write-Host '  $env:DB_ADMIN_PASSWORD = "your-secure-password"' -ForegroundColor Gray
+    exit 1
+}
+
+az postgres flexible-server create --resource-group unitedwerise-rg --name unitedwerise-db --location centralus --admin-user uwradmin --admin-password "$env:DB_ADMIN_PASSWORD" --sku-name Standard_B1ms --tier Burstable --storage-size 32 --version 14 --public-access 0.0.0.0-255.255.255.255 --yes
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`nPostgreSQL created successfully!" -ForegroundColor Green
@@ -11,7 +20,7 @@ if ($LASTEXITCODE -eq 0) {
     # Store secrets in Key Vault
     Write-Host "`nStoring secrets in Key Vault..." -ForegroundColor Cyan
     
-    $DB_CONNECTION = "Server=unitedwerise-db.postgres.database.azure.com;Database=postgres;Port=5432;User Id=uwradmin;Password=UWR-Secure2024!;Ssl Mode=Require;"
+    $DB_CONNECTION = "Server=unitedwerise-db.postgres.database.azure.com;Database=postgres;Port=5432;User Id=uwradmin;Password=$env:DB_ADMIN_PASSWORD;Ssl Mode=Require;"
     
     # Get storage connection string
     $STORAGE_CONNECTION = az storage account show-connection-string --resource-group unitedwerise-rg --name uwrstorage2425 --query connectionString -o tsv
@@ -40,7 +49,7 @@ if ($LASTEXITCODE -eq 0) {
 DATABASE_URL=$DB_CONNECTION
 DB_NAME=unitedwerise-db
 DB_ADMIN=uwradmin
-DB_PASSWORD=UWR-Secure2024!
+DB_PASSWORD=SET_VIA_ENV_VARIABLE
 
 # Storage (in East US)
 AZURE_STORAGE_CONNECTION_STRING=$STORAGE_CONNECTION
@@ -93,7 +102,7 @@ CONTAINER_APP_URL=https://wonderfulpond-f8a8271f.eastus.azurecontainerapps.io
     Write-Host "`nCentral US also restricted. Trying North Europe..." -ForegroundColor Yellow
     
     # Try North Europe as last resort
-    az postgres flexible-server create --resource-group unitedwerise-rg --name unitedwerise-db --location northeurope --admin-user uwradmin --admin-password "UWR-Secure2024!" --sku-name Standard_B1ms --tier Burstable --storage-size 32 --version 14 --public-access 0.0.0.0-255.255.255.255 --yes
+    az postgres flexible-server create --resource-group unitedwerise-rg --name unitedwerise-db --location northeurope --admin-user uwradmin --admin-password "$env:DB_ADMIN_PASSWORD" --sku-name Standard_B1ms --tier Burstable --storage-size 32 --version 14 --public-access 0.0.0.0-255.255.255.255 --yes
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "`nPostgreSQL created in North Europe!" -ForegroundColor Green
