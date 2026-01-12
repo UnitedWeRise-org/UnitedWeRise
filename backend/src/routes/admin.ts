@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
-import { requireAuth, requireStagingAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireStagingAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import { generateResetToken, hashResetToken } from '../utils/auth';
 import { moderationService } from '../services/moderationService';
 import { emailService } from '../services/emailService';
@@ -45,15 +45,6 @@ function safePagePagination(
 
   return { page: safePage, limit: safeLimit, offset };
 }
-
-// Admin-only middleware
-const requireAdmin = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
-  if (!req.user?.isAdmin) {
-    // Role info logged server-side only
-    return res.status(403).json({ error: 'Access denied' });
-  }
-  next();
-};
 
 // Validation middleware - returns sanitized field names only, no internal details
 const handleValidationErrors = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -2289,9 +2280,8 @@ router.get('/ai-insights/analysis', requireStagingAuth, requireAdmin, async (req
 
 // Enhanced admin middleware for sensitive operations
 const requireSuperAdmin = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
-  // For now, require explicit super admin flag or additional verification
-  // TODO: Implement TOTP verification here
-  if (!req.user?.isAdmin) {
+  // Require explicit super admin flag for sensitive operations
+  if (!req.user?.isSuperAdmin) {
     // Role info logged server-side only
     return res.status(403).json({ error: 'Access denied' });
   }

@@ -1,10 +1,29 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 8, 2026
+**Last Updated**: January 11, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-11] - Security Audit: TOTP Enforcement & Super-Admin Fixes
+
+### Security Fixes
+
+**H1: TOTP Enforcement Gap (HIGH)**
+- **Issue**: Local `requireAdmin` in admin.ts shadowed the auth.ts version, bypassing TOTP verification
+- **Impact**: Admin accounts without TOTP enabled could access all admin endpoints
+- **Fix**: Removed local `requireAdmin` definition, now imports from auth.ts which enforces both `isAdmin` AND `totpVerified`
+
+**M2: requireSuperAdmin Bug (MEDIUM)**
+- **Issue**: Local `requireSuperAdmin` checked `isAdmin` instead of `isSuperAdmin`
+- **Impact**: Any admin could access super-admin endpoints with `x-recent-auth` header
+- **Fix**: Changed check from `!req.user?.isAdmin` to `!req.user?.isSuperAdmin`
+
+### Files Changed
+- `backend/src/routes/admin.ts`: Import fix + deleted local requireAdmin + fixed requireSuperAdmin check
 
 ---
 
