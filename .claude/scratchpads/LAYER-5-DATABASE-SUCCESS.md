@@ -21,7 +21,7 @@ Layer 5 successfully adds **database persistence** to the photo upload system. A
 
 ### Development Database Confirmed
 ```
-DATABASE_URL="postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+DATABASE_URL="postgresql://<username>:<password>@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
 ```
 
 **Verification Results:**

@@ -15,6 +15,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const feedbackAnalysisService_1 = require("../services/feedbackAnalysisService");
 const logger_1 = __importDefault(require("../utils/logger"));
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -23,7 +24,9 @@ const router = express_1.default.Router();
  */
 router.get('/', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const { type, category, priority, status = 'new', page = 1, limit = 20 } = req.query;
+        const { type, category, priority, status = 'new' } = req.query;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const page = Math.floor(offset / limit) + 1;
         const where = {
             containsFeedback: true
         };
@@ -36,7 +39,6 @@ router.get('/', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res)
             where.feedbackPriority = priority;
         if (status)
             where.feedbackStatus = status;
-        const offset = (Number(page) - 1) * Number(limit);
         const [posts, totalCount] = await Promise.all([
             prisma_1.prisma.post.findMany({
                 where,
@@ -61,7 +63,7 @@ router.get('/', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res)
                     { createdAt: 'desc' }
                 ],
                 skip: offset,
-                take: Number(limit)
+                take: limit
             }),
             prisma_1.prisma.post.count({ where })
         ]);
@@ -85,10 +87,10 @@ router.get('/', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res)
         res.json({
             feedback: feedbackPosts,
             pagination: {
-                page: Number(page),
-                limit: Number(limit),
+                page,
+                limit,
                 total: totalCount,
-                pages: Math.ceil(totalCount / Number(limit))
+                pages: Math.ceil(totalCount / limit)
             }
         });
     }

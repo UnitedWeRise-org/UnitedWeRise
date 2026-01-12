@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Get conversations list for a user
 router.get('/conversations', auth_1.requireAuth, async (req, res) => {
@@ -61,8 +62,7 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
     try {
         const userId = req.user.id;
         const { conversationId } = req.params;
-        const limit = parseInt(req.query.limit) || 50;
-        const offset = parseInt(req.query.offset) || 0;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Verify user is participant in this conversation
         const conversation = await prisma_1.prisma.conversationMeta.findUnique({
             where: { id: conversationId }
@@ -275,8 +275,7 @@ router.get('/admin/candidate/:candidateId', auth_1.requireAuth, async (req, res)
     try {
         const userId = req.user.id;
         const { candidateId } = req.params;
-        const limit = parseInt(req.query.limit) || 50;
-        const offset = parseInt(req.query.offset) || 0;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Check if user is admin
         const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
@@ -342,8 +341,7 @@ router.get('/admin/candidate/:candidateId', auth_1.requireAuth, async (req, res)
 router.get('/candidate/admin-messages', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const limit = parseInt(req.query.limit) || 50;
-        const offset = parseInt(req.query.offset) || 0;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Get candidate profile for this user
         const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { userId },
@@ -398,8 +396,7 @@ router.get('/candidate/admin-messages', auth_1.requireAuth, async (req, res) => 
 router.get('/candidate/user-messages', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const limit = parseInt(req.query.limit) || 50;
-        const offset = parseInt(req.query.offset) || 0;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Get candidate profile for this user
         const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { userId },

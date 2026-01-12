@@ -15,6 +15,7 @@ const civicOrganizingService_1 = __importDefault(require("../services/civicOrgan
 const auth_1 = require("../middleware/auth");
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Rate limiting for civic actions
 const civicActionLimit = (0, express_rate_limit_1.default)({
@@ -272,8 +273,8 @@ router.get('/petitions', civicBrowseLimit, [
         if (!errors.isEmpty()) {
             return res.status(400).json({ error: 'Validation failed', details: errors.array() });
         }
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const page = Math.floor(offset / limit) + 1;
         const filters = {};
         if (req.query.category)
             filters.category = req.query.category;
@@ -719,8 +720,8 @@ router.get('/events', civicBrowseLimit, [
         if (!errors.isEmpty()) {
             return res.status(400).json({ error: 'Validation failed', details: errors.array() });
         }
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const page = Math.floor(offset / limit) + 1;
         const filters = {};
         if (req.query.eventType)
             filters.eventType = req.query.eventType;
@@ -982,15 +983,15 @@ router.get('/search', civicBrowseLimit, [
         if (!errors.isEmpty()) {
             return res.status(400).json({ error: 'Validation failed', details: errors.array() });
         }
-        const query = req.query.q;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const searchQuery = req.query.q;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const page = Math.floor(offset / limit) + 1;
         const filters = {};
         if (req.query.category)
             filters.category = req.query.category;
         if (req.query.eventType)
             filters.eventType = req.query.eventType;
-        const result = await civicOrganizingService_1.default.searchCivic(query, filters, page, limit);
+        const result = await civicOrganizingService_1.default.searchCivic(searchQuery, filters, page, limit);
         res.json({
             success: true,
             data: result

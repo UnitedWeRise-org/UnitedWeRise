@@ -13,6 +13,7 @@ const auth_1 = require("../middleware/auth");
 const relationshipService_1 = require("../services/relationshipService");
 const logger_1 = require("../services/logger");
 const prisma_1 = require("../lib/prisma");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 /**
  * FOLLOW ENDPOINTS
@@ -204,8 +205,8 @@ router.get('/follow-status/:userId', auth_1.requireAuth, async (req, res) => {
 router.get('/:userId/followers', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-        const result = await relationshipService_1.FollowService.getFollowers(userId, parseInt(limit.toString()), parseInt(offset.toString()));
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const result = await relationshipService_1.FollowService.getFollowers(userId, limit, offset);
         if (result.success) {
             res.json(result.data);
         }
@@ -250,8 +251,8 @@ router.get('/:userId/followers', async (req, res) => {
 router.get('/:userId/following', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-        const result = await relationshipService_1.FollowService.getFollowing(userId, parseInt(limit.toString()), parseInt(offset.toString()));
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const result = await relationshipService_1.FollowService.getFollowing(userId, limit, offset);
         if (result.success) {
             res.json(result.data);
         }
@@ -415,8 +416,8 @@ router.put('/subscribe/:userId/notifications', auth_1.requireAuth, async (req, r
 router.get('/:userId/subscribers', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-        const result = await relationshipService_1.SubscriptionService.getSubscribers(userId, parseInt(limit.toString()), parseInt(offset.toString()));
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const result = await relationshipService_1.SubscriptionService.getSubscribers(userId, limit, offset);
         if (result.success) {
             res.json(result.data);
         }
@@ -433,8 +434,8 @@ router.get('/:userId/subscribers', async (req, res) => {
 router.get('/:userId/subscriptions', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-        const result = await relationshipService_1.SubscriptionService.getSubscriptions(userId, parseInt(limit.toString()), parseInt(offset.toString()));
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const result = await relationshipService_1.SubscriptionService.getSubscriptions(userId, limit, offset);
         if (result.success) {
             res.json(result.data);
         }
@@ -681,8 +682,8 @@ router.get('/friend-status/:userId', auth_1.requireAuth, async (req, res) => {
 router.get('/:userId/friends', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-        const result = await relationshipService_1.FriendService.getFriends(userId, parseInt(limit.toString()), parseInt(offset.toString()));
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const result = await relationshipService_1.FriendService.getFriends(userId, limit, offset);
         if (result.success) {
             res.json(result.data);
         }
@@ -800,12 +801,12 @@ router.get('/status/:userId', auth_1.requireAuth, async (req, res) => {
 router.get('/suggestions/:type', auth_1.requireAuth, async (req, res) => {
     try {
         const { type } = req.params; // 'follow' or 'friend'
-        const { limit = 10 } = req.query;
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const currentUserId = req.user.id;
         if (type !== 'follow' && type !== 'friend') {
             return res.status(400).json({ error: 'Invalid suggestion type. Use "follow" or "friend"' });
         }
-        const result = await relationshipService_1.RelationshipUtils.getSuggestions(currentUserId, type, parseInt(limit.toString()));
+        const result = await relationshipService_1.RelationshipUtils.getSuggestions(currentUserId, type, limit);
         if (result.success) {
             res.json(result.data);
         }

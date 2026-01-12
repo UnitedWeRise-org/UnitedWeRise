@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const logger_1 = require("../services/logger");
-;
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -154,7 +154,7 @@ router.get('/topics', async (req, res) => {
                 scope: scope
             }
         ];
-        const limitNum = parseInt(limit.toString()) || 7;
+        const { limit: limitNum } = (0, safeJson_1.safePaginationParams)(limit, undefined);
         const topics = mockTopics.slice(0, limitNum);
         res.json({
             success: true,
@@ -280,7 +280,8 @@ router.get('/map-topics', async (req, res) => {
                 oppose: 28
             }
         ];
-        const countNum = parseInt(count.toString()) || 3;
+        const rawCount = parseInt(count);
+        const countNum = Number.isNaN(rawCount) || rawCount < 1 || rawCount > 100 ? 3 : rawCount;
         const topics = mapTopics.slice(0, countNum);
         res.json({
             success: true,

@@ -11,15 +11,16 @@ const legislativeDataService_1 = require("../services/legislativeDataService");
 const newsAggregationService_1 = require("../services/newsAggregationService");
 const newsApiRateLimiter_1 = require("../services/newsApiRateLimiter");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Get voting records for a specific official
 router.get('/voting-records/:bioguideId', async (req, res) => {
     try {
         const { bioguideId } = req.params;
-        const { limit = 20 } = req.query;
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         // Get voting records from service
-        const votingRecords = await legislativeDataService_1.LegislativeDataService.getVotingRecords(bioguideId, parseInt(limit.toString()));
+        const votingRecords = await legislativeDataService_1.LegislativeDataService.getVotingRecords(bioguideId, limit);
         // Get voting statistics from database
         const membership = await prisma_1.prisma.legislativeMembership.findFirst({
             where: { bioguideId },
@@ -41,9 +42,11 @@ router.get('/voting-records/:bioguideId', async (req, res) => {
 router.get('/news/:officialName', async (req, res) => {
     try {
         const { officialName } = req.params;
-        const { limit = 10, daysBack = 30 } = req.query;
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
+        const rawDaysBack = parseInt(req.query.daysBack);
+        const daysBack = Number.isNaN(rawDaysBack) || rawDaysBack < 1 || rawDaysBack > 365 ? 30 : rawDaysBack;
         const newsData = await newsAggregationService_1.NewsAggregationService.searchPoliticianNews(officialName, undefined, // officialId
-        parseInt(limit.toString()), parseInt(daysBack.toString()));
+        limit, daysBack);
         res.json(newsData);
     }
     catch (error) {
@@ -60,7 +63,8 @@ router.post('/sync/federal', auth_1.requireAuth, async (req, res) => {
             select: { isAdmin: true }
         });
         if (!user?.isAdmin) {
-            return res.status(403).json({ error: 'Admin access required' });
+            // Role info logged server-side only
+            return res.status(403).json({ error: 'Access denied' });
         }
         await legislativeDataService_1.LegislativeDataService.syncFederalLegislators(true);
         res.json({
@@ -83,7 +87,8 @@ router.post('/sync/state/:stateCode', auth_1.requireAuth, async (req, res) => {
             select: { isAdmin: true }
         });
         if (!user?.isAdmin) {
-            return res.status(403).json({ error: 'Admin access required' });
+            // Role info logged server-side only
+            return res.status(403).json({ error: 'Access denied' });
         }
         await legislativeDataService_1.LegislativeDataService.syncStateLegislators(stateCode.toUpperCase(), true);
         res.json({
@@ -99,8 +104,8 @@ router.post('/sync/state/:stateCode', auth_1.requireAuth, async (req, res) => {
 // Get trending political news
 router.get('/news/trending', async (req, res) => {
     try {
-        const { limit = 20 } = req.query;
-        const trendingNews = await newsAggregationService_1.NewsAggregationService.getTrendingPoliticalNews(parseInt(limit.toString()));
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
+        const trendingNews = await newsAggregationService_1.NewsAggregationService.getTrendingPoliticalNews(limit);
         res.json({
             articles: trendingNews,
             count: trendingNews.length,
@@ -115,13 +120,14 @@ router.get('/news/trending', async (req, res) => {
 // Get stored news articles with filtering
 router.get('/news/stored', async (req, res) => {
     try {
-        const { officialId, sentiment, limit = 20, offset = 0 } = req.query;
-        const result = await newsAggregationService_1.NewsAggregationService.getStoredArticles(officialId?.toString(), sentiment, parseInt(limit.toString()), parseInt(offset.toString()));
+        const { officialId, sentiment } = req.query;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const result = await newsAggregationService_1.NewsAggregationService.getStoredArticles(officialId?.toString(), sentiment, limit, offset);
         res.json({
             articles: result.articles,
             total: result.total,
-            limit: parseInt(limit.toString()),
-            offset: parseInt(offset.toString())
+            limit,
+            offset
         });
     }
     catch (error) {
@@ -161,7 +167,7 @@ router.post('/voting-statistics', async (req, res) => {
 router.get('/bills/:bioguideId', async (req, res) => {
     try {
         const { bioguideId } = req.params;
-        const { limit = 10 } = req.query;
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         // Find the membership
         const membership = await prisma_1.prisma.legislativeMembership.findFirst({
             where: { bioguideId }
@@ -183,7 +189,7 @@ router.get('/bills/:bioguideId', async (req, res) => {
                 }
             },
             orderBy: { dateSigned: 'desc' },
-            take: parseInt(limit.toString())
+            take: limit
         });
         const bills = sponsoredBills.map(sponsorship => ({
             ...sponsorship.bill,

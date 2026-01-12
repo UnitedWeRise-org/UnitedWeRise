@@ -82,10 +82,54 @@
       "Bash(pip install:*)",
       "Bash(git stash:*)",
       "Bash(gh run watch:*)",
-      "Bash(gh run view:*)"
+      "Bash(gh run view:*)",
+      "Bash(npx dotenv:*)",
+      "Read(/Users/jeffreysmacbookpro/.claude/protocols/**)",
+      "Bash(git log:*)",
+      "Bash(wc:*)",
+      "Bash(for f in src/modules/admin/state/AdminState.js src/modules/admin/controllers/ReportsController.js src/modules/admin/controllers/OverviewController.js src/modules/admin/controllers/SecurityController.js src/modules/admin/controllers/DeploymentController.js)",
+      "Bash(do echo \"Checking $f...\")",
+      "Bash(done)",
+      "Bash(CHANGELOG.md )",
+      "Bash(frontend/src/modules/admin/auth/AdminAuth.js )",
+      "Bash(frontend/src/modules/admin/controllers/DeploymentController.js )",
+      "Bash(frontend/src/modules/admin/controllers/OverviewController.js )",
+      "Bash(frontend/src/modules/admin/controllers/ReportsController.js )",
+      "Bash(frontend/src/modules/admin/controllers/SecurityController.js )",
+      "Bash(frontend/src/modules/admin/state/AdminState.js )",
+      "Bash(.claude/handoffs/2026-01-01-admin-graceful-resume-fix.md )",
+      "Bash(.claude/handoffs/2025-12-22-admin-401-refresh-fix.md)",
+      "Bash(git rev-parse:*)",
+      "WebFetch(domain:admin.unitedwerise.org)",
+      "WebFetch(domain:dev-admin.unitedwerise.org)",
+      "Bash(frontend/src/utils/security.js )",
+      "Bash(frontend/src/components/VerificationFlow.js )",
+      "Bash(frontend/src/components/moderation/index.js )",
+      "Bash(frontend/src/handlers/auth-handlers.js )",
+      "Bash(frontend/src/handlers/content-handlers.js )",
+      "Bash(frontend/src/handlers/search-handlers.js )",
+      "Bash(frontend/src/js/donation-system.js )",
+      "Bash(frontend/src/js/map-maplibre.js )",
+      "Bash(frontend/src/modules/features/search/global-search.js )",
+      "Bash(backend/src/utils/safeJson.ts )",
+      "Bash(backend/src/utils/urlSanitizer.ts )",
+      "Bash(backend/src/middleware/*.ts)",
+      "Bash(backend/src/routes/*.ts)",
+      "Bash(backend/src/server.ts )",
+      "Bash(backend/src/services/sessionManager.ts )",
+      "Bash(docs/SECURITY_NOTES.md )",
+      "Bash(.claude/handoffs/2026-01-07-security-remediation-complete.md)",
+      "Skill(security-audit)"
     ],
     "deny": [
       "Bash(npm run dev:*)"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "unitedwerise-tools",
+    "staging-monitor",
+    "deployment-tracker",
+    "performance-monitor",
+    "security-scanner"
+  ]
 }

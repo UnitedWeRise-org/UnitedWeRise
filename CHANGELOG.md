@@ -1,10 +1,58 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 8, 2026
+**Last Updated**: January 12, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-12] - Fix Token Refresh Race Condition on Extended Idle
+
+### Bug Fix
+
+**Root Cause**: When a tab is hidden for 30+ minutes, the `authToken` cookie expires (browser-side `maxAge`), but the `refreshToken` (30-90 days) remains valid. On page wake:
+1. Old API calls fire with expired/missing `authToken` → 401
+2. 401 handler verifies with `/auth/me` which also fails (no cookie)
+3. User logged out incorrectly, even though refresh was about to succeed
+
+**Fix**: Skip redundant `/auth/me` verification when token refresh just succeeded (within 5 seconds), since successful refresh already validates the session against the database.
+
+### Changes
+- `unified-manager.js`: Added `_lastSuccessfulRefresh` tracking and `didJustRefreshSuccessfully()` method
+- `backend-integration.js`: Added `didJustRefreshSuccessfully(5000)` to shouldWaitForRefresh check
+
+### Security Analysis
+- When refresh succeeds, session IS valid because:
+  - Valid refresh token required (30-90 day lifetime)
+  - Token validated against database (revocation checked in `validateRefreshToken()`)
+  - Suspended users blocked at refresh time
+- No new attack surface: attacker would need valid refresh token (equivalent to full session access)
+- The `/auth/me` verification was redundant security theater in this flow
+
+### Files Changed
+- `frontend/src/modules/core/auth/unified-manager.js`
+- `frontend/src/integrations/backend-integration.js`
+
+---
+
+## [2026-01-11] - Security Audit: TOTP Enforcement & Super-Admin Fixes
+
+### Security Fixes
+
+**H1: TOTP Enforcement Gap (HIGH)**
+- **Issue**: Local `requireAdmin` in admin.ts shadowed the auth.ts version, bypassing TOTP verification
+- **Impact**: Admin accounts without TOTP enabled could access all admin endpoints
+- **Fix**: Removed local `requireAdmin` definition, now imports from auth.ts which enforces both `isAdmin` AND `totpVerified`
+
+**M2: requireSuperAdmin Bug (MEDIUM)**
+- **Issue**: Local `requireSuperAdmin` checked `isAdmin` instead of `isSuperAdmin`
+- **Impact**: Any admin could access super-admin endpoints with `x-recent-auth` header
+- **Fix**: Changed check from `!req.user?.isAdmin` to `!req.user?.isSuperAdmin`
+
+### Files Changed
+- `backend/src/routes/admin.ts`: Import fix + deleted local requireAdmin + fixed requireSuperAdmin check
 
 ---
 

@@ -500,7 +500,7 @@ These stub endpoints serve two important purposes:
 
 ```bash
 $ cat .env | grep "DATABASE_URL"
-DATABASE_URL="postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+DATABASE_URL="postgresql://<username>:<password>@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
 ```
 
 ✅ **SAFE:** Migration applied to development database only, NOT production

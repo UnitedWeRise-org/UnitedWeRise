@@ -3,9 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createError = exports.securityLogger = exports.requestLogger = exports.notFoundHandler = exports.errorHandler = void 0;
 const environment_1 = require("../utils/environment");
 const logger_1 = require("../services/logger");
+const urlSanitizer_1 = require("../utils/urlSanitizer");
 // Global error handler
 const errorHandler = (err, req, res, next) => {
     // Log error details using Pino
+    // Security: Sanitize URL to redact sensitive query parameters (OAuth tokens, etc.)
     req.log.error({
         error: {
             message: err.message,
@@ -13,7 +15,7 @@ const errorHandler = (err, req, res, next) => {
             statusCode: err.statusCode
         },
         method: req.method,
-        url: req.url,
+        url: (0, urlSanitizer_1.redactSensitiveParams)(req.url),
         ip: req.ip,
         userAgent: req.get('User-Agent')
     }, 'Error occurred');
@@ -40,16 +42,19 @@ const errorHandler = (err, req, res, next) => {
 exports.errorHandler = errorHandler;
 // 404 handler for undefined routes
 const notFoundHandler = (req, res) => {
+    // Security: Sanitize URL in response to prevent token leakage
+    const sanitizedUrl = (0, urlSanitizer_1.redactSensitiveParams)(req.url);
     const error = {
         error: 'Route not found', // Consistent with other error responses
-        path: req.url,
+        path: sanitizedUrl,
         method: req.method,
         timestamp: new Date().toISOString()
     };
     // Security event: Log 404s to detect scanning/probing
+    // URL sanitized to redact any OAuth tokens in query params
     req.log.warn({
         method: req.method,
-        url: req.url,
+        url: sanitizedUrl,
         ip: req.ip,
         userAgent: req.get('User-Agent')
     }, '404 - Route not found');
@@ -66,6 +71,7 @@ const requestLogger = (req, res, next) => {
 exports.requestLogger = requestLogger;
 // Security event logger
 // Uses Pino structured logging for security events
+// Security: URLs are sanitized to prevent OAuth token leakage in logs
 const securityLogger = (event, details, req) => {
     if (req) {
         // Use request logger if available
@@ -73,7 +79,7 @@ const securityLogger = (event, details, req) => {
             event,
             ip: req.ip,
             userAgent: req.get('User-Agent'),
-            url: req.url,
+            url: (0, urlSanitizer_1.redactSensitiveParams)(req.url),
             method: req.method,
             ...details
         }, 'SECURITY EVENT');

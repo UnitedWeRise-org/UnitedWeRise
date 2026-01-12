@@ -1,17 +1,29 @@
 const { PrismaClient } = require('@prisma/client');
+require('dotenv').config();
+
+// Validate required environment variable
+const databaseUrl = process.env.PROD_DATABASE_URL || process.env.DATABASE_URL;
+if (!databaseUrl) {
+    console.error('ERROR: Required environment variable not set.');
+    console.error('Please set PROD_DATABASE_URL or DATABASE_URL in your environment.');
+    console.error('');
+    console.error('Example:');
+    console.error('  PROD_DATABASE_URL="postgresql://user:pass@host:5432/db?sslmode=require"');
+    process.exit(1);
+}
 
 // Connect to production database
 const prisma = new PrismaClient({
     datasources: {
         db: {
-            url: "postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+            url: databaseUrl
         }
     }
 });
 
 async function deleteProductionUser() {
     try {
-        console.log('Connecting to PRODUCTION database...');
+        console.log('Connecting to database...');
 
         // Delete the user
         const deletedUser = await prisma.user.delete({
@@ -20,7 +32,7 @@ async function deleteProductionUser() {
             }
         });
 
-        console.log('USER DELETED FROM PRODUCTION DATABASE:');
+        console.log('USER DELETED FROM DATABASE:');
         console.log('=====================================');
         console.log('Deleted ID:', deletedUser.id);
         console.log('Email:', deletedUser.email);

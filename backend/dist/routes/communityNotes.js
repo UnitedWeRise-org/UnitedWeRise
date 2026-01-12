@@ -13,6 +13,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const communityNotesService_1 = require("../services/communityNotesService");
 const logger_1 = __importDefault(require("../utils/logger"));
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // ==========================================
 // Note CRUD Operations
@@ -197,7 +198,7 @@ router.get('/admin/pending-appeals', auth_1.requireAuth, auth_1.requireAdmin, as
  */
 router.get('/user/notes', auth_1.requireAuth, async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 20;
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const notes = await communityNotesService_1.CommunityNotesService.getUserNotes(req.user.id, limit);
         return res.json(notes);
     }
@@ -212,7 +213,7 @@ router.get('/user/notes', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/user/votes', auth_1.requireAuth, async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 50;
+        const { limit } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const votes = await communityNotesService_1.CommunityNotesService.getUserVotes(req.user.id, limit);
         return res.json(votes);
     }

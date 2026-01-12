@@ -7,6 +7,9 @@
  * - Response status, duration
  * - User ID (if authenticated)
  * - Unique request ID for tracing
+ *
+ * Security: Automatically redacts sensitive OAuth tokens, authorization codes,
+ * and other sensitive query parameters from logged URLs.
  */
 /**
  * Pino HTTP middleware configuration

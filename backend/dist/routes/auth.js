@@ -433,8 +433,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 return res.status(200).json({
                     requiresTOTP: true,
                     message: 'Two-factor authentication required',
-                    userId: user.id, // Temporary ID for TOTP verification
-                    totpDebug: { ...totpDebug, requiresTOTP: true, reason: 'No TOTP token provided' }
+                    userId: user.id // Temporary ID for TOTP verification
                 });
             }
             // Verify TOTP token
@@ -550,7 +549,6 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
         });
         res.json({
             message: 'Login successful',
-            totpDebug: totpDebug, // Temporary debug info
             user: {
                 id: user.id,
                 email: user.email,
@@ -698,12 +696,10 @@ router.post('/forgot-password', async (req, res) => {
     }
 });
 // Reset password
-router.post('/reset-password', async (req, res) => {
+// SECURITY: validatePasswordReset enforces exact 64-char hex token length
+router.post('/reset-password', validation_1.validatePasswordReset, async (req, res) => {
     try {
         const { token, newPassword } = req.body;
-        if (!token || !newPassword) {
-            return res.status(400).json({ error: 'Token and new password are required' });
-        }
         // SECURITY FIX: Hash incoming token to compare with stored hash
         const hashedToken = (0, auth_1.hashResetToken)(token);
         const user = await prisma_1.prisma.user.findFirst({

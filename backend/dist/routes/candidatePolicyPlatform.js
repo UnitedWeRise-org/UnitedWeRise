@@ -9,6 +9,7 @@ const auth_1 = require("../middleware/auth");
 const embeddingService_1 = require("../services/embeddingService");
 const azureOpenAIService_1 = require("../services/azureOpenAIService");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Check if current user is a verified candidate
 router.get('/candidate/status', auth_1.requireAuth, async (req, res) => {
@@ -617,12 +618,19 @@ INSTRUCTIONS:
             maxTokens: 400,
             systemMessage: "You are a policy analysis system for political candidates. Extract structured data from policy positions objectively and accurately."
         });
-        // Parse JSON response
+        // Parse JSON response from AI
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
             throw new Error('No JSON found in AI response');
         }
-        const analysis = JSON.parse(jsonMatch[0]);
+        // Safely parse AI response with default fallback structure
+        const defaultAnalysis = {
+            keywords: [],
+            category: 'other',
+            stance: 'NEUTRAL',
+            generatedSummary: ''
+        };
+        const analysis = (0, safeJson_1.safeJSONParse)(jsonMatch[0], defaultAnalysis);
         return {
             keywords: Array.isArray(analysis.keywords) ? analysis.keywords : [],
             category: analysis.category || 'other',

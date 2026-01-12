@@ -5,9 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-;
 const auth_1 = require("../middleware/auth");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -209,12 +209,12 @@ const router = express_1.default.Router();
 // Replaces: /search/users + /search/posts + /search/officials + /search/topics
 router.get('/unified', auth_1.requireAuth, async (req, res) => {
     try {
-        const { q, types = 'all', limit = 10 } = req.query;
+        const { q, types = 'all' } = req.query;
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const currentUserId = req.user.id;
         const searchTypes = types.toString().split(',');
         const includeAll = searchTypes.includes('all');
@@ -659,12 +659,12 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
 // Legacy individual search endpoints for backward compatibility
 router.get('/users', auth_1.requireAuth, async (req, res) => {
     try {
-        const { q, limit = 10 } = req.query;
+        const { q } = req.query;
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const currentUserId = req.user.id;
         const users = await prisma_1.prisma.user.findMany({
             where: {
@@ -790,12 +790,12 @@ router.get('/users', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/posts', auth_1.requireAuth, async (req, res) => {
     try {
-        const { q, limit = 10 } = req.query;
+        const { q } = req.query;
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const posts = await prisma_1.prisma.post.findMany({
             where: {
                 content: {
@@ -915,12 +915,12 @@ router.get('/posts', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/officials', auth_1.requireAuth, async (req, res) => {
     try {
-        const { q, limit = 10 } = req.query;
+        const { q } = req.query;
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const officials = await prisma_1.prisma.user.findMany({
             where: {
                 AND: [
@@ -1049,12 +1049,12 @@ router.get('/officials', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/topics', auth_1.requireAuth, async (req, res) => {
     try {
-        const { q, limit = 10 } = req.query;
+        const { q } = req.query;
         if (!q) {
             return res.status(400).json({ error: 'Search query is required' });
         }
         const searchTerm = q.toString().toLowerCase();
-        const limitNum = parseInt(limit.toString());
+        const { limit: limitNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         // Search for posts containing the topic term
         const topicPosts = await prisma_1.prisma.post.findMany({
             where: {

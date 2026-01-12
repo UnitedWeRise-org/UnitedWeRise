@@ -9,10 +9,10 @@
   },
   {
     "name": "DATABASE_URL",
-    "value": "postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+    "value": "SET_FROM_AZURE_KEY_VAULT_OR_ENV"
   },
   {
     "name": "JWT_SECRET",
-    "value": "UWR-JWT-Secret-123456-20250808"
+    "value": "SET_FROM_AZURE_KEY_VAULT_OR_ENV"
   }
 ]

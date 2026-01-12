@@ -9,6 +9,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const districtIdentificationService_1 = require("../services/districtIdentificationService");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Rate limiting for crowdsourcing submissions
@@ -426,10 +427,8 @@ router.post('/districts/:districtId/conflicts', auth_1.requireAuth, async (req, 
 router.get('/my-contributions', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { page = 1, limit = 20 } = req.query;
-        const pageNum = parseInt(page.toString());
-        const limitNum = Math.min(parseInt(limit.toString()), 100);
-        const offset = (pageNum - 1) * limitNum;
+        const { limit: limitNum, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
+        const pageNum = Math.floor(offset / limitNum) + 1;
         const [districts, offices, officials, conflicts] = await Promise.all([
             prisma_1.prisma.electoralDistrict.findMany({
                 where: { submittedBy: userId },

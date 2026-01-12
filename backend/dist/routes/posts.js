@@ -20,6 +20,7 @@ const postManagementService_1 = require("../services/postManagementService");
 const engagementScoringService_1 = require("../services/engagementScoringService");
 const riseAIEnrichmentService_1 = require("../services/riseAIEnrichmentService");
 const logger_1 = require("../services/logger");
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -503,9 +504,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
 router.get('/me', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { limit = 20, offset = 0 } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const posts = await prisma_1.prisma.post.findMany({
             where: { authorId: userId },
             include: {
@@ -638,8 +637,7 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
 router.get('/saved', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const limit = parseInt(req.query.limit) || 20;
-        const offset = parseInt(req.query.offset) || 0;
+        const { limit, offset } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const sort = req.query.sort || 'recent';
         // Build orderBy based on sort parameter
         let orderBy = { savedAt: 'desc' }; // Default: most recent
@@ -1862,9 +1860,7 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
 router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res) => {
     try {
         const { postId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         // Check if post exists
         const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId }
@@ -2026,11 +2022,9 @@ router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res
 router.get('/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const currentUserId = req.headers.authorization ?
             req.user?.id : null; // Try to get user ID if authenticated
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
         // Verify user exists
         const userExists = await prisma_1.prisma.user.findUnique({
             where: { id: userId },

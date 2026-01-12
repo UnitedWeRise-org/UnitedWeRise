@@ -14,6 +14,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const reputationService_1 = require("../services/reputationService");
 const logger_1 = __importDefault(require("../utils/logger"));
+const safeJson_1 = require("../utils/safeJson");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Get user's reputation score
@@ -49,9 +50,7 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
 router.get('/history', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { limit = 20, offset = 0 } = req.query;
-        const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
+        const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);
         const events = await prisma_1.prisma.reputationEvent.findMany({
             where: { userId },
             orderBy: { createdAt: 'desc' },
@@ -274,9 +273,9 @@ router.get('/stats', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req,
 // Get low reputation users for admin review (admin only)
 router.get('/low-reputation', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const { threshold = 30, limit = 20 } = req.query;
-        const thresholdNum = parseInt(threshold.toString());
-        const limitNum = parseInt(limit.toString());
+        const rawThreshold = parseInt(req.query.threshold);
+        const thresholdNum = Number.isNaN(rawThreshold) || rawThreshold < 0 || rawThreshold > 100 ? 30 : rawThreshold;
+        const { limit: limitNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, undefined);
         const users = await prisma_1.prisma.user.findMany({
             where: {
                 reputationScore: { lt: thresholdNum }

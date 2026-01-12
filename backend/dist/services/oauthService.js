@@ -339,24 +339,82 @@ class OAuthService {
         return username;
     }
     /**
+     * Check if OAuth encryption key is configured
+     * Logs warning if not set (tokens will be stored unencrypted)
+     */
+    static hasEncryptionKey() {
+        if (!process.env.OAUTH_ENCRYPTION_KEY) {
+            return false;
+        }
+        // Validate key length (must be 32 bytes for AES-256)
+        const keyBuffer = Buffer.from(process.env.OAUTH_ENCRYPTION_KEY, 'hex');
+        if (keyBuffer.length !== 32) {
+            logger_1.logger.warn({
+                keyLength: keyBuffer.length,
+                expected: 32
+            }, 'OAUTH_ENCRYPTION_KEY has invalid length - must be 64 hex characters (32 bytes)');
+            return false;
+        }
+        return true;
+    }
+    /**
      * Encrypt OAuth tokens for secure storage
+     * If OAUTH_ENCRYPTION_KEY is not set, returns token with 'unencrypted:' prefix
      */
     static encryptToken(token) {
+        if (!this.hasEncryptionKey()) {
+            logger_1.logger.warn('OAUTH_ENCRYPTION_KEY not set - storing OAuth token unencrypted');
+            // Return with prefix so we know it's unencrypted during decryption
+            return `unencrypted:${token}`;
+        }
         const algorithm = 'aes-256-cbc';
-        const key = process.env.OAUTH_ENCRYPTION_KEY || crypto_1.default.randomBytes(32);
+        const key = Buffer.from(process.env.OAUTH_ENCRYPTION_KEY, 'hex');
         const iv = crypto_1.default.randomBytes(16);
         const cipher = crypto_1.default.createCipheriv(algorithm, key, iv);
         let encrypted = cipher.update(token, 'utf8', 'hex');
         encrypted += cipher.final('hex');
-        return `${iv.toString('hex')}:${encrypted}`;
+        return `encrypted:${iv.toString('hex')}:${encrypted}`;
     }
     /**
      * Decrypt OAuth tokens for use
+     * Handles both encrypted and unencrypted tokens (for backwards compatibility)
      */
-    static decryptToken(encryptedToken) {
+    static decryptToken(storedToken) {
+        // Handle unencrypted tokens
+        if (storedToken.startsWith('unencrypted:')) {
+            return storedToken.substring('unencrypted:'.length);
+        }
+        // Handle new encrypted format
+        if (storedToken.startsWith('encrypted:')) {
+            if (!this.hasEncryptionKey()) {
+                logger_1.logger.error('Cannot decrypt token - OAUTH_ENCRYPTION_KEY not set');
+                throw new Error('Encryption key not available');
+            }
+            const parts = storedToken.split(':');
+            if (parts.length !== 3) {
+                throw new Error('Invalid encrypted token format');
+            }
+            const algorithm = 'aes-256-cbc';
+            const key = Buffer.from(process.env.OAUTH_ENCRYPTION_KEY, 'hex');
+            const iv = Buffer.from(parts[1], 'hex');
+            const encrypted = parts[2];
+            const decipher = crypto_1.default.createDecipheriv(algorithm, key, iv);
+            let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+        // Handle legacy format (iv:encrypted without prefix)
+        // This handles tokens encrypted before the format change
+        if (!this.hasEncryptionKey()) {
+            logger_1.logger.error('Cannot decrypt legacy token - OAUTH_ENCRYPTION_KEY not set');
+            throw new Error('Encryption key not available for legacy token');
+        }
+        const [ivHex, encrypted] = storedToken.split(':');
+        if (!ivHex || !encrypted) {
+            throw new Error('Invalid token format');
+        }
         const algorithm = 'aes-256-cbc';
-        const key = process.env.OAUTH_ENCRYPTION_KEY || crypto_1.default.randomBytes(32);
-        const [ivHex, encrypted] = encryptedToken.split(':');
+        const key = Buffer.from(process.env.OAUTH_ENCRYPTION_KEY, 'hex');
         const iv = Buffer.from(ivHex, 'hex');
         const decipher = crypto_1.default.createDecipheriv(algorithm, key, iv);
         let decrypted = decipher.update(encrypted, 'hex', 'utf8');

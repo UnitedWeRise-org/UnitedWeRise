@@ -102,11 +102,13 @@ These secrets MUST be configured in the repository:
 
 ### Staging
 - **Secret Name:** `DATABASE_URL_STAGING`
-- **Value:** `postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require`
+- **Value:** `postgresql://<username>:<password>@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require`
+- **Note:** Get actual credentials from Azure Key Vault or your secrets manager
 
 ### Production
 - **Secret Name:** `DATABASE_URL_PRODUCTION`
-- **Value:** `postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require`
+- **Value:** `postgresql://<username>:<password>@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require`
+- **Note:** Get actual credentials from Azure Key Vault or your secrets manager
 
 ### How to Add Secrets
 
