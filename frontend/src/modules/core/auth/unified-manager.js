@@ -33,6 +33,7 @@ class UnifiedAuthManager {
         this._isRefreshingToken = false; // Flag to prevent concurrent refreshes
         this._refreshPending = false; // Flag set IMMEDIATELY on visibility change (before debounce)
         this._lastWakeTimestamp = null; // Timestamp of last visibility change (for race condition detection)
+        this._lastSuccessfulRefresh = 0; // Timestamp of last successful token refresh (for 401 handler race condition)
         this._visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this._proactiveRefreshTimer = null; // Timer for proactive token refresh (14-min interval)
         this._currentAuthState = {
@@ -120,6 +121,7 @@ class UnifiedAuthManager {
 
                     console.log('✅ Token refreshed successfully');
                     this._isRefreshingToken = false;
+                    this._lastSuccessfulRefresh = Date.now(); // Track successful refresh for 401 handler race condition
 
                     // Reset proactive refresh timer to prevent redundant refreshes
                     this._startProactiveRefreshTimer();
@@ -215,6 +217,17 @@ class UnifiedAuthManager {
      */
     didJustWakeUp(thresholdMs = 3000) {
         return this._lastWakeTimestamp && (Date.now() - this._lastWakeTimestamp < thresholdMs);
+    }
+
+    /**
+     * Check if token refresh just succeeded recently
+     * Used by 401 handlers to skip redundant /auth/me verification after successful refresh
+     * When refresh succeeds, the session IS valid (requires valid refresh token from database)
+     * @param {number} thresholdMs - Time window to consider "just refreshed" (default 5 seconds)
+     * @returns {boolean} True if refresh succeeded within threshold
+     */
+    didJustRefreshSuccessfully(thresholdMs = 5000) {
+        return this._lastSuccessfulRefresh && (Date.now() - this._lastSuccessfulRefresh < thresholdMs);
     }
 
     /**

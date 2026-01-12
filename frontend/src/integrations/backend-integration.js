@@ -197,18 +197,22 @@ class BackendIntegration {
                     );
 
                     if (!isInitializationCall && window.appInitializer && window.appInitializer.isAppInitialized()) {
-                        // Check if token refresh is pending OR if we just woke up (race condition fallback)
+                        // Check if token refresh is pending, just woke up, or just refreshed successfully
                         // The didJustWakeUp() check handles cases where:
                         // - Scheduled timers fire before visibility change event
                         // - The isRefreshPending flag wasn't set due to race condition
+                        // The didJustRefreshSuccessfully() check handles the case where:
+                        // - Refresh completed but old 401s are still being processed
+                        // - Trust successful refresh (requires valid refresh token from database)
                         const manager = window.unifiedAuthManager;
                         const shouldWaitForRefresh = manager && (
                             manager.isRefreshPending() ||
-                            manager.didJustWakeUp(3000) // Within 3 seconds of tab becoming visible
+                            manager.didJustWakeUp(3000) || // Within 3 seconds of tab becoming visible
+                            manager.didJustRefreshSuccessfully(5000) // Within 5 seconds of successful refresh
                         );
 
                         if (shouldWaitForRefresh) {
-                            console.log('⏳ Token refresh pending or just woke - waiting before session verification...');
+                            console.log('⏳ Token refresh pending, just woke, or just refreshed - checking session...');
                             await manager.waitForPendingRefresh(5000);
 
                             // After refresh completes, check if user is still authenticated
