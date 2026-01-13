@@ -427,7 +427,7 @@ class FriendUtils {
      */
     static async getFriendStatus(userId) {
         try {
-            const response = await apiCall(`/users/friend-status/${userId}`);
+            const response = await apiCall(`/relationships/friend-status/${userId}`);
 
             if (response.ok) {
                 return response.data;
@@ -447,7 +447,7 @@ class FriendUtils {
      * @param {string} status - Friend status ('none', 'request_sent', 'request_received', 'friends')
      */
     static updateFriendUI(userId, status) {
-        const friendButtons = document.querySelectorAll(`[data-friend-user="${userId}"]`);
+        const friendButtons = document.querySelectorAll(`[data-friend-user="${userId}"], [data-user-id="${userId}"][data-relationship-action="friend"]`);
         
         friendButtons.forEach(button => {
             button.setAttribute('data-friend-status', status);

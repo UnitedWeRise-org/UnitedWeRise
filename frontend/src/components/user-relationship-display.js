@@ -208,9 +208,36 @@ class UserRelationshipDisplay {
 
     updateFriendStatus(status) {
         if (this.relationshipStatus) {
-            this.relationshipStatus.friend.friendshipStatus = status;
-            this.relationshipStatus.friend.isFriend = (status === 'ACCEPTED');
-            this.relationshipStatus.canMessage = (status === 'ACCEPTED');
+            // Map incoming status values to API format
+            let friendshipStatus, requestSentByCurrentUser = false, isFriend = false;
+
+            switch (status) {
+                case 'request_sent':
+                    friendshipStatus = 'PENDING';
+                    requestSentByCurrentUser = true;
+                    break;
+                case 'request_received':
+                    friendshipStatus = 'PENDING';
+                    requestSentByCurrentUser = false;
+                    break;
+                case 'friends':
+                case 'ACCEPTED':
+                    friendshipStatus = 'ACCEPTED';
+                    isFriend = true;
+                    break;
+                case 'none':
+                    friendshipStatus = 'none';
+                    break;
+                default:
+                    // Already in API format (PENDING, ACCEPTED, etc.)
+                    friendshipStatus = status;
+                    break;
+            }
+
+            this.relationshipStatus.friend.friendshipStatus = friendshipStatus;
+            this.relationshipStatus.friend.requestSentByCurrentUser = requestSentByCurrentUser;
+            this.relationshipStatus.friend.isFriend = isFriend;
+            this.relationshipStatus.canMessage = isFriend;
             this.render();
         }
     }
