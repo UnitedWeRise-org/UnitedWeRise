@@ -9,7 +9,7 @@ import { showOrgProfileModal, handleModalAction } from '../components/org-profil
 import { handleBrowserAction } from '../components/org-browser.js';
 import { handleWidgetAction } from '../components/my-orgs-widget.js';
 import { organizationsApi } from '../organizations-api.js';
-import { showToast } from '../../../utils/toast.js';
+import { showToast } from '../../../../utils/toast.js';
 
 /**
  * Setup global event delegation for organization actions

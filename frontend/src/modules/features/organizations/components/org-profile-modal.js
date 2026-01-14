@@ -6,7 +6,7 @@
  */
 
 import { organizationsApi } from '../organizations-api.js';
-import { showToast } from '../../../utils/toast.js';
+import { showToast } from '../../../../utils/toast.js';
 import { ORG_TYPE_LABELS, JURISDICTION_LABELS } from './org-card.js';
 
 /**

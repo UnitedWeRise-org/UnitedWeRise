@@ -6,7 +6,7 @@
  */
 
 import { organizationsApi } from '../organizations-api.js';
-import { showToast } from '../../../utils/toast.js';
+import { showToast } from '../../../../utils/toast.js';
 
 /**
  * Widget state

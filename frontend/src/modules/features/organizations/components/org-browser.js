@@ -7,7 +7,7 @@
 
 import { organizationsApi } from '../organizations-api.js';
 import { renderOrgGrid, ORG_TYPE_LABELS, JURISDICTION_LABELS } from './org-card.js';
-import { showToast } from '../../../utils/toast.js';
+import { showToast } from '../../../../utils/toast.js';
 
 /**
  * Browser state
