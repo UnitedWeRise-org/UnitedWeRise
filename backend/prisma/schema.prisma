@@ -325,6 +325,18 @@ model User {
   /// Application errors associated with this user (for debugging and support)
   applicationErrors           ApplicationError[]
 
+  // Organization relationships
+  /// Organizations this user leads (as head)
+  ledOrganizations            Organization[]            @relation("OrgHead")
+  /// Organization memberships for this user
+  organizationMemberships     OrganizationMember[]      @relation("OrgMemberships")
+  /// Organizations this user follows
+  organizationFollows         OrganizationFollow[]      @relation("OrgFollows")
+  /// Organization discussions authored by this user
+  orgDiscussions              OrganizationDiscussion[]  @relation("OrgDiscussionAuthor")
+  /// Organization discussion replies authored by this user
+  orgDiscussionReplies        DiscussionReply[]         @relation("DiscussionReplyAuthor")
+
   @@index([username]) /// Fast lookup for @username mentions and profile pages
   @@index([createdAt]) /// Chronological sorting for admin user lists
   @@index([h3Index]) /// Geospatial queries for local content discovery
@@ -566,6 +578,14 @@ model Post {
   /// Position in thread (0 = head/standalone, 1+ = continuations in order)
   threadPosition     Int               @default(0) @map("thread_position")
 
+  // Organization authorship (optional - null = personal post)
+  /// Organization ID if this post is published on behalf of an organization
+  /// @description When set, post displays with org name/avatar as author.
+  /// authorId remains the user who created it (for audit purposes).
+  organizationId     String?
+  /// Organization relationship
+  organization       Organization?     @relation("OrgPosts", fields: [organizationId], references: [id], onDelete: SetNull)
+
   // Relationships
   /// Comments on this post (CASCADE: deleting post deletes all comments)
   comments           Comment[]
@@ -610,6 +630,7 @@ model Post {
   @@index([isPolitical]) /// Filtering political vs non-political content
   @@index([containsFeedback, feedbackType, feedbackPriority]) /// Feedback management dashboard queries
   @@index([threadHeadId, threadPosition]) /// Thread queries - get all posts in a thread
+  @@index([organizationId]) /// Organization posts lookup
 }
 
 model Like {
@@ -837,6 +858,12 @@ model Candidate {
   policyPositions        PolicyPosition[]
   politicalInquiries     PoliticalInquiry[]
   publicQAs              PublicQA[]
+
+  // Organization endorsement relations
+  /// Endorsement applications submitted by this candidate
+  orgEndorsementApplications EndorsementApplication[] @relation("OrgEndorsementApplications")
+  /// Organization endorsements received by this candidate
+  orgEndorsementsReceived    OrganizationEndorsement[] @relation("OrgEndorsementsReceived")
 
   @@index([officeId])
   @@index([party])
@@ -1971,6 +1998,13 @@ model CivicEvent {
   createdBy     String
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  /// Organization ID if this event is hosted by an organization
+  /// @description When set, event displays with org branding. Null = personal event.
+  organizationId String?
+  /// Organization relationship
+  organization   Organization? @relation("OrgEvents", fields: [organizationId], references: [id], onDelete: SetNull)
+
   creator       User          @relation("EventCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   rsvps         EventRSVP[]
 
@@ -1978,6 +2012,7 @@ model CivicEvent {
   @@index([scheduledDate, status])
   @@index([createdBy])
   @@index([location])
+  @@index([organizationId])
 }
 
 model EventRSVP {
@@ -2349,6 +2384,47 @@ enum NotificationType {
   REACTION
   NEW_POST         /// Subscription notification when subscribed user posts
   MESSAGE_REQUEST  /// DM request from non-friend
+
+  // Organization notifications
+  ORG_INVITE                       /// Invitation to join an organization
+  ORG_APPLICATION_RECEIVED         /// Someone wants to join your org
+  ORG_APPLICATION_APPROVED         /// Your membership application approved
+  ORG_APPLICATION_DENIED           /// Your membership application denied
+  ORG_ROLE_ASSIGNED                /// You were assigned a role in an org
+  ORG_ROLE_REMOVED                 /// Your role was removed
+
+  // Affiliation notifications
+  ORG_AFFILIATION_PROPOSED         /// Affiliation proposal received
+  ORG_AFFILIATION_APPROVED         /// Affiliation accepted
+  ORG_AFFILIATION_REVOKED          /// Affiliation ended
+
+  // Merger notifications
+  ORG_MERGE_PROPOSED               /// Merge proposal received
+  ORG_MERGE_ACCEPTED               /// Merge accepted by target org
+  ORG_MERGE_COMPLETED              /// Merge process completed
+
+  // Endorsement notifications
+  ENDORSEMENT_APPLICATION_RECEIVED /// Candidate applied for endorsement
+  ENDORSEMENT_VOTE_CAST            /// Vote cast on endorsement application
+  ENDORSEMENT_APPROVED             /// Endorsement application approved
+  ENDORSEMENT_DENIED               /// Endorsement application denied
+  ENDORSEMENT_PUBLISHED            /// Endorsement made public
+  ENDORSEMENT_REVOKED              /// Endorsement revoked
+
+  // Event notifications
+  ORG_EVENT_CREATED                /// New event created by org you follow
+  ORG_EVENT_UPDATED                /// Event details changed
+  ORG_EVENT_CANCELLED              /// Event was cancelled
+  ORG_EVENT_REMINDER               /// 24h and 1h before event reminders
+
+  // Discussion notifications
+  ORG_DISCUSSION_CREATED           /// New discussion in your org
+  ORG_DISCUSSION_REPLY             /// Reply to your discussion
+  ORG_DISCUSSION_MENTION           /// @mentioned in discussion
+
+  // Verification notifications
+  ORG_VERIFICATION_APPROVED        /// Org verification approved
+  ORG_VERIFICATION_DENIED          /// Org verification denied
 }
 
 enum FriendshipStatus {
@@ -3232,6 +3308,152 @@ enum QuestTimeframe {
   LIMITED_TIME
 }
 
+// ============================================================================
+// ORGANIZATION SYSTEM ENUMS
+// ============================================================================
+
+/// Type of jurisdiction for organization territory
+enum JurisdictionType {
+  NATIONAL
+  STATE
+  COUNTY
+  CITY
+  CUSTOM
+}
+
+/// Voting threshold type for organization endorsement decisions
+enum VotingThresholdType {
+  SIMPLE_MAJORITY    /// > 50% of votes
+  TWO_THIRDS         /// >= 66.67% of votes
+  THREE_QUARTERS     /// >= 75% of votes
+  UNANIMOUS          /// 100% of votes (no AGAINST)
+  PERCENTAGE         /// Custom percentage (use votingThresholdValue)
+}
+
+/// Organization membership status
+enum MembershipStatus {
+  PENDING            /// Awaiting approval
+  ACTIVE             /// Full member
+  SUSPENDED          /// Temporarily restricted
+  REMOVED            /// No longer member
+}
+
+/// Organization affiliation status
+enum AffiliationStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+/// Organization merge request status
+enum MergeRequestStatus {
+  PENDING            /// Awaiting fromOrg acceptance
+  ACCEPTED           /// fromOrg accepted, awaiting processing
+  COMPLETED          /// Merge executed
+  REJECTED           /// fromOrg declined
+  CANCELLED          /// toOrg withdrew
+}
+
+/// Question types for endorsement questionnaires
+enum QuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  MULTIPLE_CHOICE
+  CHECKBOX
+  YES_NO
+  SCALE              /// 1-5 or 1-10
+}
+
+/// Endorsement application status
+enum EndorsementApplicationStatus {
+  SUBMITTED          /// Awaiting review
+  UNDER_REVIEW       /// Being discussed/voted on
+  APPROVED           /// Endorsed
+  DENIED             /// Not endorsed
+  WITHDRAWN          /// Candidate withdrew
+}
+
+/// Vote choice for endorsement decisions
+enum EndorsementVoteChoice {
+  FOR
+  AGAINST
+  ABSTAIN
+}
+
+/// Discussion visibility levels within organization
+enum DiscussionVisibility {
+  ALL_MEMBERS        /// All org members can see
+  ROLE_HOLDERS       /// Only members with roles can see
+  LEADERSHIP         /// Only head + designated leadership roles
+}
+
+/// Organization verification status
+enum OrgVerificationStatus {
+  NOT_REQUESTED
+  PENDING
+  APPROVED
+  DENIED
+}
+
+/// Type of organization for verification
+enum OrgType {
+  POLITICAL_PARTY
+  ADVOCACY_ORG
+  LABOR_UNION
+  COMMUNITY_ORG
+  GOVERNMENT_OFFICE
+  CAMPAIGN
+  PAC_SUPERPAC
+  OTHER
+}
+
+/// Predefined organization capabilities
+enum OrgCapability {
+  // Structural
+  CREATE_SUBORG
+  MANAGE_ORG_SETTINGS
+  DISSOLVE_ORG
+  TRANSFER_HEADSHIP
+
+  // Membership
+  INVITE_MEMBERS
+  REMOVE_MEMBERS
+  APPROVE_APPLICATIONS
+
+  // Roles & Delegation
+  CREATE_ROLES
+  ASSIGN_ROLES
+  DELEGATE_CAPABILITIES
+
+  // Endorsements
+  MANAGE_QUESTIONNAIRE
+  REVIEW_APPLICATIONS
+  VOTE_ENDORSEMENT
+  PUBLISH_ENDORSEMENT
+
+  // Affiliations & Mergers
+  PROPOSE_AFFILIATION
+  APPROVE_AFFILIATION
+  REVOKE_AFFILIATION
+  INITIATE_MERGE
+  APPROVE_MERGE
+
+  // Content
+  POST_AS_ORG
+  MODERATE_CONTENT
+
+  // Events
+  CREATE_EVENTS
+  MANAGE_EVENTS
+  VIEW_RSVPS
+
+  // Discussions
+  CREATE_DISCUSSION
+  PIN_DISCUSSION
+  MODERATE_DISCUSSION
+  VIEW_LEADERSHIP_DISCUSSIONS
+}
+
 /// Photo upload record
 /// @description Tracks uploaded images with Azure Blob Storage, AI moderation, and EXIF processing.
 /// Photos can be avatars, gallery images, or post attachments.
@@ -3924,4 +4146,604 @@ model AuditLog {
   @@index([action])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+// ============================================================================
+// ORGANIZATION SYSTEM MODELS
+// ============================================================================
+
+/// Organization entity for groups, advocacy orgs, parties, etc.
+/// @description Core organization model supporting hierarchical structure,
+/// membership management, endorsements, and civic engagement features.
+model Organization {
+  /// Unique identifier for the organization
+  id                    String                @id @default(cuid())
+  /// Organization display name
+  name                  String
+  /// URL-friendly unique identifier
+  slug                  String                @unique
+  /// Organization description/about text
+  description           String?
+  /// Avatar/logo image URL
+  avatar                String?
+  /// Organization website URL
+  website               String?
+
+  // Hierarchy
+  /// Parent organization ID (null = top-level organization)
+  parentId              String?
+  /// Parent organization relationship
+  parent                Organization?         @relation("OrgHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  /// Child organizations
+  children              Organization[]        @relation("OrgHierarchy")
+
+  // Leadership (required, exactly one head)
+  /// User ID of the organization head
+  headUserId            String
+  /// Organization head user relationship
+  head                  User                  @relation("OrgHead", fields: [headUserId], references: [id], onDelete: Restrict)
+
+  // Jurisdiction (optional)
+  /// Type of jurisdiction (NATIONAL, STATE, COUNTY, CITY, CUSTOM)
+  jurisdictionType      JurisdictionType?
+  /// Jurisdiction value (e.g., "TX", "Travis County, TX", "Austin, TX")
+  jurisdictionValue     String?
+  /// H3 cell indices covering the jurisdiction area
+  h3Cells               String[]              @default([])
+
+  // Endorsement settings
+  /// Whether endorsements are enabled for this organization
+  endorsementsEnabled   Boolean               @default(false)
+  /// Voting threshold type for endorsement decisions
+  votingThresholdType   VotingThresholdType   @default(SIMPLE_MAJORITY)
+  /// Custom voting threshold percentage (for PERCENTAGE type)
+  votingThresholdValue  Int?
+  /// Minimum participation percentage for quorum (0 = no quorum required)
+  votingQuorumPercent   Int                   @default(0)
+
+  // Verification
+  /// Whether organization has been verified by platform
+  isVerified            Boolean               @default(false)
+  /// Organization verification status
+  verificationStatus    OrgVerificationStatus @default(NOT_REQUESTED)
+  /// Verification document URLs
+  verificationDocuments String[]              @default([])
+  /// Timestamp when organization was verified
+  verifiedAt            DateTime?
+  /// Admin user ID who verified the organization
+  verifiedBy            String?
+
+  // Metadata
+  /// Whether organization is active (not dissolved)
+  isActive              Boolean               @default(true)
+  /// Organization creation timestamp
+  createdAt             DateTime              @default(now())
+  /// Last update timestamp
+  updatedAt             DateTime              @updatedAt
+
+  // Relations
+  members                 OrganizationMember[]
+  roles                   OrganizationRole[]
+  affiliationsFrom        OrganizationAffiliation[]     @relation("AffiliationFrom")
+  affiliationsTo          OrganizationAffiliation[]     @relation("AffiliationTo")
+  mergeRequestsSent       OrganizationMergeRequest[]    @relation("MergeRequestFrom")
+  mergeRequestsReceived   OrganizationMergeRequest[]    @relation("MergeRequestTo")
+  questionnaires          EndorsementQuestionnaire[]
+  orgEndorsements         OrganizationEndorsement[]
+  posts                   Post[]                        @relation("OrgPosts")
+  events                  CivicEvent[]                  @relation("OrgEvents")
+  followers               OrganizationFollow[]
+  discussions             OrganizationDiscussion[]
+  verificationRequests    OrganizationVerificationRequest[]
+
+  @@index([parentId])
+  @@index([headUserId])
+  @@index([jurisdictionType, jurisdictionValue])
+  @@index([isActive])
+  @@index([slug])
+}
+
+/// Organization membership record
+/// @description Tracks user membership in organizations with role assignments and status.
+model OrganizationMember {
+  /// Unique identifier for this membership
+  id              String            @id @default(cuid())
+
+  /// Organization ID
+  organizationId  String
+  /// Organization relationship
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// User ID of the member
+  userId          String
+  /// User relationship
+  user            User              @relation("OrgMemberships", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Role assignment (nullable = regular member with no special role)
+  roleId          String?
+  /// Role relationship
+  role            OrganizationRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  /// Membership status
+  status          MembershipStatus  @default(PENDING)
+  /// Timestamp when membership was approved
+  joinedAt        DateTime?
+  /// User ID who invited this member (null = self-request)
+  invitedBy       String?
+
+  /// Membership creation timestamp
+  createdAt       DateTime          @default(now())
+  /// Last update timestamp
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  endorsementVotes EndorsementVote[]
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId, status])
+  @@index([roleId])
+}
+
+/// Organization role definition
+/// @description Defines custom roles within an organization with assigned capabilities.
+model OrganizationRole {
+  /// Unique identifier for this role
+  id              String            @id @default(cuid())
+
+  /// Organization ID
+  organizationId  String
+  /// Organization relationship
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Role display name (e.g., "Co-Chair", "Electoral Committee Lead")
+  name            String
+  /// Role description
+  description     String?
+
+  /// Capabilities granted to this role
+  capabilities    OrgCapability[]
+
+  /// Maximum number of users who can hold this role (null = unlimited)
+  maxHolders      Int               @default(1)
+
+  /// Role creation timestamp
+  createdAt       DateTime          @default(now())
+  /// Last update timestamp
+  updatedAt       DateTime          @updatedAt
+
+  /// Members assigned to this role
+  members         OrganizationMember[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+/// Organization follow relationship
+/// @description Tracks users following organizations for feed updates.
+model OrganizationFollow {
+  /// Unique identifier for this follow
+  id              String        @id @default(cuid())
+
+  /// Organization ID being followed
+  organizationId  String
+  /// Organization relationship
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// User ID of the follower
+  userId          String
+  /// User relationship
+  user            User          @relation("OrgFollows", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Follow creation timestamp
+  createdAt       DateTime      @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+/// Organization affiliation (non-hierarchical partnership)
+/// @description Tracks partnerships between organizations without parent-child hierarchy.
+model OrganizationAffiliation {
+  /// Unique identifier for this affiliation
+  id              String            @id @default(cuid())
+
+  /// Proposing organization ID
+  fromOrgId       String
+  /// Proposing organization relationship
+  fromOrg         Organization      @relation("AffiliationFrom", fields: [fromOrgId], references: [id], onDelete: Cascade)
+
+  /// Target organization ID
+  toOrgId         String
+  /// Target organization relationship
+  toOrg           Organization      @relation("AffiliationTo", fields: [toOrgId], references: [id], onDelete: Cascade)
+
+  /// Affiliation status
+  status          AffiliationStatus @default(PENDING)
+
+  /// User ID who proposed the affiliation
+  proposedBy      String
+  /// User ID who approved the affiliation
+  approvedBy      String?
+  /// User ID who revoked the affiliation
+  revokedBy       String?
+
+  /// Affiliation creation timestamp
+  createdAt       DateTime          @default(now())
+  /// Approval timestamp
+  approvedAt      DateTime?
+  /// Revocation timestamp
+  revokedAt       DateTime?
+
+  @@unique([fromOrgId, toOrgId])
+  @@index([toOrgId, status])
+}
+
+/// Organization merge request
+/// @description Tracks requests for one organization to absorb another.
+model OrganizationMergeRequest {
+  /// Unique identifier for this merge request
+  id                    String              @id @default(cuid())
+
+  /// Organization being absorbed
+  fromOrgId             String
+  /// Organization being absorbed relationship
+  fromOrg               Organization        @relation("MergeRequestFrom", fields: [fromOrgId], references: [id], onDelete: Cascade)
+
+  /// Organization absorbing
+  toOrgId               String
+  /// Organization absorbing relationship
+  toOrg                 Organization        @relation("MergeRequestTo", fields: [toOrgId], references: [id], onDelete: Cascade)
+
+  /// Proposed parent organization ID (null = becomes direct child of toOrg)
+  proposedParentId      String?
+
+  /// Merge request status
+  status                MergeRequestStatus  @default(PENDING)
+
+  /// Capabilities the absorbed org will retain
+  retainedCapabilities  OrgCapability[]
+
+  /// User ID who initiated the merge (from toOrg)
+  initiatedBy           String
+  /// User ID who accepted the merge (head of fromOrg)
+  acceptedBy            String?
+
+  /// Request creation timestamp
+  createdAt             DateTime            @default(now())
+  /// Acceptance timestamp
+  acceptedAt            DateTime?
+  /// Completion timestamp
+  completedAt           DateTime?
+
+  @@index([fromOrgId])
+  @@index([toOrgId, status])
+}
+
+// ============================================================================
+// ENDORSEMENT QUESTIONNAIRE & VOTING MODELS
+// ============================================================================
+
+/// Endorsement questionnaire for candidates seeking organization endorsement
+/// @description Organizations create questionnaires that candidates fill out to seek endorsement.
+model EndorsementQuestionnaire {
+  /// Unique identifier for this questionnaire
+  id              String                    @id @default(cuid())
+
+  /// Organization ID that created this questionnaire
+  organizationId  String
+  /// Organization relationship
+  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Questionnaire title (e.g., "2024 Endorsement Questionnaire")
+  title           String
+  /// Questionnaire description/instructions
+  description     String?
+  /// Whether questionnaire is accepting applications
+  isActive        Boolean                   @default(true)
+
+  /// Questionnaire creation timestamp
+  createdAt       DateTime                  @default(now())
+  /// Last update timestamp
+  updatedAt       DateTime                  @updatedAt
+  /// User ID who created the questionnaire
+  createdBy       String
+
+  /// Questions in this questionnaire
+  questions       QuestionnaireQuestion[]
+  /// Applications submitted to this questionnaire
+  applications    EndorsementApplication[]
+
+  @@index([organizationId, isActive])
+}
+
+/// Question within an endorsement questionnaire
+/// @description Individual questions that candidates must answer.
+model QuestionnaireQuestion {
+  /// Unique identifier for this question
+  id              String                    @id @default(cuid())
+
+  /// Questionnaire ID
+  questionnaireId String
+  /// Questionnaire relationship
+  questionnaire   EndorsementQuestionnaire  @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+
+  /// Question text
+  text            String
+  /// Help text/description for the question
+  description     String?
+  /// Question type (SHORT_TEXT, LONG_TEXT, MULTIPLE_CHOICE, etc.)
+  type            QuestionType
+  /// Options for MULTIPLE_CHOICE and CHECKBOX types (JSON array)
+  options         String[]                  @default([])
+  /// Whether response is required
+  isRequired      Boolean                   @default(true)
+  /// Display order (lower = earlier)
+  displayOrder    Int
+
+  /// Whether response should be shown on candidate's public page
+  isPublic        Boolean                   @default(true)
+
+  /// Responses to this question
+  responses       QuestionResponse[]
+
+  @@index([questionnaireId, displayOrder])
+}
+
+/// Candidate's response to a questionnaire question
+/// @description Stores the candidate's answer to each question.
+model QuestionResponse {
+  /// Unique identifier for this response
+  id              String                    @id @default(cuid())
+
+  /// Application ID
+  applicationId   String
+  /// Application relationship
+  application     EndorsementApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  /// Question ID
+  questionId      String
+  /// Question relationship
+  question        QuestionnaireQuestion     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  /// Response content (JSON for complex types)
+  response        String
+
+  @@unique([applicationId, questionId])
+}
+
+/// Candidate's endorsement application to an organization
+/// @description Tracks a candidate's application for endorsement including voting.
+model EndorsementApplication {
+  /// Unique identifier for this application
+  id              String                      @id @default(cuid())
+
+  /// Questionnaire ID
+  questionnaireId String
+  /// Questionnaire relationship
+  questionnaire   EndorsementQuestionnaire    @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+
+  /// Candidate ID applying for endorsement
+  candidateId     String
+  /// Candidate relationship
+  candidate       Candidate                   @relation("OrgEndorsementApplications", fields: [candidateId], references: [id], onDelete: Cascade)
+
+  /// Application status
+  status          EndorsementApplicationStatus @default(SUBMITTED)
+
+  /// Submission timestamp
+  submittedAt     DateTime                    @default(now())
+  /// Review completion timestamp
+  reviewedAt      DateTime?
+
+  /// Cached vote counts (denormalized for performance)
+  votesFor        Int                         @default(0)
+  votesAgainst    Int                         @default(0)
+  votesAbstain    Int                         @default(0)
+
+  /// Responses to questionnaire questions
+  responses       QuestionResponse[]
+  /// Individual member votes
+  votes           EndorsementVote[]
+  /// Published endorsement (if approved)
+  orgEndorsement  OrganizationEndorsement?
+
+  @@unique([questionnaireId, candidateId])
+  @@index([questionnaireId, status])
+  @@index([candidateId])
+}
+
+/// Individual member vote on an endorsement application
+/// @description Tracks each member's vote on whether to endorse a candidate.
+model EndorsementVote {
+  /// Unique identifier for this vote
+  id              String                    @id @default(cuid())
+
+  /// Application ID being voted on
+  applicationId   String
+  /// Application relationship
+  application     EndorsementApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  /// Member ID casting the vote
+  memberId        String
+  /// Member relationship
+  member          OrganizationMember        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  /// Vote choice (FOR, AGAINST, ABSTAIN)
+  vote            EndorsementVoteChoice
+  /// Optional internal comment/note
+  comment         String?
+
+  /// Vote timestamp
+  createdAt       DateTime                  @default(now())
+
+  @@unique([applicationId, memberId])
+  @@index([applicationId])
+}
+
+/// Published organization endorsement of a candidate
+/// @description Represents an official endorsement after approval.
+model OrganizationEndorsement {
+  /// Unique identifier for this endorsement
+  id              String                    @id @default(cuid())
+
+  /// Organization ID making the endorsement
+  organizationId  String
+  /// Organization relationship
+  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Candidate ID being endorsed
+  candidateId     String
+  /// Candidate relationship
+  candidate       Candidate                 @relation("OrgEndorsementsReceived", fields: [candidateId], references: [id], onDelete: Cascade)
+
+  /// Application ID this endorsement originated from
+  applicationId   String                    @unique
+  /// Application relationship
+  application     EndorsementApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  /// Public endorsement statement
+  statement       String?
+
+  /// Publication timestamp
+  publishedAt     DateTime                  @default(now())
+  /// User ID who published the endorsement
+  publishedBy     String
+
+  /// Whether endorsement is currently active
+  isActive        Boolean                   @default(true)
+  /// Revocation timestamp
+  revokedAt       DateTime?
+  /// User ID who revoked the endorsement
+  revokedBy       String?
+  /// Reason for revocation
+  revocationReason String?
+
+  @@index([organizationId, isActive])
+  @@index([candidateId, isActive])
+}
+
+// ============================================================================
+// ORGANIZATION DISCUSSION MODELS
+// ============================================================================
+
+/// Organization internal discussion thread
+/// @description Internal discussions visible only to organization members.
+model OrganizationDiscussion {
+  /// Unique identifier for this discussion
+  id              String                    @id @default(cuid())
+
+  /// Organization ID
+  organizationId  String
+  /// Organization relationship
+  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Discussion title
+  title           String
+  /// Initial discussion content
+  content         String
+
+  /// Who can see this discussion
+  visibility      DiscussionVisibility      @default(ALL_MEMBERS)
+
+  /// Whether discussion is pinned to top
+  isPinned        Boolean                   @default(false)
+  /// Pinned timestamp
+  pinnedAt        DateTime?
+  /// User ID who pinned the discussion
+  pinnedBy        String?
+
+  /// Author user ID
+  authorId        String
+  /// Author relationship
+  author          User                      @relation("OrgDiscussionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  /// Discussion creation timestamp
+  createdAt       DateTime                  @default(now())
+  /// Last update timestamp
+  updatedAt       DateTime                  @updatedAt
+
+  /// Replies to this discussion
+  replies         DiscussionReply[]
+
+  @@index([organizationId, isPinned, createdAt])
+  @@index([authorId])
+}
+
+/// Reply to an organization discussion
+/// @description Supports threaded replies with parent-child relationships.
+model DiscussionReply {
+  /// Unique identifier for this reply
+  id              String                    @id @default(cuid())
+
+  /// Discussion ID
+  discussionId    String
+  /// Discussion relationship
+  discussion      OrganizationDiscussion    @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  /// Reply content
+  content         String
+
+  /// Parent reply ID for threaded replies (null = direct reply to discussion)
+  parentReplyId   String?
+  /// Parent reply relationship
+  parentReply     DiscussionReply?          @relation("ReplyThread", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  /// Child replies
+  childReplies    DiscussionReply[]         @relation("ReplyThread")
+
+  /// Author user ID
+  authorId        String
+  /// Author relationship
+  author          User                      @relation("DiscussionReplyAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  /// Reply creation timestamp
+  createdAt       DateTime                  @default(now())
+  /// Last update timestamp
+  updatedAt       DateTime                  @updatedAt
+
+  @@index([discussionId, createdAt])
+  @@index([parentReplyId])
+  @@index([authorId])
+}
+
+// ============================================================================
+// ORGANIZATION VERIFICATION MODELS
+// ============================================================================
+
+/// Organization verification request
+/// @description Tracks requests for platform verification of organizations.
+model OrganizationVerificationRequest {
+  /// Unique identifier for this request
+  id              String                    @id @default(cuid())
+
+  /// Organization ID requesting verification
+  organizationId  String
+  /// Organization relationship
+  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Type of organization
+  orgType         OrgType
+
+  /// Supporting documentation URLs
+  documents       String[]                  @default([])
+  /// Statement explaining why org should be verified
+  statement       String
+
+  /// Verification request status
+  status          OrgVerificationStatus     @default(PENDING)
+  /// Admin user ID who reviewed the request
+  reviewedBy      String?
+  /// Review timestamp
+  reviewedAt      DateTime?
+  /// Admin review notes (internal)
+  reviewNotes     String?
+  /// Reason for denial (if denied)
+  denialReason    String?
+
+  /// Request creation timestamp
+  createdAt       DateTime                  @default(now())
+
+  @@index([status])
+  @@index([organizationId])
 }
