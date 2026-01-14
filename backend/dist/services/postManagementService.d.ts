@@ -53,6 +53,7 @@ export declare class PostManagementService {
             updatedAt: Date;
             h3Index: string | null;
             content: string;
+            organizationId: string | null;
             isDeleted: boolean;
             deletedAt: Date | null;
             editCount: number;

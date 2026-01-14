@@ -614,7 +614,8 @@ router.post('/events',
     body('capacity').optional().isInt({ min: 1, max: 100000 }).withMessage('Capacity must be 1-100,000'),
     body('isVirtual').optional().isBoolean(),
     body('virtualLink').optional().isURL().withMessage('Virtual link must be a valid URL'),
-    body('rsvpRequired').optional().isBoolean()
+    body('rsvpRequired').optional().isBoolean(),
+    body('organizationId').optional().isString().withMessage('Organization ID must be a string')
   ],
   async (req, res) => {
     try {

@@ -47,6 +47,7 @@ export declare class TopicService {
                 updatedAt: Date;
                 h3Index: string | null;
                 content: string;
+                organizationId: string | null;
                 isDeleted: boolean;
                 deletedAt: Date | null;
                 editCount: number;
@@ -179,6 +180,7 @@ export declare class TopicService {
                 updatedAt: Date;
                 h3Index: string | null;
                 content: string;
+                organizationId: string | null;
                 isDeleted: boolean;
                 deletedAt: Date | null;
                 editCount: number;
@@ -224,6 +226,13 @@ export declare class TopicService {
             relevanceScore: number;
         })[];
         topicComments: ({
+            author: {
+                id: string;
+                username: string;
+                firstName: string;
+                lastName: string;
+                avatar: string;
+            };
             replies: ({
                 author: {
                     id: string;
@@ -249,13 +258,6 @@ export declare class TopicService {
                 isHidden: boolean;
                 hideReason: string | null;
             })[];
-            author: {
-                id: string;
-                username: string;
-                firstName: string;
-                lastName: string;
-                avatar: string;
-            };
         } & {
             id: string;
             embedding: number[];
@@ -276,6 +278,13 @@ export declare class TopicService {
         })[];
         subTopics: ({
             comments: ({
+                author: {
+                    id: string;
+                    username: string;
+                    firstName: string;
+                    lastName: string;
+                    avatar: string;
+                };
                 replies: ({
                     author: {
                         id: string;
@@ -301,13 +310,6 @@ export declare class TopicService {
                     isHidden: boolean;
                     hideReason: string | null;
                 })[];
-                author: {
-                    id: string;
-                    username: string;
-                    firstName: string;
-                    lastName: string;
-                    avatar: string;
-                };
             } & {
                 id: string;
                 embedding: number[];

@@ -53,6 +53,7 @@ interface CreateEventRequest {
     };
     requirements?: string;
     rsvpRequired?: boolean;
+    organizationId?: string;
 }
 interface CivicSearchFilters {
     category?: IssueCategory;

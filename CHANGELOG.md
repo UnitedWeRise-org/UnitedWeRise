@@ -1,10 +1,68 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 12, 2026
+**Last Updated**: January 13, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-13] - Organizations & Endorsements Feature (Phase 1 Backend)
+
+### Added
+
+**Organization System**
+- Organization CRUD with hierarchical structure support (parentId)
+- Membership system: join requests, invitations, approval workflow
+- Flexible role system with 28 predefined capabilities (OrgCapability enum)
+- Capability-based authorization middleware (`requireOrgCapability`, `requireOrgMembership`)
+- Organization following (users can follow orgs)
+- Organization verification workflow
+
+**Endorsement System**
+- Questionnaire builder with 6 question types (SHORT_TEXT, LONG_TEXT, MULTIPLE_CHOICE, CHECKBOX, YES_NO, SCALE)
+- Candidate endorsement application workflow
+- Org-defined voting thresholds (SIMPLE_MAJORITY, TWO_THIRDS, THREE_QUARTERS, UNANIMOUS, PERCENTAGE)
+- Quorum requirements for endorsement votes
+- Endorsement publication and revocation
+
+**Jurisdiction & Discovery**
+- H3 geospatial boundaries for organization jurisdictions (resolution 7, ~5km hexagons)
+- Jurisdiction types: NATIONAL, STATE, COUNTY, CITY, CUSTOM
+- Candidate-jurisdiction matching for endorsement eligibility
+- Organization discovery by location
+
+**Internal Communications**
+- Organization discussions with visibility levels (ALL_MEMBERS, ROLE_HOLDERS, LEADERSHIP)
+- Threaded replies with nested structure
+- Discussion pinning for org leadership
+
+**Event Integration**
+- CivicEvent extended with organizationId for org-hosted events
+- Organizations can create/manage events with capability checks
+
+### Database Schema
+- 15+ new Prisma models: Organization, OrganizationMember, OrganizationRole, OrganizationFollow, OrganizationAffiliation, OrganizationMergeRequest, EndorsementQuestionnaire, QuestionnaireQuestion, EndorsementApplication, QuestionResponse, EndorsementVote, Endorsement, OrganizationDiscussion, DiscussionReply, OrganizationVerificationRequest
+- 8 new enums: JurisdictionType, VotingThresholdType, MembershipStatus, AffiliationStatus, MergeRequestStatus, EndorsementApplicationStatus, EndorsementVoteChoice, DiscussionVisibility, OrgCapability, OrgType, OrgVerificationStatus, QuestionType
+
+### New Files
+- `backend/src/middleware/orgAuth.ts` - Capability-based authorization
+- `backend/src/services/organizationService.ts` - Core org business logic
+- `backend/src/services/jurisdictionService.ts` - H3 boundary management
+- `backend/src/services/questionnaireService.ts` - Questionnaire CRUD
+- `backend/src/services/endorsementService.ts` - Endorsement workflow
+- `backend/src/services/discussionService.ts` - Internal discussions
+- `backend/src/routes/organizations.ts` - 20+ organization endpoints
+- `backend/src/routes/questionnaires.ts` - Questionnaire management
+- `backend/src/routes/endorsements.ts` - Endorsement workflow
+- `backend/src/routes/discussions.ts` - Discussion threads
+
+### Modified Files
+- `backend/src/routes/civic.ts` - Added organizationId support for events
+- `backend/src/services/civicOrganizingService.ts` - Org event creation
+- `backend/src/server.ts` - Registered new routes
+- `backend/prisma/schema.prisma` - Added all new models
 
 ---
 
