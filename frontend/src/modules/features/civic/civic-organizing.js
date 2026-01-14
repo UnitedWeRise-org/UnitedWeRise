@@ -40,6 +40,9 @@ function setupEventDelegation() {
             case 'showEventCreator':
                 showEventCreator();
                 break;
+            case 'showOrganizationsBrowser':
+                showOrganizationsBrowser();
+                break;
         }
     });
 }
@@ -821,17 +824,49 @@ function showDefaultOrganizingView() {
         <div style="text-align: center; color: #666; padding: 2rem;">
             <div style="font-size: 3rem; margin-bottom: 1rem;">🏛️</div>
             <h3>Welcome to Civic Organizing</h3>
-            <p>Create petitions, organize events, and mobilize your community for positive change.</p>
-            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+            <p>Create petitions, organize events, join organizations, and mobilize your community for positive change.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-top: 2rem;">
                 <button data-civic-organizing-action="showPetitionCreator" style="padding: 1rem 2rem; background: #4b5c09; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
                     Start a Petition
                 </button>
                 <button data-civic-organizing-action="showEventCreator" style="padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
                     Organize an Event
                 </button>
+                <button data-civic-organizing-action="showOrganizationsBrowser" style="padding: 1rem 2rem; background: #7b1fa2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    🏢 Organizations
+                </button>
             </div>
         </div>
     `;
+}
+
+/**
+ * Show Organizations Browser
+ * Displays the organizations module in the civic organizing panel
+ */
+async function showOrganizationsBrowser() {
+    const organizingContent = document.getElementById('organizingContent');
+    if (!organizingContent) {
+        console.error('❌ Organizing content container not found');
+        return;
+    }
+
+    // Dynamically import and initialize organizations browser
+    try {
+        const { initOrgBrowser } = await import('../organizations/index.js');
+        await initOrgBrowser(organizingContent);
+    } catch (error) {
+        console.error('❌ Failed to load organizations module:', error);
+        showToast('Failed to load organizations');
+        organizingContent.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: #666;">
+                <p>⚠️ Failed to load organizations</p>
+                <button data-civic-organizing-action="showDefaultOrganizingView" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Go Back
+                </button>
+            </div>
+        `;
+    }
 }
 
 // Export for module system
@@ -842,6 +877,7 @@ export {
     showMyOrganizing,
     closeCivicOrganizing,
     showDefaultOrganizingView,
+    showOrganizationsBrowser,
     savePetitionDraft,
     saveEventDraft
 };
@@ -854,6 +890,7 @@ if (typeof window !== 'undefined') {
     window.showMyOrganizing = showMyOrganizing;
     window.closeCivicOrganizing = closeCivicOrganizing;
     window.showDefaultOrganizingView = showDefaultOrganizingView;
+    window.showOrganizationsBrowser = showOrganizationsBrowser;
     window.savePetitionDraft = savePetitionDraft;
     window.saveEventDraft = saveEventDraft;
     console.log('🌐 Civic organizing functions available globally');
