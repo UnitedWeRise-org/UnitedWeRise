@@ -8,6 +8,40 @@
 
 ---
 
+## [2026-01-14] - Organizations Phase 2a: Frontend Discovery & Basic Interaction
+
+### Added
+
+**Organizations Frontend Module**
+- Organization browser with search, filter (type, jurisdiction, verified), and pagination
+- Organization cards (standard and compact layouts) with member count, verification badge
+- Organization profile modal with detailed view, follow/join actions
+- My organizations widget showing memberships and pending invitations
+- Event delegation handlers for all organization actions
+- CSS styles for all organization UI components
+
+**Civic Organizing Integration**
+- "Organizations" button in civic organizing welcome screen
+- Dynamic module loading for organizations browser
+
+### New Files
+- `frontend/src/modules/features/organizations/` - Complete organizations module
+  - `index.js` - Module entry point and exports
+  - `organizations-api.js` - API client wrapper for org endpoints
+  - `components/org-browser.js` - Browse/search organizations
+  - `components/org-card.js` - Organization card components
+  - `components/org-profile-modal.js` - Profile overlay
+  - `components/my-orgs-widget.js` - User's organizations widget
+  - `handlers/org-handlers.js` - Event delegation handlers
+- `frontend/src/styles/organizations.css` - All organization styles
+
+### Files Modified
+- `frontend/index.html` - Added organizations.css stylesheet
+- `frontend/src/js/main.js` - Added organizations module import
+- `frontend/src/modules/features/civic/civic-organizing.js` - Added Organizations entry point
+
+---
+
 ## [2026-01-14] - Organizations Phase 1e: Verification Workflow & Notifications
 
 ### Added
