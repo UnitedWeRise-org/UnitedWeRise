@@ -1,10 +1,39 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 13, 2026
+**Last Updated**: January 14, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-14] - Organizations Phase 1e: Verification Workflow & Notifications
+
+### Added
+
+**Organization Verification**
+- Organization verification request endpoint (`POST /api/organizations/:id/verification`)
+- Organization verification status endpoint (`GET /api/organizations/:id/verification`)
+- Admin verification management: list pending, view details, approve/deny
+- ORG_VERIFICATION_APPROVED and ORG_VERIFICATION_DENIED audit actions
+
+**Notifications**
+- ORG_APPLICATION_RECEIVED: Sent to org head when someone requests to join
+- ORG_INVITE: Sent when a user is invited to an organization
+- ORG_APPLICATION_APPROVED: Sent when membership is approved
+- ORG_APPLICATION_DENIED: Sent when a member is removed
+- ORG_ROLE_ASSIGNED: Sent when a role is assigned to a member
+- ORG_ROLE_REMOVED: Sent when a role is removed from a member
+- ORG_VERIFICATION_APPROVED/DENIED: Sent to org head on admin decision
+
+### Fixed
+- `/api/organizations/nearby` endpoint now works correctly (was being captured by `/:id` route)
+
+### Files Modified
+- `backend/src/routes/organizations.ts` - Added nearby, verification endpoints, notifications
+- `backend/src/routes/admin.ts` - Added org verification admin endpoints
+- `backend/src/services/auditService.ts` - Added org verification audit actions
 
 ---
 
