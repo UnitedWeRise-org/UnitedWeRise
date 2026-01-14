@@ -8,7 +8,7 @@
 /**
  * Organization type labels for display
  */
-const ORG_TYPE_LABELS = {
+export const ORG_TYPE_LABELS = {
     POLITICAL_PARTY: 'Political Party',
     ADVOCACY_ORG: 'Advocacy Organization',
     LABOR_UNION: 'Labor Union',
@@ -22,7 +22,7 @@ const ORG_TYPE_LABELS = {
 /**
  * Jurisdiction type labels for display
  */
-const JURISDICTION_LABELS = {
+export const JURISDICTION_LABELS = {
     NATIONAL: 'National',
     STATE: 'State',
     COUNTY: 'County',

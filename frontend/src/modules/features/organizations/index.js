@@ -74,7 +74,7 @@ export async function openOrgProfile(identifier) {
             await showOrgProfileModal(org.id);
         } catch (error) {
             console.error('❌ Organization not found:', identifier);
-            const { showToast } = await import('../../utils/toast.js');
+            const { showToast } = await import('../../../utils/toast.js');
             showToast('Organization not found');
         }
     }
