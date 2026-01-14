@@ -75,6 +75,8 @@ export declare const AUDIT_ACTIONS: {
     readonly MOTD_UPDATED: "MOTD_UPDATED";
     readonly MOTD_DELETED: "MOTD_DELETED";
     readonly MOTD_TOGGLED: "MOTD_TOGGLED";
+    readonly ORG_VERIFICATION_APPROVED: "ORG_VERIFICATION_APPROVED";
+    readonly ORG_VERIFICATION_DENIED: "ORG_VERIFICATION_DENIED";
 };
 export type AuditAction = typeof AUDIT_ACTIONS[keyof typeof AUDIT_ACTIONS];
 export declare class AuditService {

@@ -8,6 +8,7 @@
  */
 
 import express from 'express';
+import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import {
   requireOrgCapability,
@@ -16,7 +17,8 @@ import {
   OrgAuthRequest,
 } from '../middleware/orgAuth';
 import { organizationService } from '../services/organizationService';
-import { OrgCapability, MembershipStatus } from '@prisma/client';
+import { jurisdictionService } from '../services/jurisdictionService';
+import { OrgCapability, MembershipStatus, OrgType, OrgVerificationStatus } from '@prisma/client';
 import { logger } from '../services/logger';
 import { createNotification } from './notifications';
 
@@ -196,6 +198,74 @@ router.get('/', async (req, res) => {
   } catch (error) {
     logger.error({ error }, 'Failed to list organizations');
     res.status(500).json({ error: 'Failed to list organizations' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/organizations/nearby:
+ *   get:
+ *     tags: [Organizations]
+ *     summary: Find organizations near a location
+ *     description: Returns organizations with jurisdiction covering the specified coordinates
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Latitude
+ *       - in: query
+ *         name: lng
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Longitude
+ *       - in: query
+ *         name: rings
+ *         schema:
+ *           type: integer
+ *           default: 3
+ *         description: Number of H3 rings to search (default 3)
+ *     responses:
+ *       200:
+ *         description: List of nearby organizations
+ *       400:
+ *         description: Invalid coordinates
+ */
+router.get('/nearby', async (req, res) => {
+  try {
+    const { lat, lng, rings } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'Latitude and longitude are required' });
+    }
+
+    const latitude = parseFloat(lat as string);
+    const longitude = parseFloat(lng as string);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({ error: 'Invalid coordinates' });
+    }
+
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ error: 'Coordinates out of range' });
+    }
+
+    const organizations = await jurisdictionService.findNearbyOrganizations(
+      latitude,
+      longitude,
+      rings ? parseInt(rings as string) : 3
+    );
+
+    res.json({
+      success: true,
+      organizations,
+      count: organizations.length,
+    });
+  } catch (error) {
+    logger.error({ error }, 'Failed to find nearby organizations');
+    res.status(500).json({ error: 'Failed to find nearby organizations' });
   }
 });
 
@@ -503,7 +573,21 @@ router.post('/:organizationId/join', requireAuth, async (req: AuthRequest, res) 
       req.user!.id
     );
 
-    // TODO: Send notification to org admins
+    // Send notification to org head about new join request
+    const org = await prisma.organization.findUnique({
+      where: { id: req.params.organizationId },
+      select: { headUserId: true, name: true },
+    });
+    if (org) {
+      await prisma.notification.create({
+        data: {
+          type: 'ORG_APPLICATION_RECEIVED',
+          senderId: req.user!.id,
+          receiverId: org.headUserId,
+          message: `${req.user!.username} has requested to join "${org.name}"`,
+        },
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -608,7 +692,19 @@ router.post(
         req.user!.id
       );
 
-      // TODO: Send notification to invited user
+      // Send notification to invited user
+      const org = await prisma.organization.findUnique({
+        where: { id: req.params.organizationId },
+        select: { name: true },
+      });
+      await prisma.notification.create({
+        data: {
+          type: 'ORG_INVITE',
+          senderId: req.user!.id,
+          receiverId: targetUserId,
+          message: `You've been invited to join "${org?.name || 'an organization'}"`,
+        },
+      });
 
       res.status(201).json({
         success: true,
@@ -706,7 +802,15 @@ router.post(
     try {
       const membership = await organizationService.approveMembership(req.params.membershipId);
 
-      // TODO: Send notification to approved member
+      // Send notification to approved member
+      await prisma.notification.create({
+        data: {
+          type: 'ORG_APPLICATION_APPROVED',
+          senderId: req.user!.id,
+          receiverId: membership.userId,
+          message: `Your request to join "${(membership as any).organization?.name || 'the organization'}" has been approved!`,
+        },
+      });
 
       res.json({
         success: true,
@@ -750,7 +854,27 @@ router.delete(
   requireOrgCapability(OrgCapability.REMOVE_MEMBERS),
   async (req: OrgAuthRequest, res) => {
     try {
+      // Get membership info before removal for notification
+      const membershipInfo = await prisma.organizationMember.findUnique({
+        where: { id: req.params.membershipId },
+        include: {
+          organization: { select: { name: true } },
+        },
+      });
+
       await organizationService.removeMembership(req.params.membershipId);
+
+      // Send notification to removed member
+      if (membershipInfo) {
+        await prisma.notification.create({
+          data: {
+            type: 'ORG_APPLICATION_DENIED',
+            senderId: req.user!.id,
+            receiverId: membershipInfo.userId,
+            message: `You have been removed from "${membershipInfo.organization.name}"`,
+          },
+        });
+      }
 
       res.json({
         success: true,
@@ -1025,6 +1149,22 @@ router.post(
 
       const membership = await organizationService.assignRole(req.params.membershipId, roleId);
 
+      // Send notification to member about role assignment
+      const roleInfo = await prisma.organizationRole.findUnique({
+        where: { id: roleId },
+        include: { organization: { select: { name: true } } },
+      });
+      if (membership && roleInfo) {
+        await prisma.notification.create({
+          data: {
+            type: 'ORG_ROLE_ASSIGNED',
+            senderId: req.user!.id,
+            receiverId: membership.userId,
+            message: `You've been assigned the "${roleInfo.name}" role in "${roleInfo.organization.name}"`,
+          },
+        });
+      }
+
       res.json({
         success: true,
         membership,
@@ -1066,7 +1206,28 @@ router.delete(
   requireOrgCapability(OrgCapability.ASSIGN_ROLES),
   async (req: OrgAuthRequest, res) => {
     try {
+      // Get current role info before removal for notification
+      const currentMembership = await prisma.organizationMember.findUnique({
+        where: { id: req.params.membershipId },
+        include: {
+          role: { select: { name: true } },
+          organization: { select: { name: true } },
+        },
+      });
+
       const membership = await organizationService.removeRole(req.params.membershipId);
+
+      // Send notification about role removal
+      if (currentMembership?.role) {
+        await prisma.notification.create({
+          data: {
+            type: 'ORG_ROLE_REMOVED',
+            senderId: req.user!.id,
+            receiverId: membership.userId,
+            message: `Your "${currentMembership.role.name}" role in "${currentMembership.organization.name}" has been removed`,
+          },
+        });
+      }
 
       res.json({
         success: true,
@@ -1240,6 +1401,175 @@ router.get('/slug-available/:slug', async (req, res) => {
   } catch (error) {
     logger.error({ error, slug: req.params.slug }, 'Failed to check slug availability');
     res.status(500).json({ error: 'Failed to check slug availability' });
+  }
+});
+
+// ===============================
+// VERIFICATION ENDPOINTS
+// ===============================
+
+/**
+ * @swagger
+ * /api/organizations/{organizationId}/verification:
+ *   post:
+ *     tags: [Organization Verification]
+ *     summary: Request organization verification
+ *     description: Organization head can request verification. Requires supporting documents.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orgType
+ *               - statement
+ *             properties:
+ *               orgType:
+ *                 type: string
+ *                 enum: [POLITICAL_PARTY, ADVOCACY_ORG, LABOR_UNION, COMMUNITY_ORG, GOVERNMENT_OFFICE, CAMPAIGN, PAC_SUPERPAC, OTHER]
+ *               statement:
+ *                 type: string
+ *                 description: Explanation of why the organization should be verified
+ *               documents:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: URLs to supporting documents
+ *     responses:
+ *       201:
+ *         description: Verification request submitted
+ *       400:
+ *         description: Invalid request or verification already pending
+ *       403:
+ *         description: Only organization head can request verification
+ */
+router.post(
+  '/:organizationId/verification',
+  requireAuth,
+  requireOrgHead(),
+  async (req: OrgAuthRequest, res) => {
+    try {
+      const { orgType, statement, documents } = req.body;
+
+      if (!orgType || !statement) {
+        return res.status(400).json({ error: 'Organization type and statement are required' });
+      }
+
+      // Check if org already has pending or approved verification
+      const org = await prisma.organization.findUnique({
+        where: { id: req.params.organizationId },
+        select: { verificationStatus: true, isVerified: true },
+      });
+
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      if (org.isVerified) {
+        return res.status(400).json({ error: 'Organization is already verified' });
+      }
+
+      if (org.verificationStatus === 'PENDING') {
+        return res.status(400).json({ error: 'Verification request already pending' });
+      }
+
+      // Create verification request
+      const verificationRequest = await prisma.organizationVerificationRequest.create({
+        data: {
+          organizationId: req.params.organizationId,
+          orgType: orgType as OrgType,
+          statement,
+          documents: documents || [],
+          status: 'PENDING',
+        },
+      });
+
+      // Update organization status
+      await prisma.organization.update({
+        where: { id: req.params.organizationId },
+        data: {
+          verificationStatus: 'PENDING',
+          verificationDocuments: documents || [],
+        },
+      });
+
+      res.status(201).json({
+        success: true,
+        verificationRequest,
+        message: 'Verification request submitted. An admin will review your request.',
+      });
+    } catch (error: any) {
+      logger.error({ error, organizationId: req.params.organizationId }, 'Failed to submit verification request');
+      res.status(400).json({ error: error.message || 'Failed to submit verification request' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/organizations/{organizationId}/verification:
+ *   get:
+ *     tags: [Organization Verification]
+ *     summary: Get verification status
+ *     description: Get the current verification status and history for an organization
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Verification status
+ */
+router.get('/:organizationId/verification', async (req, res) => {
+  try {
+    const org = await prisma.organization.findUnique({
+      where: { id: req.params.organizationId },
+      select: {
+        isVerified: true,
+        verificationStatus: true,
+        verifiedAt: true,
+      },
+    });
+
+    if (!org) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    // Get the most recent verification request
+    const latestRequest = await prisma.organizationVerificationRequest.findFirst({
+      where: { organizationId: req.params.organizationId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        orgType: true,
+        status: true,
+        createdAt: true,
+        reviewedAt: true,
+        denialReason: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      isVerified: org.isVerified,
+      verificationStatus: org.verificationStatus,
+      verifiedAt: org.verifiedAt,
+      latestRequest,
+    });
+  } catch (error) {
+    logger.error({ error, organizationId: req.params.organizationId }, 'Failed to get verification status');
+    res.status(500).json({ error: 'Failed to get verification status' });
   }
 });
 

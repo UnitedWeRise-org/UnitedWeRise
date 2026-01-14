@@ -6041,5 +6041,282 @@ router.get('/payments', auth_1.requireStagingAuth, auth_1.requireAdmin, async (r
         res.status(500).json({ success: false, error: 'Failed to retrieve payments' });
     }
 });
+// ===============================
+// ORGANIZATION VERIFICATION
+// ===============================
+/**
+ * @swagger
+ * /api/admin/org-verifications:
+ *   get:
+ *     tags: [Admin - Organization Verification]
+ *     summary: List pending organization verification requests
+ *     description: Admin endpoint to list all pending org verification requests
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, APPROVED, DENIED]
+ *         default: PENDING
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: List of verification requests
+ */
+router.get('/org-verifications', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
+    try {
+        const { status = 'PENDING' } = req.query;
+        const { page, limit, offset } = safePagePagination(req.query.page, req.query.limit);
+        const [requests, total] = await Promise.all([
+            prisma_1.prisma.organizationVerificationRequest.findMany({
+                where: {
+                    status: status,
+                },
+                include: {
+                    organization: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                            avatar: true,
+                            description: true,
+                            jurisdictionType: true,
+                            jurisdictionValue: true,
+                            headUserId: true,
+                            head: {
+                                select: {
+                                    id: true,
+                                    username: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                },
+                            },
+                            _count: {
+                                select: {
+                                    members: { where: { status: 'ACTIVE' } },
+                                },
+                            },
+                        },
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+                skip: offset,
+                take: limit,
+            }),
+            prisma_1.prisma.organizationVerificationRequest.count({
+                where: { status: status },
+            }),
+        ]);
+        // Audit log not needed for list queries (read-only)
+        res.json({
+            success: true,
+            requests,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit),
+            },
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ error, adminId: req.user?.id }, 'Failed to list org verification requests');
+        res.status(500).json({ error: 'Failed to list verification requests' });
+    }
+});
+/**
+ * @swagger
+ * /api/admin/org-verifications/{requestId}:
+ *   get:
+ *     tags: [Admin - Organization Verification]
+ *     summary: Get a specific verification request
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Verification request details
+ */
+router.get('/org-verifications/:requestId', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
+    try {
+        const request = await prisma_1.prisma.organizationVerificationRequest.findUnique({
+            where: { id: req.params.requestId },
+            include: {
+                organization: {
+                    include: {
+                        head: {
+                            select: {
+                                id: true,
+                                username: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                                phoneNumber: true,
+                            },
+                        },
+                        _count: {
+                            select: {
+                                members: { where: { status: 'ACTIVE' } },
+                                posts: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!request) {
+            return res.status(404).json({ error: 'Verification request not found' });
+        }
+        res.json({
+            success: true,
+            request,
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ error, requestId: req.params.requestId }, 'Failed to get verification request');
+        res.status(500).json({ error: 'Failed to get verification request' });
+    }
+});
+/**
+ * @swagger
+ * /api/admin/org-verifications/{requestId}:
+ *   patch:
+ *     tags: [Admin - Organization Verification]
+ *     summary: Approve or deny a verification request
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - decision
+ *             properties:
+ *               decision:
+ *                 type: string
+ *                 enum: [APPROVED, DENIED]
+ *               reviewNotes:
+ *                 type: string
+ *               denialReason:
+ *                 type: string
+ *                 description: Required if decision is DENIED
+ *     responses:
+ *       200:
+ *         description: Verification decision recorded
+ */
+router.patch('/org-verifications/:requestId', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
+    try {
+        const { decision, reviewNotes, denialReason } = req.body;
+        if (!decision || !['APPROVED', 'DENIED'].includes(decision)) {
+            return res.status(400).json({ error: 'Valid decision (APPROVED or DENIED) is required' });
+        }
+        if (decision === 'DENIED' && !denialReason) {
+            return res.status(400).json({ error: 'Denial reason is required when denying verification' });
+        }
+        const request = await prisma_1.prisma.organizationVerificationRequest.findUnique({
+            where: { id: req.params.requestId },
+            select: { id: true, organizationId: true, status: true },
+        });
+        if (!request) {
+            return res.status(404).json({ error: 'Verification request not found' });
+        }
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ error: 'This request has already been processed' });
+        }
+        // Update request and organization in transaction
+        const [updatedRequest, updatedOrg] = await prisma_1.prisma.$transaction([
+            prisma_1.prisma.organizationVerificationRequest.update({
+                where: { id: req.params.requestId },
+                data: {
+                    status: decision,
+                    reviewedBy: req.user.id,
+                    reviewedAt: new Date(),
+                    reviewNotes,
+                    denialReason: decision === 'DENIED' ? denialReason : null,
+                },
+            }),
+            prisma_1.prisma.organization.update({
+                where: { id: request.organizationId },
+                data: {
+                    isVerified: decision === 'APPROVED',
+                    verificationStatus: decision,
+                    verifiedAt: decision === 'APPROVED' ? new Date() : null,
+                    verifiedBy: decision === 'APPROVED' ? req.user.id : null,
+                },
+            }),
+        ]);
+        // Log admin action
+        await auditService_1.AuditService.log({
+            action: decision === 'APPROVED' ? auditService_1.AUDIT_ACTIONS.ORG_VERIFICATION_APPROVED : auditService_1.AUDIT_ACTIONS.ORG_VERIFICATION_DENIED,
+            adminId: req.user.id,
+            targetType: 'organization',
+            targetId: request.organizationId,
+            details: {
+                requestId: req.params.requestId,
+                denialReason: decision === 'DENIED' ? denialReason : undefined,
+            },
+        });
+        // Send notification to organization head
+        const org = await prisma_1.prisma.organization.findUnique({
+            where: { id: request.organizationId },
+            select: { headUserId: true, name: true },
+        });
+        if (org) {
+            await prisma_1.prisma.notification.create({
+                data: {
+                    type: decision === 'APPROVED' ? 'ORG_VERIFICATION_APPROVED' : 'ORG_VERIFICATION_DENIED',
+                    senderId: req.user.id,
+                    receiverId: org.headUserId,
+                    message: decision === 'APPROVED'
+                        ? `Your organization "${org.name}" has been verified!`
+                        : `Verification for "${org.name}" was denied: ${denialReason}`,
+                },
+            });
+        }
+        logger_1.logger.info({
+            adminId: req.user.id,
+            requestId: req.params.requestId,
+            organizationId: request.organizationId,
+            decision,
+        }, 'Organization verification decision made');
+        res.json({
+            success: true,
+            request: updatedRequest,
+            organization: updatedOrg,
+            message: decision === 'APPROVED'
+                ? 'Organization has been verified'
+                : 'Verification request has been denied',
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ error, requestId: req.params.requestId, adminId: req.user?.id }, 'Failed to process verification request');
+        res.status(500).json({ error: 'Failed to process verification request' });
+    }
+});
 exports.default = router;
 //# sourceMappingURL=admin.js.map
