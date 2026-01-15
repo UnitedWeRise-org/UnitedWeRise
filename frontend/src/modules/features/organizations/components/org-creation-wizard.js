@@ -56,6 +56,7 @@ let wizardState = {
         type: 'COMMUNITY_ORG',
         jurisdictionType: 'STATE',
         jurisdictionValue: '',
+        h3Cells: [], // Array of H3 cell indexes for CUSTOM jurisdiction
         description: '',
         website: ''
     },
@@ -66,6 +67,16 @@ let wizardState = {
 let slugCheckTimeout = null;
 let wizardContainer = null;
 let escapeHandler = null;
+
+// H3 Picker state
+let h3PickerMap = null;
+let h3PickerState = {
+    selectedCells: [],
+    hoveredCell: null,
+    history: [] // For undo functionality
+};
+const H3_RESOLUTION = 7; // ~5km hexagons
+const MAX_H3_CELLS = 100; // Maximum cells allowed
 
 /**
  * Show the create organization wizard
@@ -93,11 +104,19 @@ export function showCreateOrgWizard() {
             type: 'COMMUNITY_ORG',
             jurisdictionType: 'STATE',
             jurisdictionValue: '',
+            h3Cells: [],
             description: '',
             website: ''
         },
         errors: {},
         submitting: false
+    };
+
+    // Reset H3 picker state
+    h3PickerState = {
+        selectedCells: [],
+        hoveredCell: null,
+        history: []
     };
 
     // Create container
@@ -131,6 +150,12 @@ export function showCreateOrgWizard() {
  * Close the create organization wizard
  */
 export function closeCreateOrgWizard() {
+    // Clean up H3 picker map
+    if (h3PickerMap) {
+        h3PickerMap.remove();
+        h3PickerMap = null;
+    }
+
     if (wizardContainer) {
         wizardContainer.remove();
         wizardContainer = null;
@@ -296,7 +321,7 @@ function renderBasicInfoStep() {
  * Step 2: Type & Jurisdiction
  */
 function renderTypeStep() {
-    const { type, jurisdictionType, jurisdictionValue } = wizardState.formData;
+    const { type, jurisdictionType, jurisdictionValue, h3Cells } = wizardState.formData;
     const errors = wizardState.errors;
 
     // Build type options
@@ -304,12 +329,13 @@ function renderTypeStep() {
         `<option value="${value}" ${type === value ? 'selected' : ''}>${label}</option>`
     ).join('');
 
-    // Build jurisdiction type options (exclude CUSTOM for now)
+    // Build jurisdiction type options (including CUSTOM)
     const jurisdictionOptions = Object.entries(JURISDICTION_LABELS)
-        .filter(([value]) => value !== 'CUSTOM')
-        .map(([value, label]) =>
-            `<option value="${value}" ${jurisdictionType === value ? 'selected' : ''}>${label}</option>`
-        ).join('');
+        .map(([value, label]) => {
+            // Add description for CUSTOM type
+            const displayLabel = value === 'CUSTOM' ? `${label} (Draw on Map)` : label;
+            return `<option value="${value}" ${jurisdictionType === value ? 'selected' : ''}>${displayLabel}</option>`;
+        }).join('');
 
     // Build state dropdown if needed
     const stateOptions = US_STATES.map(state =>
@@ -317,6 +343,11 @@ function renderTypeStep() {
     ).join('');
 
     const showJurisdictionValue = ['STATE', 'COUNTY', 'CITY'].includes(jurisdictionType);
+    const showH3Picker = jurisdictionType === 'CUSTOM';
+
+    // Calculate approximate coverage area for selected cells
+    const cellCount = h3PickerState.selectedCells.length;
+    const approxArea = Math.round(cellCount * 50); // ~50 km² per resolution 7 cell
 
     return `
         <div class="org-wizard-step">
@@ -366,6 +397,41 @@ function renderTypeStep() {
                             />
                         `}
                         ${errors.jurisdictionValue ? `<span class="org-wizard-error">${errors.jurisdictionValue}</span>` : ''}
+                    </div>
+                ` : ''}
+
+                ${showH3Picker ? `
+                    <div class="org-wizard-field ${errors.h3Cells ? 'has-error' : ''}">
+                        <label>Coverage Area *</label>
+                        <p class="org-wizard-h3-instructions">
+                            Click on the map to select hexagonal areas. Click again to deselect.
+                            You can select up to ${MAX_H3_CELLS} cells (~${MAX_H3_CELLS * 50} km²).
+                        </p>
+
+                        <div class="org-wizard-h3-picker" id="h3PickerContainer">
+                            <div class="org-wizard-h3-map" id="h3PickerMap"></div>
+                            <div class="org-wizard-h3-controls">
+                                <div class="org-wizard-h3-info">
+                                    <span class="org-wizard-h3-count">
+                                        Selected: <strong>${cellCount}</strong> cell${cellCount !== 1 ? 's' : ''}
+                                        ${cellCount > 0 ? `(~${approxArea} km²)` : ''}
+                                    </span>
+                                </div>
+                                <div class="org-wizard-h3-buttons">
+                                    <button type="button" class="org-wizard-h3-btn" data-h3-action="undo" ${h3PickerState.history.length === 0 ? 'disabled' : ''}>
+                                        Undo
+                                    </button>
+                                    <button type="button" class="org-wizard-h3-btn" data-h3-action="clear" ${cellCount === 0 ? 'disabled' : ''}>
+                                        Clear All
+                                    </button>
+                                    <button type="button" class="org-wizard-h3-btn" data-h3-action="fit" ${cellCount === 0 ? 'disabled' : ''}>
+                                        Zoom to Selection
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${errors.h3Cells ? `<span class="org-wizard-error">${errors.h3Cells}</span>` : ''}
                     </div>
                 ` : ''}
             </div>
@@ -443,6 +509,10 @@ function renderReviewStep() {
         } else {
             jurisdictionDisplay += ` - ${jurisdictionValue}`;
         }
+    } else if (jurisdictionType === 'CUSTOM' && h3PickerState.selectedCells.length > 0) {
+        const cellCount = h3PickerState.selectedCells.length;
+        const approxArea = Math.round(cellCount * 50);
+        jurisdictionDisplay = `Custom Area (${cellCount} region${cellCount !== 1 ? 's' : ''}, ~${approxArea} km²)`;
     }
 
     return `
@@ -590,8 +660,25 @@ function handleInputChange(e) {
     // Re-render type step when jurisdiction type changes (to show/hide value input)
     if (field === 'jurisdictionType') {
         wizardState.formData.jurisdictionValue = ''; // Reset value
+
+        // Clean up existing H3 picker if switching away from CUSTOM
+        if (value !== 'CUSTOM' && h3PickerMap) {
+            h3PickerMap.remove();
+            h3PickerMap = null;
+        }
+
+        // Reset h3Cells when switching jurisdiction types
+        wizardState.formData.h3Cells = [];
+        h3PickerState.selectedCells = [];
+        h3PickerState.history = [];
+
         renderWizard();
         attachWizardListeners();
+
+        // Initialize H3 picker if switching to CUSTOM
+        if (value === 'CUSTOM') {
+            setTimeout(() => initH3Picker(), 100);
+        }
     }
 }
 
@@ -757,9 +844,25 @@ function validateTypeStep() {
         valid = false;
     }
 
+    // Validate H3 cells for CUSTOM jurisdiction
+    if (jurisdictionType === 'CUSTOM') {
+        if (h3PickerState.selectedCells.length === 0) {
+            wizardState.errors.h3Cells = 'Please select at least one coverage area on the map';
+            valid = false;
+        } else if (h3PickerState.selectedCells.length > MAX_H3_CELLS) {
+            wizardState.errors.h3Cells = `Maximum ${MAX_H3_CELLS} cells allowed`;
+            valid = false;
+        }
+    }
+
     if (!valid) {
         renderWizard();
         attachWizardListeners();
+
+        // Re-init H3 picker if on CUSTOM
+        if (jurisdictionType === 'CUSTOM') {
+            setTimeout(() => initH3Picker(), 100);
+        }
     }
 
     return valid;
@@ -827,6 +930,9 @@ async function submitWizard() {
             orgData.jurisdictionValue = jurisdictionValue;
         } else if (['COUNTY', 'CITY'].includes(jurisdictionType) && jurisdictionValue) {
             orgData.jurisdictionValue = jurisdictionValue.trim();
+        } else if (jurisdictionType === 'CUSTOM' && h3PickerState.selectedCells.length > 0) {
+            // Include H3 cells for custom jurisdiction
+            orgData.h3Cells = h3PickerState.selectedCells;
         }
 
         // Add optional fields
@@ -875,6 +981,356 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+// ==================== H3 Picker Functions ====================
+
+/**
+ * Initialize the H3 map picker
+ */
+function initH3Picker() {
+    const mapContainer = document.getElementById('h3PickerMap');
+    if (!mapContainer) {
+        console.warn('H3 picker map container not found');
+        return;
+    }
+
+    // Check if MapLibre is available
+    if (typeof maplibregl === 'undefined') {
+        console.error('MapLibre GL JS not loaded');
+        mapContainer.innerHTML = '<p class="org-wizard-error">Map library not available</p>';
+        return;
+    }
+
+    // Check if h3 library is available
+    if (typeof h3 === 'undefined') {
+        console.error('H3 library not loaded');
+        mapContainer.innerHTML = '<p class="org-wizard-error">H3 library not available</p>';
+        return;
+    }
+
+    // Remove existing map if present
+    if (h3PickerMap) {
+        h3PickerMap.remove();
+    }
+
+    // Create new map centered on US
+    h3PickerMap = new maplibregl.Map({
+        container: mapContainer,
+        style: {
+            version: 8,
+            sources: {
+                'carto-light': {
+                    type: 'raster',
+                    tiles: [
+                        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+                    ],
+                    tileSize: 256,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                }
+            },
+            layers: [{
+                id: 'carto-light-layer',
+                type: 'raster',
+                source: 'carto-light',
+                minzoom: 0,
+                maxzoom: 19
+            }]
+        },
+        center: [-98.5795, 39.8283], // Center of US
+        zoom: 4,
+        minZoom: 3,
+        maxZoom: 12
+    });
+
+    // Add navigation controls
+    h3PickerMap.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    // Wait for map to load
+    h3PickerMap.on('load', () => {
+        // Add source for selected H3 cells
+        h3PickerMap.addSource('h3-selected', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] }
+        });
+
+        // Add source for hover preview
+        h3PickerMap.addSource('h3-hover', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] }
+        });
+
+        // Add fill layer for selected cells
+        h3PickerMap.addLayer({
+            id: 'h3-selected-fill',
+            type: 'fill',
+            source: 'h3-selected',
+            paint: {
+                'fill-color': '#3b82f6',
+                'fill-opacity': 0.4
+            }
+        });
+
+        // Add outline layer for selected cells
+        h3PickerMap.addLayer({
+            id: 'h3-selected-outline',
+            type: 'line',
+            source: 'h3-selected',
+            paint: {
+                'line-color': '#1d4ed8',
+                'line-width': 2
+            }
+        });
+
+        // Add hover preview layer
+        h3PickerMap.addLayer({
+            id: 'h3-hover-fill',
+            type: 'fill',
+            source: 'h3-hover',
+            paint: {
+                'fill-color': '#60a5fa',
+                'fill-opacity': 0.3
+            }
+        });
+
+        // Render existing selections (if any)
+        updateH3Layers();
+
+        console.log('🗺️ H3 picker map initialized');
+    });
+
+    // Handle map clicks
+    h3PickerMap.on('click', handleH3MapClick);
+
+    // Handle mouse move for hover preview
+    h3PickerMap.on('mousemove', handleH3MapMove);
+
+    // Clear hover on mouse leave
+    h3PickerMap.on('mouseleave', () => {
+        h3PickerState.hoveredCell = null;
+        updateH3HoverLayer();
+    });
+
+    // Attach H3 control button listeners
+    attachH3ControlListeners();
+}
+
+/**
+ * Handle map click to toggle H3 cell selection
+ */
+function handleH3MapClick(e) {
+    const { lng, lat } = e.lngLat;
+
+    try {
+        // Convert click coordinates to H3 cell
+        const cellIndex = h3.latLngToCell(lat, lng, H3_RESOLUTION);
+
+        // Toggle cell selection
+        const existingIndex = h3PickerState.selectedCells.indexOf(cellIndex);
+
+        // Save state for undo
+        h3PickerState.history.push([...h3PickerState.selectedCells]);
+
+        // Keep history manageable
+        if (h3PickerState.history.length > 50) {
+            h3PickerState.history.shift();
+        }
+
+        if (existingIndex >= 0) {
+            // Deselect
+            h3PickerState.selectedCells.splice(existingIndex, 1);
+        } else {
+            // Select (check max limit)
+            if (h3PickerState.selectedCells.length >= MAX_H3_CELLS) {
+                showToast(`Maximum ${MAX_H3_CELLS} cells allowed`);
+                h3PickerState.history.pop(); // Remove failed undo state
+                return;
+            }
+            h3PickerState.selectedCells.push(cellIndex);
+        }
+
+        // Update form data
+        wizardState.formData.h3Cells = [...h3PickerState.selectedCells];
+
+        // Update map layers
+        updateH3Layers();
+
+        // Update UI (cell count display)
+        updateH3ControlsUI();
+
+    } catch (error) {
+        console.error('Error processing H3 cell:', error);
+    }
+}
+
+/**
+ * Handle mouse move for hover preview
+ */
+function handleH3MapMove(e) {
+    const { lng, lat } = e.lngLat;
+
+    try {
+        const cellIndex = h3.latLngToCell(lat, lng, H3_RESOLUTION);
+
+        if (cellIndex !== h3PickerState.hoveredCell) {
+            h3PickerState.hoveredCell = cellIndex;
+            updateH3HoverLayer();
+        }
+    } catch (error) {
+        // Ignore errors for out-of-bounds coordinates
+    }
+}
+
+/**
+ * Update the selected H3 cells layer
+ */
+function updateH3Layers() {
+    if (!h3PickerMap || !h3PickerMap.getSource('h3-selected')) return;
+
+    const features = h3PickerState.selectedCells.map(cellIndex => {
+        const boundary = h3.cellToBoundary(cellIndex, true); // true for GeoJSON format
+        return {
+            type: 'Feature',
+            properties: { cellIndex },
+            geometry: {
+                type: 'Polygon',
+                coordinates: [boundary]
+            }
+        };
+    });
+
+    h3PickerMap.getSource('h3-selected').setData({
+        type: 'FeatureCollection',
+        features
+    });
+}
+
+/**
+ * Update the hover preview layer
+ */
+function updateH3HoverLayer() {
+    if (!h3PickerMap || !h3PickerMap.getSource('h3-hover')) return;
+
+    let features = [];
+
+    if (h3PickerState.hoveredCell && !h3PickerState.selectedCells.includes(h3PickerState.hoveredCell)) {
+        const boundary = h3.cellToBoundary(h3PickerState.hoveredCell, true);
+        features.push({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'Polygon',
+                coordinates: [boundary]
+            }
+        });
+    }
+
+    h3PickerMap.getSource('h3-hover').setData({
+        type: 'FeatureCollection',
+        features
+    });
+}
+
+/**
+ * Update the H3 controls UI (cell count, button states)
+ */
+function updateH3ControlsUI() {
+    const cellCount = h3PickerState.selectedCells.length;
+    const approxArea = Math.round(cellCount * 50);
+
+    // Update count display
+    const countEl = document.querySelector('.org-wizard-h3-count');
+    if (countEl) {
+        countEl.innerHTML = `
+            Selected: <strong>${cellCount}</strong> cell${cellCount !== 1 ? 's' : ''}
+            ${cellCount > 0 ? `(~${approxArea} km²)` : ''}
+        `;
+    }
+
+    // Update button states
+    const undoBtn = document.querySelector('[data-h3-action="undo"]');
+    const clearBtn = document.querySelector('[data-h3-action="clear"]');
+    const fitBtn = document.querySelector('[data-h3-action="fit"]');
+
+    if (undoBtn) undoBtn.disabled = h3PickerState.history.length === 0;
+    if (clearBtn) clearBtn.disabled = cellCount === 0;
+    if (fitBtn) fitBtn.disabled = cellCount === 0;
+}
+
+/**
+ * Attach listeners for H3 picker control buttons
+ */
+function attachH3ControlListeners() {
+    const container = document.getElementById('h3PickerContainer');
+    if (!container) return;
+
+    container.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-h3-action]');
+        if (!target) return;
+
+        const action = target.dataset.h3Action;
+        handleH3Action(action);
+    });
+}
+
+/**
+ * Handle H3 picker actions
+ */
+function handleH3Action(action) {
+    switch (action) {
+        case 'undo':
+            if (h3PickerState.history.length > 0) {
+                h3PickerState.selectedCells = h3PickerState.history.pop();
+                wizardState.formData.h3Cells = [...h3PickerState.selectedCells];
+                updateH3Layers();
+                updateH3ControlsUI();
+            }
+            break;
+
+        case 'clear':
+            if (h3PickerState.selectedCells.length > 0) {
+                // Save to history for undo
+                h3PickerState.history.push([...h3PickerState.selectedCells]);
+                h3PickerState.selectedCells = [];
+                wizardState.formData.h3Cells = [];
+                updateH3Layers();
+                updateH3ControlsUI();
+            }
+            break;
+
+        case 'fit':
+            fitMapToSelection();
+            break;
+    }
+}
+
+/**
+ * Fit map view to selected cells
+ */
+function fitMapToSelection() {
+    if (!h3PickerMap || h3PickerState.selectedCells.length === 0) return;
+
+    // Calculate bounds of all selected cells
+    let minLng = Infinity, maxLng = -Infinity;
+    let minLat = Infinity, maxLat = -Infinity;
+
+    h3PickerState.selectedCells.forEach(cellIndex => {
+        const boundary = h3.cellToBoundary(cellIndex, true);
+        boundary.forEach(([lng, lat]) => {
+            minLng = Math.min(minLng, lng);
+            maxLng = Math.max(maxLng, lng);
+            minLat = Math.min(minLat, lat);
+            maxLat = Math.max(maxLat, lat);
+        });
+    });
+
+    // Fit map to bounds with padding
+    h3PickerMap.fitBounds(
+        [[minLng, minLat], [maxLng, maxLat]],
+        { padding: 50, maxZoom: 10 }
+    );
 }
 
 export default {

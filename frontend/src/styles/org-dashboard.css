@@ -1825,3 +1825,178 @@
         width: 100%;
     }
 }
+
+/* ========================================
+   JURISDICTION MODAL
+======================================== */
+
+.org-jurisdiction-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.org-jurisdiction-modal {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.org-jurisdiction-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.org-jurisdiction-modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.org-jurisdiction-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.org-jurisdiction-modal-close:hover {
+    color: #333;
+}
+
+.org-jurisdiction-modal-body {
+    padding: 1.5rem;
+}
+
+.org-jurisdiction-instructions {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.org-jurisdiction-map-container {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f9f9f9;
+}
+
+.org-jurisdiction-map {
+    height: 400px;
+    width: 100%;
+    cursor: crosshair;
+}
+
+.org-jurisdiction-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-top: 1px solid #eee;
+    background: white;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.org-jurisdiction-info {
+    flex: 1;
+    min-width: 150px;
+}
+
+.org-jurisdiction-count {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.org-jurisdiction-count strong {
+    color: #4b5c09;
+    font-weight: 600;
+}
+
+.org-jurisdiction-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.org-jurisdiction-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Inline button for jurisdiction edit */
+.org-dashboard-btn-inline {
+    background: none;
+    border: 1px solid #4b5c09;
+    color: #4b5c09;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    transition: background 0.2s ease;
+}
+
+.org-dashboard-btn-inline:hover {
+    background: #4b5c09;
+    color: white;
+}
+
+/* Jurisdiction Modal Responsive */
+@media (max-width: 640px) {
+    .org-jurisdiction-modal {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .org-jurisdiction-map {
+        height: 300px;
+    }
+
+    .org-jurisdiction-controls {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.75rem;
+    }
+
+    .org-jurisdiction-info {
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .org-jurisdiction-buttons {
+        justify-content: center;
+    }
+
+    .org-jurisdiction-modal-footer {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .org-jurisdiction-modal-footer .org-dashboard-btn {
+        width: 100%;
+    }
+}

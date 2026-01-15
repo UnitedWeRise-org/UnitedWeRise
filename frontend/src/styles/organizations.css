@@ -1318,3 +1318,102 @@
         margin-bottom: 0.25rem;
     }
 }
+
+/* ========================================
+   H3 JURISDICTION PICKER
+======================================== */
+
+.org-wizard-h3-instructions {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.org-wizard-h3-picker {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f9f9f9;
+}
+
+.org-wizard-h3-map {
+    height: 350px;
+    width: 100%;
+    cursor: crosshair;
+}
+
+.org-wizard-h3-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-top: 1px solid #eee;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.org-wizard-h3-info {
+    flex: 1;
+    min-width: 150px;
+}
+
+.org-wizard-h3-count {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.org-wizard-h3-count strong {
+    color: #4b5c09;
+    font-weight: 600;
+}
+
+.org-wizard-h3-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.org-wizard-h3-btn {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    color: #555;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.org-wizard-h3-btn:hover:not(:disabled) {
+    background: #f0f0f0;
+    border-color: #ccc;
+}
+
+.org-wizard-h3-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* H3 Picker Responsive */
+@media (max-width: 640px) {
+    .org-wizard-h3-map {
+        height: 280px;
+    }
+
+    .org-wizard-h3-controls {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.5rem;
+    }
+
+    .org-wizard-h3-info {
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .org-wizard-h3-buttons {
+        justify-content: center;
+    }
+}

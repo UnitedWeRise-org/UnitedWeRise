@@ -121,8 +121,17 @@ let dashboardState = {
     endorsements: [],
     endorsementsLoading: false,
     showRevokeConfirmModal: false,
-    endorsementToRevoke: null
+    endorsementToRevoke: null,
+    // Jurisdiction editing (for CUSTOM type)
+    showJurisdictionModal: false,
+    jurisdictionCells: [],
+    jurisdictionMap: null,
+    jurisdictionHistory: []
 };
+
+// H3 Picker constants for dashboard
+const H3_RESOLUTION = 7;
+const MAX_H3_CELLS = 100;
 
 /**
  * Initialize dashboard on page load
@@ -524,6 +533,24 @@ function renderSettingsTab() {
         return renderEditForm();
     }
 
+    // Format jurisdiction display
+    let jurisdictionDisplay = org.jurisdictionType || 'National';
+    if (org.jurisdictionType === 'STATE' && org.jurisdictionValue) {
+        jurisdictionDisplay = `State - ${org.jurisdictionValue}`;
+    } else if (org.jurisdictionType === 'COUNTY' && org.jurisdictionValue) {
+        jurisdictionDisplay = `County - ${org.jurisdictionValue}`;
+    } else if (org.jurisdictionType === 'CITY' && org.jurisdictionValue) {
+        jurisdictionDisplay = `City - ${org.jurisdictionValue}`;
+    } else if (org.jurisdictionType === 'CUSTOM') {
+        const cellCount = org.h3Cells?.length || 0;
+        const approxArea = Math.round(cellCount * 50);
+        jurisdictionDisplay = cellCount > 0
+            ? `Custom Area (${cellCount} region${cellCount !== 1 ? 's' : ''}, ~${approxArea} km²)`
+            : 'Custom Area (not configured)';
+    }
+
+    const canEditJurisdiction = isHead && org.jurisdictionType === 'CUSTOM';
+
     return `
         <div class="org-dashboard-settings">
             <div class="org-dashboard-section">
@@ -542,6 +569,21 @@ function renderSettingsTab() {
                     <div class="org-detail-row">
                         <dt>Slug</dt>
                         <dd>${escapeHtml(org.slug)} <small>(cannot be changed)</small></dd>
+                    </div>
+                    <div class="org-detail-row">
+                        <dt>Type</dt>
+                        <dd>${org.type || 'Organization'}</dd>
+                    </div>
+                    <div class="org-detail-row">
+                        <dt>Jurisdiction</dt>
+                        <dd>
+                            ${jurisdictionDisplay}
+                            ${canEditJurisdiction ? `
+                                <button class="org-dashboard-btn-inline" data-action="editJurisdiction">
+                                    Edit Coverage
+                                </button>
+                            ` : ''}
+                        </dd>
                     </div>
                     <div class="org-detail-row">
                         <dt>Description</dt>
@@ -568,6 +610,63 @@ function renderSettingsTab() {
                     </div>
                 </div>
             ` : ''}
+        </div>
+
+        ${dashboardState.showJurisdictionModal ? renderJurisdictionModal() : ''}
+    `;
+}
+
+/**
+ * Render jurisdiction editing modal for CUSTOM type orgs
+ */
+function renderJurisdictionModal() {
+    const cellCount = dashboardState.jurisdictionCells.length;
+    const approxArea = Math.round(cellCount * 50);
+
+    return `
+        <div class="org-jurisdiction-modal-overlay" data-action="closeJurisdictionModal">
+            <div class="org-jurisdiction-modal" onclick="event.stopPropagation()">
+                <div class="org-jurisdiction-modal-header">
+                    <h2>Edit Coverage Area</h2>
+                    <button class="org-jurisdiction-modal-close" data-action="closeJurisdictionModal">✕</button>
+                </div>
+                <div class="org-jurisdiction-modal-body">
+                    <p class="org-jurisdiction-instructions">
+                        Click on the map to select hexagonal coverage areas.
+                        Click again to deselect. Maximum ${MAX_H3_CELLS} cells (~${MAX_H3_CELLS * 50} km²).
+                    </p>
+                    <div class="org-jurisdiction-map-container">
+                        <div id="jurisdictionMapContainer" class="org-jurisdiction-map"></div>
+                    </div>
+                    <div class="org-jurisdiction-controls">
+                        <div class="org-jurisdiction-info">
+                            <span class="org-jurisdiction-count">
+                                Selected: <strong>${cellCount}</strong> cell${cellCount !== 1 ? 's' : ''}
+                                ${cellCount > 0 ? `(~${approxArea} km²)` : ''}
+                            </span>
+                        </div>
+                        <div class="org-jurisdiction-buttons">
+                            <button type="button" class="org-dashboard-btn org-dashboard-btn-sm org-dashboard-btn-secondary" data-action="h3Undo" ${dashboardState.jurisdictionHistory.length === 0 ? 'disabled' : ''}>
+                                Undo
+                            </button>
+                            <button type="button" class="org-dashboard-btn org-dashboard-btn-sm org-dashboard-btn-secondary" data-action="h3Clear" ${cellCount === 0 ? 'disabled' : ''}>
+                                Clear All
+                            </button>
+                            <button type="button" class="org-dashboard-btn org-dashboard-btn-sm org-dashboard-btn-secondary" data-action="h3FitToSelection" ${cellCount === 0 ? 'disabled' : ''}>
+                                Zoom to Selection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="org-jurisdiction-modal-footer">
+                    <button type="button" class="org-dashboard-btn org-dashboard-btn-secondary" data-action="closeJurisdictionModal">
+                        Cancel
+                    </button>
+                    <button type="button" class="org-dashboard-btn org-dashboard-btn-primary" data-action="saveJurisdiction" ${cellCount === 0 ? 'disabled' : ''}>
+                        Save Changes
+                    </button>
+                </div>
+            </div>
         </div>
     `;
 }
@@ -986,6 +1085,24 @@ function attachDashboardListeners(container) {
                 break;
             case 'cancelEdit':
                 cancelEdit();
+                break;
+            case 'editJurisdiction':
+                openJurisdictionModal();
+                break;
+            case 'closeJurisdictionModal':
+                closeJurisdictionModal();
+                break;
+            case 'saveJurisdiction':
+                await saveJurisdiction();
+                break;
+            case 'h3Undo':
+                h3Undo();
+                break;
+            case 'h3Clear':
+                h3Clear();
+                break;
+            case 'h3FitToSelection':
+                h3FitToSelection();
                 break;
             case 'approveMember':
                 await approveMember(membershipId);
@@ -2894,6 +3011,391 @@ async function confirmRevoke() {
     } catch (error) {
         console.error('Revoke failed:', error);
         showToast(error.message || 'Failed to revoke endorsement');
+    }
+}
+
+// ==================== Jurisdiction Modal Functions ====================
+
+/**
+ * Open jurisdiction editing modal
+ */
+function openJurisdictionModal() {
+    const org = dashboardState.organization;
+    if (!org || org.jurisdictionType !== 'CUSTOM') return;
+
+    // Initialize with current cells
+    dashboardState.jurisdictionCells = org.h3Cells ? [...org.h3Cells] : [];
+    dashboardState.jurisdictionHistory = [];
+    dashboardState.showJurisdictionModal = true;
+
+    const container = document.getElementById('orgDashboardContainer');
+    if (container) {
+        renderDashboard(container);
+
+        // Initialize map after modal is rendered
+        setTimeout(() => initJurisdictionMap(), 100);
+    }
+}
+
+/**
+ * Close jurisdiction modal
+ */
+function closeJurisdictionModal() {
+    // Clean up map
+    if (dashboardState.jurisdictionMap) {
+        dashboardState.jurisdictionMap.remove();
+        dashboardState.jurisdictionMap = null;
+    }
+
+    dashboardState.showJurisdictionModal = false;
+    dashboardState.jurisdictionCells = [];
+    dashboardState.jurisdictionHistory = [];
+
+    const container = document.getElementById('orgDashboardContainer');
+    if (container) renderDashboard(container);
+}
+
+/**
+ * Initialize the jurisdiction map
+ */
+function initJurisdictionMap() {
+    const mapContainer = document.getElementById('jurisdictionMapContainer');
+    if (!mapContainer) {
+        console.warn('Jurisdiction map container not found');
+        return;
+    }
+
+    // Check if MapLibre is available
+    if (typeof maplibregl === 'undefined') {
+        console.error('MapLibre GL JS not loaded');
+        mapContainer.innerHTML = '<p style="color: red; padding: 1rem;">Map library not available</p>';
+        return;
+    }
+
+    // Check if h3 library is available
+    if (typeof h3 === 'undefined') {
+        console.error('H3 library not loaded');
+        mapContainer.innerHTML = '<p style="color: red; padding: 1rem;">H3 library not available</p>';
+        return;
+    }
+
+    // Remove existing map if present
+    if (dashboardState.jurisdictionMap) {
+        dashboardState.jurisdictionMap.remove();
+    }
+
+    // Create new map
+    dashboardState.jurisdictionMap = new maplibregl.Map({
+        container: mapContainer,
+        style: {
+            version: 8,
+            sources: {
+                'carto-light': {
+                    type: 'raster',
+                    tiles: [
+                        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+                    ],
+                    tileSize: 256,
+                    attribution: '&copy; OpenStreetMap &copy; CARTO'
+                }
+            },
+            layers: [{
+                id: 'carto-light-layer',
+                type: 'raster',
+                source: 'carto-light',
+                minzoom: 0,
+                maxzoom: 19
+            }]
+        },
+        center: [-98.5795, 39.8283], // Center of US
+        zoom: 4,
+        minZoom: 3,
+        maxZoom: 12
+    });
+
+    // Add navigation controls
+    dashboardState.jurisdictionMap.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    // Wait for map to load
+    dashboardState.jurisdictionMap.on('load', () => {
+        // Add sources and layers
+        dashboardState.jurisdictionMap.addSource('h3-selected', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] }
+        });
+
+        dashboardState.jurisdictionMap.addSource('h3-hover', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] }
+        });
+
+        dashboardState.jurisdictionMap.addLayer({
+            id: 'h3-selected-fill',
+            type: 'fill',
+            source: 'h3-selected',
+            paint: {
+                'fill-color': '#3b82f6',
+                'fill-opacity': 0.4
+            }
+        });
+
+        dashboardState.jurisdictionMap.addLayer({
+            id: 'h3-selected-outline',
+            type: 'line',
+            source: 'h3-selected',
+            paint: {
+                'line-color': '#1d4ed8',
+                'line-width': 2
+            }
+        });
+
+        dashboardState.jurisdictionMap.addLayer({
+            id: 'h3-hover-fill',
+            type: 'fill',
+            source: 'h3-hover',
+            paint: {
+                'fill-color': '#60a5fa',
+                'fill-opacity': 0.3
+            }
+        });
+
+        // Render existing cells
+        updateJurisdictionMapLayers();
+
+        // Fit to selection if cells exist
+        if (dashboardState.jurisdictionCells.length > 0) {
+            setTimeout(() => h3FitToSelection(), 500);
+        }
+
+        console.log('🗺️ Jurisdiction map initialized');
+    });
+
+    // Handle map clicks
+    dashboardState.jurisdictionMap.on('click', handleJurisdictionMapClick);
+
+    // Handle mouse move for hover
+    dashboardState.jurisdictionMap.on('mousemove', handleJurisdictionMapMove);
+}
+
+/**
+ * Handle map click for jurisdiction editing
+ */
+function handleJurisdictionMapClick(e) {
+    const { lng, lat } = e.lngLat;
+
+    try {
+        const cellIndex = h3.latLngToCell(lat, lng, H3_RESOLUTION);
+        const existingIndex = dashboardState.jurisdictionCells.indexOf(cellIndex);
+
+        // Save state for undo
+        dashboardState.jurisdictionHistory.push([...dashboardState.jurisdictionCells]);
+        if (dashboardState.jurisdictionHistory.length > 50) {
+            dashboardState.jurisdictionHistory.shift();
+        }
+
+        if (existingIndex >= 0) {
+            // Deselect
+            dashboardState.jurisdictionCells.splice(existingIndex, 1);
+        } else {
+            // Check limit
+            if (dashboardState.jurisdictionCells.length >= MAX_H3_CELLS) {
+                showToast(`Maximum ${MAX_H3_CELLS} cells allowed`);
+                dashboardState.jurisdictionHistory.pop();
+                return;
+            }
+            dashboardState.jurisdictionCells.push(cellIndex);
+        }
+
+        updateJurisdictionMapLayers();
+        updateJurisdictionControlsUI();
+
+    } catch (error) {
+        console.error('Error processing H3 cell:', error);
+    }
+}
+
+/**
+ * Handle mouse move for hover preview
+ */
+let hoveredJurisdictionCell = null;
+
+function handleJurisdictionMapMove(e) {
+    const { lng, lat } = e.lngLat;
+
+    try {
+        const cellIndex = h3.latLngToCell(lat, lng, H3_RESOLUTION);
+
+        if (cellIndex !== hoveredJurisdictionCell) {
+            hoveredJurisdictionCell = cellIndex;
+            updateJurisdictionHoverLayer();
+        }
+    } catch (error) {
+        // Ignore errors for out-of-bounds
+    }
+}
+
+/**
+ * Update the selected cells layer
+ */
+function updateJurisdictionMapLayers() {
+    if (!dashboardState.jurisdictionMap || !dashboardState.jurisdictionMap.getSource('h3-selected')) return;
+
+    const features = dashboardState.jurisdictionCells.map(cellIndex => {
+        const boundary = h3.cellToBoundary(cellIndex, true);
+        return {
+            type: 'Feature',
+            properties: { cellIndex },
+            geometry: {
+                type: 'Polygon',
+                coordinates: [boundary]
+            }
+        };
+    });
+
+    dashboardState.jurisdictionMap.getSource('h3-selected').setData({
+        type: 'FeatureCollection',
+        features
+    });
+}
+
+/**
+ * Update hover layer
+ */
+function updateJurisdictionHoverLayer() {
+    if (!dashboardState.jurisdictionMap || !dashboardState.jurisdictionMap.getSource('h3-hover')) return;
+
+    let features = [];
+
+    if (hoveredJurisdictionCell && !dashboardState.jurisdictionCells.includes(hoveredJurisdictionCell)) {
+        const boundary = h3.cellToBoundary(hoveredJurisdictionCell, true);
+        features.push({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'Polygon',
+                coordinates: [boundary]
+            }
+        });
+    }
+
+    dashboardState.jurisdictionMap.getSource('h3-hover').setData({
+        type: 'FeatureCollection',
+        features
+    });
+}
+
+/**
+ * Update controls UI (cell count, button states)
+ */
+function updateJurisdictionControlsUI() {
+    const cellCount = dashboardState.jurisdictionCells.length;
+    const approxArea = Math.round(cellCount * 50);
+
+    // Update count display
+    const countEl = document.querySelector('.org-jurisdiction-count');
+    if (countEl) {
+        countEl.innerHTML = `
+            Selected: <strong>${cellCount}</strong> cell${cellCount !== 1 ? 's' : ''}
+            ${cellCount > 0 ? `(~${approxArea} km²)` : ''}
+        `;
+    }
+
+    // Update button states
+    const undoBtn = document.querySelector('[data-action="h3Undo"]');
+    const clearBtn = document.querySelector('[data-action="h3Clear"]');
+    const fitBtn = document.querySelector('[data-action="h3FitToSelection"]');
+    const saveBtn = document.querySelector('[data-action="saveJurisdiction"]');
+
+    if (undoBtn) undoBtn.disabled = dashboardState.jurisdictionHistory.length === 0;
+    if (clearBtn) clearBtn.disabled = cellCount === 0;
+    if (fitBtn) fitBtn.disabled = cellCount === 0;
+    if (saveBtn) saveBtn.disabled = cellCount === 0;
+}
+
+/**
+ * H3 Undo action
+ */
+function h3Undo() {
+    if (dashboardState.jurisdictionHistory.length > 0) {
+        dashboardState.jurisdictionCells = dashboardState.jurisdictionHistory.pop();
+        updateJurisdictionMapLayers();
+        updateJurisdictionControlsUI();
+    }
+}
+
+/**
+ * H3 Clear all action
+ */
+function h3Clear() {
+    if (dashboardState.jurisdictionCells.length > 0) {
+        dashboardState.jurisdictionHistory.push([...dashboardState.jurisdictionCells]);
+        dashboardState.jurisdictionCells = [];
+        updateJurisdictionMapLayers();
+        updateJurisdictionControlsUI();
+    }
+}
+
+/**
+ * H3 Fit to selection action
+ */
+function h3FitToSelection() {
+    if (!dashboardState.jurisdictionMap || dashboardState.jurisdictionCells.length === 0) return;
+
+    let minLng = Infinity, maxLng = -Infinity;
+    let minLat = Infinity, maxLat = -Infinity;
+
+    dashboardState.jurisdictionCells.forEach(cellIndex => {
+        const boundary = h3.cellToBoundary(cellIndex, true);
+        boundary.forEach(([lng, lat]) => {
+            minLng = Math.min(minLng, lng);
+            maxLng = Math.max(maxLng, lng);
+            minLat = Math.min(minLat, lat);
+            maxLat = Math.max(maxLat, lat);
+        });
+    });
+
+    dashboardState.jurisdictionMap.fitBounds(
+        [[minLng, minLat], [maxLng, maxLat]],
+        { padding: 50, maxZoom: 10 }
+    );
+}
+
+/**
+ * Save jurisdiction changes
+ */
+async function saveJurisdiction() {
+    if (dashboardState.jurisdictionCells.length === 0) {
+        showToast('Please select at least one coverage area');
+        return;
+    }
+
+    try {
+        const org = dashboardState.organization;
+        const response = await fetch(`${API_BASE}/organizations/${org.id}`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                h3Cells: dashboardState.jurisdictionCells
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to save jurisdiction');
+        }
+
+        // Update local state
+        dashboardState.organization.h3Cells = [...dashboardState.jurisdictionCells];
+
+        showToast('Coverage area saved successfully');
+        closeJurisdictionModal();
+
+    } catch (error) {
+        console.error('Save jurisdiction failed:', error);
+        showToast(error.message || 'Failed to save jurisdiction');
     }
 }
 

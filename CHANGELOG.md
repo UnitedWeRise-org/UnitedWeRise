@@ -8,6 +8,42 @@
 
 ---
 
+## [2026-01-15] - Organizations Phase 2e: H3 Jurisdiction Picker
+
+### Added
+
+**H3 Library Integration**
+- Added h3-js v4.1.0 via CDN to frontend (org-dashboard.html, index.html)
+- Resolution 7 hexagons (~5km, ~50 km² per cell)
+- Maximum 100 cells selectable (~5,000 km² coverage)
+
+**Creation Wizard - CUSTOM Jurisdiction**
+- Enabled CUSTOM jurisdiction type option (previously hidden)
+- MapLibre-based H3 picker integrated into Type & Jurisdiction step
+- Click-to-select hexagonal areas
+- Hover preview for unselected cells
+- Controls: Undo, Clear All, Zoom to Selection
+- Cell count and approximate coverage area display
+- Validation: minimum 1 cell required for CUSTOM type
+- H3 cells array sent to API on organization creation
+
+**Dashboard - Jurisdiction Editing**
+- "Edit Coverage" button in Settings tab for CUSTOM type orgs
+- Jurisdiction editing modal with H3 picker
+- Pre-loads existing h3Cells from organization
+- Save changes via PATCH /api/organizations/{id}
+- Full undo/redo support during editing session
+
+### Files Modified
+- `frontend/org-dashboard.html` - Add h3-js CDN script
+- `frontend/index.html` - Add h3-js CDN script
+- `frontend/src/modules/features/organizations/components/org-creation-wizard.js` - Add H3 picker, enable CUSTOM
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Add jurisdiction modal and editing
+- `frontend/src/styles/organizations.css` - Add H3 picker styles for wizard
+- `frontend/src/styles/org-dashboard.css` - Add jurisdiction modal styles
+
+---
+
 ## [2026-01-15] - Organizations Phase 2d: Endorsement System UI
 
 ### Added
