@@ -17,6 +17,8 @@ import * as speakeasy from 'speakeasy';
 import { logger } from '../services/logger';
 import { AuditService, AUDIT_ACTIONS } from '../services/auditService';
 import { safePaginationParams, PAGINATION_LIMITS } from '../utils/safeJson';
+import { organizationService } from '../services/organizationService';
+import { MembershipStatus } from '@prisma/client';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -6983,5 +6985,894 @@ router.patch('/org-verifications/:requestId', requireStagingAuth, requireAdmin, 
     res.status(500).json({ error: 'Failed to process verification request' });
   }
 });
+
+// ===============================
+// ORGANIZATION MANAGEMENT (SUPER-ADMIN)
+// ===============================
+
+/**
+ * @swagger
+ * /api/admin/organizations:
+ *   get:
+ *     tags: [Admin - Organization Management]
+ *     summary: List all organizations (admin view)
+ *     description: Lists all organizations including inactive ones with detailed info
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, all]
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [newest, members, alphabetical]
+ *     responses:
+ *       200:
+ *         description: List of organizations
+ */
+router.get('/organizations', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { page, limit, offset } = safePagePagination(
+      req.query.page as string,
+      req.query.limit as string
+    );
+    const search = req.query.search as string;
+    const status = req.query.status as string || 'all';
+    const sort = (req.query.sort as string) || 'newest';
+
+    const where: any = {};
+
+    // Status filter
+    if (status === 'active') {
+      where.isActive = true;
+    } else if (status === 'inactive') {
+      where.isActive = false;
+    }
+    // 'all' = no filter
+
+    // Search filter
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Build orderBy
+    let orderBy: any;
+    switch (sort) {
+      case 'members':
+        orderBy = [{ members: { _count: 'desc' } }, { createdAt: 'desc' }];
+        break;
+      case 'alphabetical':
+        orderBy = [{ name: 'asc' }];
+        break;
+      default:
+        orderBy = [{ createdAt: 'desc' }];
+    }
+
+    const [organizations, total] = await Promise.all([
+      prisma.organization.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        orderBy,
+        include: {
+          head: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+            },
+          },
+          _count: {
+            select: {
+              members: { where: { status: MembershipStatus.ACTIVE } },
+              posts: true,
+              events: true,
+            },
+          },
+        },
+      }),
+      prisma.organization.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      organizations,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    logger.error({ error, adminId: req.user?.id }, 'Failed to list organizations');
+    res.status(500).json({ error: 'Failed to list organizations' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/organizations/{organizationId}:
+ *   get:
+ *     tags: [Admin - Organization Management]
+ *     summary: Get organization details (admin view)
+ *     description: Get detailed organization info including members and verification history
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Organization details
+ *       404:
+ *         description: Organization not found
+ */
+router.get('/organizations/:organizationId', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { organizationId } = req.params;
+
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        head: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            email: true,
+          },
+        },
+        parent: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        _count: {
+          select: {
+            members: { where: { status: MembershipStatus.ACTIVE } },
+            posts: true,
+            events: true,
+            children: { where: { isActive: true } },
+          },
+        },
+      },
+    });
+
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    // Get members (first 20)
+    const members = await prisma.organizationMember.findMany({
+      where: { organizationId },
+      take: 20,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+          },
+        },
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const totalMembers = await prisma.organizationMember.count({
+      where: { organizationId },
+    });
+
+    // Get verification history
+    const verificationHistory = await prisma.organizationVerificationRequest.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        orgType: true,
+        status: true,
+        createdAt: true,
+        reviewedAt: true,
+        denialReason: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      organization,
+      members: {
+        members,
+        total: totalMembers,
+      },
+      verificationHistory,
+    });
+  } catch (error) {
+    logger.error({ error, organizationId: req.params.organizationId, adminId: req.user?.id }, 'Failed to get organization details');
+    res.status(500).json({ error: 'Failed to get organization details' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/organizations/{organizationId}/members:
+ *   post:
+ *     tags: [Admin - Organization Management]
+ *     summary: Add member to organization (super-admin only)
+ *     description: Super-admin can add any user to any organization
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [PENDING, ACTIVE]
+ *                 default: ACTIVE
+ *     responses:
+ *       201:
+ *         description: Member added
+ *       403:
+ *         description: Super-admin access required
+ *       404:
+ *         description: Organization or user not found
+ */
+router.post(
+  '/organizations/:organizationId/members',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('userId').isString().notEmpty().withMessage('userId is required'),
+    body('status').optional().isIn(['PENDING', 'ACTIVE']).withMessage('Invalid status'),
+    handleValidationErrors,
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      // Super-admin check
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({ error: 'Super-admin access required' });
+      }
+
+      const { organizationId } = req.params;
+      const { userId, status = 'ACTIVE' } = req.body;
+      const adminId = req.user.id;
+
+      // Verify organization exists
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { id: true, name: true, slug: true, isActive: true },
+      });
+
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      if (!org.isActive) {
+        return res.status(400).json({ error: 'Cannot add members to inactive organization' });
+      }
+
+      // Verify user exists
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, username: true, firstName: true, lastName: true },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Check for existing membership
+      const existingMembership = await prisma.organizationMember.findUnique({
+        where: {
+          organizationId_userId: { organizationId, userId },
+        },
+      });
+
+      let membership;
+      if (existingMembership) {
+        if (existingMembership.status === 'ACTIVE') {
+          return res.status(400).json({ error: 'User is already an active member' });
+        }
+        // Reactivate removed/suspended member
+        membership = await prisma.organizationMember.update({
+          where: { id: existingMembership.id },
+          data: {
+            status: status as MembershipStatus,
+            joinedAt: status === 'ACTIVE' ? new Date() : null,
+          },
+          include: {
+            user: {
+              select: { id: true, username: true, firstName: true, lastName: true },
+            },
+          },
+        });
+      } else {
+        // Create new membership
+        membership = await prisma.organizationMember.create({
+          data: {
+            organizationId,
+            userId,
+            status: status as MembershipStatus,
+            joinedAt: status === 'ACTIVE' ? new Date() : null,
+          },
+          include: {
+            user: {
+              select: { id: true, username: true, firstName: true, lastName: true },
+            },
+          },
+        });
+      }
+
+      // Audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ADMIN_ORG_MEMBER_ADDED,
+        adminId,
+        targetType: 'organization_member',
+        targetId: membership.id,
+        details: {
+          organizationId,
+          organizationName: org.name,
+          addedUserId: userId,
+          addedUsername: user.username,
+          status,
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      logger.info({
+        adminId,
+        adminUsername: req.user.username,
+        organizationId,
+        organizationName: org.name,
+        addedUserId: userId,
+        addedUsername: user.username,
+        status,
+        action: 'admin_org_member_added',
+      }, 'Super-admin added member to organization');
+
+      res.status(201).json({
+        success: true,
+        membership,
+        message: 'Member added successfully',
+      });
+    } catch (error) {
+      logger.error({ error, organizationId: req.params.organizationId, adminId: req.user?.id }, 'Failed to add member');
+      res.status(500).json({ error: 'Failed to add member' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/organizations/{organizationId}/members/{membershipId}:
+ *   delete:
+ *     tags: [Admin - Organization Management]
+ *     summary: Remove member from organization (super-admin only)
+ *     description: Super-admin can remove any member from any organization
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: membershipId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Member removed
+ *       403:
+ *         description: Super-admin access required or cannot remove org head
+ *       404:
+ *         description: Membership not found
+ */
+router.delete(
+  '/organizations/:organizationId/members/:membershipId',
+  requireStagingAuth,
+  requireAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      // Super-admin check
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({ error: 'Super-admin access required' });
+      }
+
+      const { organizationId, membershipId } = req.params;
+      const { reason } = req.body || {};
+      const adminId = req.user.id;
+
+      // Get membership with org and user info
+      const membership = await prisma.organizationMember.findUnique({
+        where: { id: membershipId },
+        include: {
+          user: {
+            select: { id: true, username: true },
+          },
+          organization: {
+            select: { id: true, name: true, headUserId: true },
+          },
+        },
+      });
+
+      if (!membership) {
+        return res.status(404).json({ error: 'Membership not found' });
+      }
+
+      if (membership.organizationId !== organizationId) {
+        return res.status(400).json({ error: 'Membership does not belong to this organization' });
+      }
+
+      // Cannot remove organization head
+      if (membership.userId === membership.organization.headUserId) {
+        return res.status(403).json({ error: 'Cannot remove organization head. Transfer headship first.' });
+      }
+
+      // Remove membership
+      await prisma.organizationMember.delete({
+        where: { id: membershipId },
+      });
+
+      // Audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ADMIN_ORG_MEMBER_REMOVED,
+        adminId,
+        targetType: 'organization_member',
+        targetId: membershipId,
+        details: {
+          organizationId,
+          organizationName: membership.organization.name,
+          removedUserId: membership.userId,
+          removedUsername: membership.user.username,
+          reason: reason || 'Not specified',
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      logger.info({
+        adminId,
+        adminUsername: req.user.username,
+        organizationId,
+        organizationName: membership.organization.name,
+        removedUserId: membership.userId,
+        removedUsername: membership.user.username,
+        reason,
+        action: 'admin_org_member_removed',
+      }, 'Super-admin removed member from organization');
+
+      res.json({
+        success: true,
+        message: 'Member removed successfully',
+      });
+    } catch (error) {
+      logger.error({ error, membershipId: req.params.membershipId, adminId: req.user?.id }, 'Failed to remove member');
+      res.status(500).json({ error: 'Failed to remove member' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/organizations/{organizationId}/transfer-headship:
+ *   post:
+ *     tags: [Admin - Organization Management]
+ *     summary: Transfer organization headship (super-admin only)
+ *     description: Super-admin can transfer headship even if not the current head
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newHeadUserId
+ *               - reason
+ *             properties:
+ *               newHeadUserId:
+ *                 type: string
+ *               reason:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 500
+ *     responses:
+ *       200:
+ *         description: Headship transferred
+ *       403:
+ *         description: Super-admin access required
+ *       400:
+ *         description: Invalid request
+ */
+router.post(
+  '/organizations/:organizationId/transfer-headship',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('newHeadUserId').isString().notEmpty().withMessage('newHeadUserId is required'),
+    body('reason').isString().isLength({ min: 10, max: 500 }).withMessage('Reason must be 10-500 characters'),
+    handleValidationErrors,
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      // Super-admin check
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({ error: 'Super-admin access required' });
+      }
+
+      const { organizationId } = req.params;
+      const { newHeadUserId, reason } = req.body;
+      const adminId = req.user.id;
+
+      // Get current org info
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        include: {
+          head: {
+            select: { id: true, username: true },
+          },
+        },
+      });
+
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      const previousHead = org.head;
+
+      // Use organization service for transfer (handles validation)
+      const updatedOrg = await organizationService.transferHeadship(organizationId, newHeadUserId);
+
+      // Get new head info
+      const newHead = await prisma.user.findUnique({
+        where: { id: newHeadUserId },
+        select: { id: true, username: true },
+      });
+
+      // Audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ADMIN_ORG_HEADSHIP_TRANSFERRED,
+        adminId,
+        targetType: 'organization',
+        targetId: organizationId,
+        details: {
+          organizationName: org.name,
+          previousHeadUserId: previousHead.id,
+          previousHeadUsername: previousHead.username,
+          newHeadUserId,
+          newHeadUsername: newHead?.username,
+          reason,
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      logger.info({
+        adminId,
+        adminUsername: req.user.username,
+        organizationId,
+        organizationName: org.name,
+        previousHeadUserId: previousHead.id,
+        previousHeadUsername: previousHead.username,
+        newHeadUserId,
+        newHeadUsername: newHead?.username,
+        reason,
+        action: 'admin_org_headship_transferred',
+      }, 'Super-admin transferred organization headship');
+
+      res.json({
+        success: true,
+        organization: updatedOrg,
+        previousHead: { id: previousHead.id, username: previousHead.username },
+        newHead: { id: newHeadUserId, username: newHead?.username },
+        message: 'Headship transferred successfully',
+      });
+    } catch (error: any) {
+      logger.error({ error, organizationId: req.params.organizationId, adminId: req.user?.id }, 'Failed to transfer headship');
+      res.status(400).json({ error: error.message || 'Failed to transfer headship' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/organizations/{organizationId}/deactivate:
+ *   post:
+ *     tags: [Admin - Organization Management]
+ *     summary: Deactivate organization (super-admin only)
+ *     description: Soft delete an organization
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 500
+ *     responses:
+ *       200:
+ *         description: Organization deactivated
+ *       403:
+ *         description: Super-admin access required
+ */
+router.post(
+  '/organizations/:organizationId/deactivate',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('reason').isString().isLength({ min: 10, max: 500 }).withMessage('Reason must be 10-500 characters'),
+    handleValidationErrors,
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      // Super-admin check
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({ error: 'Super-admin access required' });
+      }
+
+      const { organizationId } = req.params;
+      const { reason } = req.body;
+      const adminId = req.user.id;
+
+      // Get org info
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        include: {
+          _count: {
+            select: { members: true },
+          },
+        },
+      });
+
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      if (!org.isActive) {
+        return res.status(400).json({ error: 'Organization is already inactive' });
+      }
+
+      // Deactivate
+      const updatedOrg = await prisma.organization.update({
+        where: { id: organizationId },
+        data: { isActive: false },
+        select: { id: true, name: true, slug: true, isActive: true },
+      });
+
+      // Audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ADMIN_ORG_DEACTIVATED,
+        adminId,
+        targetType: 'organization',
+        targetId: organizationId,
+        details: {
+          organizationName: org.name,
+          organizationSlug: org.slug,
+          headUserId: org.headUserId,
+          memberCount: org._count.members,
+          reason,
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      logger.info({
+        adminId,
+        adminUsername: req.user.username,
+        organizationId,
+        organizationName: org.name,
+        reason,
+        action: 'admin_org_deactivated',
+      }, 'Super-admin deactivated organization');
+
+      res.json({
+        success: true,
+        organization: updatedOrg,
+        message: 'Organization deactivated',
+      });
+    } catch (error) {
+      logger.error({ error, organizationId: req.params.organizationId, adminId: req.user?.id }, 'Failed to deactivate organization');
+      res.status(500).json({ error: 'Failed to deactivate organization' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/organizations/{organizationId}/reactivate:
+ *   post:
+ *     tags: [Admin - Organization Management]
+ *     summary: Reactivate organization (super-admin only)
+ *     description: Restore a previously deactivated organization
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Organization reactivated
+ *       403:
+ *         description: Super-admin access required
+ */
+router.post(
+  '/organizations/:organizationId/reactivate',
+  requireStagingAuth,
+  requireAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      // Super-admin check
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({ error: 'Super-admin access required' });
+      }
+
+      const { organizationId } = req.params;
+      const { reason } = req.body || {};
+      const adminId = req.user.id;
+
+      // Get org info
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+      });
+
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      if (org.isActive) {
+        return res.status(400).json({ error: 'Organization is already active' });
+      }
+
+      // Verify head user still exists
+      const headUser = await prisma.user.findUnique({
+        where: { id: org.headUserId },
+        select: { id: true, isSuspended: true },
+      });
+
+      if (!headUser) {
+        return res.status(400).json({ error: 'Organization head user no longer exists' });
+      }
+
+      if (headUser.isSuspended) {
+        return res.status(400).json({ error: 'Organization head user is suspended' });
+      }
+
+      // Reactivate
+      const updatedOrg = await prisma.organization.update({
+        where: { id: organizationId },
+        data: { isActive: true },
+        select: { id: true, name: true, slug: true, isActive: true },
+      });
+
+      // Audit log
+      await AuditService.log({
+        action: AUDIT_ACTIONS.ADMIN_ORG_REACTIVATED,
+        adminId,
+        targetType: 'organization',
+        targetId: organizationId,
+        details: {
+          organizationName: org.name,
+          organizationSlug: org.slug,
+          reason: reason || 'Not specified',
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      logger.info({
+        adminId,
+        adminUsername: req.user.username,
+        organizationId,
+        organizationName: org.name,
+        reason,
+        action: 'admin_org_reactivated',
+      }, 'Super-admin reactivated organization');
+
+      res.json({
+        success: true,
+        organization: updatedOrg,
+        message: 'Organization reactivated',
+      });
+    } catch (error) {
+      logger.error({ error, organizationId: req.params.organizationId, adminId: req.user?.id }, 'Failed to reactivate organization');
+      res.status(500).json({ error: 'Failed to reactivate organization' });
+    }
+  }
+);
 
 export default router;
