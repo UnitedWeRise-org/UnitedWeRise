@@ -193,9 +193,9 @@ class OrganizationsController {
             const response = await window.AdminAPI.getAdminOrganizations(params);
 
             if (response.success) {
-                this.currentOrganizations = response.organizations;
-                this.totalOrganizations = response.pagination.total;
-                this.displayOrganizationsTable(response.organizations, response.pagination);
+                this.currentOrganizations = response.data.organizations;
+                this.totalOrganizations = response.data.pagination.total;
+                this.displayOrganizationsTable(response.data.organizations, response.data.pagination);
             } else {
                 container.innerHTML = '<p class="error">Failed to load organizations</p>';
             }
@@ -344,7 +344,7 @@ class OrganizationsController {
                 return;
             }
 
-            const { organization, members, verificationHistory } = response;
+            const { organization, members, verificationHistory } = response.data;
 
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
@@ -599,7 +599,7 @@ class OrganizationsController {
                 return;
             }
 
-            const { organization, members } = response;
+            const { organization, members } = response.data;
             const activeMembers = members.members.filter(m =>
                 m.status === 'ACTIVE' && m.userId !== organization.headUserId
             );
