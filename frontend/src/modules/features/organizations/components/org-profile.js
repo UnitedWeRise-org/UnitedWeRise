@@ -116,7 +116,7 @@ async function checkAuth() {
         const response = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
         if (response.ok) {
             const data = await response.json();
-            return data.user;
+            return data.data;  // API returns { success: true, data: userData }
         }
     } catch (e) {
         console.warn('Auth check failed:', e);

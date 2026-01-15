@@ -3396,7 +3396,7 @@
     overflow: hidden;
 }
 
-.modal-header {
+.endorsement-modal-overlay .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -3405,23 +3405,23 @@
     background: #f8f9fa;
 }
 
-.modal-org-info {
+.endorsement-modal-overlay .modal-org-info {
     display: flex;
     align-items: center;
     gap: 0.75rem;
 }
 
-.modal-org-info h2 {
+.endorsement-modal-overlay .modal-org-info h2 {
     font-size: 1.25rem;
     margin: 0;
 }
 
-.modal-org-info .org-name {
+.endorsement-modal-overlay .modal-org-info .org-name {
     font-size: 0.9rem;
     color: #666;
 }
 
-.modal-close {
+.endorsement-modal-overlay .modal-close {
     background: none;
     border: none;
     font-size: 1.5rem;
@@ -3431,23 +3431,23 @@
     line-height: 1;
 }
 
-.modal-close:hover {
+.endorsement-modal-overlay .modal-close:hover {
     color: #333;
 }
 
-.modal-body {
+.endorsement-modal-overlay .modal-body {
     padding: 1.25rem;
     overflow-y: auto;
     flex: 1;
 }
 
-.modal-description {
+.endorsement-modal-overlay .modal-description {
     color: #666;
     margin-bottom: 1.5rem;
     line-height: 1.5;
 }
 
-.modal-footer {
+.endorsement-modal-overlay .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
@@ -3580,11 +3580,11 @@
         max-height: 95vh;
     }
 
-    .modal-header {
+    .endorsement-modal-overlay .modal-header {
         padding: 1rem;
     }
 
-    .modal-body {
+    .endorsement-modal-overlay .modal-body {
         padding: 1rem;
     }
 
