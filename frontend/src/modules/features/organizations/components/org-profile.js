@@ -810,7 +810,10 @@ async function toggleFollow() {
 
         const response = await fetch(endpoint, {
             method: 'POST',
-            credentials: 'include'
+            credentials: 'include',
+            headers: {
+                'X-CSRF-Token': window.csrfToken || ''
+            }
         });
 
         if (response.ok) {
@@ -837,7 +840,10 @@ async function requestJoin() {
     try {
         const response = await fetch(`${API_BASE}/organizations/${profileState.organization.id}/join`, {
             method: 'POST',
-            credentials: 'include'
+            credentials: 'include',
+            headers: {
+                'X-CSRF-Token': window.csrfToken || ''
+            }
         });
 
         if (response.ok) {

@@ -140,39 +140,58 @@ export class OrganizationService {
       }
     }
 
-    const organization = await prisma.organization.create({
-      data: {
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        avatar: data.avatar,
-        website: data.website,
-        headUserId: userId,
-        parentId: data.parentId,
-        jurisdictionType: data.jurisdictionType,
-        jurisdictionValue: data.jurisdictionValue,
-        h3Cells: data.h3Cells || [],
-        endorsementsEnabled: data.endorsementsEnabled ?? false,
-        votingThresholdType: data.votingThresholdType ?? VotingThresholdType.SIMPLE_MAJORITY,
-        votingThresholdValue: data.votingThresholdValue,
-        votingQuorumPercent: data.votingQuorumPercent ?? 0,
-      },
-      include: {
-        head: {
-          select: USER_SELECT,
+    // Use transaction to create org and membership atomically
+    const organization = await prisma.$transaction(async (tx) => {
+      // Create the organization
+      const org = await tx.organization.create({
+        data: {
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          avatar: data.avatar,
+          website: data.website,
+          headUserId: userId,
+          parentId: data.parentId,
+          jurisdictionType: data.jurisdictionType,
+          jurisdictionValue: data.jurisdictionValue,
+          h3Cells: data.h3Cells || [],
+          endorsementsEnabled: data.endorsementsEnabled ?? false,
+          votingThresholdType: data.votingThresholdType ?? VotingThresholdType.SIMPLE_MAJORITY,
+          votingThresholdValue: data.votingThresholdValue,
+          votingQuorumPercent: data.votingQuorumPercent ?? 0,
         },
-        _count: {
-          select: {
-            members: true,
-            children: true,
+      });
+
+      // Add creator as an active member (they're also the head)
+      await tx.organizationMember.create({
+        data: {
+          organizationId: org.id,
+          userId: userId,
+          status: MembershipStatus.ACTIVE,
+          joinedAt: new Date(),
+        },
+      });
+
+      // Return org with includes
+      return tx.organization.findUnique({
+        where: { id: org.id },
+        include: {
+          head: {
+            select: USER_SELECT,
+          },
+          _count: {
+            select: {
+              members: true,
+              children: true,
+            },
           },
         },
-      },
+      });
     });
 
-    logger.info({ organizationId: organization.id, userId }, 'Organization created');
+    logger.info({ organizationId: organization!.id, userId }, 'Organization created');
 
-    return organization;
+    return organization!;
   }
 
   /**
