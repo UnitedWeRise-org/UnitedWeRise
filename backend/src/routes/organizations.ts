@@ -1573,4 +1573,255 @@ router.get('/:organizationId/verification', async (req, res) => {
   }
 });
 
+// ==================== Activity Feed ====================
+
+/**
+ * @swagger
+ * /organizations/{organizationId}/activity:
+ *   get:
+ *     summary: Get organization activity feed
+ *     description: Returns combined activity feed including posts, events, endorsements, and member milestones
+ *     tags: [Organizations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Organization ID
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [all, posts, events, endorsements]
+ *         description: Filter by activity type
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Activity feed items
+ *       403:
+ *         description: Not a member of this organization
+ */
+router.get('/:organizationId/activity', requireAuth, requireOrgMembership(), async (req: OrgAuthRequest, res) => {
+  try {
+    const { organizationId } = req.params;
+    const { type = 'all', page = '1', limit = '20' } = req.query;
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const activityItems: any[] = [];
+
+    // Fetch posts if type is 'all' or 'posts'
+    if (type === 'all' || type === 'posts') {
+      const posts = await prisma.post.findMany({
+        where: {
+          organizationId,
+          isDeleted: false
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              avatar: true
+            }
+          },
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              avatar: true
+            }
+          },
+          photos: true,
+          _count: {
+            select: {
+              likes: true,
+              comments: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: type === 'posts' ? limitNum : 10
+      });
+
+      posts.forEach(post => {
+        activityItems.push({
+          type: 'post',
+          timestamp: post.createdAt.toISOString(),
+          data: post
+        });
+      });
+    }
+
+    // Fetch events if type is 'all' or 'events'
+    if (type === 'all' || type === 'events') {
+      const events = await prisma.civicEvent.findMany({
+        where: {
+          organizationId,
+          status: { in: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED'] }
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              avatar: true
+            }
+          },
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              avatar: true
+            }
+          },
+          _count: {
+            select: {
+              rsvps: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: type === 'events' ? limitNum : 10
+      });
+
+      events.forEach(event => {
+        activityItems.push({
+          type: 'event',
+          timestamp: event.createdAt.toISOString(),
+          data: event
+        });
+      });
+    }
+
+    // Fetch endorsements if type is 'all' or 'endorsements'
+    if (type === 'all' || type === 'endorsements') {
+      const endorsements = await prisma.organizationEndorsement.findMany({
+        where: {
+          organizationId,
+          isActive: true
+        },
+        include: {
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              avatar: true
+            }
+          },
+          candidate: {
+            select: {
+              id: true,
+              name: true,
+              office: true,
+              party: true
+            }
+          }
+        },
+        orderBy: { publishedAt: 'desc' },
+        take: type === 'endorsements' ? limitNum : 10
+      });
+
+      endorsements.forEach(endorsement => {
+        activityItems.push({
+          type: 'endorsement',
+          timestamp: endorsement.publishedAt.toISOString(),
+          data: endorsement
+        });
+      });
+    }
+
+    // Fetch member milestones (recent joins) if type is 'all'
+    if (type === 'all') {
+      const recentMembers = await prisma.organizationMember.findMany({
+        where: {
+          organizationId,
+          status: 'ACTIVE'
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              avatar: true
+            }
+          }
+        },
+        orderBy: { joinedAt: 'desc' },
+        take: 5
+      });
+
+      // Group recent joins into milestone
+      if (recentMembers.length > 0) {
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const recentJoins = recentMembers.filter(m => m.joinedAt && new Date(m.joinedAt) > oneWeekAgo);
+
+        if (recentJoins.length > 0) {
+          activityItems.push({
+            type: 'member_milestone',
+            timestamp: recentJoins[0].joinedAt?.toISOString() || new Date().toISOString(),
+            data: {
+              type: 'join',
+              count: recentJoins.length,
+              users: recentJoins.slice(0, 3).map(m => ({
+                id: m.user.id,
+                displayName: m.user.firstName && m.user.lastName
+                  ? `${m.user.firstName} ${m.user.lastName}`
+                  : m.user.username
+              }))
+            }
+          });
+        }
+      }
+    }
+
+    // Sort all items by timestamp (newest first)
+    activityItems.sort((a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    // Paginate if filtering by specific type
+    const paginatedItems = type !== 'all'
+      ? activityItems.slice(skip, skip + limitNum)
+      : activityItems.slice(0, limitNum);
+
+    const hasMore = type !== 'all'
+      ? activityItems.length > skip + limitNum
+      : activityItems.length > limitNum;
+
+    res.json({
+      items: paginatedItems,
+      hasMore,
+      page: pageNum,
+      totalItems: activityItems.length
+    });
+
+  } catch (error) {
+    logger.error({ error, organizationId: req.params.organizationId }, 'Failed to get organization activity');
+    res.status(500).json({ error: 'Failed to get activity feed' });
+  }
+});
+
 export default router;

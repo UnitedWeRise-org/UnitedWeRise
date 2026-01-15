@@ -8,6 +8,51 @@
 
 ---
 
+## [2026-01-15] - Organizations Phase 2f: Organization Activity Feed
+
+### Added
+
+**Backend - Activity Endpoint**
+- New GET `/api/organizations/:id/activity` endpoint
+- Returns combined feed: posts, events, endorsements, member milestones
+- Supports type filter query param (all, posts, events, endorsements)
+- Pagination support (page, limit)
+- Validates org membership via `requireOrgMembership()` middleware
+
+**Backend - Organization Posts**
+- Added organizationId validation to POST `/api/posts`
+- Checks for POST_AS_ORG capability or org head status
+- Organization included in post response when posting as org
+
+**Activity Tab (Dashboard)**
+- New "Activity" tab visible to all organization members
+- Filter buttons: All, Posts, Events, Endorsements
+- Activity items sorted by timestamp (newest first)
+- Load more pagination
+- Activity item types with distinct styling:
+  - Posts: org avatar, content, photos, like/comment counts
+  - Events: calendar icon, title, date/time, location, RSVP count
+  - Endorsements: checkmark icon, candidate name, office, statement
+  - Member milestones: grouped recent joins
+
+**Post Composer**
+- "New Post" button (requires POST_AS_ORG capability)
+- Inline post composer textarea
+- Posts created as organization (not personal)
+
+**Event Creator**
+- "New Event" button (requires CREATE_EVENTS capability)
+- Modal with title, description, date, time, location fields
+- Creates event associated with organization
+
+### Files Modified
+- `backend/src/routes/posts.ts` - Add organizationId validation (~50 lines)
+- `backend/src/routes/organizations.ts` - Add activity endpoint (~150 lines)
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Add Activity tab (~500 lines)
+- `frontend/src/styles/org-dashboard.css` - Add activity styles (~250 lines)
+
+---
+
 ## [2026-01-15] - Organizations Phase 2e: H3 Jurisdiction Picker
 
 ### Added

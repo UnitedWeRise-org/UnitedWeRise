@@ -126,7 +126,17 @@ let dashboardState = {
     showJurisdictionModal: false,
     jurisdictionCells: [],
     jurisdictionMap: null,
-    jurisdictionHistory: []
+    jurisdictionHistory: [],
+    // Activity feed
+    activityFilter: 'all', // 'all' | 'posts' | 'events' | 'endorsements'
+    activityItems: [],
+    activityLoading: false,
+    activityPage: 1,
+    activityHasMore: true,
+    showPostComposer: false,
+    showEventCreator: false,
+    newPostContent: '',
+    newEventData: { title: '', description: '', date: '', time: '', location: '' }
 };
 
 // H3 Picker constants for dashboard
@@ -387,6 +397,14 @@ function renderDashboard(container) {
                 >
                     Overview
                 </button>
+                ${dashboardState.userRole ? `
+                    <button
+                        class="org-dashboard-tab ${dashboardState.activeTab === 'activity' ? 'active' : ''}"
+                        data-tab="activity"
+                    >
+                        Activity
+                    </button>
+                ` : ''}
                 ${canEdit ? `
                     <button
                         class="org-dashboard-tab ${dashboardState.activeTab === 'settings' ? 'active' : ''}"
@@ -439,6 +457,8 @@ function renderTabContent() {
     switch (dashboardState.activeTab) {
         case 'overview':
             return renderOverviewTab();
+        case 'activity':
+            return renderActivityTab();
         case 'settings':
             return renderSettingsTab();
         case 'roles':
@@ -520,6 +540,499 @@ function renderOverviewTab() {
             </div>
         </div>
     `;
+}
+
+/**
+ * Render Activity tab
+ */
+function renderActivityTab() {
+    const org = dashboardState.organization;
+    const isHead = dashboardState.userRole === 'HEAD';
+    const canPost = isHead || dashboardState.userCapabilities.includes('POST_AS_ORG');
+    const canCreateEvents = isHead || dashboardState.userCapabilities.includes('CREATE_EVENTS');
+
+    // Load activity if not loaded yet
+    if (dashboardState.activityItems.length === 0 && !dashboardState.activityLoading) {
+        loadActivity();
+    }
+
+    return `
+        <div class="org-activity-container">
+            <!-- Action Buttons -->
+            <div class="org-activity-actions">
+                ${canPost ? `
+                    <button class="org-dashboard-btn org-dashboard-btn-primary" data-action="toggle-post-composer">
+                        + New Post
+                    </button>
+                ` : ''}
+                ${canCreateEvents ? `
+                    <button class="org-dashboard-btn org-dashboard-btn-secondary" data-action="toggle-event-creator">
+                        + New Event
+                    </button>
+                ` : ''}
+            </div>
+
+            <!-- Post Composer (inline) -->
+            ${dashboardState.showPostComposer ? renderPostComposer() : ''}
+
+            <!-- Event Creator Modal -->
+            ${dashboardState.showEventCreator ? renderEventCreatorModal() : ''}
+
+            <!-- Filter Buttons -->
+            <div class="org-activity-filters">
+                <button
+                    class="org-activity-filter ${dashboardState.activityFilter === 'all' ? 'active' : ''}"
+                    data-activity-filter="all"
+                >
+                    All
+                </button>
+                <button
+                    class="org-activity-filter ${dashboardState.activityFilter === 'posts' ? 'active' : ''}"
+                    data-activity-filter="posts"
+                >
+                    Posts
+                </button>
+                <button
+                    class="org-activity-filter ${dashboardState.activityFilter === 'events' ? 'active' : ''}"
+                    data-activity-filter="events"
+                >
+                    Events
+                </button>
+                <button
+                    class="org-activity-filter ${dashboardState.activityFilter === 'endorsements' ? 'active' : ''}"
+                    data-activity-filter="endorsements"
+                >
+                    Endorsements
+                </button>
+            </div>
+
+            <!-- Activity Feed -->
+            <div class="org-activity-feed">
+                ${dashboardState.activityLoading && dashboardState.activityItems.length === 0
+                    ? '<div class="org-activity-loading">Loading activity...</div>'
+                    : dashboardState.activityItems.length === 0
+                        ? '<div class="org-activity-empty">No activity yet</div>'
+                        : dashboardState.activityItems.map(item => renderActivityItem(item)).join('')
+                }
+            </div>
+
+            <!-- Load More -->
+            ${dashboardState.activityHasMore && dashboardState.activityItems.length > 0 ? `
+                <div class="org-activity-load-more">
+                    <button
+                        class="org-dashboard-btn org-dashboard-btn-secondary"
+                        data-action="load-more-activity"
+                        ${dashboardState.activityLoading ? 'disabled' : ''}
+                    >
+                        ${dashboardState.activityLoading ? 'Loading...' : 'Load More'}
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Load activity feed from API
+ */
+async function loadActivity(append = false) {
+    if (!dashboardState.organization) return;
+    if (dashboardState.activityLoading) return;
+
+    dashboardState.activityLoading = true;
+    const container = document.getElementById('orgDashboardContainer');
+    if (container) renderDashboard(container);
+
+    try {
+        const params = new URLSearchParams({
+            type: dashboardState.activityFilter,
+            page: dashboardState.activityPage.toString(),
+            limit: '20'
+        });
+
+        const response = await fetch(
+            `${API_BASE}/organizations/${dashboardState.organization.id}/activity?${params}`,
+            { credentials: 'include' }
+        );
+
+        if (!response.ok) {
+            throw new Error('Failed to load activity');
+        }
+
+        const data = await response.json();
+
+        if (append) {
+            dashboardState.activityItems = [...dashboardState.activityItems, ...data.items];
+        } else {
+            dashboardState.activityItems = data.items;
+        }
+        dashboardState.activityHasMore = data.hasMore;
+
+    } catch (error) {
+        console.error('Load activity error:', error);
+    } finally {
+        dashboardState.activityLoading = false;
+        const container = document.getElementById('orgDashboardContainer');
+        if (container) renderDashboard(container);
+    }
+}
+
+/**
+ * Render a single activity item
+ */
+function renderActivityItem(item) {
+    switch (item.type) {
+        case 'post':
+            return renderPostActivityItem(item.data, item.timestamp);
+        case 'event':
+            return renderEventActivityItem(item.data, item.timestamp);
+        case 'endorsement':
+            return renderEndorsementActivityItem(item.data, item.timestamp);
+        case 'member_milestone':
+            return renderMilestoneActivityItem(item.data, item.timestamp);
+        default:
+            return '';
+    }
+}
+
+/**
+ * Render post activity item
+ */
+function renderPostActivityItem(post, timestamp) {
+    const org = dashboardState.organization;
+    const timeAgo = formatTimeAgo(timestamp);
+    const avatarUrl = org.avatar || '/assets/images/org-placeholder.png';
+
+    return `
+        <div class="org-activity-item org-activity-post">
+            <div class="org-activity-header">
+                <img src="${avatarUrl}" alt="${org.name}" class="org-activity-avatar" />
+                <div class="org-activity-meta">
+                    <span class="org-activity-author">${org.name}</span>
+                    <span class="org-activity-label">posted</span>
+                    <span class="org-activity-time">${timeAgo}</span>
+                </div>
+            </div>
+            <div class="org-activity-content">
+                ${post.content || ''}
+            </div>
+            ${post.photos && post.photos.length > 0 ? `
+                <div class="org-activity-photos">
+                    ${post.photos.slice(0, 4).map(photo => `
+                        <img src="${photo.thumbnailUrl || photo.url}" alt="" class="org-activity-photo" />
+                    `).join('')}
+                </div>
+            ` : ''}
+            <div class="org-activity-stats">
+                <span>${post._count?.likes || 0} likes</span>
+                <span>${post._count?.comments || 0} comments</span>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render event activity item
+ */
+function renderEventActivityItem(event, timestamp) {
+    const timeAgo = formatTimeAgo(timestamp);
+    const eventDate = new Date(event.startDate || event.date);
+    const dateStr = eventDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    });
+
+    return `
+        <div class="org-activity-item org-activity-event">
+            <div class="org-activity-header">
+                <span class="org-activity-icon">📅</span>
+                <div class="org-activity-meta">
+                    <span class="org-activity-label">New Event</span>
+                    <span class="org-activity-time">${timeAgo}</span>
+                </div>
+            </div>
+            <div class="org-activity-event-title">${event.title}</div>
+            <div class="org-activity-event-date">${dateStr}</div>
+            ${event.location ? `<div class="org-activity-event-location">📍 ${event.location}</div>` : ''}
+            <div class="org-activity-stats">
+                <span>${event._count?.rsvps || 0} RSVPs</span>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render endorsement activity item
+ */
+function renderEndorsementActivityItem(endorsement, timestamp) {
+    const timeAgo = formatTimeAgo(timestamp);
+    const candidate = endorsement.candidate;
+
+    return `
+        <div class="org-activity-item org-activity-endorsement">
+            <div class="org-activity-header">
+                <span class="org-activity-icon">✓</span>
+                <div class="org-activity-meta">
+                    <span class="org-activity-label">Endorsed</span>
+                    <span class="org-activity-time">${timeAgo}</span>
+                </div>
+            </div>
+            <div class="org-activity-endorsement-content">
+                <strong>${candidate?.name || 'Candidate'}</strong>
+                ${candidate?.office ? ` for ${candidate.office}` : ''}
+            </div>
+            ${endorsement.statement ? `
+                <div class="org-activity-endorsement-statement">"${endorsement.statement}"</div>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Render member milestone activity item
+ */
+function renderMilestoneActivityItem(milestone, timestamp) {
+    const timeAgo = formatTimeAgo(timestamp);
+    const count = milestone.count || 0;
+    const users = milestone.users || [];
+
+    let description = '';
+    if (count === 1 && users.length > 0) {
+        description = `${users[0].displayName} joined`;
+    } else if (count > 1) {
+        if (users.length > 0) {
+            const names = users.map(u => u.displayName).join(', ');
+            description = count > users.length
+                ? `${names} and ${count - users.length} more joined`
+                : `${names} joined`;
+        } else {
+            description = `${count} new members joined`;
+        }
+    }
+
+    return `
+        <div class="org-activity-item org-activity-milestone">
+            <div class="org-activity-header">
+                <span class="org-activity-icon">👤</span>
+                <div class="org-activity-meta">
+                    <span class="org-activity-label">${description}</span>
+                    <span class="org-activity-time">${timeAgo}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render inline post composer
+ */
+function renderPostComposer() {
+    return `
+        <div class="org-post-composer">
+            <textarea
+                class="org-post-textarea"
+                placeholder="What's happening with your organization?"
+                id="orgPostContent"
+            >${dashboardState.newPostContent}</textarea>
+            <div class="org-post-composer-actions">
+                <button class="org-dashboard-btn org-dashboard-btn-secondary" data-action="cancel-post">
+                    Cancel
+                </button>
+                <button
+                    class="org-dashboard-btn org-dashboard-btn-primary"
+                    data-action="submit-post"
+                    ${!dashboardState.newPostContent.trim() ? 'disabled' : ''}
+                >
+                    Post as ${dashboardState.organization?.name || 'Organization'}
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render event creator modal
+ */
+function renderEventCreatorModal() {
+    const data = dashboardState.newEventData;
+    return `
+        <div class="org-modal-overlay" data-action="close-event-creator">
+            <div class="org-modal" onclick="event.stopPropagation()">
+                <div class="org-modal-header">
+                    <h3>Create Event</h3>
+                    <button class="org-modal-close" data-action="close-event-creator">&times;</button>
+                </div>
+                <div class="org-modal-body">
+                    <div class="org-form-group">
+                        <label for="eventTitle">Event Title *</label>
+                        <input
+                            type="text"
+                            id="eventTitle"
+                            class="org-form-input"
+                            value="${data.title}"
+                            placeholder="Enter event title"
+                        />
+                    </div>
+                    <div class="org-form-group">
+                        <label for="eventDescription">Description</label>
+                        <textarea
+                            id="eventDescription"
+                            class="org-form-textarea"
+                            placeholder="Describe your event"
+                        >${data.description}</textarea>
+                    </div>
+                    <div class="org-form-row">
+                        <div class="org-form-group">
+                            <label for="eventDate">Date *</label>
+                            <input
+                                type="date"
+                                id="eventDate"
+                                class="org-form-input"
+                                value="${data.date}"
+                            />
+                        </div>
+                        <div class="org-form-group">
+                            <label for="eventTime">Time *</label>
+                            <input
+                                type="time"
+                                id="eventTime"
+                                class="org-form-input"
+                                value="${data.time}"
+                            />
+                        </div>
+                    </div>
+                    <div class="org-form-group">
+                        <label for="eventLocation">Location</label>
+                        <input
+                            type="text"
+                            id="eventLocation"
+                            class="org-form-input"
+                            value="${data.location}"
+                            placeholder="Enter location or 'Virtual'"
+                        />
+                    </div>
+                </div>
+                <div class="org-modal-footer">
+                    <button class="org-dashboard-btn org-dashboard-btn-secondary" data-action="close-event-creator">
+                        Cancel
+                    </button>
+                    <button class="org-dashboard-btn org-dashboard-btn-primary" data-action="submit-event">
+                        Create Event
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Format timestamp as relative time ago
+ */
+function formatTimeAgo(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    const diffWeeks = Math.floor(diffDays / 7);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+    if (diffDays < 7) return `${diffDays}d`;
+    if (diffWeeks < 4) return `${diffWeeks}w`;
+    return date.toLocaleDateString();
+}
+
+/**
+ * Submit organization post
+ */
+async function submitOrgPost() {
+    const content = document.getElementById('orgPostContent')?.value?.trim();
+    if (!content) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/posts`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content,
+                organizationId: dashboardState.organization.id,
+                audience: 'PUBLIC'
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create post');
+        }
+
+        // Reset and reload
+        dashboardState.showPostComposer = false;
+        dashboardState.newPostContent = '';
+        dashboardState.activityPage = 1;
+        dashboardState.activityItems = [];
+        loadActivity();
+
+    } catch (error) {
+        console.error('Post creation error:', error);
+        alert(error.message || 'Failed to create post');
+    }
+}
+
+/**
+ * Submit organization event
+ */
+async function submitOrgEvent() {
+    const title = document.getElementById('eventTitle')?.value?.trim();
+    const description = document.getElementById('eventDescription')?.value?.trim();
+    const date = document.getElementById('eventDate')?.value;
+    const time = document.getElementById('eventTime')?.value;
+    const location = document.getElementById('eventLocation')?.value?.trim();
+
+    if (!title || !date || !time) {
+        alert('Please fill in required fields (title, date, time)');
+        return;
+    }
+
+    try {
+        const startDate = new Date(`${date}T${time}`);
+
+        const response = await fetch(`${API_BASE}/civic/events`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title,
+                description,
+                startDate: startDate.toISOString(),
+                location: location || null,
+                organizationId: dashboardState.organization.id,
+                category: 'ORGANIZING_ACTIVITIES'
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create event');
+        }
+
+        // Reset and reload
+        dashboardState.showEventCreator = false;
+        dashboardState.newEventData = { title: '', description: '', date: '', time: '', location: '' };
+        dashboardState.activityPage = 1;
+        dashboardState.activityItems = [];
+        loadActivity();
+
+    } catch (error) {
+        console.error('Event creation error:', error);
+        alert(error.message || 'Failed to create event');
+    }
 }
 
 /**
@@ -1050,6 +1563,23 @@ function attachDashboardListeners(container) {
                 loadQuestionnaires();
                 loadEndorsements();
             }
+            // Reset and load activity when switching to activity tab
+            if (tab.dataset.tab === 'activity') {
+                dashboardState.activityPage = 1;
+                dashboardState.activityItems = [];
+                loadActivity();
+            }
+            renderDashboard(container);
+        });
+    });
+
+    // Activity filter buttons
+    container.querySelectorAll('[data-activity-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            dashboardState.activityFilter = btn.dataset.activityFilter;
+            dashboardState.activityPage = 1;
+            dashboardState.activityItems = [];
+            loadActivity();
             renderDashboard(container);
         });
     });
@@ -1202,6 +1732,47 @@ function attachDashboardListeners(container) {
             case 'confirmRevoke':
                 await confirmRevoke();
                 break;
+            // Activity actions
+            case 'toggle-post-composer':
+                dashboardState.showPostComposer = !dashboardState.showPostComposer;
+                renderDashboard(container);
+                break;
+            case 'cancel-post':
+                dashboardState.showPostComposer = false;
+                dashboardState.newPostContent = '';
+                renderDashboard(container);
+                break;
+            case 'submit-post':
+                await submitOrgPost();
+                break;
+            case 'toggle-event-creator':
+                dashboardState.showEventCreator = !dashboardState.showEventCreator;
+                renderDashboard(container);
+                break;
+            case 'close-event-creator':
+                dashboardState.showEventCreator = false;
+                dashboardState.newEventData = { title: '', description: '', date: '', time: '', location: '' };
+                renderDashboard(container);
+                break;
+            case 'submit-event':
+                await submitOrgEvent();
+                break;
+            case 'load-more-activity':
+                dashboardState.activityPage++;
+                await loadActivity(true);
+                break;
+        }
+    });
+
+    // Input handlers for post composer
+    container.addEventListener('input', (e) => {
+        if (e.target.id === 'orgPostContent') {
+            dashboardState.newPostContent = e.target.value;
+            // Update submit button state
+            const submitBtn = container.querySelector('[data-action="submit-post"]');
+            if (submitBtn) {
+                submitBtn.disabled = !e.target.value.trim();
+            }
         }
     });
 
