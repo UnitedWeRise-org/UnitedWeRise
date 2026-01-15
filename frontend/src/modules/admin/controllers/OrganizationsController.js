@@ -192,13 +192,6 @@ class OrganizationsController {
 
             const response = await window.AdminAPI.getAdminOrganizations(params);
 
-            // Debug logging
-            console.log('[OrgsController] Full response:', response);
-            console.log('[OrgsController] response.success:', response.success);
-            console.log('[OrgsController] response.data:', response.data);
-            console.log('[OrgsController] response.data?.organizations:', response.data?.organizations);
-            console.log('[OrgsController] response.data?.pagination:', response.data?.pagination);
-
             if (response.success) {
                 this.currentOrganizations = response.data.organizations;
                 this.totalOrganizations = response.data.pagination.total;
@@ -216,31 +209,12 @@ class OrganizationsController {
      * Display organizations table
      */
     displayOrganizationsTable(organizations, pagination) {
-        console.log('[OrgsController] displayOrganizationsTable called');
-        console.log('[OrgsController] organizations param:', organizations);
-        console.log('[OrgsController] organizations type:', typeof organizations);
-        console.log('[OrgsController] organizations?.length:', organizations?.length);
-
         const container = document.getElementById('organizationsTable');
-        if (!container) {
-            console.error('[OrgsController] Container #organizationsTable not found!');
-            return;
-        }
+        if (!container) return;
 
         if (!organizations || organizations.length === 0) {
-            console.log('[OrgsController] No organizations - showing empty message');
             container.innerHTML = '<p class="no-data">No organizations found</p>';
             return;
-        }
-
-        // Trace table generation
-        console.log('[OrgsController] Building table HTML for', organizations.length, 'organizations');
-        try {
-            const firstRowTest = this.renderOrganizationRow(organizations[0]);
-            console.log('[OrgsController] First row HTML length:', firstRowTest?.length);
-            console.log('[OrgsController] First row preview:', firstRowTest?.substring(0, 300));
-        } catch (err) {
-            console.error('[OrgsController] Error rendering first row:', err);
         }
 
         const tableHtml = `
@@ -249,7 +223,7 @@ class OrganizationsController {
                     <thead>
                         <tr>
                             <th>Organization</th>
-                            <th>Head</th>
+                            <th>Leader</th>
                             <th>Members</th>
                             <th>Status</th>
                             <th>Verified</th>
@@ -264,17 +238,7 @@ class OrganizationsController {
             </div>
         `;
 
-        console.log('[OrgsController] tableHtml length:', tableHtml.length);
-
         container.innerHTML = tableHtml;
-
-        // Verify DOM after innerHTML set
-        console.log('[OrgsController] innerHTML set. Verifying DOM...');
-        console.log('[OrgsController] container.innerHTML length:', container.innerHTML.length);
-        console.log('[OrgsController] Has table?:', !!container.querySelector('table'));
-        console.log('[OrgsController] Row count:', container.querySelectorAll('tbody tr').length);
-
-        // Render pagination
         this.renderPagination(pagination);
     }
 
@@ -444,7 +408,7 @@ class OrganizationsController {
                     <div style="padding: 1.5rem;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                             <div>
-                                <strong>Head:</strong><br>
+                                <strong>Leader:</strong><br>
                                 ${this.escapeHtml(headName)}
                             </div>
                             <div>
@@ -497,7 +461,7 @@ class OrganizationsController {
 
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid #eee;">
                             <button class="action-btn" data-action="show-transfer-headship-modal" data-target="${orgId}">
-                                👑 Transfer Headship
+                                👑 Transfer Leadership
                             </button>
                             ${organization.isActive ? `
                                 <button class="action-btn danger" data-action="show-deactivate-modal" data-target="${orgId}">
@@ -512,6 +476,9 @@ class OrganizationsController {
                     </div>
                 </div>
             `;
+
+            // Add event delegation to modal for action buttons
+            modal.addEventListener('click', (e) => this.handleOrganizationActions(e));
 
             document.body.appendChild(modal);
         } catch (error) {
@@ -560,6 +527,9 @@ class OrganizationsController {
                 </div>
             </div>
         `;
+
+        // Add event delegation to modal for action buttons
+        modal.addEventListener('click', (e) => this.handleOrganizationActions(e));
 
         document.body.appendChild(modal);
     }
@@ -639,7 +609,7 @@ class OrganizationsController {
             );
 
             if (activeMembers.length === 0) {
-                alert('No other active members to transfer headship to');
+                alert('No other active members to transfer leadership to');
                 return;
             }
 
@@ -661,10 +631,10 @@ class OrganizationsController {
 
             modal.innerHTML = `
                 <div style="background: white; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 100%;">
-                    <h3 style="margin-top: 0;">Transfer Headship</h3>
+                    <h3 style="margin-top: 0;">Transfer Leadership</h3>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="display: block; margin-bottom: 0.25rem; font-weight: 500;">New Head</label>
+                        <label style="display: block; margin-bottom: 0.25rem; font-weight: 500;">New Leader</label>
                         <select id="transferNewHead" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
                             ${membersOptions}
                         </select>
@@ -681,6 +651,9 @@ class OrganizationsController {
                     </div>
                 </div>
             `;
+
+            // Add event delegation to modal for action buttons
+            modal.addEventListener('click', (e) => this.handleOrganizationActions(e));
 
             document.body.appendChild(modal);
         } catch (error) {
@@ -706,21 +679,21 @@ class OrganizationsController {
             return;
         }
 
-        if (!confirm('Are you sure you want to transfer headship? This action is significant.')) return;
+        if (!confirm('Are you sure you want to transfer leadership? This action is significant.')) return;
 
         try {
             const response = await window.AdminAPI.transferOrganizationHeadship(orgId, newHeadUserId, reason);
             if (response.success) {
-                alert('Headship transferred successfully');
+                alert('Leadership transferred successfully');
                 document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
                 await this.showOrganizationDetails(orgId);
                 await this.loadOrganizations();
             } else {
-                alert(response.error || 'Failed to transfer headship');
+                alert(response.error || 'Failed to transfer leadership');
             }
         } catch (error) {
-            console.error('Error transferring headship:', error);
-            alert('Error transferring headship');
+            console.error('Error transferring leadership:', error);
+            alert('Error transferring leadership');
         }
     }
 
@@ -757,6 +730,9 @@ class OrganizationsController {
                 </div>
             </div>
         `;
+
+        // Add event delegation to modal for action buttons
+        modal.addEventListener('click', (e) => this.handleOrganizationActions(e));
 
         document.body.appendChild(modal);
     }
