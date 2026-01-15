@@ -8,6 +8,44 @@
 
 ---
 
+## [2026-01-15] - Organizations Phase 2d: Endorsement System UI
+
+### Added
+
+**Endorsements Tab (Dashboard)**
+- New "Endorsements" tab with sub-navigation (Questionnaires, Applications, Published)
+- Visible to org head or users with endorsement capabilities
+
+**Questionnaire Management**
+- List questionnaires with stats (question count, application count, active status)
+- Create/edit questionnaire modal with question builder
+- Question types: SHORT_TEXT, LONG_TEXT, MULTIPLE_CHOICE, CHECKBOX, YES_NO, SCALE
+- Question options: required toggle, public toggle, options manager for choice types
+- Reorder questions with up/down buttons
+- Toggle questionnaire active/inactive, delete if no applications
+
+**Applications Review**
+- Filter applications by questionnaire and status
+- Application cards showing candidate, status, vote counts
+- Application detail modal with all question responses
+- Move application to review, deny application
+
+**Voting Interface**
+- Cast votes: FOR, AGAINST, ABSTAIN
+- Visual vote buttons with selected state
+- Vote counts and threshold/quorum status display
+
+**Publishing & Revocation**
+- Publish endorsement with optional statement
+- List published endorsements
+- Revoke endorsement with reason confirmation
+
+### Files Modified
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Add ~1700 lines for endorsement UI
+- `frontend/src/styles/org-dashboard.css` - Add ~850 lines of endorsement styles
+
+---
+
 ## [2026-01-15] - Organizations Phase 2c: Role Management UI
 
 ### Added
