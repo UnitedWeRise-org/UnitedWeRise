@@ -244,6 +244,36 @@ export const organizationsApi = {
     },
 
     /**
+     * Update a role
+     * @param {string} orgId - Organization ID
+     * @param {string} roleId - Role ID
+     * @param {Object} data - Fields to update
+     * @param {string} [data.name] - Role name
+     * @param {string} [data.description] - Role description
+     * @param {Array<string>} [data.capabilities] - Role capabilities
+     * @param {number} [data.maxHolders] - Maximum role holders
+     * @returns {Promise<Object>} Updated role
+     */
+    async updateRole(orgId, roleId, data) {
+        return apiClient.call(`/organizations/${orgId}/roles/${roleId}`, {
+            method: 'PATCH',
+            body: data
+        });
+    },
+
+    /**
+     * Delete a role
+     * @param {string} orgId - Organization ID
+     * @param {string} roleId - Role ID
+     * @returns {Promise<void>}
+     */
+    async deleteRole(orgId, roleId) {
+        return apiClient.call(`/organizations/${orgId}/roles/${roleId}`, {
+            method: 'DELETE'
+        });
+    },
+
+    /**
      * Assign role to member
      * @param {string} orgId - Organization ID
      * @param {string} membershipId - Membership ID

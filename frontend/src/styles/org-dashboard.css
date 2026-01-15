@@ -698,3 +698,283 @@
         flex: 1;
     }
 }
+
+/* ========================================
+   ROLES TAB
+======================================== */
+
+.org-dashboard-roles-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.org-roles-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.org-roles-header h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.org-roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.org-role-card {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: box-shadow 0.2s ease;
+}
+
+.org-role-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.org-role-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.org-role-name {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.org-role-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.org-role-description {
+    margin: 0 0 0.75rem;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.org-role-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.org-role-stat strong {
+    color: #4b5c09;
+}
+
+.org-role-capabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+.org-capability-tag {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.org-capability-more {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    color: #666;
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+.org-roles-empty {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.org-roles-empty p {
+    margin: 0.5rem 0;
+}
+
+/* ========================================
+   ROLE MODAL
+======================================== */
+
+.org-role-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.org-role-modal {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.org-role-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.org-role-modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.org-role-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.org-role-modal-close:hover {
+    color: #333;
+}
+
+.org-role-form {
+    padding: 1.5rem;
+}
+
+.org-capabilities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.org-capability-category {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+
+.org-capability-category h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.org-capability-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+    font-size: 0.9rem;
+    color: #333;
+    cursor: pointer;
+}
+
+.org-capability-checkbox input[type="checkbox"] {
+    margin-top: 0.2rem;
+    accent-color: #4b5c09;
+}
+
+/* ========================================
+   MEMBER ROLE SELECT
+======================================== */
+
+.org-member-role-select {
+    padding: 0.375rem 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: white;
+    cursor: pointer;
+    min-width: 120px;
+}
+
+.org-member-role-select:focus {
+    outline: none;
+    border-color: #4b5c09;
+    box-shadow: 0 0 0 2px rgba(75, 92, 9, 0.1);
+}
+
+/* ========================================
+   RESPONSIVE - ROLES
+======================================== */
+
+@media (max-width: 768px) {
+    .org-roles-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .org-roles-header .org-dashboard-btn {
+        width: 100%;
+    }
+
+    .org-roles-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .org-role-card-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .org-role-actions {
+        width: 100%;
+    }
+
+    .org-role-actions .org-dashboard-btn {
+        flex: 1;
+    }
+
+    .org-role-modal {
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .org-capabilities-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .org-member-role-select {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
