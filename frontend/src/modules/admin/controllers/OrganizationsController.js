@@ -182,18 +182,20 @@ class OrganizationsController {
         container.innerHTML = '<p class="loading">Loading organizations...</p>';
 
         try {
-            const response = await window.AdminAPI.getAdminOrganizations({
+            const params = {
                 page: this.currentPage,
                 limit: this.pageSize,
-                search: this.searchQuery || undefined,
-                status: this.statusFilter !== 'all' ? this.statusFilter : undefined,
                 sort: this.sortFilter
-            });
+            };
+            if (this.searchQuery) params.search = this.searchQuery;
+            if (this.statusFilter !== 'all') params.status = this.statusFilter;
+
+            const response = await window.AdminAPI.getAdminOrganizations(params);
 
             if (response.success) {
-                this.currentOrganizations = response.data.organizations;
-                this.totalOrganizations = response.data.pagination.total;
-                this.displayOrganizationsTable(response.data.organizations, response.data.pagination);
+                this.currentOrganizations = response.organizations;
+                this.totalOrganizations = response.pagination.total;
+                this.displayOrganizationsTable(response.organizations, response.pagination);
             } else {
                 container.innerHTML = '<p class="error">Failed to load organizations</p>';
             }
@@ -342,7 +344,7 @@ class OrganizationsController {
                 return;
             }
 
-            const { organization, members, verificationHistory } = response.data;
+            const { organization, members, verificationHistory } = response;
 
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
@@ -597,7 +599,7 @@ class OrganizationsController {
                 return;
             }
 
-            const { organization, members } = response.data;
+            const { organization, members } = response;
             const activeMembers = members.members.filter(m =>
                 m.status === 'ACTIVE' && m.userId !== organization.headUserId
             );
