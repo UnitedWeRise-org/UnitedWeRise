@@ -8,6 +8,30 @@
 
 ---
 
+## [2026-01-15] - Organizations Phase 2h: Search & Sort Enhancements
+
+### Added
+
+**Backend - Sort Parameter**
+- Added `sort` query param to GET `/api/organizations` endpoint
+- Sort options: `newest` (default), `members`, `alphabetical`, `verified`
+- Member count sorting with secondary sort by createdAt
+- Updated organizationService.listOrganizations with sort logic
+
+**Frontend - Sort Dropdown**
+- Added sort dropdown to organization browser toolbar
+- Sort options: Newest, Most Members, A-Z, Verified First
+- Sort selection triggers automatic reload
+- Sort resets to page 1 when changed
+
+### Files Modified
+- `backend/src/routes/organizations.ts` - Add sort param and Swagger docs
+- `backend/src/services/organizationService.ts` - Add sort logic to listOrganizations
+- `frontend/src/modules/features/organizations/components/org-browser.js` - Add sort dropdown and state
+- `frontend/src/styles/organizations.css` - Add sort dropdown styles
+
+---
+
 ## [2026-01-15] - Organizations Phase 2g: Public Organization Profiles
 
 ### Added

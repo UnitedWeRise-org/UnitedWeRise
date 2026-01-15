@@ -295,6 +295,18 @@
     cursor: pointer;
 }
 
+.org-browser-sort {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.org-browser-sort label {
+    font-size: 0.9rem;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
 .org-browser-actions {
     display: flex;
     gap: 0.5rem;

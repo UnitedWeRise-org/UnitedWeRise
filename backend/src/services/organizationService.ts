@@ -77,6 +77,7 @@ interface ListOrganizationsOptions {
   jurisdictionType?: JurisdictionType;
   isVerified?: boolean;
   includeInactive?: boolean;
+  sort?: 'newest' | 'members' | 'alphabetical' | 'verified';
 }
 
 /**
@@ -254,7 +255,7 @@ export class OrganizationService {
     organizations: Organization[];
     total: number;
   }> {
-    const { limit = 20, offset = 0, search, jurisdictionType, isVerified, includeInactive = false } = options;
+    const { limit = 20, offset = 0, search, jurisdictionType, isVerified, includeInactive = false, sort = 'newest' } = options;
 
     const where = {
       ...(includeInactive ? {} : { isActive: true }),
@@ -270,12 +271,28 @@ export class OrganizationService {
       ...(isVerified !== undefined ? { isVerified } : {}),
     };
 
+    // Build orderBy based on sort option
+    let orderBy: any;
+    switch (sort) {
+      case 'members':
+        orderBy = [{ members: { _count: 'desc' } }, { createdAt: 'desc' }];
+        break;
+      case 'alphabetical':
+        orderBy = [{ name: 'asc' }];
+        break;
+      case 'verified':
+        orderBy = [{ isVerified: 'desc' }, { createdAt: 'desc' }];
+        break;
+      default: // 'newest'
+        orderBy = [{ createdAt: 'desc' }];
+    }
+
     const [organizations, total] = await Promise.all([
       prisma.organization.findMany({
         where,
         take: limit,
         skip: offset,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: {
           head: {
             select: USER_SELECT,

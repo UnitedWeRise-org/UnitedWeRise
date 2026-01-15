@@ -22,6 +22,7 @@ let browserState = {
         jurisdictionType: '',
         isVerified: null
     },
+    sortOption: 'newest', // 'newest', 'members', 'alphabetical', 'verified'
     pagination: {
         page: 1,
         limit: 12,
@@ -82,7 +83,8 @@ async function loadOrganizations() {
     try {
         const params = {
             page: browserState.pagination.page,
-            limit: browserState.pagination.limit
+            limit: browserState.pagination.limit,
+            sort: browserState.sortOption
         };
 
         // Add filters
@@ -220,6 +222,16 @@ function renderBrowser(container) {
                         />
                         Verified Only
                     </label>
+                </div>
+
+                <div class="org-browser-sort">
+                    <label for="orgSortSelect">Sort:</label>
+                    <select id="orgSortSelect" class="org-filter-select">
+                        <option value="newest" ${browserState.sortOption === 'newest' ? 'selected' : ''}>Newest</option>
+                        <option value="members" ${browserState.sortOption === 'members' ? 'selected' : ''}>Most Members</option>
+                        <option value="alphabetical" ${browserState.sortOption === 'alphabetical' ? 'selected' : ''}>A-Z</option>
+                        <option value="verified" ${browserState.sortOption === 'verified' ? 'selected' : ''}>Verified First</option>
+                    </select>
                 </div>
 
                 <div class="org-browser-actions">
@@ -393,6 +405,16 @@ function attachBrowserEventListeners(container) {
     if (verifiedFilter) {
         verifiedFilter.addEventListener('change', (e) => {
             browserState.filters.isVerified = e.target.checked ? true : null;
+            browserState.pagination.page = 1;
+            loadOrganizations();
+        });
+    }
+
+    // Sort dropdown
+    const sortSelect = container.querySelector('#orgSortSelect');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', (e) => {
+            browserState.sortOption = e.target.value;
             browserState.pagination.page = 1;
             loadOrganizations();
         });

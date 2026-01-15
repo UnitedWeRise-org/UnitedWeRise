@@ -146,7 +146,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
  *   get:
  *     tags: [Organizations]
  *     summary: List organizations
- *     description: List organizations with optional filtering and pagination
+ *     description: List organizations with optional filtering, sorting, and pagination
  *     parameters:
  *       - in: query
  *         name: limit
@@ -172,13 +172,24 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
  *         name: isVerified
  *         schema:
  *           type: boolean
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [newest, members, alphabetical, verified]
+ *           default: newest
+ *         description: Sort order for results
  *     responses:
  *       200:
  *         description: List of organizations
  */
 router.get('/', async (req, res) => {
   try {
-    const { limit, offset, search, jurisdictionType, isVerified } = req.query;
+    const { limit, offset, search, jurisdictionType, isVerified, sort } = req.query;
+
+    // Validate sort option
+    const validSorts = ['newest', 'members', 'alphabetical', 'verified'];
+    const sortOption = validSorts.includes(sort as string) ? (sort as 'newest' | 'members' | 'alphabetical' | 'verified') : 'newest';
 
     const result = await organizationService.listOrganizations({
       limit: limit ? parseInt(limit as string) : undefined,
@@ -186,6 +197,7 @@ router.get('/', async (req, res) => {
       search: search as string,
       jurisdictionType: jurisdictionType as any,
       isVerified: isVerified === 'true' ? true : isVerified === 'false' ? false : undefined,
+      sort: sortOption,
     });
 
     res.json({
