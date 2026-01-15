@@ -33,6 +33,8 @@ let profileState = {
     membershipStatus: null, // null | 'ACTIVE' | 'PENDING'
     publicActivity: [],
     activityLoading: false,
+    endorsedCandidates: [],
+    endorsementsLoading: false,
     mapInitialized: false,
     map: null
 };
@@ -89,8 +91,9 @@ async function initProfile() {
         profileState.loading = false;
         renderProfile(container);
 
-        // Load public activity
+        // Load public activity and endorsed candidates
         loadPublicActivity();
+        loadEndorsedCandidates();
 
         // Initialize map if org has H3 cells
         if (profileState.organization.h3Cells?.length > 0) {
@@ -192,6 +195,33 @@ async function loadPublicActivity() {
 }
 
 /**
+ * Load endorsed candidates for this organization
+ */
+async function loadEndorsedCandidates() {
+    if (!profileState.organization) return;
+
+    profileState.endorsementsLoading = true;
+
+    try {
+        const response = await fetch(
+            `${API_BASE}/endorsements/organizations/${profileState.organization.id}`,
+            { credentials: 'include' }
+        );
+
+        if (response.ok) {
+            const data = await response.json();
+            profileState.endorsedCandidates = data || [];
+        }
+    } catch (e) {
+        console.warn('Endorsements load failed:', e);
+    } finally {
+        profileState.endorsementsLoading = false;
+        const container = document.getElementById('orgProfileContainer');
+        if (container) renderProfile(container);
+    }
+}
+
+/**
  * Update meta tags for SEO/sharing
  */
 function updateMetaTags(org) {
@@ -238,6 +268,7 @@ function renderProfile(container) {
             ${renderHeader(org)}
             ${renderAbout(org)}
             ${org.h3Cells?.length > 0 ? renderCoverageSection() : ''}
+            ${renderEndorsedCandidatesSection()}
             ${renderActivitySection()}
         </div>
     `;
@@ -396,6 +427,93 @@ function renderCoverageSection() {
             <div id="coverageMap" class="org-profile-map"></div>
         </div>
     `;
+}
+
+/**
+ * Render endorsed candidates section
+ */
+function renderEndorsedCandidatesSection() {
+    const endorsements = profileState.endorsedCandidates;
+
+    // Don't render section if no endorsements and not loading
+    if (!profileState.endorsementsLoading && endorsements.length === 0) {
+        return '';
+    }
+
+    return `
+        <div class="org-profile-section org-profile-endorsements-section">
+            <h2 class="org-profile-section-title">Endorsed Candidates</h2>
+            <div class="org-profile-endorsed-candidates">
+                ${profileState.endorsementsLoading
+                    ? '<div class="org-profile-loading-message">Loading endorsements...</div>'
+                    : endorsements.map(endorsement => renderEndorsedCandidateCard(endorsement)).join('')
+                }
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render a single endorsed candidate card
+ */
+function renderEndorsedCandidateCard(endorsement) {
+    const candidate = endorsement.candidate || {};
+    const office = candidate.office?.title || 'Running for Office';
+
+    return `
+        <div class="org-profile-candidate-card">
+            <div class="org-profile-candidate-photo">
+                ${candidate.photoUrl || candidate.user?.avatar
+                    ? `<img src="${candidate.photoUrl || candidate.user?.avatar}" alt="${candidate.name}">`
+                    : `<div class="org-profile-candidate-initials">${getInitials(candidate.name)}</div>`
+                }
+            </div>
+            <div class="org-profile-candidate-info">
+                <h3 class="org-profile-candidate-name">${escapeHtml(candidate.name || 'Candidate')}</h3>
+                <span class="org-profile-candidate-office">${escapeHtml(office)}</span>
+                ${candidate.party ? `<span class="org-profile-candidate-party">${escapeHtml(candidate.party)}</span>` : ''}
+            </div>
+            ${endorsement.statement ? `
+                <div class="org-profile-endorsement-statement">
+                    "${escapeHtml(endorsement.statement)}"
+                </div>
+            ` : ''}
+            <div class="org-profile-endorsement-date">
+                Endorsed ${formatDate(endorsement.publishedAt)}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Get initials from name
+ */
+function getInitials(name) {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
+/**
+ * Format date for display
+ */
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+/**
+ * Escape HTML for security
+ */
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 /**

@@ -8,6 +8,52 @@
 
 ---
 
+## [2026-01-15] - Organizations Phase 3i: Candidate Endorsement UI
+
+### Added
+
+**Candidate Dashboard - Endorsements Tab**
+- New endorsements card in candidate dashboard grid
+- Three-tab interface: Seek Endorsements, My Applications, Received
+- Browse available organization questionnaires with org details
+- Track pending application status (Submitted, Under Review)
+- View received endorsements with org info and statements
+
+**Endorsement Application Flow**
+- Modal-based questionnaire completion form
+- Support for all question types: SHORT_TEXT, LONG_TEXT, MULTIPLE_CHOICE, CHECKBOX, YES_NO, SCALE
+- Required field validation before submission
+- Withdraw application functionality
+- Success feedback and automatic redirect to applications tab
+
+**Candidate Profile - Organization Endorsements**
+- New "Organization Endorsements" section on candidate detail modal
+- Displays endorsing org avatar, name, verified badge
+- Shows endorsement statement if provided
+- Fetched in parallel with candidate data loading
+
+**Organization Profile - Endorsed Candidates Section**
+- New "Endorsed Candidates" section on public org profile page
+- Grid layout with candidate photo, name, office, party
+- Endorsement statement display with date
+- Responsive mobile layout
+
+### API Endpoints Used (All Existing)
+- `GET /api/questionnaires/candidates/:candidateId/available`
+- `POST /api/endorsements/applications`
+- `GET /api/endorsements/candidates/:candidateId`
+- `GET /api/endorsements/candidates/:candidateId/pending`
+- `POST /api/endorsements/applications/:applicationId/withdraw`
+- `GET /api/endorsements/organizations/:organizationId`
+
+### Files Modified
+- `frontend/src/integrations/candidate-system-integration.js` - Add endorsements tab, modal, event handlers (~500 lines)
+- `frontend/src/modules/features/organizations/components/org-profile.js` - Add endorsed candidates section (~80 lines)
+- `frontend/src/styles/candidate-system.css` - Add endorsement UI styles (~350 lines)
+- `frontend/src/styles/org-profile.css` - Add endorsed candidates styles (~100 lines)
+
+---
+
 ## [2026-01-15] - Organizations Phase 2h: Search & Sort Enhancements
 
 ### Added

@@ -3031,3 +3031,633 @@
         padding-right: 3rem;
     }
 }
+
+/* ===== CANDIDATE ENDORSEMENTS (Phase 3i) ===== */
+
+.candidate-endorsements-view {
+    padding: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.endorsements-header {
+    margin-bottom: 1.5rem;
+}
+
+.endorsements-header .header-content h1 {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    color: #1a1a2e;
+}
+
+.endorsements-header .subtitle {
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.endorsements-header .header-actions {
+    margin-top: 1rem;
+}
+
+.endorsements-header .header-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.endorsements-header .header-btn.secondary {
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    color: #333;
+}
+
+.endorsements-header .header-btn.secondary:hover {
+    background: #e0e0e0;
+}
+
+/* Endorsement Tabs */
+.endorsements-tabs {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid #e0e0e0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0;
+}
+
+.endorsement-tab {
+    padding: 0.75rem 1.25rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.endorsement-tab:hover {
+    color: #1a5f7a;
+}
+
+.endorsement-tab.active {
+    color: #1a5f7a;
+    border-bottom-color: #1a5f7a;
+    font-weight: 600;
+}
+
+.tab-badge {
+    background: #1a5f7a;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.tab-badge.success {
+    background: #28a745;
+}
+
+/* Endorsement Content */
+.endorsements-content {
+    min-height: 300px;
+}
+
+.section-description {
+    color: #666;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+/* Loading & Error States */
+.endorsements-loading,
+.endorsements-error,
+.endorsements-empty {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.endorsements-loading .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f0f0f0;
+    border-top-color: #1a5f7a;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.endorsements-empty .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.endorsements-empty h3 {
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.endorsements-empty p {
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.endorsements-empty .hint {
+    font-size: 0.875rem;
+    color: #888;
+}
+
+.endorsements-empty .btn {
+    margin-top: 1rem;
+}
+
+/* Questionnaire Cards */
+.questionnaire-cards,
+.application-cards,
+.endorsement-cards {
+    display: grid;
+    gap: 1rem;
+}
+
+.questionnaire-card,
+.application-card,
+.endorsement-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: box-shadow 0.2s ease;
+}
+
+.questionnaire-card:hover,
+.application-card:hover,
+.endorsement-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Organization Info in Cards */
+.questionnaire-org-info,
+.application-org-info,
+.endorsement-org-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.org-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.org-avatar-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1a5f7a 0%, #2d8f9f 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.org-details h3 {
+    font-size: 1.1rem;
+    margin: 0;
+    color: #1a1a2e;
+}
+
+.org-details .verified-badge {
+    font-size: 0.75rem;
+    color: #28a745;
+    margin-left: 0.5rem;
+}
+
+.org-details .org-jurisdiction {
+    font-size: 0.8rem;
+    color: #666;
+    display: block;
+    margin-top: 0.25rem;
+}
+
+.org-details .questionnaire-title {
+    font-size: 0.875rem;
+    color: #666;
+    display: block;
+}
+
+/* Questionnaire Info */
+.questionnaire-info h4 {
+    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.questionnaire-description {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+}
+
+.questionnaire-meta {
+    display: flex;
+    gap: 1rem;
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.questionnaire-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* Application Status */
+.application-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-submitted {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.status-review {
+    background: #fff3e0;
+    color: #ef6c00;
+}
+
+.status-approved {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-denied {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.status-withdrawn {
+    background: #f5f5f5;
+    color: #757575;
+}
+
+.submitted-date {
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.application-votes {
+    color: #666;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.application-actions {
+    margin-top: 0.75rem;
+}
+
+.btn.danger.small {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn.danger.small:hover {
+    background: #c82333;
+}
+
+/* Endorsement Statement */
+.endorsement-statement {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    font-style: italic;
+    color: #555;
+}
+
+.endorsement-meta {
+    color: #888;
+    font-size: 0.85rem;
+}
+
+/* Application Modal */
+.endorsement-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 1rem;
+}
+
+.endorsement-modal {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.25rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f8f9fa;
+}
+
+.modal-org-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.modal-org-info h2 {
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.modal-org-info .org-name {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-description {
+    color: #666;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #e0e0e0;
+    background: #f8f9fa;
+}
+
+/* Application Form */
+.application-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.application-form .form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.application-form .required {
+    color: #dc3545;
+}
+
+.application-form .public-note {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: normal;
+    margin-left: 0.5rem;
+}
+
+.application-form .form-help {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.application-form .form-input,
+.application-form .form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease;
+}
+
+.application-form .form-input:focus,
+.application-form .form-textarea:focus {
+    outline: none;
+    border-color: #1a5f7a;
+    box-shadow: 0 0 0 3px rgba(26, 95, 122, 0.1);
+}
+
+.application-form .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Radio & Checkbox Groups */
+.application-form .radio-group,
+.application-form .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.application-form .radio-group.yes-no {
+    flex-direction: row;
+    gap: 1.5rem;
+}
+
+.application-form .radio-option,
+.application-form .checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.application-form .radio-option input,
+.application-form .checkbox-option input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* Scale Group */
+.application-form .scale-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.application-form .scale-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.application-form .scale-option input {
+    margin-bottom: 0.25rem;
+}
+
+.application-form .scale-option span {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Responsive Endorsements */
+@media (max-width: 768px) {
+    .candidate-endorsements-view {
+        padding: 1rem;
+    }
+
+    .endorsements-tabs {
+        flex-wrap: wrap;
+    }
+
+    .endorsement-tab {
+        flex: 1;
+        min-width: 120px;
+        justify-content: center;
+        font-size: 0.85rem;
+        padding: 0.625rem 0.75rem;
+    }
+
+    .endorsement-modal {
+        max-height: 95vh;
+    }
+
+    .modal-header {
+        padding: 1rem;
+    }
+
+    .modal-body {
+        padding: 1rem;
+    }
+
+    .application-form .radio-group.yes-no {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+/* ===== CANDIDATE PROFILE - ORGANIZATION ENDORSEMENTS ===== */
+
+.org-endorsements-section {
+    margin-top: 1.5rem;
+}
+
+.org-endorsements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.org-endorsement-item {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+}
+
+.org-endorsement-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.org-endorsement-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.org-endorsement-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #1a5f7a 0%, #2d8f9f 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.org-endorsement-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.org-endorsement-info strong {
+    font-size: 0.95rem;
+    color: #1a1a2e;
+}
+
+.org-verified-badge {
+    font-size: 0.75rem;
+    color: #28a745;
+}
+
+.org-endorsement-statement {
+    margin-top: 0.75rem;
+    font-style: italic;
+    color: #555;
+    line-height: 1.5;
+    font-size: 0.9rem;
+}

@@ -534,3 +534,129 @@
         gap: 0.75rem;
     }
 }
+
+/* =============================================================================
+   Endorsed Candidates Section
+   ============================================================================= */
+
+.org-profile-endorsements-section {
+    margin-top: 1.5rem;
+}
+
+.org-profile-endorsed-candidates {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.org-profile-loading-message {
+    color: #6b7280;
+    font-style: italic;
+    padding: 1rem 0;
+}
+
+.org-profile-candidate-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.org-profile-candidate-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.org-profile-candidate-photo {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+}
+
+.org-profile-candidate-photo img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.org-profile-candidate-initials {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.org-profile-candidate-info {
+    margin-bottom: 0.75rem;
+}
+
+.org-profile-candidate-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.25rem 0;
+}
+
+.org-profile-candidate-office {
+    display: block;
+    font-size: 0.9rem;
+    color: #4b5563;
+}
+
+.org-profile-candidate-party {
+    display: inline-block;
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.org-profile-endorsement-statement {
+    font-style: italic;
+    color: #374151;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 3px solid #3b82f6;
+}
+
+.org-profile-endorsement-date {
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
+/* Responsive Endorsed Candidates */
+@media (max-width: 640px) {
+    .org-profile-endorsed-candidates {
+        grid-template-columns: 1fr;
+    }
+
+    .org-profile-candidate-card {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .org-profile-candidate-photo {
+        margin-bottom: 0;
+        flex-shrink: 0;
+    }
+
+    .org-profile-candidate-photo,
+    .org-profile-candidate-initials {
+        width: 48px;
+        height: 48px;
+        font-size: 1.125rem;
+    }
+}
