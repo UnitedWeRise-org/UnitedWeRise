@@ -85,6 +85,9 @@
       "Bash(gh run view:*)",
       "Bash(npx dotenv:*)",
       "Read(/Users/jeffreysmacbookpro/.claude/protocols/**)",
+      "Read(/Users/jeffreysmacbookpro/UnitedWeRise/.claude/protocols/**)",
+      "Read(/Users/jeffreysmacbookpro/UnitedWeRise/.claude/plans/**)",
+      "Read(/Users/jeffreysmacbookpro/UnitedWeRise/.claude/handoffs/**)",
       "Bash(git log:*)",
       "Bash(wc:*)",
       "Bash(for f in src/modules/admin/state/AdminState.js src/modules/admin/controllers/ReportsController.js src/modules/admin/controllers/OverviewController.js src/modules/admin/controllers/SecurityController.js src/modules/admin/controllers/DeploymentController.js)",
@@ -119,7 +122,10 @@
       "Bash(backend/src/services/sessionManager.ts )",
       "Bash(docs/SECURITY_NOTES.md )",
       "Bash(.claude/handoffs/2026-01-07-security-remediation-complete.md)",
-      "Skill(security-audit)"
+      "Skill(security-audit)",
+      "Bash(gh workflow view:*)",
+      "Bash(gh run rerun:*)",
+      "Bash(ls:*)"
     ],
     "deny": [
       "Bash(npm run dev:*)"
