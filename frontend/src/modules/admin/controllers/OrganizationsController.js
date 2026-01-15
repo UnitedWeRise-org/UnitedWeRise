@@ -192,6 +192,13 @@ class OrganizationsController {
 
             const response = await window.AdminAPI.getAdminOrganizations(params);
 
+            // Debug logging
+            console.log('[OrgsController] Full response:', response);
+            console.log('[OrgsController] response.success:', response.success);
+            console.log('[OrgsController] response.data:', response.data);
+            console.log('[OrgsController] response.data?.organizations:', response.data?.organizations);
+            console.log('[OrgsController] response.data?.pagination:', response.data?.pagination);
+
             if (response.success) {
                 this.currentOrganizations = response.data.organizations;
                 this.totalOrganizations = response.data.pagination.total;
@@ -209,10 +216,19 @@ class OrganizationsController {
      * Display organizations table
      */
     displayOrganizationsTable(organizations, pagination) {
+        console.log('[OrgsController] displayOrganizationsTable called');
+        console.log('[OrgsController] organizations param:', organizations);
+        console.log('[OrgsController] organizations type:', typeof organizations);
+        console.log('[OrgsController] organizations?.length:', organizations?.length);
+
         const container = document.getElementById('organizationsTable');
-        if (!container) return;
+        if (!container) {
+            console.error('[OrgsController] Container #organizationsTable not found!');
+            return;
+        }
 
         if (!organizations || organizations.length === 0) {
+            console.log('[OrgsController] No organizations - showing empty message');
             container.innerHTML = '<p class="no-data">No organizations found</p>';
             return;
         }
