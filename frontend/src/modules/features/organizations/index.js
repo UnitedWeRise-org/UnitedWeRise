@@ -19,6 +19,7 @@ export { renderOrgCard, renderOrgGrid, renderOrgList, ORG_TYPE_LABELS, JURISDICT
 export { initOrgBrowser, loadNearbyOrganizations, handleBrowserAction, resetBrowserState } from './components/org-browser.js';
 export { showOrgProfileModal, closeOrgProfileModal, handleModalAction } from './components/org-profile-modal.js';
 export { initMyOrgsWidget, handleWidgetAction, refreshMyOrgsWidget } from './components/my-orgs-widget.js';
+export { showCreateOrgWizard, closeCreateOrgWizard, handleWizardAction } from './components/org-creation-wizard.js';
 
 // Handlers
 export { setupOrgEventDelegation, setupAuthStateListener } from './handlers/org-handlers.js';
@@ -87,8 +88,17 @@ if (document.readyState === 'loading') {
     initOrganizationsModule();
 }
 
+/**
+ * Open organization creation wizard
+ */
+export async function openCreateWizard() {
+    const { showCreateOrgWizard } = await import('./components/org-creation-wizard.js');
+    showCreateOrgWizard();
+}
+
 export default {
     initOrganizationsModule,
     showOrganizations,
-    openOrgProfile
+    openOrgProfile,
+    openCreateWizard
 };

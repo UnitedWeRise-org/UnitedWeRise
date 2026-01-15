@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="version" content="1.1.0">
+
+    <!-- SEO Meta Tags -->
+    <title>Organization Dashboard - United We Rise</title>
+    <meta name="description" content="Manage your organization on United We Rise. View members, edit settings, and engage with your community.">
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#002868">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+    <!-- Application CSS -->
+    <link rel="stylesheet" href="src/styles/main.css">
+    <link rel="stylesheet" href="src/styles/modals.css">
+    <link rel="stylesheet" href="src/styles/organizations.css">
+    <link rel="stylesheet" href="src/styles/org-dashboard.css">
+    <link rel="stylesheet" href="src/styles/responsive.css">
+
+    <!-- Core Application JavaScript -->
+    <script type="module" src="src/modules/features/organizations/components/org-dashboard.js"></script>
+</head>
+<body>
+    <div id="app" class="org-dashboard-page">
+        <!-- Top Navigation Bar -->
+        <header class="org-dashboard-topbar">
+            <div class="org-dashboard-topbar-left">
+                <a href="/" class="org-dashboard-logo">
+                    <span class="logo-text">United We Rise</span>
+                </a>
+            </div>
+            <div class="org-dashboard-topbar-right">
+                <a href="/" class="org-dashboard-back-link">
+                    Back to Main Site
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Content -->
+        <main class="org-dashboard-main">
+            <div id="orgDashboardContainer" class="org-dashboard-container">
+                <!-- Dashboard content will be loaded here by JavaScript -->
+                <div class="org-dashboard-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading organization...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="org-dashboard-footer">
+            <p>&copy; 2025 United We Rise. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+</body>
+</html>

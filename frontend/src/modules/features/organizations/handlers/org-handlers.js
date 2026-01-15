@@ -133,12 +133,10 @@ function showOrganizationsBrowser() {
 
 /**
  * Show create organization wizard
- * (Placeholder - will be implemented in Phase 2b)
  */
-function showCreateOrgWizard() {
-    showToast('Organization creation coming soon!');
-    // TODO: Implement in Phase 2b
-    // This will show a multi-step wizard for creating an organization
+async function showCreateOrgWizard() {
+    const { showCreateOrgWizard: openWizard } = await import('../components/org-creation-wizard.js');
+    openWizard();
 }
 
 /**
