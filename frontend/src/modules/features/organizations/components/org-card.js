@@ -94,13 +94,12 @@ export function renderOrgCard(org, options = {}) {
 
             ${showActions ? `
                 <div class="org-card-actions">
-                    <button
+                    <a
+                        href="/org-profile.html?org=${org.slug || ''}&id=${org.id}"
                         class="org-card-btn org-card-btn-primary"
-                        data-org-action="viewProfile"
-                        data-org-id="${org.id}"
                     >
                         View Profile
-                    </button>
+                    </a>
                     ${!isMember && !isPending ? `
                         <button
                             class="org-card-btn org-card-btn-secondary"
@@ -144,14 +143,13 @@ function renderCompactCard(org, { typeLabel, isVerified, memberCount }) {
                     ${typeLabel} · ${memberCount} members
                 </span>
             </div>
-            <button
+            <a
+                href="/org-profile.html?org=${org.slug || ''}&id=${org.id}"
                 class="org-card-btn org-card-btn-icon"
-                data-org-action="viewProfile"
-                data-org-id="${org.id}"
                 title="View Profile"
             >
                 →
-            </button>
+            </a>
         </div>
     `;
 }

@@ -8,6 +8,54 @@
 
 ---
 
+## [2026-01-15] - Organizations Phase 2g: Public Organization Profiles
+
+### Added
+
+**Backend - Public Activity Endpoint**
+- New GET `/api/organizations/:id/public-activity` endpoint (no auth required)
+- Returns PUBLIC posts, upcoming events, and published endorsements
+- Filtered to public content only (no member milestones)
+
+**Standalone Public Profile Page**
+- New `/org-profile.html` standalone page
+- URL pattern: `?org={slug}` or `?id={id}`
+- Full organization details: name, type, jurisdiction, description
+- Member count and follower count display
+- Verified badge for approved organizations
+
+**H3 Coverage Map**
+- MapLibre-based map showing H3 jurisdiction cells
+- Read-only display (no editing)
+- Auto-fits to organization's coverage area
+- Only shown for CUSTOM jurisdiction type organizations
+
+**Public Activity Feed**
+- Recent PUBLIC posts displayed
+- Upcoming events with dates
+- Published endorsements with candidate info
+- "View All Activity" link for members
+
+**User Actions**
+- Follow/Unfollow button (requires login)
+- "Request to Join" button for non-members
+- Share button (clipboard copy + native share)
+- Context-aware buttons based on membership status
+
+### Modified
+- `org-card.js` - "View Profile" now links to standalone profile page
+
+### Files Created
+- `frontend/org-profile.html` - Standalone page template
+- `frontend/src/modules/features/organizations/components/org-profile.js` - Profile component (~600 lines)
+- `frontend/src/styles/org-profile.css` - Profile styles (~350 lines)
+
+### Files Modified
+- `backend/src/routes/organizations.ts` - Add public-activity endpoint (~130 lines)
+- `frontend/src/modules/features/organizations/components/org-card.js` - Update View Profile links
+
+---
+
 ## [2026-01-15] - Organizations Phase 2f: Organization Activity Feed
 
 ### Added

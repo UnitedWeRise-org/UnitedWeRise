@@ -1577,6 +1577,182 @@ router.get('/:organizationId/verification', async (req, res) => {
 
 /**
  * @swagger
+ * /organizations/{organizationId}/public-activity:
+ *   get:
+ *     summary: Get organization public activity feed
+ *     description: Returns public activity feed including PUBLIC posts, upcoming events, and published endorsements. No authentication required.
+ *     tags: [Organizations]
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Organization ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Public activity feed items
+ *       404:
+ *         description: Organization not found
+ */
+router.get('/:organizationId/public-activity', async (req, res) => {
+  try {
+    const { organizationId } = req.params;
+    const { limit = '10' } = req.query;
+    const limitNum = Math.min(20, Math.max(1, parseInt(limit as string, 10) || 10));
+
+    // Verify organization exists
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true, isActive: true }
+    });
+
+    if (!org || !org.isActive) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    const activityItems: any[] = [];
+
+    // Fetch PUBLIC posts
+    const posts = await prisma.post.findMany({
+      where: {
+        organizationId,
+        isDeleted: false,
+        audience: 'PUBLIC'
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        },
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            avatar: true
+          }
+        },
+        photos: true,
+        _count: {
+          select: {
+            likes: true,
+            comments: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limitNum
+    });
+
+    posts.forEach(post => {
+      activityItems.push({
+        type: 'post',
+        timestamp: post.createdAt.toISOString(),
+        data: post
+      });
+    });
+
+    // Fetch upcoming events
+    const now = new Date();
+    const events = await prisma.civicEvent.findMany({
+      where: {
+        organizationId,
+        status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
+        scheduledDate: { gte: now }
+      },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            avatar: true
+          }
+        },
+        _count: {
+          select: {
+            rsvps: true
+          }
+        }
+      },
+      orderBy: { scheduledDate: 'asc' },
+      take: 5
+    });
+
+    events.forEach(event => {
+      activityItems.push({
+        type: 'event',
+        timestamp: event.createdAt.toISOString(),
+        data: event
+      });
+    });
+
+    // Fetch published endorsements
+    const endorsements = await prisma.organizationEndorsement.findMany({
+      where: {
+        organizationId,
+        isActive: true
+      },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            avatar: true
+          }
+        },
+        candidate: {
+          select: {
+            id: true,
+            name: true,
+            office: true,
+            party: true
+          }
+        }
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 5
+    });
+
+    endorsements.forEach(endorsement => {
+      activityItems.push({
+        type: 'endorsement',
+        timestamp: endorsement.publishedAt.toISOString(),
+        data: endorsement
+      });
+    });
+
+    // Sort all items by timestamp (newest first)
+    activityItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    // Limit to requested amount
+    const limitedItems = activityItems.slice(0, limitNum);
+
+    res.json({
+      items: limitedItems,
+      total: activityItems.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching public activity:', error);
+    res.status(500).json({ error: 'Failed to fetch public activity' });
+  }
+});
+
+/**
+ * @swagger
  * /organizations/{organizationId}/activity:
  *   get:
  *     summary: Get organization activity feed

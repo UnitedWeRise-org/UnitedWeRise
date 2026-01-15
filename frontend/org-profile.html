@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="version" content="1.1.0">
+
+    <!-- SEO Meta Tags -->
+    <title>Organization Profile - United We Rise</title>
+    <meta name="description" content="View organization profile on United We Rise. Learn about their mission, coverage area, and recent activity.">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Organization Profile - United We Rise">
+    <meta property="og:description" content="View organization profile on United We Rise.">
+    <meta property="og:type" content="website">
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#002868">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+    <!-- MapLibre GL CSS -->
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+
+    <!-- Application CSS -->
+    <link rel="stylesheet" href="src/styles/main.css">
+    <link rel="stylesheet" href="src/styles/modals.css">
+    <link rel="stylesheet" href="src/styles/organizations.css">
+    <link rel="stylesheet" href="src/styles/org-profile.css">
+    <link rel="stylesheet" href="src/styles/responsive.css">
+
+    <!-- MapLibre GL JS -->
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+    <!-- H3 Geospatial Library (for jurisdiction map) -->
+    <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+
+    <!-- Core Application JavaScript -->
+    <script type="module" src="src/modules/features/organizations/components/org-profile.js"></script>
+</head>
+<body>
+    <div id="app" class="org-profile-page">
+        <!-- Top Navigation Bar -->
+        <header class="org-profile-topbar">
+            <div class="org-profile-topbar-left">
+                <a href="/" class="org-profile-logo">
+                    <span class="logo-text">United We Rise</span>
+                </a>
+            </div>
+            <div class="org-profile-topbar-right">
+                <a href="/index.html#organizations" class="org-profile-back-link">
+                    Back to Organizations
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Profile Content -->
+        <main class="org-profile-main">
+            <div id="orgProfileContainer" class="org-profile-container">
+                <!-- Profile content will be loaded here by JavaScript -->
+                <div class="org-profile-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading organization...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="org-profile-footer">
+            <p>&copy; 2025 United We Rise. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+</body>
+</html>
