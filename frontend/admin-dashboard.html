@@ -95,6 +95,7 @@
             <button class="nav-button" data-section="ai-insights">🤖 AI Insights</button>
             <button class="nav-button" data-section="motd">MOTD</button>
             <button class="nav-button" data-section="civic-engagement">🏛️ Civic Engagement</button>
+            <button class="nav-button" data-section="organizations">🏢 Organizations</button>
             <button class="nav-button" data-section="deployment">🚀 Deployment</button>
             <button class="nav-button" data-section="system">System</button>
             <button class="nav-button" data-section="errors">🚨 Errors</button>
@@ -2197,6 +2198,44 @@ Auto-refresh enabled every 60 seconds
 
     </div>
 
+        <!-- Organizations Section -->
+        <div id="organizations" class="dashboard-section">
+            <div class="section-header">
+                <h2>🏢 Organization Management</h2>
+                <p class="section-description">Manage organizations, members, and headship (Super-Admin)</p>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-bar" style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                <input type="text" id="orgSearch" placeholder="Search organizations..." class="search-input" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd; min-width: 200px;">
+                <select id="orgStatusFilter" class="filter-select" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+                <select id="orgVerificationFilter" class="filter-select" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="all">All Verification</option>
+                    <option value="verified">Verified</option>
+                    <option value="unverified">Unverified</option>
+                </select>
+                <select id="orgSortFilter" class="filter-select" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="members">Most Members</option>
+                    <option value="alphabetical">A-Z</option>
+                </select>
+                <button class="btn btn-secondary" data-action="refreshOrganizations" style="padding: 0.5rem 1rem;">🔄 Refresh</button>
+            </div>
+
+            <!-- Table container -->
+            <div id="organizationsTable" class="admin-table-container">
+                <p class="loading" style="padding: 2rem; text-align: center; color: #666;">Loading organizations...</p>
+            </div>
+
+            <!-- Pagination -->
+            <div id="orgPagination" class="pagination-controls" style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem;"></div>
+        </div>
+
     <!-- Quest Creation Modal -->
     <div id="quest-modal" class="modal">
         <div class="modal-content">
@@ -2612,6 +2651,7 @@ Auto-refresh enabled every 60 seconds
     <script type="module" src="src/modules/admin/controllers/SystemController.js"></script>
     <script type="module" src="src/modules/admin/controllers/ErrorsController.js"></script>
     <script type="module" src="src/modules/admin/controllers/CivicEngagementController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/OrganizationsController.js"></script>
 
     <!-- Load Module Loader (orchestrates everything) -->
     <script type="module" src="src/modules/admin/AdminModuleLoader.js"></script>
