@@ -233,6 +233,16 @@ class OrganizationsController {
             return;
         }
 
+        // Trace table generation
+        console.log('[OrgsController] Building table HTML for', organizations.length, 'organizations');
+        try {
+            const firstRowTest = this.renderOrganizationRow(organizations[0]);
+            console.log('[OrgsController] First row HTML length:', firstRowTest?.length);
+            console.log('[OrgsController] First row preview:', firstRowTest?.substring(0, 300));
+        } catch (err) {
+            console.error('[OrgsController] Error rendering first row:', err);
+        }
+
         const tableHtml = `
             <div class="admin-table">
                 <table>
@@ -254,7 +264,15 @@ class OrganizationsController {
             </div>
         `;
 
+        console.log('[OrgsController] tableHtml length:', tableHtml.length);
+
         container.innerHTML = tableHtml;
+
+        // Verify DOM after innerHTML set
+        console.log('[OrgsController] innerHTML set. Verifying DOM...');
+        console.log('[OrgsController] container.innerHTML length:', container.innerHTML.length);
+        console.log('[OrgsController] Has table?:', !!container.querySelector('table'));
+        console.log('[OrgsController] Row count:', container.querySelectorAll('tbody tr').length);
 
         // Render pagination
         this.renderPagination(pagination);
