@@ -785,5 +785,8 @@ class OrganizationsController {
     }
 }
 
+// Make available globally for AdminModuleLoader
+window.OrganizationsController = OrganizationsController;
+
 // Export for ES6 modules
 export { OrganizationsController };
