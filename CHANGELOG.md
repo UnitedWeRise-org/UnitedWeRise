@@ -8,6 +8,32 @@
 
 ---
 
+## [2026-01-15] - Organizations Phase 2c: Role Management UI
+
+### Added
+
+**Roles Tab (Dashboard)**
+- New "Roles" tab visible to organization heads
+- Role cards grid showing name, description, capabilities, holder count
+- Create role modal with name, description, max holders
+- Edit/delete existing roles
+- Capability selection organized by category (Membership, Roles, Settings, Content, Events, Discussions, Endorsements)
+
+**Members Tab Enhancements**
+- Role assignment dropdown for org head to assign roles to members
+- Remove member button with confirmation dialog
+- Visual role badges on member items
+
+**API Methods**
+- Added `updateRole()` and `deleteRole()` to organizations-api.js
+
+### Files Modified
+- `frontend/src/modules/features/organizations/organizations-api.js` - Add updateRole, deleteRole
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Add Roles tab, role modal, member role management
+- `frontend/src/styles/org-dashboard.css` - Add role card, modal, capability checkbox styles
+
+---
+
 ## [2026-01-15] - Organizations Phase 2b: Creation Wizard & Dashboard
 
 ### Added
