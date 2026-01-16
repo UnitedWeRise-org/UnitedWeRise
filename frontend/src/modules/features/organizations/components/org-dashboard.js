@@ -180,7 +180,9 @@ async function initDashboard() {
             throw new Error('Failed to load organization');
         }
 
-        dashboardState.organization = await orgResponse.json();
+        const orgData = await orgResponse.json();
+        // Backend wraps response in { success: true, organization: {...} }
+        dashboardState.organization = orgData.organization || orgData;
 
         // Determine user's role
         if (dashboardState.currentUser) {
@@ -1930,7 +1932,8 @@ async function saveEdit(formData) {
         }
 
         const updated = await response.json();
-        dashboardState.organization = updated;
+        // Backend wraps response in { success: true, organization: {...} }
+        dashboardState.organization = updated.organization || updated;
         dashboardState.editMode = false;
         dashboardState.editData = {};
 

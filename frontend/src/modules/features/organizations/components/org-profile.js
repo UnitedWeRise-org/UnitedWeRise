@@ -151,34 +151,21 @@ async function checkFollowStatus() {
  * Check user's membership in organization
  */
 async function checkMembership() {
-    if (!profileState.currentUser || !profileState.organization) {
-        console.log('[OrgProfile] checkMembership skipped - no user or org');
-        return;
-    }
-
-    console.log('[OrgProfile] Checking membership for org:', profileState.organization.id);
+    if (!profileState.currentUser || !profileState.organization) return;
 
     try {
         const response = await fetch(`${API_BASE}/organizations/me/memberships`, {
             credentials: 'include'
         });
-        console.log('[OrgProfile] Membership API response status:', response.status);
-
         if (response.ok) {
             const data = await response.json();
-            console.log('[OrgProfile] Memberships returned:', data.memberships?.length);
-            console.log('[OrgProfile] Looking for orgId:', profileState.organization.id);
-            console.log('[OrgProfile] Available orgIds:', data.memberships?.map(m => m.organizationId));
-
             const membership = data.memberships?.find(
                 m => m.organizationId === profileState.organization.id
             );
-            console.log('[OrgProfile] Found membership:', membership);
             profileState.membershipStatus = membership?.status || null;
-            console.log('[OrgProfile] Set membershipStatus to:', profileState.membershipStatus);
         }
     } catch (e) {
-        console.error('[OrgProfile] Membership check failed:', e);
+        console.warn('Membership check failed:', e);
     }
 }
 
