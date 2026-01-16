@@ -135,6 +135,7 @@ let dashboardState = {
     activityFilter: 'all', // 'all' | 'posts' | 'events' | 'endorsements'
     activityItems: [],
     activityLoading: false,
+    activityLoaded: false,
     activityPage: 1,
     activityHasMore: true,
     showPostComposer: false,
@@ -558,7 +559,7 @@ function renderActivityTab() {
     const canCreateEvents = isHead || dashboardState.userCapabilities.includes('CREATE_EVENTS');
 
     // Load activity if not loaded yet
-    if (dashboardState.activityItems.length === 0 && !dashboardState.activityLoading) {
+    if (!dashboardState.activityLoaded && !dashboardState.activityLoading) {
         loadActivity();
     }
 
@@ -678,6 +679,7 @@ async function loadActivity(append = false) {
         console.error('Load activity error:', error);
     } finally {
         dashboardState.activityLoading = false;
+        dashboardState.activityLoaded = true;
         const container = document.getElementById('orgDashboardContainer');
         if (container) renderDashboard(container);
     }
@@ -1573,6 +1575,7 @@ function attachDashboardListeners(container) {
             if (tab.dataset.tab === 'activity') {
                 dashboardState.activityPage = 1;
                 dashboardState.activityItems = [];
+                dashboardState.activityLoaded = false;
                 loadActivity();
             }
             renderDashboard(container);
@@ -1585,6 +1588,7 @@ function attachDashboardListeners(container) {
             dashboardState.activityFilter = btn.dataset.activityFilter;
             dashboardState.activityPage = 1;
             dashboardState.activityItems = [];
+            dashboardState.activityLoaded = false;
             loadActivity();
             renderDashboard(container);
         });
