@@ -76,7 +76,9 @@ async function initProfile() {
             throw new Error('Failed to load organization');
         }
 
-        profileState.organization = await orgResponse.json();
+        const orgData = await orgResponse.json();
+        // Backend wraps response in { success: true, organization: {...} }
+        profileState.organization = orgData.organization || orgData;
 
         // Update page metadata
         document.title = `${profileState.organization.name} - United We Rise`;
