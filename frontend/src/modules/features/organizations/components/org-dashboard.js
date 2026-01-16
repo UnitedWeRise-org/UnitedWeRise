@@ -181,8 +181,11 @@ async function initDashboard() {
         }
 
         const orgData = await orgResponse.json();
+        console.log('[OrgDashboard] Raw org response:', orgData);
         // Backend wraps response in { success: true, organization: {...} }
         dashboardState.organization = orgData.organization || orgData;
+        console.log('[OrgDashboard] Unwrapped org:', dashboardState.organization);
+        console.log('[OrgDashboard] currentUser:', dashboardState.currentUser);
 
         // Determine user's role
         if (dashboardState.currentUser) {
