@@ -185,17 +185,11 @@ async function initDashboard() {
         }
 
         const orgData = await orgResponse.json();
-        console.log('[OrgDashboard] Raw org response:', orgData);
         // Backend wraps response in { success: true, organization: {...} }
         dashboardState.organization = orgData.organization || orgData;
-        console.log('[OrgDashboard] Unwrapped org:', dashboardState.organization);
-        console.log('[OrgDashboard] currentUser:', dashboardState.currentUser);
 
         // Determine user's role
         if (dashboardState.currentUser) {
-            console.log('[OrgDashboard] headUserId:', dashboardState.organization.headUserId);
-            console.log('[OrgDashboard] currentUser.id:', dashboardState.currentUser.id);
-            console.log('[OrgDashboard] Match:', dashboardState.organization.headUserId === dashboardState.currentUser.id);
             if (dashboardState.organization.headUserId === dashboardState.currentUser.id) {
                 dashboardState.userRole = 'HEAD';
             } else {
@@ -229,18 +223,14 @@ async function initDashboard() {
  * Check user authentication
  */
 async function checkAuth() {
-    console.log('[OrgDashboard] checkAuth - hostname:', window.location.hostname);
-    console.log('[OrgDashboard] checkAuth - API_BASE:', API_BASE);
     try {
         const response = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
-        console.log('[OrgDashboard] checkAuth - response status:', response.status);
         if (response.ok) {
             const data = await response.json();
-            console.log('[OrgDashboard] checkAuth - user data:', data);
             return data.data;
         }
     } catch (e) {
-        console.error('[OrgDashboard] Auth check failed:', e);
+        console.warn('Auth check failed:', e);
     }
     return null;
 }
