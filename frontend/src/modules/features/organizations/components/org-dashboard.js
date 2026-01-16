@@ -237,7 +237,7 @@ async function checkAuth() {
         if (response.ok) {
             const data = await response.json();
             console.log('[OrgDashboard] checkAuth - user data:', data);
-            return data.user;
+            return data.data;
         }
     } catch (e) {
         console.error('[OrgDashboard] Auth check failed:', e);
