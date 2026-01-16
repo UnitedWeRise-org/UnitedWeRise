@@ -186,6 +186,9 @@ async function initDashboard() {
 
         // Determine user's role
         if (dashboardState.currentUser) {
+            console.log('[OrgDashboard] headUserId:', dashboardState.organization.headUserId);
+            console.log('[OrgDashboard] currentUser.id:', dashboardState.currentUser.id);
+            console.log('[OrgDashboard] Match:', dashboardState.organization.headUserId === dashboardState.currentUser.id);
             if (dashboardState.organization.headUserId === dashboardState.currentUser.id) {
                 dashboardState.userRole = 'HEAD';
             } else {
