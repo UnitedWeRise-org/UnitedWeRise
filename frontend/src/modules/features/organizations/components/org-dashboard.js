@@ -73,7 +73,11 @@ const API_BASE = detectApiBase();
 
 function detectApiBase() {
     const hostname = window.location.hostname;
-    if (hostname === 'dev.unitedwerise.org' || hostname === 'localhost') {
+    // Handle dev/staging domains including admin subdomain
+    if (hostname === 'dev.unitedwerise.org' ||
+        hostname === 'dev-admin.unitedwerise.org' ||
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1') {
         return 'https://dev-api.unitedwerise.org/api';
     }
     return 'https://api.unitedwerise.org/api';
@@ -225,14 +229,18 @@ async function initDashboard() {
  * Check user authentication
  */
 async function checkAuth() {
+    console.log('[OrgDashboard] checkAuth - hostname:', window.location.hostname);
+    console.log('[OrgDashboard] checkAuth - API_BASE:', API_BASE);
     try {
         const response = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+        console.log('[OrgDashboard] checkAuth - response status:', response.status);
         if (response.ok) {
             const data = await response.json();
+            console.log('[OrgDashboard] checkAuth - user data:', data);
             return data.user;
         }
     } catch (e) {
-        console.warn('Auth check failed:', e);
+        console.error('[OrgDashboard] Auth check failed:', e);
     }
     return null;
 }
