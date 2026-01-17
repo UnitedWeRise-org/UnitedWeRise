@@ -214,7 +214,7 @@ async function initDashboard() {
 
     } catch (error) {
         console.error('Dashboard init error:', error);
-        dashboardState.error = error.message || 'Failed to load dashboard';
+        dashboardState.error = error.error || error.message || 'Failed to load dashboard';
         dashboardState.loading = false;
         renderDashboard(container);
     }
@@ -989,7 +989,7 @@ async function submitOrgPost() {
 
     } catch (error) {
         console.error('Post creation error:', error);
-        alert(error.message || 'Failed to create post');
+        alert(error.error || error.message || 'Failed to create post');
     }
 }
 
@@ -1039,7 +1039,7 @@ async function submitOrgEvent() {
 
     } catch (error) {
         console.error('Event creation error:', error);
-        alert(error.message || 'Failed to create event');
+        alert(error.error || error.message || 'Failed to create event');
     }
 }
 
@@ -1936,7 +1936,7 @@ async function saveEdit(formData) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to save changes');
+            throw new Error(error.error || error.message || 'Failed to save changes');
         }
 
         const updated = await response.json();
@@ -1952,7 +1952,7 @@ async function saveEdit(formData) {
 
     } catch (error) {
         console.error('Save failed:', error);
-        showToast(error.message || 'Failed to save changes');
+        showToast(error.error || error.message || 'Failed to save changes');
     }
 }
 
@@ -1980,7 +1980,7 @@ async function approveMember(membershipId) {
 
     } catch (error) {
         console.error('Approve failed:', error);
-        showToast(error.message || 'Failed to approve member');
+        showToast(error.error || error.message || 'Failed to approve member');
     }
 }
 
@@ -2012,7 +2012,7 @@ async function denyMember(membershipId) {
 
     } catch (error) {
         console.error('Deny failed:', error);
-        showToast(error.message || 'Failed to deny request');
+        showToast(error.error || error.message || 'Failed to deny request');
     }
 }
 
@@ -2922,7 +2922,7 @@ async function saveRole(formData) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to save role');
+            throw new Error(error.error || error.message || 'Failed to save role');
         }
 
         showToast(isEditing ? 'Role updated' : 'Role created');
@@ -2931,7 +2931,7 @@ async function saveRole(formData) {
 
     } catch (error) {
         console.error('Save role failed:', error);
-        showToast(error.message || 'Failed to save role');
+        showToast(error.error || error.message || 'Failed to save role');
     }
 }
 
@@ -2959,7 +2959,7 @@ async function deleteRole(roleId) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to delete role');
+            throw new Error(error.error || error.message || 'Failed to delete role');
         }
 
         showToast('Role deleted');
@@ -2968,7 +2968,7 @@ async function deleteRole(roleId) {
 
     } catch (error) {
         console.error('Delete role failed:', error);
-        showToast(error.message || 'Failed to delete role');
+        showToast(error.error || error.message || 'Failed to delete role');
     }
 }
 
@@ -2995,7 +2995,7 @@ async function changeMemberRole(membershipId, roleId) {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.message || 'Failed to assign role');
+                throw new Error(error.error || error.message || 'Failed to assign role');
             }
 
             showToast('Role assigned');
@@ -3011,7 +3011,7 @@ async function changeMemberRole(membershipId, roleId) {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.message || 'Failed to remove role');
+                throw new Error(error.error || error.message || 'Failed to remove role');
             }
 
             showToast('Role removed');
@@ -3021,7 +3021,7 @@ async function changeMemberRole(membershipId, roleId) {
 
     } catch (error) {
         console.error('Change role failed:', error);
-        showToast(error.message || 'Failed to change role');
+        showToast(error.error || error.message || 'Failed to change role');
         // Reload to reset dropdown to actual state
         await loadMembers();
     }
@@ -3051,7 +3051,7 @@ async function removeMember(membershipId) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to remove member');
+            throw new Error(error.error || error.message || 'Failed to remove member');
         }
 
         showToast('Member removed');
@@ -3059,7 +3059,7 @@ async function removeMember(membershipId) {
 
     } catch (error) {
         console.error('Remove member failed:', error);
-        showToast(error.message || 'Failed to remove member');
+        showToast(error.error || error.message || 'Failed to remove member');
     }
 }
 
@@ -3120,7 +3120,7 @@ async function openQuestionnaireModalForEdit(questionnaireId) {
 
     } catch (error) {
         console.error('Load questionnaire failed:', error);
-        showToast(error.message || 'Failed to load questionnaire');
+        showToast(error.error || error.message || 'Failed to load questionnaire');
     }
 }
 
@@ -3252,7 +3252,7 @@ async function saveQuestionnaire() {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.message || 'Failed to create questionnaire');
+                throw new Error(error.error || error.message || 'Failed to create questionnaire');
             }
 
             showToast('Questionnaire created');
@@ -3263,7 +3263,7 @@ async function saveQuestionnaire() {
 
     } catch (error) {
         console.error('Save questionnaire failed:', error);
-        showToast(error.message || 'Failed to save questionnaire');
+        showToast(error.error || error.message || 'Failed to save questionnaire');
     }
 }
 
@@ -3289,7 +3289,7 @@ async function toggleQuestionnaire(questionnaireId) {
 
     } catch (error) {
         console.error('Toggle questionnaire failed:', error);
-        showToast(error.message || 'Failed to update questionnaire');
+        showToast(error.error || error.message || 'Failed to update questionnaire');
     }
 }
 
@@ -3307,7 +3307,7 @@ async function deleteQuestionnaire(questionnaireId) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to delete questionnaire');
+            throw new Error(error.error || error.message || 'Failed to delete questionnaire');
         }
 
         showToast('Questionnaire deleted');
@@ -3315,7 +3315,7 @@ async function deleteQuestionnaire(questionnaireId) {
 
     } catch (error) {
         console.error('Delete questionnaire failed:', error);
-        showToast(error.message || 'Failed to delete questionnaire');
+        showToast(error.error || error.message || 'Failed to delete questionnaire');
     }
 }
 
@@ -3439,7 +3439,7 @@ async function updateApplicationStatus(applicationId, status) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to update status');
+            throw new Error(error.error || error.message || 'Failed to update status');
         }
 
         showToast(`Application moved to ${APPLICATION_STATUS_LABELS[status]}`);
@@ -3448,7 +3448,7 @@ async function updateApplicationStatus(applicationId, status) {
 
     } catch (error) {
         console.error('Update status failed:', error);
-        showToast(error.message || 'Failed to update status');
+        showToast(error.error || error.message || 'Failed to update status');
     }
 }
 
@@ -3469,7 +3469,7 @@ async function castVote(vote) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to cast vote');
+            throw new Error(error.error || error.message || 'Failed to cast vote');
         }
 
         showToast('Vote recorded');
@@ -3480,7 +3480,7 @@ async function castVote(vote) {
 
     } catch (error) {
         console.error('Cast vote failed:', error);
-        showToast(error.message || 'Failed to cast vote');
+        showToast(error.error || error.message || 'Failed to cast vote');
     }
 }
 
@@ -3500,7 +3500,7 @@ async function publishEndorsement(applicationId) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to publish endorsement');
+            throw new Error(error.error || error.message || 'Failed to publish endorsement');
         }
 
         showToast('Endorsement published');
@@ -3510,7 +3510,7 @@ async function publishEndorsement(applicationId) {
 
     } catch (error) {
         console.error('Publish failed:', error);
-        showToast(error.message || 'Failed to publish endorsement');
+        showToast(error.error || error.message || 'Failed to publish endorsement');
     }
 }
 
@@ -3528,7 +3528,7 @@ async function denyApplicationAction(applicationId) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to deny application');
+            throw new Error(error.error || error.message || 'Failed to deny application');
         }
 
         showToast('Application denied');
@@ -3537,7 +3537,7 @@ async function denyApplicationAction(applicationId) {
 
     } catch (error) {
         console.error('Deny failed:', error);
-        showToast(error.message || 'Failed to deny application');
+        showToast(error.error || error.message || 'Failed to deny application');
     }
 }
 
@@ -3583,7 +3583,7 @@ async function confirmRevoke() {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to revoke endorsement');
+            throw new Error(error.error || error.message || 'Failed to revoke endorsement');
         }
 
         showToast('Endorsement revoked');
@@ -3592,7 +3592,7 @@ async function confirmRevoke() {
 
     } catch (error) {
         console.error('Revoke failed:', error);
-        showToast(error.message || 'Failed to revoke endorsement');
+        showToast(error.error || error.message || 'Failed to revoke endorsement');
     }
 }
 
@@ -3966,7 +3966,7 @@ async function saveJurisdiction() {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to save jurisdiction');
+            throw new Error(error.error || error.message || 'Failed to save jurisdiction');
         }
 
         // Update local state
@@ -3977,7 +3977,7 @@ async function saveJurisdiction() {
 
     } catch (error) {
         console.error('Save jurisdiction failed:', error);
-        showToast(error.message || 'Failed to save jurisdiction');
+        showToast(error.error || error.message || 'Failed to save jurisdiction');
     }
 }
 

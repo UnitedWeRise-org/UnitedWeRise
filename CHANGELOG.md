@@ -1,10 +1,35 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 15, 2026
+**Last Updated**: January 17, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-17] - Organizations Dashboard Bug Fixes
+
+### Fixed
+
+**Error Message Handling**
+- Fixed 33 error handlers in org-dashboard.js that weren't displaying backend error messages
+- Backend returns `{ error: 'message' }` but frontend expected `error.message`
+- All error handlers now use `error.error || error.message || 'fallback'` pattern
+
+**Previous Session Fixes (2026-01-16)**
+- Fixed organizations admin table blank (extra `</div>` tag pushed content outside container)
+- Fixed modal buttons not working (event delegation was on section, not modal)
+- Fixed "Request to Join" shown to existing members (response unwrapping: `orgData.organization`)
+- Fixed HEAD role not recognized (auth response unwrapping: `data.data.user`)
+- Fixed admin subdomain auth (detectApiBase for `dev-admin.unitedwerise.org`)
+- Fixed Activity tab infinite loop (added `activityLoaded` flag)
+
+### Files Modified
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Fix all error handlers
+- `frontend/admin-dashboard.html` - Fix extra closing div tag
+- `frontend/src/modules/admin/controllers/OrganizationsController.js` - Fix event delegation
+- `frontend/src/modules/features/organizations/components/org-profile.js` - Response unwrapping
 
 ---
 
