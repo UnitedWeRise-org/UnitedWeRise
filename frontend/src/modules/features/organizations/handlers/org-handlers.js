@@ -140,12 +140,11 @@ async function showCreateOrgWizard() {
 }
 
 /**
- * Open organization dashboard
+ * Open organization dashboard in new tab
  */
 function openOrgDashboard(orgId) {
-    // For now, navigate to dashboard page
-    // Later we can add slug-based navigation
-    window.location.href = `/org-dashboard.html?id=${orgId}`;
+    // Open dashboard in new tab to preserve main site state
+    window.open(`/org-dashboard.html?id=${orgId}`, '_blank', 'noopener');
 }
 
 /**

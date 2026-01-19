@@ -6,6 +6,7 @@
  */
 
 import { ORG_TYPE_LABELS, JURISDICTION_LABELS } from './org-card.js';
+import { standaloneAuthRefresh } from '../../../core/auth/standalone-refresh.js';
 
 /**
  * Capability categories for role creation UI
@@ -81,6 +82,17 @@ function detectApiBase() {
         return 'https://dev-api.unitedwerise.org/api';
     }
     return 'https://api.unitedwerise.org/api';
+}
+
+/**
+ * Get CSRF token from window or cookie
+ * @returns {string} CSRF token or empty string
+ */
+function getCsrfToken() {
+    if (window.csrfToken) return window.csrfToken;
+    // Fallback: read from cookie (handles both prod and dev cookie names)
+    const match = document.cookie.match(/(?:^|;\s*)csrf-token(?:_dev)?=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
 }
 
 /**
@@ -170,6 +182,11 @@ async function initDashboard() {
     try {
         // Check authentication first
         dashboardState.currentUser = await checkAuth();
+
+        // Start token refresh to prevent session expiration
+        if (dashboardState.currentUser) {
+            standaloneAuthRefresh.start();
+        }
 
         // Load organization
         const endpoint = orgSlug
@@ -967,7 +984,10 @@ async function submitOrgPost() {
         const response = await fetch(`${API_BASE}/posts`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
             body: JSON.stringify({
                 content,
                 organizationId: dashboardState.organization.id,
@@ -1014,7 +1034,10 @@ async function submitOrgEvent() {
         const response = await fetch(`${API_BASE}/civic/events`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
             body: JSON.stringify({
                 title,
                 description,
@@ -1929,7 +1952,8 @@ async function saveEdit(formData) {
             method: 'PATCH',
             credentials: 'include',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
             },
             body: JSON.stringify(updateData)
         });
@@ -1967,7 +1991,8 @@ async function approveMember(membershipId) {
             `${API_BASE}/organizations/${org.id}/members/${membershipId}/approve`,
             {
                 method: 'POST',
-                credentials: 'include'
+                credentials: 'include',
+                headers: { 'X-CSRF-Token': getCsrfToken() }
             }
         );
 
@@ -1999,7 +2024,8 @@ async function denyMember(membershipId) {
             `${API_BASE}/organizations/${org.id}/members/${membershipId}`,
             {
                 method: 'DELETE',
-                credentials: 'include'
+                credentials: 'include',
+                headers: { 'X-CSRF-Token': getCsrfToken() }
             }
         );
 
@@ -2915,7 +2941,8 @@ async function saveRole(formData) {
             method: isEditing ? 'PATCH' : 'POST',
             credentials: 'include',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
             },
             body: JSON.stringify(roleData)
         });
@@ -2953,7 +2980,8 @@ async function deleteRole(roleId) {
             `${API_BASE}/organizations/${org.id}/roles/${roleId}`,
             {
                 method: 'DELETE',
-                credentials: 'include'
+                credentials: 'include',
+                headers: { 'X-CSRF-Token': getCsrfToken() }
             }
         );
 
@@ -2987,7 +3015,8 @@ async function changeMemberRole(membershipId, roleId) {
                     method: 'POST',
                     credentials: 'include',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken()
                     },
                     body: JSON.stringify({ roleId })
                 }
@@ -3005,7 +3034,8 @@ async function changeMemberRole(membershipId, roleId) {
                 `${API_BASE}/organizations/${org.id}/members/${membershipId}/role`,
                 {
                     method: 'DELETE',
-                    credentials: 'include'
+                    credentials: 'include',
+                    headers: { 'X-CSRF-Token': getCsrfToken() }
                 }
             );
 
@@ -3045,7 +3075,8 @@ async function removeMember(membershipId) {
             `${API_BASE}/organizations/${org.id}/members/${membershipId}`,
             {
                 method: 'DELETE',
-                credentials: 'include'
+                credentials: 'include',
+                headers: { 'X-CSRF-Token': getCsrfToken() }
             }
         );
 
@@ -3175,7 +3206,10 @@ async function saveQuestionnaire() {
             await fetch(`${API_BASE}/questionnaires/${dashboardState.editingQuestionnaire.id}`, {
                 method: 'PATCH',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken()
+                },
                 body: JSON.stringify({
                     title: formData.title,
                     description: formData.description || null,
@@ -3195,7 +3229,10 @@ async function saveQuestionnaire() {
                     await fetch(`${API_BASE}/questionnaires/questions/${q.id}`, {
                         method: 'PATCH',
                         credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': getCsrfToken()
+                        },
                         body: JSON.stringify({
                             text: q.text,
                             type: q.type,
@@ -3211,7 +3248,10 @@ async function saveQuestionnaire() {
                     await fetch(`${API_BASE}/questionnaires/${dashboardState.editingQuestionnaire.id}/questions`, {
                         method: 'POST',
                         credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': getCsrfToken()
+                        },
                         body: JSON.stringify({
                             text: q.text,
                             type: q.type,
@@ -3241,7 +3281,10 @@ async function saveQuestionnaire() {
             const response = await fetch(`${API_BASE}/questionnaires/organizations/${org.id}`, {
                 method: 'POST',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken()
+                },
                 body: JSON.stringify({
                     title: formData.title,
                     description: formData.description || null,
@@ -3278,7 +3321,10 @@ async function toggleQuestionnaire(questionnaireId) {
         const response = await fetch(`${API_BASE}/questionnaires/${questionnaireId}`, {
             method: 'PATCH',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
             body: JSON.stringify({ isActive: !questionnaire.isActive })
         });
 
@@ -3302,7 +3348,8 @@ async function deleteQuestionnaire(questionnaireId) {
     try {
         const response = await fetch(`${API_BASE}/questionnaires/${questionnaireId}`, {
             method: 'DELETE',
-            credentials: 'include'
+            credentials: 'include',
+            headers: { 'X-CSRF-Token': getCsrfToken() }
         });
 
         if (!response.ok) {
@@ -3433,7 +3480,10 @@ async function updateApplicationStatus(applicationId, status) {
         const response = await fetch(`${API_BASE}/endorsements/applications/${applicationId}/status`, {
             method: 'PATCH',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
             body: JSON.stringify({ status })
         });
 
@@ -3463,7 +3513,10 @@ async function castVote(vote) {
         const response = await fetch(`${API_BASE}/endorsements/applications/${app.id}/vote`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
             body: JSON.stringify({ vote })
         });
 
@@ -3494,7 +3547,10 @@ async function publishEndorsement(applicationId) {
         const response = await fetch(`${API_BASE}/endorsements/applications/${applicationId}/publish`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
             body: JSON.stringify({ statement: statement || null })
         });
 
@@ -3523,7 +3579,8 @@ async function denyApplicationAction(applicationId) {
     try {
         const response = await fetch(`${API_BASE}/endorsements/applications/${applicationId}/deny`, {
             method: 'POST',
-            credentials: 'include'
+            credentials: 'include',
+            headers: { 'X-CSRF-Token': getCsrfToken() }
         });
 
         if (!response.ok) {
@@ -3577,7 +3634,10 @@ async function confirmRevoke() {
         const response = await fetch(`${API_BASE}/endorsements/${endorsementId}/revoke`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
             body: JSON.stringify({ reason: reason || null })
         });
 
@@ -3958,7 +4018,10 @@ async function saveJurisdiction() {
         const response = await fetch(`${API_BASE}/organizations/${org.id}`, {
             method: 'PATCH',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
             body: JSON.stringify({
                 h3Cells: dashboardState.jurisdictionCells
             })

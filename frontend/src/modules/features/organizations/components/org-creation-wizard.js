@@ -952,8 +952,8 @@ async function submitWizard() {
         // Dispatch event for other components
         window.dispatchEvent(new CustomEvent('orgCreated', { detail: { organization: newOrg } }));
 
-        // Navigate to dashboard
-        window.location.href = `/org-dashboard.html?org=${newOrg.slug}`;
+        // Open dashboard in new tab to preserve main site state
+        window.open(`/org-dashboard.html?org=${newOrg.slug}`, '_blank', 'noopener');
 
     } catch (error) {
         console.error('Failed to create organization:', error);

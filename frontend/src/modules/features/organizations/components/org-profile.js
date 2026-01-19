@@ -338,7 +338,7 @@ function renderActionButtons() {
 
     if (isHead) {
         return `
-            <a href="/org-dashboard.html?id=${profileState.organization.id}" class="org-profile-btn org-profile-btn-primary">
+            <a href="/org-dashboard.html?id=${profileState.organization.id}" target="_blank" rel="noopener" class="org-profile-btn org-profile-btn-primary">
                 Manage Organization
             </a>
             <button class="org-profile-btn org-profile-btn-secondary" data-action="share">
@@ -349,7 +349,7 @@ function renderActionButtons() {
 
     if (isMember) {
         return `
-            <a href="/org-dashboard.html?id=${profileState.organization.id}" class="org-profile-btn org-profile-btn-primary">
+            <a href="/org-dashboard.html?id=${profileState.organization.id}" target="_blank" rel="noopener" class="org-profile-btn org-profile-btn-primary">
                 View Dashboard
             </a>
             <button class="org-profile-btn org-profile-btn-secondary ${profileState.isFollowing ? 'following' : ''}" data-action="toggle-follow">
@@ -537,7 +537,7 @@ function renderActivitySection() {
             </div>
             ${isMember && profileState.publicActivity.length > 0 ? `
                 <div class="org-profile-activity-more">
-                    <a href="/org-dashboard.html?id=${profileState.organization.id}" class="org-profile-link">
+                    <a href="/org-dashboard.html?id=${profileState.organization.id}" target="_blank" rel="noopener" class="org-profile-link">
                         View All Activity →
                     </a>
                 </div>

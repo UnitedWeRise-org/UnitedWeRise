@@ -417,13 +417,14 @@ async function handleUnfollowOrg(orgId) {
 }
 
 /**
- * Open organization dashboard
+ * Open organization dashboard in new tab
  */
 function openOrgDashboard(orgId) {
-    // For now, open in same tab. Later we can change to new tab if preferred.
     const org = modalState.organization;
     const urlParam = org?.slug ? `org=${org.slug}` : `id=${orgId}`;
-    window.location.href = `/org-dashboard.html?${urlParam}`;
+    // Open dashboard in new tab to preserve main site state
+    window.open(`/org-dashboard.html?${urlParam}`, '_blank', 'noopener');
+    closeOrgProfileModal();
 }
 
 // ==================== Utility Functions ====================
