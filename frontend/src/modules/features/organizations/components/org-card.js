@@ -27,6 +27,9 @@ export const JURISDICTION_LABELS = {
     STATE: 'State',
     COUNTY: 'County',
     CITY: 'City',
+    CONGRESSIONAL: 'Congressional District',
+    STATE_SENATE: 'State Senate District',
+    STATE_HOUSE: 'State House District',
     CUSTOM: 'Custom Area'
 };
 

@@ -43,6 +43,35 @@ export declare class JurisdictionService {
      */
     getNationalCells(): string[];
     /**
+     * Get H3 cells for a congressional district
+     * Uses existing AddressDistrictMapping data when available, falls back to state center
+     * Format: "TX-13" (state code + district number)
+     */
+    getCongressionalDistrictCells(stateCode: string, districtNumber: number): Promise<string[]>;
+    /**
+     * Get H3 cells for a state senate district
+     * Uses existing AddressDistrictMapping data when available, falls back to state center
+     * Format: "TX-S-14" (state code + S + district number)
+     */
+    getStateSenateCells(stateCode: string, districtNumber: number): Promise<string[]>;
+    /**
+     * Get H3 cells for a state house district
+     * Uses existing AddressDistrictMapping data when available, falls back to state center
+     * Format: "TX-H-52" (state code + H + district number)
+     */
+    getStateHouseCells(stateCode: string, districtNumber: number): Promise<string[]>;
+    /**
+     * Parse political district jurisdiction value
+     * Formats:
+     * - CONGRESSIONAL: "TX-13" -> { state: "TX", districtNumber: 13 }
+     * - STATE_SENATE: "TX-S-14" -> { state: "TX", districtNumber: 14 }
+     * - STATE_HOUSE: "TX-H-52" -> { state: "TX", districtNumber: 52 }
+     */
+    parseDistrictValue(jurisdictionType: 'CONGRESSIONAL' | 'STATE_SENATE' | 'STATE_HOUSE', value: string): {
+        state: string;
+        districtNumber: number;
+    } | null;
+    /**
      * Generate H3 cells based on jurisdiction type and value
      */
     generateJurisdictionCells(jurisdictionType: JurisdictionType, jurisdictionValue: string): Promise<string[]>;

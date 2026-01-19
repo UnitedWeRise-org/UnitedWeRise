@@ -172,10 +172,55 @@ router.get('/map-data', auth_1.requireAuth, async (req, res) => {
  */
 router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimiting_1.postLimiter, moderation_1.contentFilter, validation_1.validatePost, (0, moderation_1.moderateContent)('POST'), async (req, res) => {
     try {
-        const { content, imageUrl, mediaId, tags, audience, threadHeadId } = req.body;
+        const { content, imageUrl, mediaId, tags, audience, threadHeadId, organizationId } = req.body;
         const userId = req.user.id;
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ error: 'Post content is required' });
+        }
+        // Validate organization post capability if organizationId provided
+        let validatedOrgId = null;
+        if (organizationId) {
+            // Check if organization exists and is active
+            const organization = await prisma_1.prisma.organization.findUnique({
+                where: { id: organizationId },
+                select: { id: true, headUserId: true, isActive: true }
+            });
+            if (!organization) {
+                return res.status(404).json({ error: 'Organization not found' });
+            }
+            if (!organization.isActive) {
+                return res.status(403).json({ error: 'Organization is inactive' });
+            }
+            // Check if user has POST_AS_ORG capability
+            let hasCapability = false;
+            // Head has all capabilities
+            if (organization.headUserId === userId) {
+                hasCapability = true;
+            }
+            else {
+                // Check membership and role capabilities
+                const membership = await prisma_1.prisma.organizationMember.findUnique({
+                    where: {
+                        organizationId_userId: { organizationId, userId }
+                    },
+                    select: {
+                        status: true,
+                        role: {
+                            select: { capabilities: true }
+                        }
+                    }
+                });
+                if (membership && membership.status === 'ACTIVE' && membership.role?.capabilities) {
+                    hasCapability = membership.role.capabilities.includes('POST_AS_ORG');
+                }
+            }
+            if (!hasCapability) {
+                return res.status(403).json({
+                    error: 'You do not have permission to post as this organization',
+                    required: 'POST_AS_ORG'
+                });
+            }
+            validatedOrgId = organizationId;
         }
         // Thread continuation handling
         let threadPosition = 0;
@@ -294,6 +339,8 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 // Thread linking (null for standalone/head posts, set for continuations)
                 threadHeadId: threadHeadId || null,
                 threadPosition: threadPosition,
+                // Organization authorship (null for personal posts)
+                organizationId: validatedOrgId,
                 ...feedbackData,
                 // Include geographic data if available (null values are handled gracefully)
                 ...(geographicData && {
@@ -313,6 +360,15 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                         lastName: true,
                         avatar: true,
                         verified: true
+                    }
+                },
+                organization: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        avatar: true,
+                        verificationStatus: true
                     }
                 },
                 photos: true,

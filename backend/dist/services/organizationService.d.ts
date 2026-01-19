@@ -60,6 +60,7 @@ interface ListOrganizationsOptions {
     jurisdictionType?: JurisdictionType;
     isVerified?: boolean;
     includeInactive?: boolean;
+    sort?: 'newest' | 'members' | 'alphabetical' | 'verified';
 }
 /**
  * Organization Service Class

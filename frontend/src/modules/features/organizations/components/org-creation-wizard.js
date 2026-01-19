@@ -8,6 +8,30 @@
 import { organizationsApi } from '../organizations-api.js';
 import { showToast } from '../../../../utils/toast.js';
 import { ORG_TYPE_LABELS, JURISDICTION_LABELS } from './org-card.js';
+import { apiClient } from '../../../core/api/client.js';
+
+/**
+ * Political district jurisdiction types
+ */
+const POLITICAL_DISTRICT_TYPES = ['CONGRESSIONAL', 'STATE_SENATE', 'STATE_HOUSE'];
+
+/**
+ * Fetch districts for a given type and state
+ * @param {string} type - CONGRESSIONAL, STATE_SENATE, or STATE_HOUSE
+ * @param {string} stateCode - Two-letter state code
+ * @returns {Promise<Array>} Array of district objects
+ */
+async function fetchDistricts(type, stateCode) {
+    try {
+        const response = await apiClient.call('/districts', {
+            params: { type, state: stateCode }
+        });
+        return response?.districts || [];
+    } catch (error) {
+        console.error('Failed to fetch districts:', error);
+        return [];
+    }
+}
 
 /**
  * US States for jurisdiction dropdown
@@ -56,12 +80,16 @@ let wizardState = {
         type: 'COMMUNITY_ORG',
         jurisdictionType: 'STATE',
         jurisdictionValue: '',
+        districtState: '', // State code for political district jurisdictions
+        districtNumber: '', // District number for political district jurisdictions
         h3Cells: [], // Array of H3 cell indexes for CUSTOM jurisdiction
         description: '',
         website: ''
     },
     errors: {},
-    submitting: false
+    submitting: false,
+    districts: [], // Loaded district options
+    districtsLoading: false
 };
 
 let slugCheckTimeout = null;
@@ -104,12 +132,16 @@ export function showCreateOrgWizard() {
             type: 'COMMUNITY_ORG',
             jurisdictionType: 'STATE',
             jurisdictionValue: '',
+            districtState: '',
+            districtNumber: '',
             h3Cells: [],
             description: '',
             website: ''
         },
         errors: {},
-        submitting: false
+        submitting: false,
+        districts: [],
+        districtsLoading: false
     };
 
     // Reset H3 picker state
@@ -321,7 +353,7 @@ function renderBasicInfoStep() {
  * Step 2: Type & Jurisdiction
  */
 function renderTypeStep() {
-    const { type, jurisdictionType, jurisdictionValue, h3Cells } = wizardState.formData;
+    const { type, jurisdictionType, jurisdictionValue, h3Cells, districtState, districtNumber } = wizardState.formData;
     const errors = wizardState.errors;
 
     // Build type options
@@ -329,7 +361,7 @@ function renderTypeStep() {
         `<option value="${value}" ${type === value ? 'selected' : ''}>${label}</option>`
     ).join('');
 
-    // Build jurisdiction type options (including CUSTOM)
+    // Build jurisdiction type options (including CUSTOM and political districts)
     const jurisdictionOptions = Object.entries(JURISDICTION_LABELS)
         .map(([value, label]) => {
             // Add description for CUSTOM type
@@ -342,7 +374,18 @@ function renderTypeStep() {
         `<option value="${state.code}" ${jurisdictionValue === state.code ? 'selected' : ''}>${state.name}</option>`
     ).join('');
 
+    // Build state dropdown for political districts
+    const districtStateOptions = US_STATES.map(state =>
+        `<option value="${state.code}" ${districtState === state.code ? 'selected' : ''}>${state.name}</option>`
+    ).join('');
+
+    // Build district dropdown if we have loaded districts
+    const districtOptions = wizardState.districts.map(d =>
+        `<option value="${d.districtNumber}" ${String(districtNumber) === String(d.districtNumber) ? 'selected' : ''}>${d.label}</option>`
+    ).join('');
+
     const showJurisdictionValue = ['STATE', 'COUNTY', 'CITY'].includes(jurisdictionType);
+    const showPoliticalDistrict = POLITICAL_DISTRICT_TYPES.includes(jurisdictionType);
     const showH3Picker = jurisdictionType === 'CUSTOM';
 
     // Calculate approximate coverage area for selected cells
@@ -398,6 +441,33 @@ function renderTypeStep() {
                         `}
                         ${errors.jurisdictionValue ? `<span class="org-wizard-error">${errors.jurisdictionValue}</span>` : ''}
                     </div>
+                ` : ''}
+
+                ${showPoliticalDistrict ? `
+                    <div class="org-wizard-field ${errors.districtState ? 'has-error' : ''}">
+                        <label for="orgDistrictState">State *</label>
+                        <select id="orgDistrictState" class="org-wizard-select" data-field="districtState">
+                            <option value="">Select a state...</option>
+                            ${districtStateOptions}
+                        </select>
+                        ${errors.districtState ? `<span class="org-wizard-error">${errors.districtState}</span>` : ''}
+                        <small>Select the state for your ${JURISDICTION_LABELS[jurisdictionType]?.toLowerCase() || 'district'}</small>
+                    </div>
+
+                    ${districtState ? `
+                        <div class="org-wizard-field ${errors.districtNumber ? 'has-error' : ''}">
+                            <label for="orgDistrictNumber">${JURISDICTION_LABELS[jurisdictionType]} *</label>
+                            ${wizardState.districtsLoading ? `
+                                <div class="org-wizard-loading">Loading districts...</div>
+                            ` : `
+                                <select id="orgDistrictNumber" class="org-wizard-select" data-field="districtNumber">
+                                    <option value="">Select a district...</option>
+                                    ${districtOptions}
+                                </select>
+                            `}
+                            ${errors.districtNumber ? `<span class="org-wizard-error">${errors.districtNumber}</span>` : ''}
+                        </div>
+                    ` : ''}
                 ` : ''}
 
                 ${showH3Picker ? `
@@ -496,13 +566,21 @@ function renderDetailsStep() {
  * Step 4: Review
  */
 function renderReviewStep() {
-    const { name, slug, type, jurisdictionType, jurisdictionValue, description, website } = wizardState.formData;
+    const { name, slug, type, jurisdictionType, jurisdictionValue, districtState, districtNumber, description, website } = wizardState.formData;
 
     const typeLabel = ORG_TYPE_LABELS[type] || type;
     const jurisdictionLabel = JURISDICTION_LABELS[jurisdictionType] || jurisdictionType;
 
     let jurisdictionDisplay = jurisdictionLabel;
-    if (jurisdictionValue) {
+    if (POLITICAL_DISTRICT_TYPES.includes(jurisdictionType)) {
+        // Format: "Congressional District - Texas District 13"
+        const state = US_STATES.find(s => s.code === districtState);
+        const selectedDistrict = wizardState.districts.find(d => String(d.districtNumber) === String(districtNumber));
+        jurisdictionDisplay = `${jurisdictionLabel} - ${state?.name || districtState} District ${districtNumber}`;
+        if (selectedDistrict?.label) {
+            jurisdictionDisplay = `${state?.name || districtState} ${selectedDistrict.label}`;
+        }
+    } else if (jurisdictionValue) {
         if (jurisdictionType === 'STATE') {
             const state = US_STATES.find(s => s.code === jurisdictionValue);
             jurisdictionDisplay += ` - ${state?.name || jurisdictionValue}`;
@@ -629,7 +707,7 @@ export async function handleWizardAction(action) {
 /**
  * Handle input changes
  */
-function handleInputChange(e) {
+async function handleInputChange(e) {
     const field = e.target.dataset.field;
     if (!field) return;
 
@@ -661,6 +739,11 @@ function handleInputChange(e) {
     if (field === 'jurisdictionType') {
         wizardState.formData.jurisdictionValue = ''; // Reset value
 
+        // Reset political district fields when switching jurisdiction types
+        wizardState.formData.districtState = '';
+        wizardState.formData.districtNumber = '';
+        wizardState.districts = [];
+
         // Clean up existing H3 picker if switching away from CUSTOM
         if (value !== 'CUSTOM' && h3PickerMap) {
             h3PickerMap.remove();
@@ -678,6 +761,44 @@ function handleInputChange(e) {
         // Initialize H3 picker if switching to CUSTOM
         if (value === 'CUSTOM') {
             setTimeout(() => initH3Picker(), 100);
+        }
+    }
+
+    // Handle political district state changes - fetch districts
+    if (field === 'districtState') {
+        wizardState.formData.districtNumber = ''; // Reset district number
+        wizardState.districts = [];
+
+        if (value && POLITICAL_DISTRICT_TYPES.includes(wizardState.formData.jurisdictionType)) {
+            // Fetch districts for the selected state
+            wizardState.districtsLoading = true;
+            renderWizard();
+            attachWizardListeners();
+
+            const districts = await fetchDistricts(wizardState.formData.jurisdictionType, value);
+            wizardState.districts = districts;
+            wizardState.districtsLoading = false;
+
+            renderWizard();
+            attachWizardListeners();
+        } else {
+            renderWizard();
+            attachWizardListeners();
+        }
+    }
+
+    // Handle district number changes - build the jurisdiction value
+    if (field === 'districtNumber' && value) {
+        const { jurisdictionType, districtState } = wizardState.formData;
+        if (POLITICAL_DISTRICT_TYPES.includes(jurisdictionType) && districtState) {
+            // Build the jurisdiction value in the correct format
+            if (jurisdictionType === 'CONGRESSIONAL') {
+                wizardState.formData.jurisdictionValue = `${districtState}-${value}`;
+            } else if (jurisdictionType === 'STATE_SENATE') {
+                wizardState.formData.jurisdictionValue = `${districtState}-S-${value}`;
+            } else if (jurisdictionType === 'STATE_HOUSE') {
+                wizardState.formData.jurisdictionValue = `${districtState}-H-${value}`;
+            }
         }
     }
 }
@@ -825,7 +946,7 @@ function validateBasicStep() {
  * Validate type step
  */
 function validateTypeStep() {
-    const { type, jurisdictionType, jurisdictionValue } = wizardState.formData;
+    const { type, jurisdictionType, jurisdictionValue, districtState, districtNumber } = wizardState.formData;
     let valid = true;
 
     if (!type) {
@@ -842,6 +963,18 @@ function validateTypeStep() {
     if (['STATE', 'COUNTY', 'CITY'].includes(jurisdictionType) && !jurisdictionValue) {
         wizardState.errors.jurisdictionValue = `Please specify the ${jurisdictionType.toLowerCase()}`;
         valid = false;
+    }
+
+    // Validate political district types
+    if (POLITICAL_DISTRICT_TYPES.includes(jurisdictionType)) {
+        if (!districtState) {
+            wizardState.errors.districtState = 'Please select a state';
+            valid = false;
+        }
+        if (!districtNumber) {
+            wizardState.errors.districtNumber = `Please select a ${JURISDICTION_LABELS[jurisdictionType]?.toLowerCase() || 'district'}`;
+            valid = false;
+        }
     }
 
     // Validate H3 cells for CUSTOM jurisdiction
