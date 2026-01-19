@@ -1,10 +1,44 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 17, 2026
+**Last Updated**: January 19, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-19] - Org Dashboard Session Persistence Fix
+
+### Fixed
+
+**Session Expiration on Org Dashboard**
+- Users were getting logged out when returning from org dashboard after extended use
+- Root cause: org-dashboard.html had no token refresh mechanism
+- Added `standalone-refresh.js` module for standalone pages without full auth system
+- Proactive refresh every 14 minutes (half of 30-min JWT expiry)
+- Visibility-based refresh when tab becomes active after 5+ minutes away
+
+**Navigation Preserves Main Site State**
+- Org dashboard now opens in new tab from all entry points
+- Main site tab stays open and authenticated
+- Affected entry points: org handlers, creation wizard, profile modal, profile page
+
+### Added
+
+**New Module: standalone-refresh.js**
+- Minimal token refresh for standalone pages (org-dashboard, org-profile)
+- Handles proactive timer and visibility change events
+- Updates CSRF token on refresh
+- Redirects to login only on true session expiration
+
+### Files Modified
+- `frontend/src/modules/core/auth/standalone-refresh.js` (NEW)
+- `frontend/src/modules/features/organizations/components/org-dashboard.js`
+- `frontend/src/modules/features/organizations/components/org-profile.js`
+- `frontend/src/modules/features/organizations/components/org-profile-modal.js`
+- `frontend/src/modules/features/organizations/components/org-creation-wizard.js`
+- `frontend/src/modules/features/organizations/handlers/org-handlers.js`
 
 ---
 
