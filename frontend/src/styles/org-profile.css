@@ -1,0 +1,662 @@
+/* =============================================================================
+   Organization Public Profile Styles
+   ============================================================================= */
+
+/* Page Layout */
+.org-profile-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: #f9fafb;
+}
+
+/* Top Bar */
+.org-profile-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.org-profile-topbar-left {
+    display: flex;
+    align-items: center;
+}
+
+.org-profile-logo {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #002868;
+    text-decoration: none;
+}
+
+.org-profile-back-link {
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+
+.org-profile-back-link:hover {
+    color: #3b82f6;
+}
+
+/* Main Content */
+.org-profile-main {
+    flex: 1;
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.org-profile-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Loading & Error States */
+.org-profile-loading,
+.org-profile-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.org-profile-error h2 {
+    margin-bottom: 1rem;
+    color: #dc2626;
+}
+
+/* Content */
+.org-profile-content {
+    padding: 0;
+}
+
+/* Header Section */
+.org-profile-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 2rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(to bottom, #f8fafc, white);
+}
+
+.org-profile-header-main {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.org-profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.org-profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.org-profile-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.org-profile-verified {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.875rem;
+}
+
+.org-profile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.org-profile-type {
+    color: #6b7280;
+    font-size: 0.9375rem;
+}
+
+.org-profile-jurisdiction {
+    color: #6b7280;
+    font-size: 0.9375rem;
+}
+
+.org-profile-jurisdiction::before {
+    content: '•';
+    margin-right: 1rem;
+}
+
+.org-profile-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.org-profile-stat {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+/* Action Buttons */
+.org-profile-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.org-profile-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    border: none;
+}
+
+.org-profile-btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.org-profile-btn-primary:hover {
+    background: #2563eb;
+}
+
+.org-profile-btn-secondary {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.org-profile-btn-secondary:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.org-profile-btn-secondary.following {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.org-profile-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.org-profile-login-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Sections */
+.org-profile-section {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.org-profile-section:last-child {
+    border-bottom: none;
+}
+
+.org-profile-section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 1rem;
+}
+
+/* About Section */
+.org-profile-description {
+    color: #374151;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.org-profile-contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f3f4f6;
+}
+
+.org-profile-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 0.9375rem;
+}
+
+.org-profile-link:hover {
+    text-decoration: underline;
+}
+
+.org-profile-link-icon {
+    font-size: 1rem;
+}
+
+/* Coverage Map */
+.org-profile-map {
+    width: 100%;
+    height: 300px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+/* Activity Section */
+.org-profile-activity {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.org-profile-activity-loading,
+.org-profile-activity-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+.org-profile-activity-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.org-profile-activity-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.org-profile-activity-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.org-profile-activity-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.org-profile-activity-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.org-profile-activity-author {
+    font-weight: 600;
+    color: #111827;
+}
+
+.org-profile-activity-label {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.org-profile-activity-time {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin-left: 0.25rem;
+}
+
+.org-profile-activity-content {
+    color: #374151;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.org-profile-activity-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    max-width: 350px;
+}
+
+.org-profile-activity-photo {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+/* Event Item */
+.org-profile-event-title {
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.25rem;
+}
+
+.org-profile-event-date {
+    color: #3b82f6;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.org-profile-event-location {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+/* Endorsement Item */
+.org-profile-endorsement-content {
+    color: #111827;
+}
+
+/* Activity More Link */
+.org-profile-activity-more {
+    text-align: center;
+    padding-top: 1rem;
+}
+
+/* Footer */
+.org-profile-footer {
+    padding: 1.5rem 2rem;
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.875rem;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.toast {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    animation: toast-in 0.3s ease;
+}
+
+.toast-success {
+    background: #10b981;
+    color: white;
+}
+
+.toast-error {
+    background: #ef4444;
+    color: white;
+}
+
+.toast-fade-out {
+    animation: toast-out 0.3s ease forwards;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes toast-out {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+    .org-profile-topbar {
+        padding: 1rem;
+    }
+
+    .org-profile-main {
+        padding: 1rem;
+    }
+
+    .org-profile-header {
+        padding: 1.5rem;
+    }
+
+    .org-profile-header-main {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .org-profile-name {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .org-profile-meta {
+        justify-content: center;
+    }
+
+    .org-profile-stats {
+        justify-content: center;
+    }
+
+    .org-profile-actions {
+        justify-content: center;
+    }
+
+    .org-profile-section {
+        padding: 1.25rem 1.5rem;
+    }
+
+    .org-profile-map {
+        height: 250px;
+    }
+
+    .org-profile-contact {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+}
+
+/* =============================================================================
+   Endorsed Candidates Section
+   ============================================================================= */
+
+.org-profile-endorsements-section {
+    margin-top: 1.5rem;
+}
+
+.org-profile-endorsed-candidates {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.org-profile-loading-message {
+    color: #6b7280;
+    font-style: italic;
+    padding: 1rem 0;
+}
+
+.org-profile-candidate-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.org-profile-candidate-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.org-profile-candidate-photo {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+}
+
+.org-profile-candidate-photo img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.org-profile-candidate-initials {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.org-profile-candidate-info {
+    margin-bottom: 0.75rem;
+}
+
+.org-profile-candidate-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.25rem 0;
+}
+
+.org-profile-candidate-office {
+    display: block;
+    font-size: 0.9rem;
+    color: #4b5563;
+}
+
+.org-profile-candidate-party {
+    display: inline-block;
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.org-profile-endorsement-statement {
+    font-style: italic;
+    color: #374151;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 3px solid #3b82f6;
+}
+
+.org-profile-endorsement-date {
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
+/* Responsive Endorsed Candidates */
+@media (max-width: 640px) {
+    .org-profile-endorsed-candidates {
+        grid-template-columns: 1fr;
+    }
+
+    .org-profile-candidate-card {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .org-profile-candidate-photo {
+        margin-bottom: 0;
+        flex-shrink: 0;
+    }
+
+    .org-profile-candidate-photo,
+    .org-profile-candidate-initials {
+        width: 48px;
+        height: 48px;
+        font-size: 1.125rem;
+    }
+}

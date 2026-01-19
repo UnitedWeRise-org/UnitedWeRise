@@ -1,10 +1,453 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 12, 2026
+**Last Updated**: January 17, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-17] - Organizations Dashboard Bug Fixes
+
+### Fixed
+
+**Error Message Handling**
+- Fixed 33 error handlers in org-dashboard.js that weren't displaying backend error messages
+- Backend returns `{ error: 'message' }` but frontend expected `error.message`
+- All error handlers now use `error.error || error.message || 'fallback'` pattern
+
+**Previous Session Fixes (2026-01-16)**
+- Fixed organizations admin table blank (extra `</div>` tag pushed content outside container)
+- Fixed modal buttons not working (event delegation was on section, not modal)
+- Fixed "Request to Join" shown to existing members (response unwrapping: `orgData.organization`)
+- Fixed HEAD role not recognized (auth response unwrapping: `data.data.user`)
+- Fixed admin subdomain auth (detectApiBase for `dev-admin.unitedwerise.org`)
+- Fixed Activity tab infinite loop (added `activityLoaded` flag)
+
+### Files Modified
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Fix all error handlers
+- `frontend/admin-dashboard.html` - Fix extra closing div tag
+- `frontend/src/modules/admin/controllers/OrganizationsController.js` - Fix event delegation
+- `frontend/src/modules/features/organizations/components/org-profile.js` - Response unwrapping
+
+---
+
+## [2026-01-15] - Organizations Phase 3i: Candidate Endorsement UI
+
+### Added
+
+**Candidate Dashboard - Endorsements Tab**
+- New endorsements card in candidate dashboard grid
+- Three-tab interface: Seek Endorsements, My Applications, Received
+- Browse available organization questionnaires with org details
+- Track pending application status (Submitted, Under Review)
+- View received endorsements with org info and statements
+
+**Endorsement Application Flow**
+- Modal-based questionnaire completion form
+- Support for all question types: SHORT_TEXT, LONG_TEXT, MULTIPLE_CHOICE, CHECKBOX, YES_NO, SCALE
+- Required field validation before submission
+- Withdraw application functionality
+- Success feedback and automatic redirect to applications tab
+
+**Candidate Profile - Organization Endorsements**
+- New "Organization Endorsements" section on candidate detail modal
+- Displays endorsing org avatar, name, verified badge
+- Shows endorsement statement if provided
+- Fetched in parallel with candidate data loading
+
+**Organization Profile - Endorsed Candidates Section**
+- New "Endorsed Candidates" section on public org profile page
+- Grid layout with candidate photo, name, office, party
+- Endorsement statement display with date
+- Responsive mobile layout
+
+### API Endpoints Used (All Existing)
+- `GET /api/questionnaires/candidates/:candidateId/available`
+- `POST /api/endorsements/applications`
+- `GET /api/endorsements/candidates/:candidateId`
+- `GET /api/endorsements/candidates/:candidateId/pending`
+- `POST /api/endorsements/applications/:applicationId/withdraw`
+- `GET /api/endorsements/organizations/:organizationId`
+
+### Files Modified
+- `frontend/src/integrations/candidate-system-integration.js` - Add endorsements tab, modal, event handlers (~500 lines)
+- `frontend/src/modules/features/organizations/components/org-profile.js` - Add endorsed candidates section (~80 lines)
+- `frontend/src/styles/candidate-system.css` - Add endorsement UI styles (~350 lines)
+- `frontend/src/styles/org-profile.css` - Add endorsed candidates styles (~100 lines)
+
+---
+
+## [2026-01-15] - Organizations Phase 2h: Search & Sort Enhancements
+
+### Added
+
+**Backend - Sort Parameter**
+- Added `sort` query param to GET `/api/organizations` endpoint
+- Sort options: `newest` (default), `members`, `alphabetical`, `verified`
+- Member count sorting with secondary sort by createdAt
+- Updated organizationService.listOrganizations with sort logic
+
+**Frontend - Sort Dropdown**
+- Added sort dropdown to organization browser toolbar
+- Sort options: Newest, Most Members, A-Z, Verified First
+- Sort selection triggers automatic reload
+- Sort resets to page 1 when changed
+
+### Files Modified
+- `backend/src/routes/organizations.ts` - Add sort param and Swagger docs
+- `backend/src/services/organizationService.ts` - Add sort logic to listOrganizations
+- `frontend/src/modules/features/organizations/components/org-browser.js` - Add sort dropdown and state
+- `frontend/src/styles/organizations.css` - Add sort dropdown styles
+
+---
+
+## [2026-01-15] - Organizations Phase 2g: Public Organization Profiles
+
+### Added
+
+**Backend - Public Activity Endpoint**
+- New GET `/api/organizations/:id/public-activity` endpoint (no auth required)
+- Returns PUBLIC posts, upcoming events, and published endorsements
+- Filtered to public content only (no member milestones)
+
+**Standalone Public Profile Page**
+- New `/org-profile.html` standalone page
+- URL pattern: `?org={slug}` or `?id={id}`
+- Full organization details: name, type, jurisdiction, description
+- Member count and follower count display
+- Verified badge for approved organizations
+
+**H3 Coverage Map**
+- MapLibre-based map showing H3 jurisdiction cells
+- Read-only display (no editing)
+- Auto-fits to organization's coverage area
+- Only shown for CUSTOM jurisdiction type organizations
+
+**Public Activity Feed**
+- Recent PUBLIC posts displayed
+- Upcoming events with dates
+- Published endorsements with candidate info
+- "View All Activity" link for members
+
+**User Actions**
+- Follow/Unfollow button (requires login)
+- "Request to Join" button for non-members
+- Share button (clipboard copy + native share)
+- Context-aware buttons based on membership status
+
+### Modified
+- `org-card.js` - "View Profile" now links to standalone profile page
+
+### Files Created
+- `frontend/org-profile.html` - Standalone page template
+- `frontend/src/modules/features/organizations/components/org-profile.js` - Profile component (~600 lines)
+- `frontend/src/styles/org-profile.css` - Profile styles (~350 lines)
+
+### Files Modified
+- `backend/src/routes/organizations.ts` - Add public-activity endpoint (~130 lines)
+- `frontend/src/modules/features/organizations/components/org-card.js` - Update View Profile links
+
+---
+
+## [2026-01-15] - Organizations Phase 2f: Organization Activity Feed
+
+### Added
+
+**Backend - Activity Endpoint**
+- New GET `/api/organizations/:id/activity` endpoint
+- Returns combined feed: posts, events, endorsements, member milestones
+- Supports type filter query param (all, posts, events, endorsements)
+- Pagination support (page, limit)
+- Validates org membership via `requireOrgMembership()` middleware
+
+**Backend - Organization Posts**
+- Added organizationId validation to POST `/api/posts`
+- Checks for POST_AS_ORG capability or org head status
+- Organization included in post response when posting as org
+
+**Activity Tab (Dashboard)**
+- New "Activity" tab visible to all organization members
+- Filter buttons: All, Posts, Events, Endorsements
+- Activity items sorted by timestamp (newest first)
+- Load more pagination
+- Activity item types with distinct styling:
+  - Posts: org avatar, content, photos, like/comment counts
+  - Events: calendar icon, title, date/time, location, RSVP count
+  - Endorsements: checkmark icon, candidate name, office, statement
+  - Member milestones: grouped recent joins
+
+**Post Composer**
+- "New Post" button (requires POST_AS_ORG capability)
+- Inline post composer textarea
+- Posts created as organization (not personal)
+
+**Event Creator**
+- "New Event" button (requires CREATE_EVENTS capability)
+- Modal with title, description, date, time, location fields
+- Creates event associated with organization
+
+### Files Modified
+- `backend/src/routes/posts.ts` - Add organizationId validation (~50 lines)
+- `backend/src/routes/organizations.ts` - Add activity endpoint (~150 lines)
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Add Activity tab (~500 lines)
+- `frontend/src/styles/org-dashboard.css` - Add activity styles (~250 lines)
+
+---
+
+## [2026-01-15] - Organizations Phase 2e: H3 Jurisdiction Picker
+
+### Added
+
+**H3 Library Integration**
+- Added h3-js v4.1.0 via CDN to frontend (org-dashboard.html, index.html)
+- Resolution 7 hexagons (~5km, ~50 km² per cell)
+- Maximum 100 cells selectable (~5,000 km² coverage)
+
+**Creation Wizard - CUSTOM Jurisdiction**
+- Enabled CUSTOM jurisdiction type option (previously hidden)
+- MapLibre-based H3 picker integrated into Type & Jurisdiction step
+- Click-to-select hexagonal areas
+- Hover preview for unselected cells
+- Controls: Undo, Clear All, Zoom to Selection
+- Cell count and approximate coverage area display
+- Validation: minimum 1 cell required for CUSTOM type
+- H3 cells array sent to API on organization creation
+
+**Dashboard - Jurisdiction Editing**
+- "Edit Coverage" button in Settings tab for CUSTOM type orgs
+- Jurisdiction editing modal with H3 picker
+- Pre-loads existing h3Cells from organization
+- Save changes via PATCH /api/organizations/{id}
+- Full undo/redo support during editing session
+
+### Files Modified
+- `frontend/org-dashboard.html` - Add h3-js CDN script
+- `frontend/index.html` - Add h3-js CDN script
+- `frontend/src/modules/features/organizations/components/org-creation-wizard.js` - Add H3 picker, enable CUSTOM
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Add jurisdiction modal and editing
+- `frontend/src/styles/organizations.css` - Add H3 picker styles for wizard
+- `frontend/src/styles/org-dashboard.css` - Add jurisdiction modal styles
+
+---
+
+## [2026-01-15] - Organizations Phase 2d: Endorsement System UI
+
+### Added
+
+**Endorsements Tab (Dashboard)**
+- New "Endorsements" tab with sub-navigation (Questionnaires, Applications, Published)
+- Visible to org head or users with endorsement capabilities
+
+**Questionnaire Management**
+- List questionnaires with stats (question count, application count, active status)
+- Create/edit questionnaire modal with question builder
+- Question types: SHORT_TEXT, LONG_TEXT, MULTIPLE_CHOICE, CHECKBOX, YES_NO, SCALE
+- Question options: required toggle, public toggle, options manager for choice types
+- Reorder questions with up/down buttons
+- Toggle questionnaire active/inactive, delete if no applications
+
+**Applications Review**
+- Filter applications by questionnaire and status
+- Application cards showing candidate, status, vote counts
+- Application detail modal with all question responses
+- Move application to review, deny application
+
+**Voting Interface**
+- Cast votes: FOR, AGAINST, ABSTAIN
+- Visual vote buttons with selected state
+- Vote counts and threshold/quorum status display
+
+**Publishing & Revocation**
+- Publish endorsement with optional statement
+- List published endorsements
+- Revoke endorsement with reason confirmation
+
+### Files Modified
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Add ~1700 lines for endorsement UI
+- `frontend/src/styles/org-dashboard.css` - Add ~850 lines of endorsement styles
+
+---
+
+## [2026-01-15] - Organizations Phase 2c: Role Management UI
+
+### Added
+
+**Roles Tab (Dashboard)**
+- New "Roles" tab visible to organization heads
+- Role cards grid showing name, description, capabilities, holder count
+- Create role modal with name, description, max holders
+- Edit/delete existing roles
+- Capability selection organized by category (Membership, Roles, Settings, Content, Events, Discussions, Endorsements)
+
+**Members Tab Enhancements**
+- Role assignment dropdown for org head to assign roles to members
+- Remove member button with confirmation dialog
+- Visual role badges on member items
+
+**API Methods**
+- Added `updateRole()` and `deleteRole()` to organizations-api.js
+
+### Files Modified
+- `frontend/src/modules/features/organizations/organizations-api.js` - Add updateRole, deleteRole
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Add Roles tab, role modal, member role management
+- `frontend/src/styles/org-dashboard.css` - Add role card, modal, capability checkbox styles
+
+---
+
+## [2026-01-15] - Organizations Phase 2b: Creation Wizard & Dashboard
+
+### Added
+
+**Organization Creation Wizard**
+- Multi-step wizard modal for creating organizations (Basic Info → Type/Jurisdiction → Details → Review)
+- Real-time slug availability checking with debounced API calls
+- Organization type dropdown (Political Party, Advocacy Org, Labor Union, etc.)
+- Jurisdiction selection (National, State, County, City) with state dropdown for STATE type
+- Form validation at each step with error messages
+- Automatic redirect to organization dashboard on creation success
+
+**Organization Dashboard**
+- Standalone `org-dashboard.html` page for organization management
+- URL parameter support: `?org=slug` or `?id=uuid`
+- Tab-based navigation: Overview, Settings, Members
+- Overview tab: Stats cards (members, followers, verified status), about section, details
+- Settings tab: Edit organization name, description, website (org head/admin only)
+- Members tab: View active members, approve/deny pending membership requests
+- Role-based access control (HEAD, ADMIN, MEMBER, visitor views)
+
+### New Files
+- `frontend/org-dashboard.html` - Standalone dashboard page
+- `frontend/src/modules/features/organizations/components/org-creation-wizard.js` - Creation wizard
+- `frontend/src/modules/features/organizations/components/org-dashboard.js` - Dashboard component
+- `frontend/src/styles/org-dashboard.css` - Dashboard-specific styles
+
+### Files Modified
+- `frontend/src/modules/features/organizations/index.js` - Export wizard functions, add openCreateWizard
+- `frontend/src/modules/features/organizations/handlers/org-handlers.js` - Wire up wizard via dynamic import
+- `frontend/src/styles/organizations.css` - Add wizard modal styles
+
+---
+
+## [2026-01-14] - Organizations Phase 2a: Frontend Discovery & Basic Interaction
+
+### Added
+
+**Organizations Frontend Module**
+- Organization browser with search, filter (type, jurisdiction, verified), and pagination
+- Organization cards (standard and compact layouts) with member count, verification badge
+- Organization profile modal with detailed view, follow/join actions
+- My organizations widget showing memberships and pending invitations
+- Event delegation handlers for all organization actions
+- CSS styles for all organization UI components
+
+**Civic Organizing Integration**
+- "Organizations" button in civic organizing welcome screen
+- Dynamic module loading for organizations browser
+
+### New Files
+- `frontend/src/modules/features/organizations/` - Complete organizations module
+  - `index.js` - Module entry point and exports
+  - `organizations-api.js` - API client wrapper for org endpoints
+  - `components/org-browser.js` - Browse/search organizations
+  - `components/org-card.js` - Organization card components
+  - `components/org-profile-modal.js` - Profile overlay
+  - `components/my-orgs-widget.js` - User's organizations widget
+  - `handlers/org-handlers.js` - Event delegation handlers
+- `frontend/src/styles/organizations.css` - All organization styles
+
+### Files Modified
+- `frontend/index.html` - Added organizations.css stylesheet
+- `frontend/src/js/main.js` - Added organizations module import
+- `frontend/src/modules/features/civic/civic-organizing.js` - Added Organizations entry point
+
+---
+
+## [2026-01-14] - Organizations Phase 1e: Verification Workflow & Notifications
+
+### Added
+
+**Organization Verification**
+- Organization verification request endpoint (`POST /api/organizations/:id/verification`)
+- Organization verification status endpoint (`GET /api/organizations/:id/verification`)
+- Admin verification management: list pending, view details, approve/deny
+- ORG_VERIFICATION_APPROVED and ORG_VERIFICATION_DENIED audit actions
+
+**Notifications**
+- ORG_APPLICATION_RECEIVED: Sent to org head when someone requests to join
+- ORG_INVITE: Sent when a user is invited to an organization
+- ORG_APPLICATION_APPROVED: Sent when membership is approved
+- ORG_APPLICATION_DENIED: Sent when a member is removed
+- ORG_ROLE_ASSIGNED: Sent when a role is assigned to a member
+- ORG_ROLE_REMOVED: Sent when a role is removed from a member
+- ORG_VERIFICATION_APPROVED/DENIED: Sent to org head on admin decision
+
+### Fixed
+- `/api/organizations/nearby` endpoint now works correctly (was being captured by `/:id` route)
+
+### Files Modified
+- `backend/src/routes/organizations.ts` - Added nearby, verification endpoints, notifications
+- `backend/src/routes/admin.ts` - Added org verification admin endpoints
+- `backend/src/services/auditService.ts` - Added org verification audit actions
+
+---
+
+## [2026-01-13] - Organizations & Endorsements Feature (Phase 1 Backend)
+
+### Added
+
+**Organization System**
+- Organization CRUD with hierarchical structure support (parentId)
+- Membership system: join requests, invitations, approval workflow
+- Flexible role system with 28 predefined capabilities (OrgCapability enum)
+- Capability-based authorization middleware (`requireOrgCapability`, `requireOrgMembership`)
+- Organization following (users can follow orgs)
+- Organization verification workflow
+
+**Endorsement System**
+- Questionnaire builder with 6 question types (SHORT_TEXT, LONG_TEXT, MULTIPLE_CHOICE, CHECKBOX, YES_NO, SCALE)
+- Candidate endorsement application workflow
+- Org-defined voting thresholds (SIMPLE_MAJORITY, TWO_THIRDS, THREE_QUARTERS, UNANIMOUS, PERCENTAGE)
+- Quorum requirements for endorsement votes
+- Endorsement publication and revocation
+
+**Jurisdiction & Discovery**
+- H3 geospatial boundaries for organization jurisdictions (resolution 7, ~5km hexagons)
+- Jurisdiction types: NATIONAL, STATE, COUNTY, CITY, CUSTOM
+- Candidate-jurisdiction matching for endorsement eligibility
+- Organization discovery by location
+
+**Internal Communications**
+- Organization discussions with visibility levels (ALL_MEMBERS, ROLE_HOLDERS, LEADERSHIP)
+- Threaded replies with nested structure
+- Discussion pinning for org leadership
+
+**Event Integration**
+- CivicEvent extended with organizationId for org-hosted events
+- Organizations can create/manage events with capability checks
+
+### Database Schema
+- 15+ new Prisma models: Organization, OrganizationMember, OrganizationRole, OrganizationFollow, OrganizationAffiliation, OrganizationMergeRequest, EndorsementQuestionnaire, QuestionnaireQuestion, EndorsementApplication, QuestionResponse, EndorsementVote, Endorsement, OrganizationDiscussion, DiscussionReply, OrganizationVerificationRequest
+- 8 new enums: JurisdictionType, VotingThresholdType, MembershipStatus, AffiliationStatus, MergeRequestStatus, EndorsementApplicationStatus, EndorsementVoteChoice, DiscussionVisibility, OrgCapability, OrgType, OrgVerificationStatus, QuestionType
+
+### New Files
+- `backend/src/middleware/orgAuth.ts` - Capability-based authorization
+- `backend/src/services/organizationService.ts` - Core org business logic
+- `backend/src/services/jurisdictionService.ts` - H3 boundary management
+- `backend/src/services/questionnaireService.ts` - Questionnaire CRUD
+- `backend/src/services/endorsementService.ts` - Endorsement workflow
+- `backend/src/services/discussionService.ts` - Internal discussions
+- `backend/src/routes/organizations.ts` - 20+ organization endpoints
+- `backend/src/routes/questionnaires.ts` - Questionnaire management
+- `backend/src/routes/endorsements.ts` - Endorsement workflow
+- `backend/src/routes/discussions.ts` - Discussion threads
+
+### Modified Files
+- `backend/src/routes/civic.ts` - Added organizationId support for events
+- `backend/src/services/civicOrganizingService.ts` - Org event creation
+- `backend/src/server.ts` - Registered new routes
+- `backend/prisma/schema.prisma` - Added all new models
 
 ---
 

@@ -43,7 +43,8 @@ class AdminModuleLoader {
             'system': 'SystemController',
             'analytics': 'AnalyticsController',
             'candidates': 'CandidatesController',
-            'civic-engagement': 'CivicEngagementController'
+            'civic-engagement': 'CivicEngagementController',
+            'organizations': 'OrganizationsController'
         };
         this.dependencies = {
             'AdminGlobalUtils': [],
@@ -65,7 +66,8 @@ class AdminModuleLoader {
             'SystemController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'ErrorsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'ExternalCandidatesController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
-            'CivicEngagementController': ['AdminAPI', 'AdminState', 'adminDebugLog']
+            'CivicEngagementController': ['AdminAPI', 'AdminState', 'adminDebugLog'],
+            'OrganizationsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
         };
 
         // Bind methods
@@ -421,6 +423,16 @@ class AdminModuleLoader {
                 window.civicEngagementController = new window.CivicEngagementController();
                 await window.civicEngagementController.init();
                 this.modules.set('CivicEngagementController', window.civicEngagementController);
+                break;
+
+            case 'OrganizationsController':
+                if (!window.OrganizationsController) {
+                    await adminDebugLog('AdminModuleLoader', 'OrganizationsController not available - module skipped (non-critical)');
+                    return; // Skip this module but continue with others
+                }
+                window.organizationsController = new window.OrganizationsController();
+                await window.organizationsController.init();
+                this.modules.set('OrganizationsController', window.organizationsController);
                 break;
 
             default:

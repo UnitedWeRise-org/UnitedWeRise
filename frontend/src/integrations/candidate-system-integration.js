@@ -192,6 +192,33 @@ class CandidateSystemIntegration {
                 case 'backToLevels':
                     this.backToLevels();
                     break;
+                // Endorsement Actions
+                case 'showEndorsementsView':
+                    this.showEndorsementsView();
+                    break;
+                case 'showSeekEndorsements':
+                    this.showSeekEndorsements();
+                    break;
+                case 'showMyApplications':
+                    this.showMyApplications();
+                    break;
+                case 'showReceivedEndorsements':
+                    this.showReceivedEndorsements();
+                    break;
+                case 'applyForEndorsement':
+                    const questionnaireId = target.dataset.questionnaireId;
+                    if (questionnaireId) this.applyForEndorsement(questionnaireId);
+                    break;
+                case 'submitEndorsementApplication':
+                    this.submitEndorsementApplication();
+                    break;
+                case 'withdrawApplication':
+                    const applicationId = target.dataset.applicationId;
+                    if (applicationId) this.withdrawApplication(applicationId);
+                    break;
+                case 'closeEndorsementModal':
+                    this.closeEndorsementModal();
+                    break;
             }
         });
     }
@@ -1235,14 +1262,22 @@ class CandidateSystemIntegration {
         document.body.appendChild(modal);
 
         try {
-            // Fetch candidate details
-            const response = await apiCall(`/api/candidates/${candidateId}/enhanced`, {
-                method: 'GET',
-                credentials: 'include'
-            });
+            // Fetch candidate details and organization endorsements in parallel
+            const [candidateResponse, orgEndorsementsResponse] = await Promise.all([
+                apiCall(`/api/candidates/${candidateId}/enhanced`, {
+                    method: 'GET',
+                    credentials: 'include'
+                }),
+                apiCall(`/endorsements/candidates/${candidateId}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                }).catch(() => ({ ok: false, data: [] })) // Graceful fallback
+            ]);
 
-            if (response.ok && response.data) {
-                this.renderCandidateDetail(modal, response.data);
+            let candidateData = null;
+
+            if (candidateResponse.ok && candidateResponse.data) {
+                candidateData = candidateResponse.data;
             } else {
                 // Fallback to basic endpoint
                 const basicResponse = await apiCall(`/api/candidates/${candidateId}`, {
@@ -1251,11 +1286,16 @@ class CandidateSystemIntegration {
                 });
 
                 if (basicResponse.ok && basicResponse.data) {
-                    this.renderCandidateDetail(modal, basicResponse.data);
+                    candidateData = basicResponse.data;
                 } else {
                     throw new Error('Candidate not found');
                 }
             }
+
+            // Attach organization endorsements to candidate data
+            candidateData.organizationEndorsements = orgEndorsementsResponse.ok ? orgEndorsementsResponse.data : (orgEndorsementsResponse || []);
+
+            this.renderCandidateDetail(modal, candidateData);
         } catch (error) {
             adminDebugError('Candidate detail error:', error);
             modal.querySelector('.modal-body').innerHTML = `
@@ -1328,12 +1368,35 @@ class CandidateSystemIntegration {
 
                     ${candidate.endorsements && candidate.endorsements.length > 0 ? `
                         <div class="section">
-                            <h3>Endorsements</h3>
+                            <h3>Community Endorsements</h3>
                             <div class="endorsements-list">
                                 ${candidate.endorsements.slice(0, 5).map(e => `
                                     <div class="endorsement">
                                         <strong>${e.user?.firstName} ${e.user?.lastName}</strong>
                                         ${e.reason ? `<p>${e.reason}</p>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${candidate.organizationEndorsements && candidate.organizationEndorsements.length > 0 ? `
+                        <div class="section org-endorsements-section">
+                            <h3>Organization Endorsements</h3>
+                            <div class="org-endorsements-list">
+                                ${candidate.organizationEndorsements.map(e => `
+                                    <div class="org-endorsement-item">
+                                        <div class="org-endorsement-header">
+                                            ${e.organization?.avatar
+                                                ? `<img src="${e.organization.avatar}" alt="${e.organization.name}" class="org-endorsement-avatar">`
+                                                : `<div class="org-endorsement-avatar-placeholder">${(e.organization?.name || 'O')[0]}</div>`
+                                            }
+                                            <div class="org-endorsement-info">
+                                                <strong>${e.organization?.name || 'Organization'}</strong>
+                                                ${e.organization?.isVerified ? '<span class="org-verified-badge">✓ Verified</span>' : ''}
+                                            </div>
+                                        </div>
+                                        ${e.statement ? `<p class="org-endorsement-statement">"${e.statement}"</p>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
@@ -4316,6 +4379,26 @@ class CandidateSystemIntegration {
                             </div>
                         </div>
 
+                        <!-- Organization Endorsements -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <div class="card-icon">✅</div>
+                                <h3>Endorsements</h3>
+                            </div>
+                            <div class="card-content">
+                                <p>Seek and manage organization endorsements</p>
+                                <div class="card-stats">
+                                    <span class="stat">🏢 Apply to orgs</span>
+                                    <span class="stat">📋 Track applications</span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button class="btn secondary" data-candidate-action="showEndorsementsView">
+                                    Manage Endorsements
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Quick Actions -->
                         <div class="dashboard-card">
                             <div class="card-header">
@@ -4869,12 +4952,12 @@ class CandidateSystemIntegration {
             opacity: 0;
             transition: opacity 0.3s ease;
         `;
-        
+
         document.body.appendChild(toast);
-        
+
         // Fade in
         setTimeout(() => toast.style.opacity = '1', 100);
-        
+
         // Remove after duration
         setTimeout(() => {
             toast.style.opacity = '0';
@@ -4884,6 +4967,785 @@ class CandidateSystemIntegration {
                 }
             }, 300);
         }, duration);
+    }
+
+    // ===== ORGANIZATION ENDORSEMENTS (Phase 3i) =====
+
+    /**
+     * Endorsement state management
+     */
+    endorsementState = {
+        currentTab: 'seek', // 'seek', 'applications', 'received'
+        availableQuestionnaires: [],
+        pendingApplications: [],
+        receivedEndorsements: [],
+        loading: false,
+        error: null,
+        // Application form state
+        showApplicationModal: false,
+        currentQuestionnaire: null,
+        applicationResponses: {}
+    };
+
+    /**
+     * Show the endorsements view for candidates
+     */
+    async showEndorsementsView() {
+        await this.ensureCandidateStatus();
+        if (!this.isCandidate) {
+            adminDebugError('Access denied: User is not a verified candidate');
+            return;
+        }
+
+        const mainContent = document.querySelector('#mainContent') ||
+                           document.querySelector('.main') ||
+                           document.querySelector('main') ||
+                           document.querySelector('.main-content');
+        if (!mainContent) {
+            adminDebugError('Could not find main content area');
+            return;
+        }
+
+        // Load initial data
+        await this.loadEndorsementData();
+
+        this.renderEndorsementsView(mainContent);
+    }
+
+    /**
+     * Load all endorsement data
+     */
+    async loadEndorsementData() {
+        this.endorsementState.loading = true;
+        this.endorsementState.error = null;
+
+        try {
+            const candidateId = this.candidateData?.id;
+            if (!candidateId) {
+                throw new Error('Candidate ID not found');
+            }
+
+            // Load available questionnaires, pending applications, and received endorsements in parallel
+            const [questionnaires, pending, received] = await Promise.all([
+                this.fetchAvailableQuestionnaires(candidateId),
+                this.fetchPendingApplications(candidateId),
+                this.fetchReceivedEndorsements(candidateId)
+            ]);
+
+            this.endorsementState.availableQuestionnaires = questionnaires;
+            this.endorsementState.pendingApplications = pending;
+            this.endorsementState.receivedEndorsements = received;
+        } catch (error) {
+            adminDebugError('Failed to load endorsement data:', error);
+            this.endorsementState.error = error.message;
+        } finally {
+            this.endorsementState.loading = false;
+        }
+    }
+
+    /**
+     * Fetch available questionnaires for this candidate
+     */
+    async fetchAvailableQuestionnaires(candidateId) {
+        try {
+            const response = await apiCall(`/questionnaires/candidates/${candidateId}/available`, {
+                method: 'GET'
+            });
+            return response || [];
+        } catch (error) {
+            adminDebugError('Failed to fetch available questionnaires:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Fetch pending applications for this candidate
+     */
+    async fetchPendingApplications(candidateId) {
+        try {
+            const response = await apiCall(`/endorsements/candidates/${candidateId}/pending`, {
+                method: 'GET'
+            });
+            return response || [];
+        } catch (error) {
+            adminDebugError('Failed to fetch pending applications:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Fetch received endorsements for this candidate
+     */
+    async fetchReceivedEndorsements(candidateId) {
+        try {
+            const response = await apiCall(`/endorsements/candidates/${candidateId}`, {
+                method: 'GET'
+            });
+            return response || [];
+        } catch (error) {
+            adminDebugError('Failed to fetch received endorsements:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Render the endorsements view
+     */
+    renderEndorsementsView(container) {
+        const { currentTab, loading, error } = this.endorsementState;
+
+        container.innerHTML = `
+            <div class="candidate-endorsements-view">
+                <div class="endorsements-header">
+                    <div class="header-content">
+                        <h1>✅ Organization Endorsements</h1>
+                        <p class="subtitle">Seek endorsements from organizations and manage your applications</p>
+                        <div class="header-actions">
+                            <button class="header-btn secondary" data-candidate-action="showCandidateDashboard">
+                                ← Back to Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="endorsements-tabs">
+                    <button class="endorsement-tab ${currentTab === 'seek' ? 'active' : ''}"
+                            data-candidate-action="showSeekEndorsements">
+                        🔍 Seek Endorsements
+                    </button>
+                    <button class="endorsement-tab ${currentTab === 'applications' ? 'active' : ''}"
+                            data-candidate-action="showMyApplications">
+                        📋 My Applications
+                        ${this.endorsementState.pendingApplications.length > 0 ?
+                            `<span class="tab-badge">${this.endorsementState.pendingApplications.length}</span>` : ''}
+                    </button>
+                    <button class="endorsement-tab ${currentTab === 'received' ? 'active' : ''}"
+                            data-candidate-action="showReceivedEndorsements">
+                        🏆 Received
+                        ${this.endorsementState.receivedEndorsements.length > 0 ?
+                            `<span class="tab-badge success">${this.endorsementState.receivedEndorsements.length}</span>` : ''}
+                    </button>
+                </div>
+
+                <div class="endorsements-content">
+                    ${loading ? this.renderEndorsementsLoading() : ''}
+                    ${error ? this.renderEndorsementsError(error) : ''}
+                    ${!loading && !error ? this.renderEndorsementsTabContent() : ''}
+                </div>
+
+                ${this.endorsementState.showApplicationModal ? this.renderApplicationModal() : ''}
+            </div>
+        `;
+    }
+
+    /**
+     * Render loading state
+     */
+    renderEndorsementsLoading() {
+        return `
+            <div class="endorsements-loading">
+                <div class="loading-spinner"></div>
+                <p>Loading endorsement data...</p>
+            </div>
+        `;
+    }
+
+    /**
+     * Render error state
+     */
+    renderEndorsementsError(error) {
+        return `
+            <div class="endorsements-error">
+                <p>❌ ${error}</p>
+                <button class="btn secondary" onclick="window.candidateSystemIntegration.loadEndorsementData().then(() => window.candidateSystemIntegration.showEndorsementsView())">
+                    Try Again
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Render tab content based on current tab
+     */
+    renderEndorsementsTabContent() {
+        const { currentTab } = this.endorsementState;
+
+        switch (currentTab) {
+            case 'seek':
+                return this.renderSeekEndorsements();
+            case 'applications':
+                return this.renderMyApplications();
+            case 'received':
+                return this.renderReceivedEndorsements();
+            default:
+                return this.renderSeekEndorsements();
+        }
+    }
+
+    /**
+     * Render available questionnaires to apply for
+     */
+    renderSeekEndorsements() {
+        const { availableQuestionnaires } = this.endorsementState;
+
+        if (availableQuestionnaires.length === 0) {
+            return `
+                <div class="endorsements-empty">
+                    <div class="empty-icon">🔍</div>
+                    <h3>No Available Questionnaires</h3>
+                    <p>There are currently no organizations with active endorsement questionnaires in your area.</p>
+                    <p class="hint">Check back later or encourage organizations to enable endorsements!</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="available-questionnaires">
+                <p class="section-description">Organizations seeking to endorse candidates. Complete their questionnaire to apply.</p>
+                <div class="questionnaire-cards">
+                    ${availableQuestionnaires.map(q => this.renderQuestionnaireCard(q)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render a questionnaire card
+     */
+    renderQuestionnaireCard(questionnaire) {
+        const org = questionnaire.organization || {};
+        const questionCount = questionnaire.questions?.length || 0;
+
+        return `
+            <div class="questionnaire-card">
+                <div class="questionnaire-org-info">
+                    ${org.avatar ?
+                        `<img src="${org.avatar}" alt="${org.name}" class="org-avatar">` :
+                        `<div class="org-avatar-placeholder">${(org.name || 'O')[0]}</div>`
+                    }
+                    <div class="org-details">
+                        <h3>${this.escapeHtml(org.name || 'Unknown Organization')}</h3>
+                        ${org.isVerified ? '<span class="verified-badge">✓ Verified</span>' : ''}
+                        ${org.jurisdictionType ? `<span class="org-jurisdiction">${org.jurisdictionType}</span>` : ''}
+                    </div>
+                </div>
+                <div class="questionnaire-info">
+                    <h4>${this.escapeHtml(questionnaire.title)}</h4>
+                    ${questionnaire.description ? `<p class="questionnaire-description">${this.escapeHtml(questionnaire.description)}</p>` : ''}
+                    <div class="questionnaire-meta">
+                        <span class="meta-item">📝 ${questionCount} question${questionCount !== 1 ? 's' : ''}</span>
+                    </div>
+                </div>
+                <div class="questionnaire-actions">
+                    <button class="btn primary"
+                            data-candidate-action="applyForEndorsement"
+                            data-questionnaire-id="${questionnaire.id}">
+                        Apply for Endorsement
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render pending applications
+     */
+    renderMyApplications() {
+        const { pendingApplications } = this.endorsementState;
+
+        if (pendingApplications.length === 0) {
+            return `
+                <div class="endorsements-empty">
+                    <div class="empty-icon">📋</div>
+                    <h3>No Pending Applications</h3>
+                    <p>You haven't applied for any endorsements yet.</p>
+                    <button class="btn secondary" data-candidate-action="showSeekEndorsements">
+                        Browse Available Questionnaires
+                    </button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="pending-applications">
+                <p class="section-description">Track the status of your endorsement applications.</p>
+                <div class="application-cards">
+                    ${pendingApplications.map(app => this.renderApplicationCard(app)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render an application card
+     */
+    renderApplicationCard(application) {
+        const questionnaire = application.questionnaire || {};
+        const org = questionnaire.organization || {};
+        const statusLabels = {
+            'SUBMITTED': { label: 'Submitted', class: 'status-submitted' },
+            'UNDER_REVIEW': { label: 'Under Review', class: 'status-review' },
+            'APPROVED': { label: 'Approved', class: 'status-approved' },
+            'DENIED': { label: 'Denied', class: 'status-denied' },
+            'WITHDRAWN': { label: 'Withdrawn', class: 'status-withdrawn' }
+        };
+        const status = statusLabels[application.status] || { label: application.status, class: '' };
+
+        return `
+            <div class="application-card">
+                <div class="application-org-info">
+                    ${org.avatar ?
+                        `<img src="${org.avatar}" alt="${org.name}" class="org-avatar">` :
+                        `<div class="org-avatar-placeholder">${(org.name || 'O')[0]}</div>`
+                    }
+                    <div class="org-details">
+                        <h3>${this.escapeHtml(org.name || 'Unknown Organization')}</h3>
+                        <span class="questionnaire-title">${this.escapeHtml(questionnaire.title || '')}</span>
+                    </div>
+                </div>
+                <div class="application-status">
+                    <span class="status-badge ${status.class}">${status.label}</span>
+                    <span class="submitted-date">Submitted ${this.formatDate(application.submittedAt)}</span>
+                </div>
+                ${application.status !== 'WITHDRAWN' && application.status !== 'APPROVED' && application.status !== 'DENIED' ? `
+                    <div class="application-actions">
+                        <button class="btn danger small"
+                                data-candidate-action="withdrawApplication"
+                                data-application-id="${application.id}">
+                            Withdraw
+                        </button>
+                    </div>
+                ` : ''}
+                ${application.status === 'UNDER_REVIEW' ? `
+                    <div class="application-votes">
+                        <span class="vote-count">Votes: ${application.votesFor || 0} For / ${application.votesAgainst || 0} Against</span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    /**
+     * Render received endorsements
+     */
+    renderReceivedEndorsements() {
+        const { receivedEndorsements } = this.endorsementState;
+
+        if (receivedEndorsements.length === 0) {
+            return `
+                <div class="endorsements-empty">
+                    <div class="empty-icon">🏆</div>
+                    <h3>No Endorsements Yet</h3>
+                    <p>You haven't received any organization endorsements yet.</p>
+                    <p class="hint">Apply to organizations to seek their endorsement!</p>
+                    <button class="btn secondary" data-candidate-action="showSeekEndorsements">
+                        Seek Endorsements
+                    </button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="received-endorsements">
+                <p class="section-description">Organizations that have endorsed your candidacy. These appear on your public profile.</p>
+                <div class="endorsement-cards">
+                    ${receivedEndorsements.map(e => this.renderEndorsementCard(e)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render an endorsement card
+     */
+    renderEndorsementCard(endorsement) {
+        const org = endorsement.organization || {};
+
+        return `
+            <div class="endorsement-card">
+                <div class="endorsement-org-info">
+                    ${org.avatar ?
+                        `<img src="${org.avatar}" alt="${org.name}" class="org-avatar">` :
+                        `<div class="org-avatar-placeholder">${(org.name || 'O')[0]}</div>`
+                    }
+                    <div class="org-details">
+                        <h3>${this.escapeHtml(org.name || 'Unknown Organization')}</h3>
+                        ${org.isVerified ? '<span class="verified-badge">✓ Verified</span>' : ''}
+                    </div>
+                </div>
+                ${endorsement.statement ? `
+                    <div class="endorsement-statement">
+                        <p>"${this.escapeHtml(endorsement.statement)}"</p>
+                    </div>
+                ` : ''}
+                <div class="endorsement-meta">
+                    <span class="endorsed-date">Endorsed ${this.formatDate(endorsement.publishedAt)}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Tab navigation methods
+     */
+    showSeekEndorsements() {
+        this.endorsementState.currentTab = 'seek';
+        this.refreshEndorsementsView();
+    }
+
+    showMyApplications() {
+        this.endorsementState.currentTab = 'applications';
+        this.refreshEndorsementsView();
+    }
+
+    showReceivedEndorsements() {
+        this.endorsementState.currentTab = 'received';
+        this.refreshEndorsementsView();
+    }
+
+    /**
+     * Refresh the endorsements view
+     */
+    refreshEndorsementsView() {
+        const mainContent = document.querySelector('#mainContent') ||
+                           document.querySelector('.main') ||
+                           document.querySelector('main') ||
+                           document.querySelector('.main-content');
+        if (mainContent) {
+            this.renderEndorsementsView(mainContent);
+        }
+    }
+
+    /**
+     * Apply for endorsement - show questionnaire modal
+     */
+    async applyForEndorsement(questionnaireId) {
+        this.endorsementState.loading = true;
+        this.refreshEndorsementsView();
+
+        try {
+            // Fetch full questionnaire details
+            const questionnaire = await apiCall(`/questionnaires/${questionnaireId}/apply`, {
+                method: 'GET'
+            });
+
+            this.endorsementState.currentQuestionnaire = questionnaire;
+            this.endorsementState.applicationResponses = {};
+            this.endorsementState.showApplicationModal = true;
+            this.endorsementState.loading = false;
+            this.refreshEndorsementsView();
+        } catch (error) {
+            adminDebugError('Failed to load questionnaire:', error);
+            this.showToast('Failed to load questionnaire. Please try again.');
+            this.endorsementState.loading = false;
+            this.refreshEndorsementsView();
+        }
+    }
+
+    /**
+     * Render the application modal with questionnaire form
+     */
+    renderApplicationModal() {
+        const { currentQuestionnaire, applicationResponses } = this.endorsementState;
+        if (!currentQuestionnaire) return '';
+
+        const org = currentQuestionnaire.organization || {};
+        const questions = currentQuestionnaire.questions || [];
+
+        return `
+            <div class="endorsement-modal-overlay">
+                <div class="endorsement-modal">
+                    <div class="modal-header">
+                        <div class="modal-org-info">
+                            ${org.avatar ?
+                                `<img src="${org.avatar}" alt="${org.name}" class="org-avatar">` :
+                                `<div class="org-avatar-placeholder">${(org.name || 'O')[0]}</div>`
+                            }
+                            <div>
+                                <h2>${this.escapeHtml(currentQuestionnaire.title)}</h2>
+                                <span class="org-name">${this.escapeHtml(org.name || 'Organization')}</span>
+                            </div>
+                        </div>
+                        <button class="modal-close" data-candidate-action="closeEndorsementModal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        ${currentQuestionnaire.description ?
+                            `<p class="modal-description">${this.escapeHtml(currentQuestionnaire.description)}</p>` : ''}
+
+                        <form id="endorsementApplicationForm" class="application-form">
+                            ${questions.map((q, index) => this.renderQuestionInput(q, index)).join('')}
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn secondary" data-candidate-action="closeEndorsementModal">Cancel</button>
+                        <button class="btn primary" data-candidate-action="submitEndorsementApplication">
+                            Submit Application
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render a question input based on type
+     */
+    renderQuestionInput(question, index) {
+        const { applicationResponses } = this.endorsementState;
+        const currentValue = applicationResponses[question.id] || '';
+
+        const requiredMark = question.isRequired ? '<span class="required">*</span>' : '';
+        const publicNote = question.isPublic ? '<span class="public-note">(Response will be public)</span>' : '';
+
+        let inputHtml = '';
+
+        switch (question.type) {
+            case 'SHORT_TEXT':
+                inputHtml = `
+                    <input type="text"
+                           class="form-input"
+                           id="question-${question.id}"
+                           name="question-${question.id}"
+                           value="${this.escapeHtml(currentValue)}"
+                           ${question.isRequired ? 'required' : ''}
+                           onchange="window.candidateSystemIntegration.updateApplicationResponse('${question.id}', this.value)">
+                `;
+                break;
+
+            case 'LONG_TEXT':
+                inputHtml = `
+                    <textarea class="form-textarea"
+                              id="question-${question.id}"
+                              name="question-${question.id}"
+                              rows="4"
+                              ${question.isRequired ? 'required' : ''}
+                              onchange="window.candidateSystemIntegration.updateApplicationResponse('${question.id}', this.value)">${this.escapeHtml(currentValue)}</textarea>
+                `;
+                break;
+
+            case 'MULTIPLE_CHOICE':
+                const mcOptions = question.options || [];
+                inputHtml = `
+                    <div class="radio-group">
+                        ${mcOptions.map(opt => `
+                            <label class="radio-option">
+                                <input type="radio"
+                                       name="question-${question.id}"
+                                       value="${this.escapeHtml(opt)}"
+                                       ${currentValue === opt ? 'checked' : ''}
+                                       ${question.isRequired ? 'required' : ''}
+                                       onchange="window.candidateSystemIntegration.updateApplicationResponse('${question.id}', this.value)">
+                                <span>${this.escapeHtml(opt)}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                break;
+
+            case 'CHECKBOX':
+                const cbOptions = question.options || [];
+                const checkedValues = currentValue ? currentValue.split(',') : [];
+                inputHtml = `
+                    <div class="checkbox-group">
+                        ${cbOptions.map(opt => `
+                            <label class="checkbox-option">
+                                <input type="checkbox"
+                                       name="question-${question.id}"
+                                       value="${this.escapeHtml(opt)}"
+                                       ${checkedValues.includes(opt) ? 'checked' : ''}
+                                       onchange="window.candidateSystemIntegration.updateCheckboxResponse('${question.id}')">
+                                <span>${this.escapeHtml(opt)}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                break;
+
+            case 'YES_NO':
+                inputHtml = `
+                    <div class="radio-group yes-no">
+                        <label class="radio-option">
+                            <input type="radio"
+                                   name="question-${question.id}"
+                                   value="Yes"
+                                   ${currentValue === 'Yes' ? 'checked' : ''}
+                                   ${question.isRequired ? 'required' : ''}
+                                   onchange="window.candidateSystemIntegration.updateApplicationResponse('${question.id}', this.value)">
+                            <span>Yes</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio"
+                                   name="question-${question.id}"
+                                   value="No"
+                                   ${currentValue === 'No' ? 'checked' : ''}
+                                   ${question.isRequired ? 'required' : ''}
+                                   onchange="window.candidateSystemIntegration.updateApplicationResponse('${question.id}', this.value)">
+                            <span>No</span>
+                        </label>
+                    </div>
+                `;
+                break;
+
+            case 'SCALE':
+                const scaleMin = 1;
+                const scaleMax = question.options?.[0] ? parseInt(question.options[0]) : 5;
+                inputHtml = `
+                    <div class="scale-group">
+                        ${Array.from({ length: scaleMax }, (_, i) => i + scaleMin).map(n => `
+                            <label class="scale-option">
+                                <input type="radio"
+                                       name="question-${question.id}"
+                                       value="${n}"
+                                       ${currentValue === String(n) ? 'checked' : ''}
+                                       ${question.isRequired ? 'required' : ''}
+                                       onchange="window.candidateSystemIntegration.updateApplicationResponse('${question.id}', this.value)">
+                                <span>${n}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                break;
+
+            default:
+                inputHtml = `
+                    <input type="text"
+                           class="form-input"
+                           id="question-${question.id}"
+                           name="question-${question.id}"
+                           value="${this.escapeHtml(currentValue)}"
+                           ${question.isRequired ? 'required' : ''}
+                           onchange="window.candidateSystemIntegration.updateApplicationResponse('${question.id}', this.value)">
+                `;
+        }
+
+        return `
+            <div class="form-group">
+                <label class="form-label">
+                    ${this.escapeHtml(question.text)} ${requiredMark}
+                    ${publicNote}
+                </label>
+                ${question.description ? `<p class="form-help">${this.escapeHtml(question.description)}</p>` : ''}
+                ${inputHtml}
+            </div>
+        `;
+    }
+
+    /**
+     * Update a response in the application state
+     */
+    updateApplicationResponse(questionId, value) {
+        this.endorsementState.applicationResponses[questionId] = value;
+    }
+
+    /**
+     * Update checkbox responses (multiple values)
+     */
+    updateCheckboxResponse(questionId) {
+        const checkboxes = document.querySelectorAll(`input[name="question-${questionId}"]:checked`);
+        const values = Array.from(checkboxes).map(cb => cb.value);
+        this.endorsementState.applicationResponses[questionId] = values.join(',');
+    }
+
+    /**
+     * Close the application modal
+     */
+    closeEndorsementModal() {
+        this.endorsementState.showApplicationModal = false;
+        this.endorsementState.currentQuestionnaire = null;
+        this.endorsementState.applicationResponses = {};
+        this.refreshEndorsementsView();
+    }
+
+    /**
+     * Submit the endorsement application
+     */
+    async submitEndorsementApplication() {
+        const { currentQuestionnaire, applicationResponses } = this.endorsementState;
+        if (!currentQuestionnaire) return;
+
+        const questions = currentQuestionnaire.questions || [];
+
+        // Validate required fields
+        for (const question of questions) {
+            if (question.isRequired && !applicationResponses[question.id]) {
+                this.showToast(`Please answer: ${question.text}`);
+                return;
+            }
+        }
+
+        // Build responses array
+        const responses = questions.map(q => ({
+            questionId: q.id,
+            response: applicationResponses[q.id] || ''
+        })).filter(r => r.response);
+
+        try {
+            await apiCall('/endorsements/applications', {
+                method: 'POST',
+                body: JSON.stringify({
+                    questionnaireId: currentQuestionnaire.id,
+                    responses
+                })
+            });
+
+            this.showToast('Application submitted successfully!');
+            this.closeEndorsementModal();
+
+            // Reload data to reflect the new application
+            await this.loadEndorsementData();
+            this.endorsementState.currentTab = 'applications';
+            this.refreshEndorsementsView();
+        } catch (error) {
+            adminDebugError('Failed to submit application:', error);
+            this.showToast('Failed to submit application. Please try again.');
+        }
+    }
+
+    /**
+     * Withdraw an application
+     */
+    async withdrawApplication(applicationId) {
+        if (!confirm('Are you sure you want to withdraw this application? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await apiCall(`/endorsements/applications/${applicationId}/withdraw`, {
+                method: 'POST'
+            });
+
+            this.showToast('Application withdrawn');
+
+            // Reload data
+            await this.loadEndorsementData();
+            this.refreshEndorsementsView();
+        } catch (error) {
+            adminDebugError('Failed to withdraw application:', error);
+            this.showToast('Failed to withdraw application. Please try again.');
+        }
+    }
+
+    /**
+     * Format date for display
+     */
+    formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 }
 

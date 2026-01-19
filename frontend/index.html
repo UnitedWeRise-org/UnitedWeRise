@@ -108,6 +108,7 @@
     <link rel="stylesheet" href="src/styles/trending-system.css">
     <link rel="stylesheet" href="src/styles/post-component.css">
     <link rel="stylesheet" href="src/styles/saved-posts.css">
+    <link rel="stylesheet" href="src/styles/organizations.css">
     <link rel="stylesheet" href="src/styles/responsive.css">
 
     <!-- Mobile UX Styles -->
@@ -131,6 +132,8 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"
             integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
             crossorigin="anonymous"></script>
+    <!-- H3 Geospatial Library (for custom jurisdiction picker in organizations) -->
+    <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
 
     <!-- Performance & Optimization Utilities now loaded via ES6 modules in main.js (Batch 1 - Oct 11, 2025) -->
     <!-- ✅ performance.js, error-handler.js, advanced-caching.js, smart-loader.js removed - now ES6 modules -->
@@ -644,6 +647,7 @@
                         📋 <span class="label">Organizing</span>
                     </div>
                 </div>
+                <div class="thumb" data-action="show-organizations" title="Organizations" id="organizationsThumb">🏢 <span class="label">Organizations</span></div>
                 <div class="thumb" data-nav-toggle="map" title="Show Map" id="mapThumb">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" data-nav-toggle="messages" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
                 <div class="thumb" data-action="open-donation" title="Support Our Mission" id="donationThumb">💝 <span class="label">Donate</span></div>
@@ -1021,6 +1025,21 @@
                         Organize an Event
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Organizations System -->
+    <div class="organizations-container" id="organizationsContainer" style="display: none;">
+        <div class="organizations-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; background: #7b1fa2; color: white;">
+            <h3 style="margin: 0;">🏢 Organizations</h3>
+            <button class="organizations-close-btn" data-action="close-organizations" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: white;">×</button>
+        </div>
+        <div class="organizations-content" id="organizationsContent" style="padding: 1rem; overflow-y: auto; max-height: calc(100vh - 120px);">
+            <!-- Organizations browser will be dynamically loaded here -->
+            <div style="text-align: center; color: #666; padding: 2rem;">
+                <div class="loading-spinner"></div>
+                <p>Loading organizations...</p>
             </div>
         </div>
     </div>

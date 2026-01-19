@@ -231,6 +231,7 @@ class CivicOrganizingService {
                 requirements: data.requirements,
                 rsvpRequired: data.rsvpRequired || false,
                 createdBy: userId,
+                organizationId: data.organizationId, // Optional org ownership
             },
             include: {
                 creator: {

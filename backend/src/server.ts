@@ -48,6 +48,10 @@ import questRoutes from './routes/quests';
 import photosRoutes from './routes/photos';
 import riseaiRoutes from './routes/riseai';
 import communityNotesRoutes from './routes/communityNotes';
+import organizationsRoutes from './routes/organizations';
+import discussionsRoutes from './routes/discussions';
+import questionnairesRoutes from './routes/questionnaires';
+import endorsementsRoutes from './routes/endorsements';
 import WebSocketService from './services/WebSocketService';
 import analyticsCleanupJob from './jobs/analyticsCleanup';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
@@ -302,6 +306,10 @@ app.use('/api/badges', badgeClaimCodesRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/api/riseai', riseaiRoutes);
 app.use('/api/community-notes', communityNotesRoutes);
+app.use('/api/organizations', organizationsRoutes);
+app.use('/api/discussions', discussionsRoutes);
+app.use('/api/questionnaires', questionnairesRoutes);
+app.use('/api/endorsements', endorsementsRoutes);
 app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically

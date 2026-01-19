@@ -119,6 +119,9 @@ import '../components/PolicyDisplay.js';  // Candidate policy display
 import '../components/PolicyComparison.js';  // AI policy comparison
 import '../components/TopicNavigation.js';  // Topic mode navigation
 
+// Phase 5e-orgs: Organizations module
+import '../modules/features/organizations/index.js';  // Organization browsing, profiles, membership
+
 // Phase 5f: Small Integrations (Batch 8)
 import '../js/force-optimization.js';  // Force override old initialization system
 import '../integrations/officials-system-integration.js';  // Officials system integration

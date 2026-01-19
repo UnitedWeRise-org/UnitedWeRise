@@ -1627,6 +1627,93 @@ class AdminAPI {
             };
         }
     }
+
+    // ===============================
+    // ORGANIZATION MANAGEMENT (SUPER-ADMIN)
+    // ===============================
+
+    /**
+     * Get list of organizations (admin view)
+     * @param {Object} params - Query parameters (page, limit, search, status, sort)
+     * @returns {Promise<Object>} Organizations list with pagination
+     */
+    async getAdminOrganizations(params = {}) {
+        return this.get(`${this.BACKEND_URL}/api/admin/organizations`, params);
+    }
+
+    /**
+     * Get organization details (admin view)
+     * @param {string} orgId - Organization ID
+     * @returns {Promise<Object>} Organization details with members
+     */
+    async getAdminOrganization(orgId) {
+        return this.get(`${this.BACKEND_URL}/api/admin/organizations/${orgId}`);
+    }
+
+    /**
+     * Add member to organization (super-admin only)
+     * @param {string} orgId - Organization ID
+     * @param {string} userId - User ID to add
+     * @param {string} status - Membership status (ACTIVE or PENDING)
+     * @returns {Promise<Object>} New membership
+     */
+    async addOrganizationMember(orgId, userId, status = 'ACTIVE') {
+        return this.post(`${this.BACKEND_URL}/api/admin/organizations/${orgId}/members`, {
+            userId,
+            status
+        });
+    }
+
+    /**
+     * Remove member from organization (super-admin only)
+     * @param {string} orgId - Organization ID
+     * @param {string} membershipId - Membership ID to remove
+     * @param {string} reason - Reason for removal
+     * @returns {Promise<Object>} Result
+     */
+    async removeOrganizationMember(orgId, membershipId, reason = '') {
+        return this.delete(`${this.BACKEND_URL}/api/admin/organizations/${orgId}/members/${membershipId}`, {
+            reason
+        });
+    }
+
+    /**
+     * Transfer organization headship (super-admin only)
+     * @param {string} orgId - Organization ID
+     * @param {string} newHeadUserId - New head user ID
+     * @param {string} reason - Reason for transfer
+     * @returns {Promise<Object>} Updated organization
+     */
+    async transferOrganizationHeadship(orgId, newHeadUserId, reason) {
+        return this.post(`${this.BACKEND_URL}/api/admin/organizations/${orgId}/transfer-headship`, {
+            newHeadUserId,
+            reason
+        });
+    }
+
+    /**
+     * Deactivate organization (super-admin only)
+     * @param {string} orgId - Organization ID
+     * @param {string} reason - Reason for deactivation
+     * @returns {Promise<Object>} Result
+     */
+    async deactivateOrganization(orgId, reason) {
+        return this.post(`${this.BACKEND_URL}/api/admin/organizations/${orgId}/deactivate`, {
+            reason
+        });
+    }
+
+    /**
+     * Reactivate organization (super-admin only)
+     * @param {string} orgId - Organization ID
+     * @param {string} reason - Reason for reactivation
+     * @returns {Promise<Object>} Result
+     */
+    async reactivateOrganization(orgId, reason = '') {
+        return this.post(`${this.BACKEND_URL}/api/admin/organizations/${orgId}/reactivate`, {
+            reason
+        });
+    }
 }
 
 /**

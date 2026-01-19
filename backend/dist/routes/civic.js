@@ -571,7 +571,8 @@ router.post('/events', auth_1.requireAuth, civicActionLimit, [
     (0, express_validator_1.body)('capacity').optional().isInt({ min: 1, max: 100000 }).withMessage('Capacity must be 1-100,000'),
     (0, express_validator_1.body)('isVirtual').optional().isBoolean(),
     (0, express_validator_1.body)('virtualLink').optional().isURL().withMessage('Virtual link must be a valid URL'),
-    (0, express_validator_1.body)('rsvpRequired').optional().isBoolean()
+    (0, express_validator_1.body)('rsvpRequired').optional().isBoolean(),
+    (0, express_validator_1.body)('organizationId').optional().isString().withMessage('Organization ID must be a string')
 ], async (req, res) => {
     try {
         const errors = (0, express_validator_1.validationResult)(req);

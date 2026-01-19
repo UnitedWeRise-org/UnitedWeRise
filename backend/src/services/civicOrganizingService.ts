@@ -54,6 +54,7 @@ interface CreateEventRequest {
   };
   requirements?: string;
   rsvpRequired?: boolean;
+  organizationId?: string; // Optional: create event as organization
 }
 
 interface CivicSearchFilters {
@@ -319,6 +320,7 @@ export class CivicOrganizingService {
         requirements: data.requirements,
         rsvpRequired: data.rsvpRequired || false,
         createdBy: userId,
+        organizationId: data.organizationId, // Optional org ownership
       },
       include: {
         creator: {

@@ -348,6 +348,12 @@ class NavigationHandlers {
                 // Admin-gated feature
                 this.handleGatedFeature('organizing', () => this.openCivicOrganizing());
                 break;
+            case 'show-organizations':
+                this.openOrganizations();
+                break;
+            case 'close-organizations':
+                this.closeOrganizations();
+                break;
             case 'map':
                 this.showMapFromSidebar();
                 break;
@@ -988,6 +994,12 @@ class NavigationHandlers {
             civicOrganizing.style.display = 'none';
         }
 
+        // Hide Organizations container
+        const organizations = document.querySelector('.organizations-container');
+        if (organizations) {
+            organizations.style.display = 'none';
+        }
+
         // Hide other main view systems
         const viewSelectors = [
             '.elections-main-view',
@@ -1068,6 +1080,64 @@ class NavigationHandlers {
         if (typeof window.showDefaultOrganizingView === 'function') {
             window.showDefaultOrganizingView();
         }
+    }
+
+    /**
+     * Open Organizations panel
+     * Shows the organizations browser in its own container
+     */
+    async openOrganizations() {
+        // Hide other main view systems when opening
+        this.hideOtherMainViews();
+
+        // Hide other panels
+        document.querySelectorAll('.detail-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+
+        document.querySelectorAll('.info-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+
+        const container = document.getElementById('organizationsContainer');
+        const contentEl = document.getElementById('organizationsContent');
+
+        if (container) {
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+        }
+
+        this.closeAllPanels(); // Close other panels
+
+        // Dynamically load organizations browser
+        if (contentEl) {
+            try {
+                const { initOrgBrowser } = await import('../modules/features/organizations/index.js');
+                await initOrgBrowser(contentEl);
+            } catch (error) {
+                console.error('Failed to load organizations module:', error);
+                contentEl.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        <p>Failed to load organizations</p>
+                        <button data-action="show-organizations" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #7b1fa2; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /**
+     * Close Organizations panel
+     */
+    closeOrganizations() {
+        const container = document.getElementById('organizationsContainer');
+        if (container) {
+            container.style.display = 'none';
+        }
+        // Show default view
+        this.showDefaultView();
     }
 
     showDefaultView() {
@@ -1353,6 +1423,8 @@ window.closePanel = (name) => navigationHandlers.closePanel(name);
 window.closeAllPanels = () => navigationHandlers.closeAllPanels();
 window.toggleMessages = () => navigationHandlers.toggleMessages();
 window.openCivicOrganizing = () => navigationHandlers.openCivicOrganizing();
+window.openOrganizations = () => navigationHandlers.openOrganizations();
+window.closeOrganizations = () => navigationHandlers.closeOrganizations();
 window.showDefaultView = () => navigationHandlers.showDefaultView();
 window.resetPanelsToDefault = () => navigationHandlers.resetPanelsToDefault();
 window.showMapFromSidebar = () => navigationHandlers.showMapFromSidebar();

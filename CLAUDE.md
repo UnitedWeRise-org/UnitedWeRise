@@ -275,6 +275,22 @@ When user mentions these keywords, read specified documentation BEFORE implement
 
 ---
 
+## Active Feature Plans
+
+| Feature | Plan | Phase | Status |
+|---------|------|-------|--------|
+| Organizations | `.claude/plans/organizations-endorsements-plan.md` | 3 (Frontend) | COMPLETE (3a-3i) |
+
+**Protocol**: Read indexed plan before starting feature work.
+
+**Index Maintenance** (standing permission granted):
+- **Add entry**: When creating a new multi-phase feature plan
+- **Update status**: When completing a phase or sub-phase
+- **Remove entry**: When feature is 100% complete AND plan archived
+- Update immediately, don't wait for explicit instruction
+
+---
+
 ## Project Architecture
 
 ### Frontend
