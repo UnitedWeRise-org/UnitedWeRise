@@ -33,6 +33,7 @@ class UnifiedAuthManager {
         this._isRefreshingToken = false; // Flag to prevent concurrent refreshes
         this._refreshPending = false; // Flag set IMMEDIATELY on visibility change (before debounce)
         this._lastWakeTimestamp = null; // Timestamp of last visibility change (for race condition detection)
+        this._lastHiddenTimestamp = null; // Timestamp of when tab became hidden (for extended absence detection)
         this._lastSuccessfulRefresh = 0; // Timestamp of last successful token refresh (for 401 handler race condition)
         this._visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this._proactiveRefreshTimer = null; // Timer for proactive token refresh (14-min interval)
@@ -212,11 +213,30 @@ class UnifiedAuthManager {
     /**
      * Check if the page just woke up (became visible recently)
      * Used as a fallback when isRefreshPending() returns false due to race conditions
-     * @param {number} thresholdMs - Time window to consider "just woke" (default 3 seconds)
+     *
+     * EXTENDED ABSENCE FIX: If tab was hidden for >5 minutes, use a longer detection window
+     * (10 seconds instead of default 3) to account for slower network reconnection and
+     * multiple API calls firing after extended absence.
+     *
+     * @param {number} defaultMs - Default time window to consider "just woke" (default 3 seconds)
      * @returns {boolean} True if page became visible within threshold
      */
-    didJustWakeUp(thresholdMs = 3000) {
-        return this._lastWakeTimestamp && (Date.now() - this._lastWakeTimestamp < thresholdMs);
+    didJustWakeUp(defaultMs = 3000) {
+        if (!this._lastWakeTimestamp) return false;
+
+        // Calculate how long the tab was hidden
+        const hiddenDuration = this._lastHiddenTimestamp && this._lastWakeTimestamp > this._lastHiddenTimestamp
+            ? this._lastWakeTimestamp - this._lastHiddenTimestamp
+            : 0;
+
+        // For extended absences (>5 min), use a longer detection window
+        // This gives more time for token refresh to complete before 401s trigger logout
+        const EXTENDED_ABSENCE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+        const windowMs = hiddenDuration > EXTENDED_ABSENCE_THRESHOLD
+            ? 10000  // 10 seconds for extended absences
+            : defaultMs;
+
+        return Date.now() - this._lastWakeTimestamp < windowMs;
     }
 
     /**
@@ -263,6 +283,9 @@ class UnifiedAuthManager {
      * CRITICAL: Sets _refreshPending = true IMMEDIATELY (before debounce) so other code
      * can detect that a refresh is about to happen and wait for it, preventing race conditions
      * where API calls fire before the refresh completes.
+     *
+     * EXTENDED ABSENCE FIX: If tab was hidden for >5 minutes, skip debounce and refresh
+     * immediately to prevent race condition where WebSocket/API calls fire before refresh.
      */
     _handleVisibilityChange() {
         // Clear any pending debounce timer
@@ -270,19 +293,45 @@ class UnifiedAuthManager {
             clearTimeout(this._visibilityChangeDebounceTimer);
         }
 
+        // Track when tab becomes hidden
+        if (document.hidden) {
+            this._lastHiddenTimestamp = Date.now();
+            return; // Don't clear pending flags when hiding
+        }
+
+        // Tab became visible - calculate how long it was hidden
+        const hiddenDuration = this._lastHiddenTimestamp
+            ? Date.now() - this._lastHiddenTimestamp
+            : 0;
+
         // Set pending flag and timestamp IMMEDIATELY so other code knows refresh is coming
         // This prevents race conditions where 401 handlers fire before refresh
         // NOTE: We DO NOT check isAuthenticated() here because:
         // 1. API calls may fire before visibility change (scheduled timers)
         // 2. Those 401s can trigger logout, setting isAuthenticated() to false
         // 3. Then this flag is never set, defeating the purpose
-        // The debounced refresh below still checks isAuthenticated()
-        if (!document.hidden) {
-            this._refreshPending = true;
-            this._lastWakeTimestamp = Date.now();
+        this._refreshPending = true;
+        this._lastWakeTimestamp = Date.now();
+
+        // EXTENDED ABSENCE FIX: If hidden for more than 5 minutes, refresh IMMEDIATELY
+        // This prevents the race condition where WebSocket ping timeout or scheduled API calls
+        // fire BEFORE the 1-second debounced refresh, resulting in 401s and logout
+        const EXTENDED_ABSENCE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+        if (hiddenDuration > EXTENDED_ABSENCE_THRESHOLD && this.isAuthenticated()) {
+            // Prevent concurrent refreshes
+            if (this._isRefreshingToken) {
+                console.log('⏸️ Extended absence refresh skipped (refresh already in progress)');
+                return; // Keep _refreshPending = true
+            }
+
+            console.log(`🔄 Extended absence detected (${Math.round(hiddenDuration / 60000)}min) - immediate token refresh`);
+            this.refreshToken(true).finally(() => {
+                this._refreshPending = false;
+            });
+            return;
         }
 
-        // Debounce visibility changes by 1 second to prevent rapid-fire refreshes
+        // For short absences, use debounced refresh to handle rapid tab switches
         this._visibilityChangeDebounceTimer = setTimeout(() => {
             if (!document.hidden && this.isAuthenticated()) {
                 // Prevent concurrent refreshes from visibility changes
@@ -300,7 +349,7 @@ class UnifiedAuthManager {
             } else {
                 this._refreshPending = false;
             }
-        }, 1000); // 1 second debounce
+        }, 1000); // 1 second debounce for short absences
     }
 
     /**
