@@ -268,7 +268,7 @@ export class FeedToggle {
         mount.innerHTML = `
             <div class="inline-composer-content" style="width: 100%; box-sizing: border-box;">
                 <div class="thread-head-section">
-                    <textarea id="inlinePostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box; margin-bottom: 4px;" maxlength="${threadConfig.headMaxLength}"></textarea>
+                    <textarea id="inlinePostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box; margin-bottom: 4px;"></textarea>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <span id="headCharCount" style="font-size: 12px; color: #666;">0/${threadConfig.headMaxLength}</span>
                         <button id="addContinuationBtn" style="display: none; background: none; border: none; color: #0d6efd; cursor: pointer; font-size: 13px; padding: 4px 8px;">
@@ -300,9 +300,13 @@ export class FeedToggle {
         // Store selected files
         let selectedFiles = [];
 
-        // Thread state
+        // Thread state (manual continuations)
         let continuations = [];
         let continuationCounter = 0;
+
+        // Auto-thread state (smart content splitting)
+        let autoThreadMode = false;
+        let autoThreadChunks = [];
 
         // Get UI elements for thread
         const headCharCount = mount.querySelector('#headCharCount');
@@ -314,27 +318,75 @@ export class FeedToggle {
             textarea.focus();
         }
 
-        // Character counter and thread prompt on textarea input
+        // Character counter, thread prompt, and smart auto-threading on textarea input
         if (textarea && headCharCount && addContinuationBtn) {
             textarea.addEventListener('input', () => {
-                const len = textarea.value.length;
-                headCharCount.textContent = `${len}/${threadConfig.headMaxLength}`;
+                const content = textarea.value;
+                const len = content.length;
 
-                // Change color based on limit
-                if (len > threadConfig.headMaxLength - 50) {
-                    headCharCount.style.color = '#dc3545'; // Red when close to limit
-                } else if (len > threadConfig.promptThreshold) {
-                    headCharCount.style.color = '#fd7e14'; // Orange when past prompt threshold
+                // Analyze content for auto-threading (smart split when content exceeds limit)
+                if (window.unifiedPostCreator && window.unifiedPostCreator.analyzeContentForThread) {
+                    const analysis = window.unifiedPostCreator.analyzeContentForThread(content);
+                    autoThreadMode = analysis.needsThread;
+                    autoThreadChunks = analysis.chunks;
+
+                    if (analysis.needsThread) {
+                        // Auto-thread mode - update UI to show thread info
+                        headCharCount.textContent = `${len} chars - ${analysis.totalParts} parts`;
+                        headCharCount.style.color = '#4b5c09';
+                        postBtn.textContent = `Post Thread (${analysis.totalParts})`;
+                        // Hide manual "Continue in thread" button - auto-threading handles it
+                        addContinuationBtn.style.display = 'none';
+                    } else {
+                        // Single post mode - restore normal UI
+                        autoThreadMode = false;
+                        autoThreadChunks = [];
+                        headCharCount.textContent = `${len}/${threadConfig.headMaxLength}`;
+                        postBtn.textContent = 'Post';
+
+                        // Change color based on limit
+                        if (len > threadConfig.headMaxLength - 50) {
+                            headCharCount.style.color = '#dc3545'; // Red when close to limit
+                        } else if (len > threadConfig.promptThreshold) {
+                            headCharCount.style.color = '#fd7e14'; // Orange when past prompt threshold
+                        } else {
+                            headCharCount.style.color = '#666';
+                        }
+
+                        // Show "Continue in thread" button when past threshold (manual threading option)
+                        if (len >= threadConfig.promptThreshold && continuations.length === 0) {
+                            addContinuationBtn.style.display = 'inline-block';
+                        } else if (len < threadConfig.promptThreshold && continuations.length === 0) {
+                            addContinuationBtn.style.display = 'none';
+                        }
+                    }
                 } else {
-                    headCharCount.style.color = '#666';
-                }
+                    // Fallback: no unifiedPostCreator - use original behavior
+                    headCharCount.textContent = `${len}/${threadConfig.headMaxLength}`;
 
-                // Show "Continue in thread" button when past threshold
-                if (len >= threadConfig.promptThreshold && continuations.length === 0) {
-                    addContinuationBtn.style.display = 'inline-block';
-                } else if (len < threadConfig.promptThreshold && continuations.length === 0) {
-                    addContinuationBtn.style.display = 'none';
+                    // Change color based on limit
+                    if (len > threadConfig.headMaxLength - 50) {
+                        headCharCount.style.color = '#dc3545';
+                    } else if (len > threadConfig.promptThreshold) {
+                        headCharCount.style.color = '#fd7e14';
+                    } else {
+                        headCharCount.style.color = '#666';
+                    }
+
+                    // Show "Continue in thread" button when past threshold
+                    if (len >= threadConfig.promptThreshold && continuations.length === 0) {
+                        addContinuationBtn.style.display = 'inline-block';
+                    } else if (len < threadConfig.promptThreshold && continuations.length === 0) {
+                        addContinuationBtn.style.display = 'none';
+                    }
                 }
+            });
+
+            // Paste handler - trigger input analysis after paste completes
+            textarea.addEventListener('paste', () => {
+                setTimeout(() => {
+                    textarea.dispatchEvent(new Event('input'));
+                }, 0);
             });
         }
 
@@ -448,15 +500,38 @@ export class FeedToggle {
 
                 // Disable button during posting
                 postBtn.disabled = true;
-                const isThread = continuationContent.length > 0;
+                const hasManualContinuations = continuationContent.length > 0;
+                const hasAutoThread = autoThreadMode && autoThreadChunks.length > 1;
+                const isThread = hasManualContinuations || hasAutoThread;
                 postBtn.textContent = isThread ? 'Creating thread...' : 'Posting...';
 
                 try {
                     let postResult;
 
-                    // If we have continuations, create a thread
-                    if (isThread && window.unifiedPostCreator?.createThread) {
-                        console.log('🧵 Creating thread with', continuationContent.length, 'continuation(s)');
+                    // PRIORITY 1: Auto-thread mode (smart split from long content)
+                    if (hasAutoThread && window.unifiedPostCreator?.createThread) {
+                        console.log('🧵 Auto-threading: Creating thread with', autoThreadChunks.length, 'parts');
+                        postResult = await window.unifiedPostCreator.createThread({
+                            headContent: autoThreadChunks[0],
+                            continuations: autoThreadChunks.slice(1),
+                            mediaFiles: selectedFiles.length > 0 ? selectedFiles : null,
+                            onProgress: ({ step, total, message }) => {
+                                postBtn.textContent = message;
+                            }
+                        });
+
+                        // For thread, extract head post for display
+                        if (postResult.success && postResult.headPost) {
+                            postResult.data = postResult.headPost;
+                            postResult.data._count = {
+                                ...postResult.data._count,
+                                threadPosts: postResult.continuationPosts?.length || 0
+                            };
+                        }
+                    }
+                    // PRIORITY 2: Manual continuations (user clicked "Continue in thread")
+                    else if (hasManualContinuations && window.unifiedPostCreator?.createThread) {
+                        console.log('🧵 Creating thread with', continuationContent.length, 'manual continuation(s)');
                         postResult = await window.unifiedPostCreator.createThread({
                             headContent: content,
                             continuations: continuationContent,
@@ -475,7 +550,9 @@ export class FeedToggle {
                                 threadPosts: postResult.continuationPosts?.length || 0
                             };
                         }
-                    } else if (window.unifiedPostCreator && typeof window.unifiedPostCreator.create === 'function') {
+                    }
+                    // PRIORITY 3: Single post via UnifiedPostCreator
+                    else if (window.unifiedPostCreator && typeof window.unifiedPostCreator.create === 'function') {
                         // Use UnifiedPostCreator if available (handles two-step upload)
                         console.log('📝 Using UnifiedPostCreator.create()');
                         postResult = await window.unifiedPostCreator.create({
