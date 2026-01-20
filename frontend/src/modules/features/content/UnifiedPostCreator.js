@@ -23,7 +23,7 @@ class UnifiedPostCreator {
         };
 
         this.config = {
-            maxContentLength: 5000,
+            maxContentLength: 500,
             maxMediaFiles: 10,
             allowedMediaTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'],
             maxImageSize: 10 * 1024 * 1024, // 10MB
@@ -51,6 +51,130 @@ class UnifiedPostCreator {
             headMaxLength: this.config.threadHeadMaxLength,
             continuationMaxLength: this.config.threadContinuationMaxLength,
             promptThreshold: this.config.threadPromptThreshold
+        };
+    }
+
+    /**
+     * Smart split content into thread-sized chunks
+     * Splits at paragraph breaks first, then sentences if needed
+     * @param {string} content - Full content to split
+     * @param {number} [maxChars=500] - Maximum chars per chunk
+     * @returns {string[]} - Array of content chunks
+     */
+    smartSplitContent(content, maxChars = 500) {
+        if (!content || content.length <= maxChars) {
+            return [content];
+        }
+
+        const chunks = [];
+        let remaining = content.trim();
+
+        while (remaining.length > 0) {
+            if (remaining.length <= maxChars) {
+                chunks.push(remaining);
+                break;
+            }
+
+            // Try to split at paragraph break first
+            let splitPoint = this._findParagraphBreak(remaining, maxChars);
+
+            // If no paragraph break, try sentence boundary
+            if (splitPoint === -1) {
+                splitPoint = this._findSentenceBreak(remaining, maxChars);
+            }
+
+            // If no sentence break, try word boundary
+            if (splitPoint === -1) {
+                splitPoint = this._findWordBreak(remaining, maxChars);
+            }
+
+            // Last resort: hard split at maxChars
+            if (splitPoint === -1) {
+                splitPoint = maxChars;
+            }
+
+            chunks.push(remaining.substring(0, splitPoint).trim());
+            remaining = remaining.substring(splitPoint).trim();
+        }
+
+        return chunks.filter(chunk => chunk.length > 0);
+    }
+
+    /**
+     * Find a paragraph break within maxChars
+     * @private
+     */
+    _findParagraphBreak(text, maxChars) {
+        const searchText = text.substring(0, maxChars);
+        // Look for double newline (paragraph break) from the end
+        const lastBreak = searchText.lastIndexOf('\n\n');
+        if (lastBreak > 0) {
+            return lastBreak + 2; // Include the newlines in the split
+        }
+        // Also try single newlines as a fallback
+        const lastNewline = searchText.lastIndexOf('\n');
+        if (lastNewline > maxChars * 0.5) { // Only if it's past halfway
+            return lastNewline + 1;
+        }
+        return -1;
+    }
+
+    /**
+     * Find a sentence break within maxChars
+     * @private
+     */
+    _findSentenceBreak(text, maxChars) {
+        const searchText = text.substring(0, maxChars);
+        // Look for sentence endings from the end
+        const sentenceEnders = ['. ', '! ', '? ', '.\n', '!\n', '?\n'];
+        let lastBreak = -1;
+
+        for (const ender of sentenceEnders) {
+            const idx = searchText.lastIndexOf(ender);
+            if (idx > lastBreak) {
+                lastBreak = idx + ender.length;
+            }
+        }
+
+        // Only use sentence break if it's past 40% of the way
+        if (lastBreak > maxChars * 0.4) {
+            return lastBreak;
+        }
+        return -1;
+    }
+
+    /**
+     * Find a word break within maxChars
+     * @private
+     */
+    _findWordBreak(text, maxChars) {
+        const searchText = text.substring(0, maxChars);
+        const lastSpace = searchText.lastIndexOf(' ');
+        if (lastSpace > maxChars * 0.7) { // Only if past 70%
+            return lastSpace + 1;
+        }
+        return -1;
+    }
+
+    /**
+     * Check if content needs to be split into a thread
+     * @param {string} content - Content to check
+     * @returns {Object} - { needsThread: boolean, chunks: string[], totalParts: number }
+     */
+    analyzeContentForThread(content) {
+        if (!content || content.length <= this.config.maxContentLength) {
+            return {
+                needsThread: false,
+                chunks: [content || ''],
+                totalParts: 1
+            };
+        }
+
+        const chunks = this.smartSplitContent(content, this.config.maxContentLength);
+        return {
+            needsThread: chunks.length > 1,
+            chunks,
+            totalParts: chunks.length
         };
     }
 
