@@ -1,10 +1,57 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 19, 2026
+**Last Updated**: January 20, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-20] - Thread System Bug Fixes
+
+### Fixed
+
+**Continuation Posts Appearing in Discovery Feed**
+- Thread continuation posts were showing as separate top-level posts in feeds
+- Added `threadHeadId: null` filter to SlotRollService pool queries
+- Now only head posts appear in Random and Trending pools
+
+**Line Breaks Removed During Smart Splitting**
+- Long posts split into threads were losing intentional line breaks
+- Modified `smartSplitContent()` to preserve newlines within chunks
+- Added `_normalizeChunk()` to collapse excessive newlines (3+ → 2) and cap at 30 lines
+
+**Thread Creation Timeout Issues**
+- Sequential API calls for multi-part threads caused timeouts (5+ seconds per post)
+- Created batch `POST /api/posts/thread` endpoint for atomic thread creation
+- Single API call creates all posts in one transaction
+- Only generates embedding for head post (continuations inherit context)
+- Reduces 5-part thread creation from ~15 seconds to ~3 seconds
+
+### Added
+
+**Batch Thread Endpoint**
+- `POST /api/posts/thread` - Creates entire thread atomically
+- Request: `{ headContent, continuations[], tags, mediaIds }`
+- Single database transaction ensures all-or-nothing creation
+- Single embedding generation (head post only)
+
+**Rate Limit Toast with Countdown**
+- `showRateLimitToast(retryAfterSeconds)` function in toast.js
+- Dismissible toast with live countdown timer
+- Auto-hides when countdown reaches zero
+
+**Rate Limit Response Enhancement**
+- Post rate limiter now returns `retryAfter` seconds in error response
+- Frontend can show precise wait time to users
+
+### Files Modified
+- `backend/src/services/slotRollService.ts` - Added threadHeadId filter
+- `backend/src/routes/posts.ts` - Added batch thread endpoint
+- `backend/src/middleware/rateLimiting.ts` - Added retryAfter to postLimiter
+- `frontend/src/modules/features/content/UnifiedPostCreator.js` - Batch endpoint + line break preservation
+- `frontend/src/utils/toast.js` - Added rate limit toast
 
 ---
 
