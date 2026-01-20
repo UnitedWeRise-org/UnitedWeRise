@@ -3318,6 +3318,9 @@ enum JurisdictionType {
   STATE
   COUNTY
   CITY
+  CONGRESSIONAL      /// US Congressional district (e.g., "TX-13")
+  STATE_SENATE       /// State Senate district (e.g., "TX-S-14")
+  STATE_HOUSE        /// State House/Assembly district (e.g., "TX-H-52")
   CUSTOM
 }
 

@@ -156,6 +156,187 @@ export class JurisdictionService {
   }
 
   /**
+   * Get H3 cells for a congressional district
+   * Uses existing AddressDistrictMapping data when available, falls back to state center
+   * Format: "TX-13" (state code + district number)
+   */
+  async getCongressionalDistrictCells(
+    stateCode: string,
+    districtNumber: number
+  ): Promise<string[]> {
+    // Try to find cells from existing address mappings
+    const mappings = await prisma.addressDistrictMapping.findMany({
+      where: {
+        state: stateCode.toUpperCase(),
+        district: {
+          type: 'CONGRESSIONAL',
+          identifier: `${stateCode.toUpperCase()}-${districtNumber}`,
+        },
+      },
+      select: { h3Index: true },
+      take: 1000, // Limit to avoid huge queries
+    });
+
+    if (mappings.length > 0) {
+      // Deduplicate H3 cells
+      const cells = [...new Set(mappings.map((m) => m.h3Index).filter(Boolean) as string[])];
+      if (cells.length > 0) {
+        logger.info(
+          { stateCode, districtNumber, cellCount: cells.length },
+          'Congressional district cells from address mappings'
+        );
+        return cells;
+      }
+    }
+
+    // Fallback: Use state center with smaller radius (congressional districts are smaller than states)
+    logger.info(
+      { stateCode, districtNumber },
+      'Congressional district using state center fallback'
+    );
+    const stateCenter = STATE_CENTERS[stateCode.toUpperCase()];
+    if (!stateCenter) {
+      return [];
+    }
+
+    // Use radius of 15 for congressional districts (smaller than state)
+    const centerCell = latLngToCell(stateCenter.lat, stateCenter.lng, H3_RESOLUTION);
+    return gridDisk(centerCell, 15);
+  }
+
+  /**
+   * Get H3 cells for a state senate district
+   * Uses existing AddressDistrictMapping data when available, falls back to state center
+   * Format: "TX-S-14" (state code + S + district number)
+   */
+  async getStateSenateCells(
+    stateCode: string,
+    districtNumber: number
+  ): Promise<string[]> {
+    // Try to find cells from existing address mappings
+    const mappings = await prisma.addressDistrictMapping.findMany({
+      where: {
+        state: stateCode.toUpperCase(),
+        district: {
+          type: 'STATE_SENATE',
+          identifier: `${stateCode.toUpperCase()}-S-${districtNumber}`,
+        },
+      },
+      select: { h3Index: true },
+      take: 1000,
+    });
+
+    if (mappings.length > 0) {
+      const cells = [...new Set(mappings.map((m) => m.h3Index).filter(Boolean) as string[])];
+      if (cells.length > 0) {
+        logger.info(
+          { stateCode, districtNumber, cellCount: cells.length },
+          'State senate district cells from address mappings'
+        );
+        return cells;
+      }
+    }
+
+    // Fallback: Use state center with smaller radius
+    logger.info(
+      { stateCode, districtNumber },
+      'State senate district using state center fallback'
+    );
+    const stateCenter = STATE_CENTERS[stateCode.toUpperCase()];
+    if (!stateCenter) {
+      return [];
+    }
+
+    // State senate districts are typically larger than house districts
+    const centerCell = latLngToCell(stateCenter.lat, stateCenter.lng, H3_RESOLUTION);
+    return gridDisk(centerCell, 12);
+  }
+
+  /**
+   * Get H3 cells for a state house district
+   * Uses existing AddressDistrictMapping data when available, falls back to state center
+   * Format: "TX-H-52" (state code + H + district number)
+   */
+  async getStateHouseCells(
+    stateCode: string,
+    districtNumber: number
+  ): Promise<string[]> {
+    // Try to find cells from existing address mappings
+    const mappings = await prisma.addressDistrictMapping.findMany({
+      where: {
+        state: stateCode.toUpperCase(),
+        district: {
+          type: 'STATE_HOUSE',
+          identifier: `${stateCode.toUpperCase()}-H-${districtNumber}`,
+        },
+      },
+      select: { h3Index: true },
+      take: 1000,
+    });
+
+    if (mappings.length > 0) {
+      const cells = [...new Set(mappings.map((m) => m.h3Index).filter(Boolean) as string[])];
+      if (cells.length > 0) {
+        logger.info(
+          { stateCode, districtNumber, cellCount: cells.length },
+          'State house district cells from address mappings'
+        );
+        return cells;
+      }
+    }
+
+    // Fallback: Use state center with smaller radius
+    logger.info(
+      { stateCode, districtNumber },
+      'State house district using state center fallback'
+    );
+    const stateCenter = STATE_CENTERS[stateCode.toUpperCase()];
+    if (!stateCenter) {
+      return [];
+    }
+
+    // State house districts are typically the smallest
+    const centerCell = latLngToCell(stateCenter.lat, stateCenter.lng, H3_RESOLUTION);
+    return gridDisk(centerCell, 8);
+  }
+
+  /**
+   * Parse political district jurisdiction value
+   * Formats:
+   * - CONGRESSIONAL: "TX-13" -> { state: "TX", districtNumber: 13 }
+   * - STATE_SENATE: "TX-S-14" -> { state: "TX", districtNumber: 14 }
+   * - STATE_HOUSE: "TX-H-52" -> { state: "TX", districtNumber: 52 }
+   */
+  parseDistrictValue(
+    jurisdictionType: 'CONGRESSIONAL' | 'STATE_SENATE' | 'STATE_HOUSE',
+    value: string
+  ): { state: string; districtNumber: number } | null {
+    if (!value) return null;
+
+    const parts = value.split('-');
+
+    if (jurisdictionType === 'CONGRESSIONAL') {
+      // Format: "TX-13"
+      if (parts.length !== 2) return null;
+      const districtNum = parseInt(parts[1], 10);
+      if (isNaN(districtNum)) return null;
+      return { state: parts[0].toUpperCase(), districtNumber: districtNum };
+    }
+
+    if (jurisdictionType === 'STATE_SENATE' || jurisdictionType === 'STATE_HOUSE') {
+      // Format: "TX-S-14" or "TX-H-52"
+      if (parts.length !== 3) return null;
+      const expectedMiddle = jurisdictionType === 'STATE_SENATE' ? 'S' : 'H';
+      if (parts[1].toUpperCase() !== expectedMiddle) return null;
+      const districtNum = parseInt(parts[2], 10);
+      if (isNaN(districtNum)) return null;
+      return { state: parts[0].toUpperCase(), districtNumber: districtNum };
+    }
+
+    return null;
+  }
+
+  /**
    * Generate H3 cells based on jurisdiction type and value
    */
   async generateJurisdictionCells(
@@ -171,19 +352,49 @@ export class JurisdictionService {
 
       case 'COUNTY': {
         // Expected format: "County Name, ST" or just state code
-        const parts = jurisdictionValue.split(',').map(p => p.trim());
+        const parts = jurisdictionValue.split(',').map((p) => p.trim());
         const state = parts.length > 1 ? parts[1] : parts[0];
         return this.getCountyCells(parts[0], state);
       }
 
       case 'CITY': {
         // Expected format: "City, ST"
-        const parts = jurisdictionValue.split(',').map(p => p.trim());
+        const parts = jurisdictionValue.split(',').map((p) => p.trim());
         if (parts.length < 2) {
           logger.warn({ jurisdictionValue }, 'Invalid city format');
           return [];
         }
         return this.getCityCells(parts[0], parts[1]);
+      }
+
+      case 'CONGRESSIONAL': {
+        // Expected format: "TX-13" (state-districtNumber)
+        const parsed = this.parseDistrictValue('CONGRESSIONAL', jurisdictionValue);
+        if (!parsed) {
+          logger.warn({ jurisdictionValue }, 'Invalid congressional district format');
+          return [];
+        }
+        return this.getCongressionalDistrictCells(parsed.state, parsed.districtNumber);
+      }
+
+      case 'STATE_SENATE': {
+        // Expected format: "TX-S-14" (state-S-districtNumber)
+        const parsed = this.parseDistrictValue('STATE_SENATE', jurisdictionValue);
+        if (!parsed) {
+          logger.warn({ jurisdictionValue }, 'Invalid state senate district format');
+          return [];
+        }
+        return this.getStateSenateCells(parsed.state, parsed.districtNumber);
+      }
+
+      case 'STATE_HOUSE': {
+        // Expected format: "TX-H-52" (state-H-districtNumber)
+        const parsed = this.parseDistrictValue('STATE_HOUSE', jurisdictionValue);
+        if (!parsed) {
+          logger.warn({ jurisdictionValue }, 'Invalid state house district format');
+          return [];
+        }
+        return this.getStateHouseCells(parsed.state, parsed.districtNumber);
       }
 
       case 'CUSTOM':
@@ -325,13 +536,14 @@ export class JurisdictionService {
       prisma.candidate.findUnique({
         where: { id: candidateId },
         select: {
+          id: true,
           // Get state from the office relation
           office: {
             select: { state: true },
           },
           // If candidate has H3 cell via user
           user: {
-            select: { h3Index: true },
+            select: { h3Index: true, id: true },
           },
         },
       }),
@@ -366,7 +578,63 @@ export class JurisdictionService {
       return candidateState?.toUpperCase() === organization.jurisdictionValue?.toUpperCase();
     }
 
-    // For other jurisdiction types, check if candidate's H3 cell is in jurisdiction
+    // Political district jurisdictions - check via AddressDistrictMapping
+    if (
+      organization.jurisdictionType === 'CONGRESSIONAL' ||
+      organization.jurisdictionType === 'STATE_SENATE' ||
+      organization.jurisdictionType === 'STATE_HOUSE'
+    ) {
+      const parsed = this.parseDistrictValue(
+        organization.jurisdictionType,
+        organization.jurisdictionValue || ''
+      );
+
+      if (!parsed) {
+        return false;
+      }
+
+      // First check: Does candidate's office state match the org's district state?
+      if (candidateState?.toUpperCase() !== parsed.state) {
+        return false;
+      }
+
+      // If candidate has user with H3 index, check via address district mapping
+      if (candidate.user?.id) {
+        const districtType =
+          organization.jurisdictionType === 'CONGRESSIONAL'
+            ? 'CONGRESSIONAL'
+            : organization.jurisdictionType === 'STATE_SENATE'
+            ? 'STATE_SENATE'
+            : 'STATE_HOUSE';
+
+        // Check if candidate's address is in this district
+        const candidateAddress = await prisma.addressDistrictMapping.findFirst({
+          where: {
+            district: {
+              type: districtType,
+              identifier: organization.jurisdictionValue,
+            },
+          },
+          include: { district: true },
+        });
+
+        if (candidateAddress) {
+          // Candidate's address is mapped to this district
+          return true;
+        }
+      }
+
+      // Fallback: Check if candidate's H3 cell is in organization's h3Cells
+      if (candidate.user?.h3Index) {
+        return organization.h3Cells.includes(candidate.user.h3Index);
+      }
+
+      // If we can't determine district, use state match as conservative fallback
+      // (already passed state check above)
+      return true;
+    }
+
+    // For other jurisdiction types (COUNTY, CITY, CUSTOM), check if candidate's H3 cell is in jurisdiction
     if (candidate.user?.h3Index) {
       return organization.h3Cells.includes(candidate.user.h3Index);
     }

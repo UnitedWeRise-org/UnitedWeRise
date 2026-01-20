@@ -12,6 +12,44 @@ exports.organizationService = exports.OrganizationService = void 0;
 const client_1 = require("@prisma/client");
 const prisma_1 = require("../lib/prisma");
 const logger_1 = require("./logger");
+const jurisdictionService_1 = require("./jurisdictionService");
+// Valid US state codes for district validation
+const VALID_STATE_CODES = [
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC',
+];
+/**
+ * Validate political district jurisdiction value format
+ * @param jurisdictionType - CONGRESSIONAL, STATE_SENATE, or STATE_HOUSE
+ * @param jurisdictionValue - The district value (e.g., "TX-13", "TX-S-14", "TX-H-52")
+ * @throws Error if validation fails
+ */
+function validatePoliticalDistrictValue(jurisdictionType, jurisdictionValue) {
+    if (!jurisdictionValue) {
+        throw new Error(`${jurisdictionType} jurisdiction requires a district value`);
+    }
+    const parsed = jurisdictionService_1.jurisdictionService.parseDistrictValue(jurisdictionType, jurisdictionValue);
+    if (!parsed) {
+        const formatExample = jurisdictionType === 'CONGRESSIONAL'
+            ? 'TX-13'
+            : jurisdictionType === 'STATE_SENATE'
+                ? 'TX-S-14'
+                : 'TX-H-52';
+        throw new Error(`Invalid ${jurisdictionType} district format. Expected format: "${formatExample}"`);
+    }
+    if (!VALID_STATE_CODES.includes(parsed.state)) {
+        throw new Error(`Invalid state code "${parsed.state}" in district value`);
+    }
+    if (parsed.districtNumber < 1) {
+        throw new Error('District number must be at least 1');
+    }
+    // Optional: Add max district number validation per state
+    // Texas has 38 congressional districts, 31 state senate, 150 state house
+    // Other states have different limits
+}
 /**
  * Standard user select fields for API responses
  */
@@ -63,34 +101,57 @@ class OrganizationService {
                 throw new Error('Cannot create sub-organization under an inactive organization');
             }
         }
-        const organization = await prisma_1.prisma.organization.create({
-            data: {
-                name: data.name,
-                slug: data.slug,
-                description: data.description,
-                avatar: data.avatar,
-                website: data.website,
-                headUserId: userId,
-                parentId: data.parentId,
-                jurisdictionType: data.jurisdictionType,
-                jurisdictionValue: data.jurisdictionValue,
-                h3Cells: data.h3Cells || [],
-                endorsementsEnabled: data.endorsementsEnabled ?? false,
-                votingThresholdType: data.votingThresholdType ?? client_1.VotingThresholdType.SIMPLE_MAJORITY,
-                votingThresholdValue: data.votingThresholdValue,
-                votingQuorumPercent: data.votingQuorumPercent ?? 0,
-            },
-            include: {
-                head: {
-                    select: USER_SELECT,
+        // Validate political district jurisdiction values
+        if (data.jurisdictionType === 'CONGRESSIONAL' ||
+            data.jurisdictionType === 'STATE_SENATE' ||
+            data.jurisdictionType === 'STATE_HOUSE') {
+            validatePoliticalDistrictValue(data.jurisdictionType, data.jurisdictionValue);
+        }
+        // Use transaction to create org and membership atomically
+        const organization = await prisma_1.prisma.$transaction(async (tx) => {
+            // Create the organization
+            const org = await tx.organization.create({
+                data: {
+                    name: data.name,
+                    slug: data.slug,
+                    description: data.description,
+                    avatar: data.avatar,
+                    website: data.website,
+                    headUserId: userId,
+                    parentId: data.parentId,
+                    jurisdictionType: data.jurisdictionType,
+                    jurisdictionValue: data.jurisdictionValue,
+                    h3Cells: data.h3Cells || [],
+                    endorsementsEnabled: data.endorsementsEnabled ?? false,
+                    votingThresholdType: data.votingThresholdType ?? client_1.VotingThresholdType.SIMPLE_MAJORITY,
+                    votingThresholdValue: data.votingThresholdValue,
+                    votingQuorumPercent: data.votingQuorumPercent ?? 0,
                 },
-                _count: {
-                    select: {
-                        members: true,
-                        children: true,
+            });
+            // Add creator as an active member (they're also the head)
+            await tx.organizationMember.create({
+                data: {
+                    organizationId: org.id,
+                    userId: userId,
+                    status: client_1.MembershipStatus.ACTIVE,
+                    joinedAt: new Date(),
+                },
+            });
+            // Return org with includes
+            return tx.organization.findUnique({
+                where: { id: org.id },
+                include: {
+                    head: {
+                        select: USER_SELECT,
+                    },
+                    _count: {
+                        select: {
+                            members: true,
+                            children: true,
+                        },
                     },
                 },
-            },
+            });
         });
         logger_1.logger.info({ organizationId: organization.id, userId }, 'Organization created');
         return organization;
@@ -149,6 +210,12 @@ class OrganizationService {
      * Update organization settings
      */
     async updateOrganization(organizationId, data) {
+        // Validate political district jurisdiction values if being updated
+        if (data.jurisdictionType === 'CONGRESSIONAL' ||
+            data.jurisdictionType === 'STATE_SENATE' ||
+            data.jurisdictionType === 'STATE_HOUSE') {
+            validatePoliticalDistrictValue(data.jurisdictionType, data.jurisdictionValue);
+        }
         return prisma_1.prisma.organization.update({
             where: { id: organizationId },
             data: {
@@ -166,7 +233,7 @@ class OrganizationService {
      * List organizations with filtering and pagination
      */
     async listOrganizations(options = {}) {
-        const { limit = 20, offset = 0, search, jurisdictionType, isVerified, includeInactive = false } = options;
+        const { limit = 20, offset = 0, search, jurisdictionType, isVerified, includeInactive = false, sort = 'newest' } = options;
         const where = {
             ...(includeInactive ? {} : { isActive: true }),
             ...(search
@@ -180,12 +247,27 @@ class OrganizationService {
             ...(jurisdictionType ? { jurisdictionType } : {}),
             ...(isVerified !== undefined ? { isVerified } : {}),
         };
+        // Build orderBy based on sort option
+        let orderBy;
+        switch (sort) {
+            case 'members':
+                orderBy = [{ members: { _count: 'desc' } }, { createdAt: 'desc' }];
+                break;
+            case 'alphabetical':
+                orderBy = [{ name: 'asc' }];
+                break;
+            case 'verified':
+                orderBy = [{ isVerified: 'desc' }, { createdAt: 'desc' }];
+                break;
+            default: // 'newest'
+                orderBy = [{ createdAt: 'desc' }];
+        }
         const [organizations, total] = await Promise.all([
             prisma_1.prisma.organization.findMany({
                 where,
                 take: limit,
                 skip: offset,
-                orderBy: { createdAt: 'desc' },
+                orderBy,
                 include: {
                     head: {
                         select: USER_SELECT,

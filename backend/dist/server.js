@@ -58,6 +58,7 @@ const organizations_1 = __importDefault(require("./routes/organizations"));
 const discussions_1 = __importDefault(require("./routes/discussions"));
 const questionnaires_1 = __importDefault(require("./routes/questionnaires"));
 const endorsements_1 = __importDefault(require("./routes/endorsements"));
+const districts_1 = __importDefault(require("./routes/districts"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
 const analyticsCleanup_1 = __importDefault(require("./jobs/analyticsCleanup"));
 const rateLimiting_1 = require("./middleware/rateLimiting");
@@ -281,6 +282,7 @@ app.use('/api/organizations', organizations_1.default);
 app.use('/api/discussions', discussions_1.default);
 app.use('/api/questionnaires', questionnaires_1.default);
 app.use('/api/endorsements', endorsements_1.default);
+app.use('/api/districts', districts_1.default);
 app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));

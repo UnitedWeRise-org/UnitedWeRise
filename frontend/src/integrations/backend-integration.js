@@ -306,6 +306,14 @@ class BackendIntegration {
             window.authToken = null;
         }
 
+        // Disconnect WebSocket to prevent reconnection with stale auth
+        // WebSocket has its own refresh token that can reconnect even after logout cleared UI state,
+        // which causes confusing behavior where the socket reconnects after the user is "logged out"
+        if (window.socketService && typeof window.socketService.disconnect === 'function') {
+            console.log('🔌 Disconnecting WebSocket on auth error');
+            window.socketService.disconnect();
+        }
+
         // Silent logout - update UI to logged-out state without popup
         // User can click login when they're ready
         if (window.setUserLoggedOut) {

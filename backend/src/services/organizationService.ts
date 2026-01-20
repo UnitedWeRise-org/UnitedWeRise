@@ -18,6 +18,60 @@ import {
 } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logger } from './logger';
+import { jurisdictionService } from './jurisdictionService';
+
+// Valid US state codes for district validation
+const VALID_STATE_CODES = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC',
+];
+
+/**
+ * Validate political district jurisdiction value format
+ * @param jurisdictionType - CONGRESSIONAL, STATE_SENATE, or STATE_HOUSE
+ * @param jurisdictionValue - The district value (e.g., "TX-13", "TX-S-14", "TX-H-52")
+ * @throws Error if validation fails
+ */
+function validatePoliticalDistrictValue(
+  jurisdictionType: JurisdictionType,
+  jurisdictionValue: string | undefined | null
+): void {
+  if (!jurisdictionValue) {
+    throw new Error(`${jurisdictionType} jurisdiction requires a district value`);
+  }
+
+  const parsed = jurisdictionService.parseDistrictValue(
+    jurisdictionType as 'CONGRESSIONAL' | 'STATE_SENATE' | 'STATE_HOUSE',
+    jurisdictionValue
+  );
+
+  if (!parsed) {
+    const formatExample =
+      jurisdictionType === 'CONGRESSIONAL'
+        ? 'TX-13'
+        : jurisdictionType === 'STATE_SENATE'
+        ? 'TX-S-14'
+        : 'TX-H-52';
+    throw new Error(
+      `Invalid ${jurisdictionType} district format. Expected format: "${formatExample}"`
+    );
+  }
+
+  if (!VALID_STATE_CODES.includes(parsed.state)) {
+    throw new Error(`Invalid state code "${parsed.state}" in district value`);
+  }
+
+  if (parsed.districtNumber < 1) {
+    throw new Error('District number must be at least 1');
+  }
+
+  // Optional: Add max district number validation per state
+  // Texas has 38 congressional districts, 31 state senate, 150 state house
+  // Other states have different limits
+}
 
 // Types for API requests
 
@@ -140,6 +194,15 @@ export class OrganizationService {
       }
     }
 
+    // Validate political district jurisdiction values
+    if (
+      data.jurisdictionType === 'CONGRESSIONAL' ||
+      data.jurisdictionType === 'STATE_SENATE' ||
+      data.jurisdictionType === 'STATE_HOUSE'
+    ) {
+      validatePoliticalDistrictValue(data.jurisdictionType, data.jurisdictionValue);
+    }
+
     // Use transaction to create org and membership atomically
     const organization = await prisma.$transaction(async (tx) => {
       // Create the organization
@@ -253,6 +316,15 @@ export class OrganizationService {
     organizationId: string,
     data: UpdateOrganizationRequest
   ): Promise<Organization> {
+    // Validate political district jurisdiction values if being updated
+    if (
+      data.jurisdictionType === 'CONGRESSIONAL' ||
+      data.jurisdictionType === 'STATE_SENATE' ||
+      data.jurisdictionType === 'STATE_HOUSE'
+    ) {
+      validatePoliticalDistrictValue(data.jurisdictionType, data.jurisdictionValue);
+    }
+
     return prisma.organization.update({
       where: { id: organizationId },
       data: {
