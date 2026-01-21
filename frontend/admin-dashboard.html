@@ -82,27 +82,85 @@
             </div>
         </div>
 
-        <!-- Navigation -->
-        <div class="admin-nav">
-            <button class="nav-button active" data-section="overview">Overview</button>
-            <button class="nav-button" data-section="security">Security</button>
-            <button class="nav-button" data-section="users">Users</button>
-            <button class="nav-button" data-section="content">Content</button>
-            <button class="nav-button" data-section="reports">Reports</button>
-            <button class="nav-button" data-section="candidates">Candidates</button>
-            <button class="nav-button" data-section="external-candidates">🌐 External Candidates</button>
-            <button class="nav-button" data-section="analytics">Analytics</button>
-            <button class="nav-button" data-section="ai-insights">🤖 AI Insights</button>
-            <button class="nav-button" data-section="motd">MOTD</button>
-            <button class="nav-button" data-section="civic-engagement">🏛️ Civic Engagement</button>
-            <button class="nav-button" data-section="organizations">🏢 Organizations</button>
-            <button class="nav-button" data-section="deployment">🚀 Deployment</button>
-            <button class="nav-button" data-section="system">System</button>
-            <button class="nav-button" data-section="errors">🚨 Errors</button>
-            <button class="nav-button" data-section="payments">💰 Payments</button>
-        </div>
+        <!-- Admin Layout: Sidebar + Content -->
+        <div class="admin-layout">
+            <aside class="admin-sidebar">
+                <nav class="sidebar-nav">
+                    <!-- CORE -->
+                    <div class="nav-category" data-category="core">
+                        <button class="category-header expanded">
+                            <span class="category-icon">⚡</span>
+                            <span class="category-label">Core</span>
+                            <span class="category-chevron">▼</span>
+                        </button>
+                        <div class="category-links expanded">
+                            <button class="nav-link active" data-section="overview">Overview</button>
+                            <button class="nav-link" data-section="users">Users</button>
+                            <button class="nav-link" data-section="content">Content</button>
+                            <button class="nav-link" data-section="reports">Reports</button>
+                            <button class="nav-link" data-section="security">Security</button>
+                        </div>
+                    </div>
 
-        <!-- Overview Section -->
+                    <!-- MONITORING -->
+                    <div class="nav-category" data-category="monitoring">
+                        <button class="category-header">
+                            <span class="category-icon">📊</span>
+                            <span class="category-label">Monitoring</span>
+                            <span class="category-chevron">▶</span>
+                        </button>
+                        <div class="category-links">
+                            <button class="nav-link" data-section="analytics">Analytics</button>
+                            <button class="nav-link" data-section="ai-insights">AI Insights</button>
+                        </div>
+                    </div>
+
+                    <!-- USERS -->
+                    <div class="nav-category" data-category="users-mgmt">
+                        <button class="category-header">
+                            <span class="category-icon">👥</span>
+                            <span class="category-label">Users</span>
+                            <span class="category-chevron">▶</span>
+                        </button>
+                        <div class="category-links">
+                            <button class="nav-link" data-section="candidates">Candidates</button>
+                            <button class="nav-link" data-section="external-candidates">External Candidates</button>
+                            <button class="nav-link" data-section="organizations">Organizations</button>
+                        </div>
+                    </div>
+
+                    <!-- CONTENT -->
+                    <div class="nav-category" data-category="content-mgmt">
+                        <button class="category-header">
+                            <span class="category-icon">📝</span>
+                            <span class="category-label">Content</span>
+                            <span class="category-chevron">▶</span>
+                        </button>
+                        <div class="category-links">
+                            <button class="nav-link" data-section="motd">MOTD</button>
+                            <button class="nav-link" data-section="civic-engagement">Civic Engagement</button>
+                        </div>
+                    </div>
+
+                    <!-- SYSTEM -->
+                    <div class="nav-category" data-category="system">
+                        <button class="category-header">
+                            <span class="category-icon">⚙️</span>
+                            <span class="category-label">System</span>
+                            <span class="category-chevron">▶</span>
+                        </button>
+                        <div class="category-links">
+                            <button class="nav-link" data-section="deployment">Deployment</button>
+                            <button class="nav-link" data-section="system">System</button>
+                            <button class="nav-link" data-section="errors">Errors</button>
+                            <button class="nav-link" data-section="payments">Payments</button>
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+
+            <main class="admin-content">
+                <!-- Overview Section -->
         <div id="overview" class="dashboard-section active">
             <h2>System Overview</h2>
 
@@ -2233,6 +2291,9 @@ Auto-refresh enabled every 60 seconds
             <!-- Pagination -->
             <div id="orgPagination" class="pagination-controls" style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem;"></div>
         </div>
+
+            </main> <!-- Close admin-content -->
+        </div> <!-- Close admin-layout -->
 
     </div> <!-- Close dashboardMain -->
 

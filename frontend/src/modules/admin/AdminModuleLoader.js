@@ -529,6 +529,16 @@ class AdminModuleLoader {
      * Set up section navigation handlers
      */
     setupSectionNavigation() {
+        // Handle sidebar nav links
+        const navLinks = document.querySelectorAll('.nav-link[data-section]');
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const sectionId = link.dataset.section;
+                this.showSection(sectionId);
+            });
+        });
+
+        // Legacy support: Also handle .nav-button[data-section] (for any remaining buttons)
         const navButtons = document.querySelectorAll('.nav-button[data-section]');
         navButtons.forEach(button => {
             button.addEventListener('click', () => {
@@ -588,15 +598,19 @@ class AdminModuleLoader {
             targetSection.classList.add('active');
         }
 
-        // Update navigation active state
-        const navButtons = document.querySelectorAll('.nav-button');
-        navButtons.forEach(button => {
-            button.classList.remove('active');
-            if (button.dataset.section === sectionId ||
-                button.getAttribute('onclick')?.includes(sectionId)) {
-                button.classList.add('active');
+        // Update sidebar navigation active state
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.dataset.section === sectionId) {
+                link.classList.add('active');
             }
         });
+
+        // Expand the category containing this section
+        if (window.adminTabsManager && window.adminTabsManager.expandCategoryForSection) {
+            window.adminTabsManager.expandCategoryForSection(sectionId);
+        }
 
         // Load data for the section
         if (window.AdminState) {

@@ -2,7 +2,7 @@
  * AdminTabsManager - Handles tab functionality for admin dashboard
  * Extracted from inline HTML scripts for proper ES6 module architecture
  *
- * Handles analytics tabs, custom date range visibility, and other tab-based UI
+ * Handles analytics tabs, custom date range visibility, sidebar categories, and other tab-based UI
  */
 
 class AdminTabsManager {
@@ -10,6 +10,7 @@ class AdminTabsManager {
         this.tabs = new Map();
         this.panels = new Map();
         this.activeTab = null;
+        this.sidebarStateKey = 'adminSidebarState';
 
         // Bind methods
         this.init = this.init.bind(this);
@@ -17,6 +18,10 @@ class AdminTabsManager {
         this.switchTab = this.switchTab.bind(this);
         this.handleCustomDateRange = this.handleCustomDateRange.bind(this);
         this.registerTab = this.registerTab.bind(this);
+        this.setupSidebarCategories = this.setupSidebarCategories.bind(this);
+        this.saveSidebarState = this.saveSidebarState.bind(this);
+        this.restoreSidebarState = this.restoreSidebarState.bind(this);
+        this.expandCategoryForSection = this.expandCategoryForSection.bind(this);
     }
 
     /**
@@ -25,6 +30,8 @@ class AdminTabsManager {
     init() {
         try {
             this.setupAnalyticsTabs();
+            this.setupSidebarCategories();
+            this.restoreSidebarState();
             console.log('✅ AdminTabsManager initialized');
         } catch (error) {
             console.error('❌ AdminTabsManager initialization failed:', error);
@@ -128,6 +135,108 @@ class AdminTabsManager {
      */
     getActiveTab() {
         return this.activeTab;
+    }
+
+    /**
+     * Setup sidebar category collapse/expand functionality
+     */
+    setupSidebarCategories() {
+        const categoryHeaders = document.querySelectorAll('.category-header');
+
+        categoryHeaders.forEach(header => {
+            header.addEventListener('click', (e) => {
+                const category = header.closest('.nav-category');
+                const links = category.querySelector('.category-links');
+                const chevron = header.querySelector('.category-chevron');
+                const isExpanded = links.classList.contains('expanded');
+
+                // Toggle this category
+                if (isExpanded) {
+                    links.classList.remove('expanded');
+                    header.classList.remove('expanded');
+                    if (chevron) chevron.textContent = '▶';
+                } else {
+                    links.classList.add('expanded');
+                    header.classList.add('expanded');
+                    if (chevron) chevron.textContent = '▼';
+                }
+
+                // Save state to localStorage
+                this.saveSidebarState();
+            });
+        });
+
+        console.log(`✅ Sidebar categories setup: ${categoryHeaders.length} categories`);
+    }
+
+    /**
+     * Save sidebar expanded/collapsed state to localStorage
+     */
+    saveSidebarState() {
+        const state = {};
+        document.querySelectorAll('.nav-category').forEach(cat => {
+            const categoryId = cat.dataset.category;
+            const isExpanded = cat.querySelector('.category-links').classList.contains('expanded');
+            state[categoryId] = isExpanded;
+        });
+        localStorage.setItem(this.sidebarStateKey, JSON.stringify(state));
+    }
+
+    /**
+     * Restore sidebar state from localStorage
+     */
+    restoreSidebarState() {
+        const saved = localStorage.getItem(this.sidebarStateKey);
+        if (saved) {
+            try {
+                const state = JSON.parse(saved);
+                Object.entries(state).forEach(([categoryId, isExpanded]) => {
+                    const cat = document.querySelector(`.nav-category[data-category="${categoryId}"]`);
+                    if (cat) {
+                        const links = cat.querySelector('.category-links');
+                        const header = cat.querySelector('.category-header');
+                        const chevron = header.querySelector('.category-chevron');
+
+                        if (isExpanded) {
+                            links.classList.add('expanded');
+                            header.classList.add('expanded');
+                            if (chevron) chevron.textContent = '▼';
+                        } else {
+                            links.classList.remove('expanded');
+                            header.classList.remove('expanded');
+                            if (chevron) chevron.textContent = '▶';
+                        }
+                    }
+                });
+                console.log('✅ Sidebar state restored from localStorage');
+            } catch (error) {
+                console.warn('⚠️ Failed to restore sidebar state:', error);
+            }
+        }
+    }
+
+    /**
+     * Expand the category containing a specific section
+     * @param {string} sectionId - The section ID to find and expand
+     */
+    expandCategoryForSection(sectionId) {
+        const activeLink = document.querySelector(`.nav-link[data-section="${sectionId}"]`);
+        if (activeLink) {
+            const category = activeLink.closest('.nav-category');
+            if (category) {
+                const links = category.querySelector('.category-links');
+                const header = category.querySelector('.category-header');
+                const chevron = header.querySelector('.category-chevron');
+
+                // Expand the category
+                links.classList.add('expanded');
+                header.classList.add('expanded');
+                if (chevron) chevron.textContent = '▼';
+
+                // Save state
+                this.saveSidebarState();
+            }
+        }
     }
 
     /**

@@ -20,13 +20,120 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .admin-nav {
+        /* ===== SIDEBAR LAYOUT ===== */
+        .admin-layout {
             display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
+            gap: 0;
+            min-height: calc(100vh - 120px);
         }
 
+        /* Sidebar */
+        .admin-sidebar {
+            width: 240px;
+            min-width: 240px;
+            background: #1a1a2e;
+            border-radius: 8px 0 0 8px;
+            padding: 1rem 0;
+            position: sticky;
+            top: 1rem;
+            height: fit-content;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Category header */
+        .category-header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: transparent;
+            border: none;
+            color: #a0a0b0;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-header:hover,
+        .category-header.active {
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .category-icon {
+            font-size: 1rem;
+        }
+
+        .category-label {
+            flex: 1;
+            text-align: left;
+        }
+
+        /* Chevron rotation */
+        .category-chevron {
+            font-size: 0.75rem;
+            transition: transform 0.2s;
+        }
+
+        .category-header.expanded .category-chevron {
+            transform: rotate(90deg);
+        }
+
+        /* Category links container */
+        .category-links {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .category-links.expanded {
+            max-height: 500px;
+        }
+
+        /* Individual nav links */
+        .nav-link {
+            display: block;
+            width: 100%;
+            padding: 0.6rem 1rem 0.6rem 2.5rem;
+            background: transparent;
+            border: none;
+            color: #8888a0;
+            text-align: left;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-link.active {
+            color: #a3c74a;
+            background: rgba(75, 92, 9, 0.15);
+            border-left-color: #a3c74a;
+            font-weight: 600;
+        }
+
+        /* Main content area */
+        .admin-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Legacy nav-button support (for header buttons) */
         .nav-button {
             padding: 0.75rem 1.5rem;
             background: white;
@@ -46,14 +153,57 @@
         .dashboard-section {
             display: none;
             background: white;
-            border-radius: 8px;
+            border-radius: 0 8px 8px 0;
             padding: 2rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
+            min-height: calc(100vh - 180px);
         }
 
         .dashboard-section.active {
             display: block;
+        }
+
+        /* ===== RESPONSIVE SIDEBAR ===== */
+        @media (max-width: 900px) {
+            .admin-layout {
+                flex-direction: column;
+            }
+
+            .admin-sidebar {
+                width: 100%;
+                min-width: 100%;
+                border-radius: 8px;
+                max-height: none;
+                position: static;
+            }
+
+            .dashboard-section {
+                border-radius: 8px;
+                min-height: auto;
+            }
+
+            .sidebar-nav {
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 0.5rem;
+            }
+
+            .nav-category {
+                flex: 1;
+                min-width: 140px;
+            }
+
+            .category-links {
+                position: absolute;
+                background: #1a1a2e;
+                z-index: 100;
+                border-radius: 0 0 8px 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+
+            .nav-link {
+                padding-left: 1rem;
+            }
         }
 
         .stats-grid {
