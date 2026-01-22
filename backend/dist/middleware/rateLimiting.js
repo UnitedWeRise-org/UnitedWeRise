@@ -127,13 +127,26 @@ exports.burstLimiter = (0, express_rate_limit_1.default)({
 // Strict rate limiting for posting content
 exports.postLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // Limit each IP to 10 posts per 15 minutes
-    message: {
-        error: 'Too many posts created, please wait before posting again.'
-    },
+    max: 10, // Limit each IP to 10 posts/threads per 15 minutes
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: azureKeyGenerator
+    keyGenerator: azureKeyGenerator,
+    // Custom handler to include retryAfter for frontend countdown
+    handler: (req, res) => {
+        const resetTime = req.rateLimit?.resetTime;
+        const retryAfter = resetTime ? Math.ceil((resetTime - Date.now()) / 1000) : 900; // Default 15 min
+        logger_1.logger.warn({
+            ip: req.ip,
+            userId: req.user?.id,
+            retryAfter,
+            path: req.path,
+            event: 'post_rate_limit_exceeded'
+        }, 'Post rate limit exceeded');
+        res.status(429).json({
+            error: 'Too many posts created. Please wait before posting again.',
+            retryAfter: retryAfter
+        });
+    }
 });
 // Rate limiting for messaging
 exports.messageLimiter = (0, express_rate_limit_1.default)({

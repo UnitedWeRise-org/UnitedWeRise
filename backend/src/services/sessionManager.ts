@@ -270,6 +270,12 @@ class SessionManager {
     // SECURITY: Validate token format before hashing (64-char hex from crypto.randomBytes(32))
     // Defense-in-depth against cookie tampering or injection
     if (!token || token.length !== 64 || !/^[a-f0-9]+$/i.test(token)) {
+      logger.warn({
+        tokenLength: token?.length,
+        expectedLength: 64,
+        isHex: token ? /^[a-f0-9]+$/i.test(token) : false,
+        isEmpty: !token
+      }, 'DIAGNOSTIC: Refresh token format validation failed');
       return null;
     }
 
@@ -282,6 +288,9 @@ class SessionManager {
 
     // Token doesn't exist
     if (!refreshToken) {
+      logger.warn({
+        tokenHashPrefix: tokenHash.substring(0, 8) + '...'
+      }, 'DIAGNOSTIC: Refresh token hash not found in database');
       return null;
     }
 
@@ -289,11 +298,16 @@ class SessionManager {
 
     // Token has expired (past its expiresAt timestamp)
     if (refreshToken.expiresAt < now) {
-      logger.debug({
+      logger.warn({
         tokenId: refreshToken.id,
         userId: refreshToken.userId,
-        expiresAt: refreshToken.expiresAt
-      }, 'Refresh token expired');
+        username: refreshToken.user?.username,
+        expiresAt: refreshToken.expiresAt.toISOString(),
+        expiredAgo: Math.round((now.getTime() - refreshToken.expiresAt.getTime()) / 1000 / 60) + ' minutes',
+        createdAt: refreshToken.createdAt?.toISOString(),
+        lastUsedAt: refreshToken.lastUsedAt?.toISOString(),
+        rememberMe: refreshToken.rememberMe
+      }, 'DIAGNOSTIC: Refresh token TTL expired');
       return null;
     }
 
@@ -307,9 +321,14 @@ class SessionManager {
         logger.warn({
           tokenId: refreshToken.id,
           userId: refreshToken.userId,
-          revokedAt: refreshToken.revokedAt,
-          attemptTime: now
-        }, 'SECURITY: Attempted use of revoked refresh token after grace period - possible replay attack');
+          username: refreshToken.user?.username,
+          revokedAt: refreshToken.revokedAt.toISOString(),
+          revokedAgo: Math.round((now.getTime() - refreshToken.revokedAt.getTime()) / 1000) + ' seconds',
+          createdAt: refreshToken.createdAt?.toISOString(),
+          lastUsedAt: refreshToken.lastUsedAt?.toISOString(),
+          rememberMe: refreshToken.rememberMe,
+          attemptTime: now.toISOString()
+        }, 'DIAGNOSTIC: Refresh token revoked - possible logout, password change, or rotation');
         return null;
       }
       // Token is within grace period - still valid but log for monitoring

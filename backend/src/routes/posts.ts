@@ -562,6 +562,341 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
 
 /**
  * @swagger
+ * /api/posts/thread:
+ *   post:
+ *     tags: [Post]
+ *     summary: Create a thread (batch create head post + continuations)
+ *     description: |
+ *       Creates an entire thread atomically in a single request.
+ *       - All posts are created in one database transaction
+ *       - Only the head post gets an AI embedding (continuations get empty embedding)
+ *       - Rate limit counts as 1 action regardless of thread length
+ *       - If any post fails, the entire thread is rolled back
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - headContent
+ *             properties:
+ *               headContent:
+ *                 type: string
+ *                 maxLength: 500
+ *                 description: Content for the head/first post
+ *                 example: "This is the start of my thread about civic engagement..."
+ *               continuations:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   maxLength: 500
+ *                 description: Array of continuation content strings (max 500 chars each)
+ *                 example: ["This continues the discussion...", "And finally..."]
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   enum: [Public Post, Official Post, Candidate Post, Volunteer Post]
+ *                 default: ["Public Post"]
+ *                 description: Tags applied to all posts in the thread
+ *               mediaId:
+ *                 type: string
+ *                 description: ID of photo to attach to head post
+ *               mediaIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of photo IDs to attach to head post
+ *     responses:
+ *       201:
+ *         description: Thread created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 headPost:
+ *                   type: object
+ *                   description: The created head post with full details
+ *                 continuationPosts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                   description: Array of created continuation posts
+ *                 totalPosts:
+ *                   type: integer
+ *                   example: 3
+ *       400:
+ *         description: Validation error - missing content or content too long
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       403:
+ *         description: Forbidden - user is suspended or lacks permissions
+ *       429:
+ *         description: Rate limit exceeded
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/thread', requireAuth, checkUserSuspension, postLimiter, contentFilter, async (req: AuthRequest, res) => {
+    try {
+        const { headContent, continuations = [], tags = ['Public Post'], mediaId, mediaIds = [] } = req.body;
+        const userId = req.user!.id;
+
+        // Validate head content
+        if (!headContent || headContent.trim().length === 0) {
+            return res.status(400).json({ error: 'Head post content is required' });
+        }
+
+        if (headContent.trim().length > 500) {
+            return res.status(400).json({ error: 'Head post content exceeds 500 characters' });
+        }
+
+        // Validate continuations
+        if (!Array.isArray(continuations)) {
+            return res.status(400).json({ error: 'Continuations must be an array' });
+        }
+
+        for (let i = 0; i < continuations.length; i++) {
+            if (typeof continuations[i] !== 'string') {
+                return res.status(400).json({ error: `Continuation ${i + 1} must be a string` });
+            }
+            if (continuations[i].trim().length === 0) {
+                return res.status(400).json({ error: `Continuation ${i + 1} is empty` });
+            }
+            if (continuations[i].trim().length > 500) {
+                return res.status(400).json({ error: `Continuation ${i + 1} exceeds 500 characters` });
+            }
+        }
+
+        // Validate tags permissions
+        const fullUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, politicalProfileType: true }
+        });
+
+        if (!fullUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        for (const tag of tags) {
+            if (tag === 'Official Post' && fullUser.politicalProfileType !== 'ELECTED_OFFICIAL') {
+                return res.status(403).json({ error: 'Only elected officials can create Official Posts' });
+            }
+            if (tag === 'Candidate Post' && fullUser.politicalProfileType !== 'CANDIDATE') {
+                return res.status(403).json({ error: 'Only registered candidates can create Candidate Posts' });
+            }
+        }
+
+        // Collect photo IDs for head post
+        const photoIds: string[] = [];
+        if (mediaId) photoIds.push(mediaId);
+        if (Array.isArray(mediaIds)) photoIds.push(...mediaIds);
+
+        // Generate embedding for head post only (slow operation - 2-3 seconds)
+        let embedding: number[] = [];
+        try {
+            const embeddingResult = await azureOpenAI.generateEmbedding(headContent.trim());
+            embedding = embeddingResult.embedding;
+        } catch (error) {
+            logger.warn({ err: error }, 'Failed to generate embedding for thread head');
+        }
+
+        // Get user reputation
+        const userReputation = await reputationService.getUserReputation(userId);
+
+        // Get geographic data
+        const geographicData = await PostGeographicService.generatePostGeographicData(userId);
+
+        // Create all posts in a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // Create head post
+            const headPost = await tx.post.create({
+                data: {
+                    content: headContent.trim(),
+                    authorId: userId,
+                    embedding,
+                    authorReputation: userReputation.current,
+                    tags,
+                    audience: 'PUBLIC',
+                    threadHeadId: null,
+                    threadPosition: 0,
+                    ...(geographicData && {
+                        h3Index: geographicData.h3Index,
+                        latitude: geographicData.latitude,
+                        longitude: geographicData.longitude,
+                        originalH3Index: geographicData.originalH3Index,
+                        privacyDisplaced: geographicData.privacyDisplaced
+                    })
+                },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true
+                        }
+                    },
+                    photos: true,
+                    _count: {
+                        select: {
+                            likes: true,
+                            comments: true,
+                            threadPosts: true
+                        }
+                    }
+                }
+            });
+
+            // Link photos to head post if provided
+            if (photoIds.length > 0) {
+                await tx.photo.updateMany({
+                    where: {
+                        id: { in: photoIds },
+                        userId: userId
+                    },
+                    data: {
+                        postId: headPost.id
+                    }
+                });
+            }
+
+            // Create continuation posts (no embedding - they inherit context from head)
+            const continuationPosts = [];
+            for (let i = 0; i < continuations.length; i++) {
+                const contPost = await tx.post.create({
+                    data: {
+                        content: continuations[i].trim(),
+                        authorId: userId,
+                        embedding: [], // No embedding for continuations
+                        authorReputation: userReputation.current,
+                        tags,
+                        audience: 'PUBLIC',
+                        threadHeadId: headPost.id,
+                        threadPosition: i + 1,
+                        ...(geographicData && {
+                            h3Index: geographicData.h3Index,
+                            latitude: geographicData.latitude,
+                            longitude: geographicData.longitude,
+                            originalH3Index: geographicData.originalH3Index,
+                            privacyDisplaced: geographicData.privacyDisplaced
+                        })
+                    },
+                    include: {
+                        author: {
+                            select: {
+                                id: true,
+                                username: true,
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                                verified: true
+                            }
+                        },
+                        _count: {
+                            select: {
+                                likes: true,
+                                comments: true
+                            }
+                        }
+                    }
+                });
+                continuationPosts.push(contPost);
+            }
+
+            return { headPost, continuationPosts };
+        });
+
+        // Track activity for head post
+        try {
+            await ActivityTracker.trackPostCreated(userId, result.headPost.id, headContent.trim());
+        } catch (error) {
+            logger.error({ err: error, postId: result.headPost.id }, 'Failed to track thread creation activity');
+        }
+
+        // Notify subscribers (async, don't block response)
+        (async () => {
+            try {
+                const subscribersToNotify = await prisma.subscription.findMany({
+                    where: {
+                        subscribedId: userId,
+                        notifyOnNewPosts: true
+                    },
+                    select: { subscriberId: true }
+                });
+
+                if (subscribersToNotify.length > 0) {
+                    const authorName = result.headPost.author.firstName && result.headPost.author.lastName
+                        ? `${result.headPost.author.firstName} ${result.headPost.author.lastName}`
+                        : result.headPost.author.username;
+
+                    const notificationPromises = subscribersToNotify.map(sub =>
+                        createNotification(
+                            'NEW_POST',
+                            userId,
+                            sub.subscriberId,
+                            `${authorName} posted a new thread`,
+                            result.headPost.id
+                        )
+                    );
+
+                    await Promise.allSettled(notificationPromises);
+                    logger.info({ postId: result.headPost.id, notifiedCount: subscribersToNotify.length }, 'Thread subscription notifications sent');
+                }
+            } catch (error) {
+                logger.error({ err: error, postId: result.headPost.id }, 'Failed to send thread subscription notifications');
+            }
+        })();
+
+        logger.info({
+            userId,
+            headPostId: result.headPost.id,
+            continuationCount: result.continuationPosts.length
+        }, 'Thread created successfully');
+
+        res.status(201).json({
+            success: true,
+            headPost: {
+                ...result.headPost,
+                likesCount: result.headPost._count.likes,
+                commentsCount: result.headPost._count.comments,
+                threadPostsCount: result.continuationPosts.length,
+                dislikesCount: 0,
+                agreesCount: 0,
+                disagreesCount: 0,
+                isLiked: false,
+                isShared: false,
+                _count: undefined
+            },
+            continuationPosts: result.continuationPosts.map(post => ({
+                ...post,
+                likesCount: post._count.likes,
+                commentsCount: post._count.comments,
+                dislikesCount: 0,
+                agreesCount: 0,
+                disagreesCount: 0,
+                isLiked: false,
+                isShared: false,
+                _count: undefined
+            })),
+            totalPosts: 1 + result.continuationPosts.length
+        });
+    } catch (error) {
+        logger.error({ err: error, userId: req.user!.id }, 'Thread creation error');
+        res.status(500).json({ error: 'Failed to create thread' });
+    }
+});
+
+/**
+ * @swagger
  * /api/posts/me:
  *   get:
  *     tags: [Post]

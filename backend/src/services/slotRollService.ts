@@ -212,7 +212,8 @@ export class SlotRollService {
         const posts = await prisma.post.findMany({
             where: {
                 createdAt: { gte: thirtyDaysAgo },
-                tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
+                tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] },
+                threadHeadId: null  // Exclude thread continuations - only show head posts
             },
             include: {
                 author: {
@@ -286,7 +287,8 @@ export class SlotRollService {
         const posts = await prisma.post.findMany({
             where: {
                 createdAt: { gte: thirtyDaysAgo },
-                tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
+                tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] },
+                threadHeadId: null  // Exclude thread continuations - only show head posts
             },
             include: {
                 author: {

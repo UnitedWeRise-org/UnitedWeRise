@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
 ;
-import { hashPassword, comparePassword, generateToken, generateResetToken, generateRefreshToken, hashResetToken } from '../utils/auth';
+import { hashPassword, comparePassword, generateToken, generateResetToken, generateRefreshToken, hashResetToken, hashRefreshToken } from '../utils/auth';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validateRegistration, validateLogin, validatePasswordReset } from '../middleware/validation';
 import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiting';
@@ -1339,16 +1339,34 @@ router.post('/set-password', requireAuth, async (req: AuthRequest, res) => {
 router.post('/refresh', async (req, res) => {
   const startTime = Date.now();
   const ipAddress = req.ip || 'unknown';
+  const userAgent = req.get('User-Agent') || 'unknown';
 
   try {
     // Get refreshToken from cookies (not authToken)
     const refreshToken = req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
 
+    // DIAGNOSTIC: Log all cookie names received (not values for security)
+    const allCookieNames = Object.keys(req.cookies || {});
+    req.log.info({
+      ipAddress,
+      hasCookie: !!refreshToken,
+      cookieLength: refreshToken?.length,
+      userAgent,
+      allCookieNames
+    }, 'Token refresh attempt - diagnostic info');
+
     if (!refreshToken) {
-      req.log.debug({ ipAddress }, 'Token refresh failed: No refresh token provided');
+      req.log.warn({
+        ipAddress,
+        userAgent,
+        allCookieNames,
+        hasAuthToken: allCookieNames.includes(COOKIE_NAMES.AUTH_TOKEN),
+        hasCsrfToken: allCookieNames.includes(COOKIE_NAMES.CSRF_TOKEN)
+      }, 'Token refresh failed: No refresh token cookie sent by browser');
       return res.status(401).json({
         error: 'Invalid refresh token',
-        code: 'REFRESH_TOKEN_INVALID'
+        code: 'REFRESH_TOKEN_MISSING',
+        diagnostic: 'No refresh token cookie received'
       });
     }
 
@@ -1356,20 +1374,81 @@ router.post('/refresh', async (req, res) => {
     const tokenData = await sessionManager.validateRefreshToken(refreshToken);
 
     if (!tokenData) {
-      req.log.debug({ ipAddress }, 'Token refresh failed: Invalid or expired refresh token');
+      // DIAGNOSTIC: Query database to understand WHY validation failed
+      const tokenHash = hashRefreshToken(refreshToken);
+      const tokenRecord = await prisma.refreshToken.findUnique({
+        where: { tokenHash },
+        select: {
+          id: true,
+          expiresAt: true,
+          revokedAt: true,
+          userId: true,
+          lastUsedAt: true,
+          createdAt: true,
+          rememberMe: true
+        }
+      });
+
+      // Determine specific failure reason
+      let failureReason = 'UNKNOWN';
+      let diagnosticDetails: Record<string, unknown> = {};
+
+      if (!tokenRecord) {
+        failureReason = 'TOKEN_NOT_FOUND';
+        diagnosticDetails = {
+          tokenHashPrefix: tokenHash.substring(0, 8) + '...',
+          note: 'Token hash not in database - was token ever stored?'
+        };
+      } else if (tokenRecord.expiresAt < new Date()) {
+        failureReason = 'TOKEN_EXPIRED';
+        diagnosticDetails = {
+          tokenId: tokenRecord.id,
+          expiresAt: tokenRecord.expiresAt.toISOString(),
+          expiredAgo: Math.round((Date.now() - tokenRecord.expiresAt.getTime()) / 1000 / 60) + ' minutes'
+        };
+      } else if (tokenRecord.revokedAt && tokenRecord.revokedAt <= new Date()) {
+        failureReason = 'TOKEN_REVOKED';
+        diagnosticDetails = {
+          tokenId: tokenRecord.id,
+          revokedAt: tokenRecord.revokedAt.toISOString(),
+          lastUsedAt: tokenRecord.lastUsedAt?.toISOString(),
+          createdAt: tokenRecord.createdAt.toISOString(),
+          revokedAgo: Math.round((Date.now() - tokenRecord.revokedAt.getTime()) / 1000 / 60) + ' minutes'
+        };
+      } else {
+        // Token exists and is valid - shouldn't reach here
+        failureReason = 'FORMAT_INVALID';
+        diagnosticDetails = {
+          tokenLength: refreshToken.length,
+          expectedLength: 64,
+          isHex: /^[a-f0-9]+$/i.test(refreshToken)
+        };
+      }
+
+      req.log.warn({
+        ipAddress,
+        userAgent,
+        failureReason,
+        ...diagnosticDetails
+      }, `Token refresh failed: ${failureReason}`);
+
       await SecurityService.logEvent({
+        userId: tokenRecord?.userId,
         eventType: 'REFRESH_TOKEN_FAILED',
         ipAddress,
-        userAgent: req.get('User-Agent') || 'unknown',
+        userAgent,
         details: {
-          reason: 'Invalid or expired refresh token',
+          reason: failureReason,
+          ...diagnosticDetails,
           timestamp: new Date().toISOString()
         },
-        riskScore: 20
+        riskScore: failureReason === 'TOKEN_REVOKED' ? 30 : 20
       });
+
       return res.status(401).json({
         error: 'Invalid refresh token',
-        code: 'REFRESH_TOKEN_INVALID'
+        code: `REFRESH_TOKEN_${failureReason}`,
+        diagnostic: failureReason
       });
     }
 

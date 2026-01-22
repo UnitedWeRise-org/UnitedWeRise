@@ -57,6 +57,7 @@ class UnifiedPostCreator {
     /**
      * Smart split content into thread-sized chunks
      * Splits at paragraph breaks first, then sentences if needed
+     * Preserves line breaks within chunks (max 30 lines per chunk)
      * @param {string} content - Full content to split
      * @param {number} [maxChars=500] - Maximum chars per chunk
      * @returns {string[]} - Array of content chunks
@@ -67,11 +68,13 @@ class UnifiedPostCreator {
         }
 
         const chunks = [];
+        // Trim outer edges only, preserve internal formatting
         let remaining = content.trim();
 
         while (remaining.length > 0) {
             if (remaining.length <= maxChars) {
-                chunks.push(remaining);
+                // Apply line limit and normalize newlines on final chunk
+                chunks.push(this._normalizeChunk(remaining));
                 break;
             }
 
@@ -93,11 +96,36 @@ class UnifiedPostCreator {
                 splitPoint = maxChars;
             }
 
-            chunks.push(remaining.substring(0, splitPoint).trim());
-            remaining = remaining.substring(splitPoint).trim();
+            // Preserve newlines: only remove trailing spaces/tabs, not newlines
+            const chunk = remaining.substring(0, splitPoint)
+                .replace(/[ \t]+$/, '');  // Remove trailing spaces/tabs only
+            chunks.push(this._normalizeChunk(chunk));
+
+            // Remove leading spaces/tabs from remainder, preserve newlines
+            remaining = remaining.substring(splitPoint).replace(/^[ \t]+/, '');
         }
 
         return chunks.filter(chunk => chunk.length > 0);
+    }
+
+    /**
+     * Normalize chunk: collapse excessive newlines and cap line count
+     * @private
+     * @param {string} text - Chunk text to normalize
+     * @param {number} [maxLines=30] - Maximum lines per chunk
+     * @returns {string} - Normalized chunk
+     */
+    _normalizeChunk(text, maxLines = 30) {
+        // Collapse 3+ consecutive newlines to 2 (preserve paragraph breaks)
+        let normalized = text.replace(/\n{3,}/g, '\n\n');
+
+        // Cap at maxLines to prevent visual overflow
+        const lines = normalized.split('\n');
+        if (lines.length > maxLines) {
+            normalized = lines.slice(0, maxLines).join('\n');
+        }
+
+        return normalized;
     }
 
     /**
@@ -179,10 +207,10 @@ class UnifiedPostCreator {
     }
 
     /**
-     * Create a thread (head post + continuation posts)
+     * Create a thread (head post + continuation posts) using batch endpoint
      * @param {Object} options - Thread creation options
      * @param {string} options.headContent - Content for the head post (max 500 chars)
-     * @param {string[]} options.continuations - Array of continuation content strings (max 1000 chars each)
+     * @param {string[]} options.continuations - Array of continuation content strings (max 500 chars each)
      * @param {string[]} [options.tags] - Post tags
      * @param {File[]} [options.mediaFiles] - Files to upload (attached to head post only)
      * @param {Function} [options.onProgress] - Progress callback (called with { step, total, message })
@@ -215,13 +243,10 @@ class UnifiedPostCreator {
                 }
             }
 
-            const totalSteps = 1 + continuations.length;
-            let currentStep = 0;
-
             // Step 1: Upload media if present (attached to head post)
             let mediaIds = [];
             if (mediaFiles && mediaFiles.length > 0) {
-                onProgress?.({ step: 0, total: totalSteps, message: 'Uploading media...' });
+                onProgress?.({ step: 1, total: 2, message: 'Uploading media...' });
                 const uploadResult = await this._uploadMedia(mediaFiles);
                 if (!uploadResult.success) {
                     return this._handleError(uploadResult.error, onError);
@@ -229,56 +254,45 @@ class UnifiedPostCreator {
                 mediaIds = uploadResult.mediaIds;
             }
 
-            // Step 2: Create head post
-            currentStep = 1;
-            onProgress?.({ step: currentStep, total: totalSteps, message: 'Creating post...' });
+            // Step 2: Create entire thread via batch endpoint (single API call)
+            onProgress?.({ step: 2, total: 2, message: 'Creating thread...' });
 
-            const headResult = await this._createPost({
-                content: headContent.trim(),
-                tags,
-                mediaIds
+            const response = await apiClient.call('/posts/thread', {
+                method: 'POST',
+                body: {
+                    headContent: headContent.trim(),
+                    continuations: continuations.map(c => c.trim()),
+                    tags,
+                    mediaIds
+                }
             });
 
-            if (!headResult.success) {
-                return this._handleError(headResult.error || 'Failed to create head post', onError);
+            if (!response || !response.success) {
+                // Check for rate limit response
+                if (response?.error?.includes('Too many') || response?.retryAfter) {
+                    return this._handleRateLimitError(response, onError);
+                }
+                return this._handleError(response?.error || 'Failed to create thread', onError);
             }
 
-            const headPost = headResult.data;
-            const threadHeadId = headPost.id;
-            console.log('✅ Head post created:', threadHeadId);
+            console.log('✅ Thread created via batch endpoint:', {
+                headPostId: response.headPost?.id,
+                totalPosts: response.totalPosts
+            });
 
-            // Check for RiseAI mention in head post
-            await this._checkForRiseAIMention(headContent, headPost, 'post', null);
-
-            // Step 3+: Create continuation posts
-            const continuationPosts = [];
+            // Check for RiseAI mentions in head and continuations
+            await this._checkForRiseAIMention(headContent, response.headPost, 'post', null);
             for (let i = 0; i < continuations.length; i++) {
-                currentStep = 2 + i;
-                onProgress?.({ step: currentStep, total: totalSteps, message: `Creating continuation ${i + 1}/${continuations.length}...` });
-
-                const contResult = await this._createPost({
-                    content: continuations[i].trim(),
-                    tags,
-                    threadHeadId  // Link to head post
-                });
-
-                if (!contResult.success) {
-                    console.error(`❌ Failed to create continuation ${i + 1}:`, contResult.error);
-                    // Continue anyway - partial thread is better than nothing
-                } else {
-                    continuationPosts.push(contResult.data);
-                    console.log(`✅ Continuation ${i + 1} created`);
-
-                    // Check for RiseAI mention in continuation
-                    await this._checkForRiseAIMention(continuations[i], contResult.data, 'post', null);
+                if (response.continuationPosts[i]) {
+                    await this._checkForRiseAIMention(continuations[i], response.continuationPosts[i], 'post', null);
                 }
             }
 
             const result = {
                 success: true,
-                headPost,
-                continuationPosts,
-                totalPosts: 1 + continuationPosts.length
+                headPost: response.headPost,
+                continuationPosts: response.continuationPosts,
+                totalPosts: response.totalPosts
             };
 
             onSuccess?.(result);
@@ -286,8 +300,40 @@ class UnifiedPostCreator {
 
         } catch (error) {
             console.error('❌ Thread creation error:', error);
+            // Check for rate limit in error response
+            if (error.retryAfter) {
+                return this._handleRateLimitError(error, onError);
+            }
             return this._handleError(error.message || 'Failed to create thread', onError);
         }
+    }
+
+    /**
+     * Handle rate limit errors with countdown info
+     * @private
+     */
+    _handleRateLimitError(response, errorCallback) {
+        const retryAfter = response.retryAfter;
+        const result = {
+            success: false,
+            error: response.error || 'Rate limit exceeded',
+            isRateLimited: true,
+            retryAfter: retryAfter
+        };
+
+        // Show rate limit toast if available
+        if (typeof window.showRateLimitToast === 'function' && retryAfter) {
+            window.showRateLimitToast(retryAfter);
+        } else if (typeof window.showToast === 'function') {
+            const minutes = Math.ceil(retryAfter / 60);
+            window.showToast(`Rate limit reached. Please wait ${minutes} minute${minutes > 1 ? 's' : ''}.`, 'warning');
+        }
+
+        if (errorCallback) {
+            errorCallback(result);
+        }
+
+        return result;
     }
 
     /**

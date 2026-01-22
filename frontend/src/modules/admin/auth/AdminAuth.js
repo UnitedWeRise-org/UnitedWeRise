@@ -22,6 +22,7 @@ class AdminAuth {
         this.autoRefreshInterval = null;
         this.lastTokenRefresh = new Date(); // Initialize to current time to prevent "Infinity minutes" bug
         this.isRefreshingToken = false; // Flag to prevent concurrent refreshes
+        this.refreshPromise = null; // Shared promise for concurrent callers to await
         this.refreshPending = false; // Flag to signal refresh is about to start (during debounce)
         this.lastWakeTimestamp = null; // Timestamp of last visibility change (for race condition detection)
         this.isRecovering = false; // Flag to suppress error displays during wake recovery
@@ -123,12 +124,17 @@ class AdminAuth {
     /**
      * Refresh authentication token to prevent Azure 30-minute timeout
      * Called every 14 minutes to maintain session with dual redundancy (14, 28, 42...)
+     *
+     * IMPORTANT: Uses promise-based deduplication to handle concurrent 401s.
+     * When multiple API calls get 401 simultaneously, all callers await the same
+     * refresh promise instead of triggering multiple refresh attempts.
      */
     async refreshToken(forceRefresh = false) {
-        // Prevent concurrent refresh attempts
-        if (this.isRefreshingToken) {
-            console.log('⏸️ Token refresh already in progress');
-            return false;
+        // If refresh is already in progress, WAIT for it instead of returning false
+        // This fixes the race condition where concurrent 401s would cause false "failures"
+        if (this.isRefreshingToken && this.refreshPromise) {
+            console.log('⏸️ Token refresh already in progress - waiting for completion...');
+            return this.refreshPromise;
         }
 
         // Skip if tab is hidden (unless forced)
@@ -144,6 +150,24 @@ class AdminAuth {
         }
 
         this.isRefreshingToken = true;
+
+        // Create a shared promise that concurrent callers can await
+        this.refreshPromise = this._doRefresh();
+
+        try {
+            return await this.refreshPromise;
+        } finally {
+            this.isRefreshingToken = false;
+            this.refreshPromise = null;
+        }
+    }
+
+    /**
+     * Internal method that performs the actual token refresh
+     * Separated from refreshToken() to enable promise-based deduplication
+     * @private
+     */
+    async _doRefresh() {
         const maxRetries = 3;
         const retryDelays = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
 
@@ -197,16 +221,29 @@ class AdminAuth {
                             detail: { timestamp: new Date().toISOString() }
                         }));
 
-                        this.isRefreshingToken = false;
                         return true;
                     } else {
                         console.warn(`⚠️ Token refresh failed with status ${response.status} (attempt ${attempt + 1}/${maxRetries})`);
 
                         // If 401, session is invalid - don't retry
                         if (response.status === 401) {
-                            console.error('🔒 Session invalid - logging out');
+                            // Parse error details for diagnostic logging
+                            let errorData = {};
+                            try {
+                                errorData = await response.json();
+                            } catch {
+                                // Response may not be JSON
+                            }
+
+                            console.error('🔒 Session invalid - logging out', {
+                                errorCode: errorData.code || 'UNKNOWN',
+                                errorMessage: errorData.error || 'Unknown error',
+                                diagnostic: errorData.diagnostic || 'No diagnostic info',
+                                timestamp: new Date().toISOString(),
+                                timeSinceLastRefresh: Math.round((Date.now() - this.lastTokenRefresh) / 1000 / 60) + ' minutes'
+                            });
+
                             this.logout();
-                            this.isRefreshingToken = false;
                             return false;
                         }
                     }
@@ -221,11 +258,9 @@ class AdminAuth {
             }
 
             console.error('❌ All token refresh attempts failed - session may expire');
-            this.isRefreshingToken = false;
             return false;
         } catch (error) {
             console.error('❌ Token refresh error:', error);
-            this.isRefreshingToken = false;
             return false;
         }
     }
@@ -619,6 +654,7 @@ class AdminAuth {
 
         // Clear refresh and recovery flags
         this.isRefreshingToken = false;
+        this.refreshPromise = null;
         this.refreshPending = false;
         this.isRecovering = false;
 
