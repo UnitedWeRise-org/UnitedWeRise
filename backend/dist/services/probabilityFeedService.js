@@ -188,7 +188,8 @@ class ProbabilityFeedService {
                     select: {
                         likes: true,
                         comments: true,
-                        shares: true
+                        shares: true,
+                        threadPosts: true
                     }
                 },
                 comments: {

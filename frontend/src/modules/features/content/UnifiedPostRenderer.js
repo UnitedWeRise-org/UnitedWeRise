@@ -492,7 +492,7 @@ class UnifiedPostRenderer {
      * @private
      */
     renderThreadIndicator(post) {
-        const threadCount = post._count?.threadPosts || 0;
+        const threadCount = post.threadPostsCount || post._count?.threadPosts || 0;
         if (threadCount === 0) return '';
 
         return `
@@ -511,7 +511,7 @@ class UnifiedPostRenderer {
      * @private
      */
     renderThreadExpansion(post) {
-        const threadCount = post._count?.threadPosts || 0;
+        const threadCount = post.threadPostsCount || post._count?.threadPosts || 0;
         if (threadCount === 0) return '';
 
         return `

@@ -201,8 +201,9 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       ...post,
       likesCount: post._count.likes,
       commentsCount: post._count.comments,
+      threadPostsCount: post._count.threadPosts || 0,
       isLiked: likedPostIds.has(post.id),
-      _count: undefined
+      _count: { threadPosts: post._count.threadPosts || 0 }
     }));
 
     // Enrich posts with RiseAI responses (batch for efficiency)
@@ -494,8 +495,9 @@ router.get('/following', requireAuth, async (req: AuthRequest, res) => {
       ...post,
       likesCount: post._count.likes,
       commentsCount: post._count.comments,
+      threadPostsCount: post._count.threadPosts || 0,
       isLiked: likedPostIds.has(post.id),
-      _count: undefined,
+      _count: { threadPosts: post._count.threadPosts || 0 },
       _feedScore: undefined,
       _relationshipMultiplier: undefined
     }));
@@ -658,6 +660,13 @@ router.get('/trending', async (req, res) => {
             agreesCount: true,
             disagreesCount: true
           }
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+            threadPosts: true
+          }
         }
       },
       orderBy: [
@@ -701,7 +710,12 @@ router.get('/trending', async (req, res) => {
       .sort((a, b) => b.engagementScore - a.engagementScore)
       .slice(offsetNum, offsetNum + limitNum);
 
-    const formattedPosts = sortedPosts;
+    // Format posts to include thread count
+    const formattedPosts = sortedPosts.map(post => ({
+      ...post,
+      threadPostsCount: post._count?.threadPosts || 0,
+      _count: { threadPosts: post._count?.threadPosts || 0 }
+    }));
 
     res.json({
       posts: formattedPosts,
@@ -914,6 +928,8 @@ router.get('/public', async (req, res) => {
       likesCount: post._count?.likes || 0,
       commentsCount: post._count?.comments || 0,
       sharesCount: post._count?.shares || 0,
+      threadPostsCount: post._count?.threadPosts || 0,
+      _count: { threadPosts: post._count?.threadPosts || 0 },
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       riseAIResponse: riseAIResponses.get(post.id) || undefined,
@@ -1024,6 +1040,8 @@ router.get('/slot-roll', requireAuth, async (req: AuthRequest, res) => {
       likesCount: post._count?.likes || 0,
       commentsCount: post._count?.comments || 0,
       sharesCount: post._count?.shares || 0,
+      threadPostsCount: post._count?.threadPosts || 0,
+      _count: { threadPosts: post._count?.threadPosts || 0 },
       isLiked: likedPostIds.has(post.id),
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
