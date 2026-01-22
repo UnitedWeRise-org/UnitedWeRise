@@ -204,7 +204,22 @@ class AdminAuth {
 
                         // If 401, session is invalid - don't retry
                         if (response.status === 401) {
-                            console.error('🔒 Session invalid - logging out');
+                            // Parse error details for diagnostic logging
+                            let errorData = {};
+                            try {
+                                errorData = await response.json();
+                            } catch {
+                                // Response may not be JSON
+                            }
+
+                            console.error('🔒 Session invalid - logging out', {
+                                errorCode: errorData.code || 'UNKNOWN',
+                                errorMessage: errorData.error || 'Unknown error',
+                                diagnostic: errorData.diagnostic || 'No diagnostic info',
+                                timestamp: new Date().toISOString(),
+                                timeSinceLastRefresh: Math.round((Date.now() - this.lastTokenRefresh) / 1000 / 60) + ' minutes'
+                            });
+
                             this.logout();
                             this.isRefreshingToken = false;
                             return false;
