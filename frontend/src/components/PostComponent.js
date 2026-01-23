@@ -203,6 +203,8 @@ class PostComponent {
      * Toggle reaction for a post (sentiment: LIKE/DISLIKE, stance: AGREE/DISAGREE)
      */
     async toggleReaction(postId, reactionType, reactionValue) {
+        console.log('🔄 toggleReaction called:', { postId, reactionType, reactionValue });
+
         // Check authentication using current user
         const currentUser = window.currentUser;
         if (!currentUser) {
@@ -210,12 +212,24 @@ class PostComponent {
             return;
         }
 
-        const postActions = document.querySelector(`[data-post-id="${postId}"]`);
-        if (!postActions) return;
+        // Find the post-actions container specifically (not any element with data-post-id)
+        const postActions = document.querySelector(`.post-actions[data-post-id="${postId}"]`);
+        if (!postActions) {
+            console.warn('⚠️ toggleReaction: post-actions not found for postId:', postId);
+            // Fallback: try finding any container with the postId
+            const fallbackContainer = document.querySelector(`[data-post-id="${postId}"]`);
+            console.log('Fallback container:', fallbackContainer?.className);
+            return;
+        }
 
         // Find the specific reaction button
         const reactionBtn = postActions.querySelector(`[data-reaction-type="${reactionType}"][data-reaction-value="${reactionValue}"]`);
-        if (!reactionBtn) return;
+        if (!reactionBtn) {
+            console.warn('⚠️ toggleReaction: reactionBtn not found:', { reactionType, reactionValue });
+            console.log('Available buttons:', postActions.querySelectorAll('[data-reaction-type]').length);
+            return;
+        }
+        console.log('✅ Found reaction button, proceeding with toggle');
 
         const isActive = reactionBtn.classList.contains('active');
         const countElement = reactionBtn.querySelector('.reaction-count');
