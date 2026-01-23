@@ -482,7 +482,10 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 path: '/',
                 domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
             });
-            return res.json({
+            // Check if this is a mobile client (needs tokens in response body)
+            const isMobileClient = req.get('X-Client-Type') === 'mobile' ||
+                req.get('User-Agent')?.includes('UnitedWeRise-iOS');
+            const responseData = {
                 message: 'Login successful',
                 user: {
                     id: user.id,
@@ -494,8 +497,14 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     isModerator: user.isModerator
                 },
                 csrfToken,
-                totpVerified: true // Simple flag for frontend
-            });
+                totpVerified: true
+            };
+            // For mobile clients, include tokens in response body
+            if (isMobileClient) {
+                responseData.accessToken = token;
+                responseData.refreshToken = refreshToken;
+            }
+            return res.json(responseData);
         }
         // No TOTP required - regular login
         await securityService_1.SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
@@ -536,7 +545,10 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             path: '/',
             domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
         });
-        res.json({
+        // Check if this is a mobile client (needs tokens in response body)
+        const isMobileClient = req.get('X-Client-Type') === 'mobile' ||
+            req.get('User-Agent')?.includes('UnitedWeRise-iOS');
+        const responseData = {
             message: 'Login successful',
             user: {
                 id: user.id,
@@ -548,8 +560,13 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 isModerator: user.isModerator
             },
             csrfToken
-            // Token is in httpOnly cookie only (not exposed to JavaScript)
-        });
+        };
+        // For mobile clients, include tokens in response body (they can't use httpOnly cookies)
+        if (isMobileClient) {
+            responseData.accessToken = token;
+            responseData.refreshToken = refreshToken;
+        }
+        res.json(responseData);
     }
     catch (error) {
         req.log.error({ error, email: req.body?.email }, 'Login error');
