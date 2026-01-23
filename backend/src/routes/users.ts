@@ -872,7 +872,8 @@ router.get('/:userId/complete', async (req: AuthRequest, res) => {
                     _count: {
                         select: {
                             comments: true,
-                            likes: true
+                            likes: true,
+                            threadPosts: true
                         }
                     }
                 },
@@ -945,7 +946,13 @@ router.get('/:userId/complete', async (req: AuthRequest, res) => {
                     postsCount: user._count.posts
                 },
                 posts: {
-                    items: posts,
+                    items: posts.map(post => ({
+                        ...post,
+                        likesCount: post._count?.likes || 0,
+                        commentsCount: post._count?.comments || 0,
+                        threadPostsCount: post._count?.threadPosts || 0,
+                        _count: { threadPosts: post._count?.threadPosts || 0 }
+                    })),
                     pagination: {
                         limit: limitNum,
                         offset: offsetNum,
