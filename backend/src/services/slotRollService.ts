@@ -245,7 +245,7 @@ export class SlotRollService {
                 },
                 photos: true,
                 _count: {
-                    select: { likes: true, comments: true, shares: true }
+                    select: { likes: true, comments: true, shares: true, threadPosts: true }
                 }
             },
             orderBy: { createdAt: 'desc' },
@@ -320,7 +320,7 @@ export class SlotRollService {
                 },
                 photos: true,
                 _count: {
-                    select: { likes: true, comments: true, shares: true }
+                    select: { likes: true, comments: true, shares: true, threadPosts: true }
                 },
                 comments: {
                     select: {

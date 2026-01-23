@@ -371,6 +371,18 @@ class AdminState {
      * Extracted from refreshAllData function
      */
     async refreshAllData() {
+        // Check token freshness before refresh (like AdminAuth auto-refresh does)
+        if (window.adminAuth) {
+            const timeSinceLastRefresh = (Date.now() - (window.adminAuth.lastTokenRefresh || 0)) / 1000 / 60;
+            if (timeSinceLastRefresh > 5) {
+                try {
+                    await window.adminAuth.refreshToken(true);
+                } catch (error) {
+                    console.warn('AdminState: Token refresh failed, proceeding with existing token');
+                }
+            }
+        }
+
         // Clear cache for fresh data
         this.clearCache();
 
@@ -384,7 +396,13 @@ class AdminState {
         const sectionId = activeSection ? activeSection.id : this.currentSection;
 
         // Reload data for current section
-        this.loadSectionData(sectionId);
+        await this.loadSectionData(sectionId);
+
+        // Update last refresh timestamp display
+        const lastRefreshEl = document.getElementById('lastRefreshTime');
+        if (lastRefreshEl) {
+            lastRefreshEl.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+        }
 
         // Remove refresh animation after 1 second
         setTimeout(() => {
