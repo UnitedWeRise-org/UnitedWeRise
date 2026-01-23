@@ -261,6 +261,15 @@ export class RelationshipHandlers {
      * Extracted from index.html line 6843
      */
     async handleFriendRequestAction(userId, action) {
+        // Find the button that was clicked and add loading state
+        const button = document.querySelector(`[data-friend-action="${action}"][data-user-id="${userId}"]`);
+        if (button) {
+            button.disabled = true;
+            button.dataset.originalText = button.textContent;
+            button.textContent = action === 'accept' ? 'Accepting...' : 'Declining...';
+            button.style.opacity = '0.7';
+        }
+
         try {
             let result;
             if (action === 'accept') {
@@ -270,6 +279,18 @@ export class RelationshipHandlers {
             }
 
             if (result && result.success) {
+                // Animate the request item removal
+                const requestItem = button?.closest('.friend-request-item');
+                if (requestItem) {
+                    requestItem.style.transition = 'opacity 0.3s, transform 0.3s';
+                    requestItem.style.opacity = '0';
+                    requestItem.style.transform = 'translateX(100%)';
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+
+                // Show success feedback
+                this.showToast(action === 'accept' ? 'Friend request accepted' : 'Friend request declined');
+
                 // Refresh the friend requests panel
                 this.showFriendRequestsPanel();
 
@@ -281,6 +302,12 @@ export class RelationshipHandlers {
         } catch (error) {
             console.error(`Error ${action}ing friend request:`, error);
             this.showToast(`Failed to ${action} friend request`);
+            // Restore button state on error
+            if (button) {
+                button.disabled = false;
+                button.textContent = button.dataset.originalText || (action === 'accept' ? 'Accept' : 'Decline');
+                button.style.opacity = '1';
+            }
         }
     }
 
@@ -289,9 +316,8 @@ export class RelationshipHandlers {
      */
     async acceptFriendRequest(userId) {
         try {
-            const response = await apiCall('/relationships/friend-request/accept', {
-                method: 'POST',
-                data: { userId }
+            const response = await apiCall(`/relationships/friend-request/${userId}/accept`, {
+                method: 'POST'
             });
             return response.data;
         } catch (error) {
@@ -305,9 +331,8 @@ export class RelationshipHandlers {
      */
     async rejectFriendRequest(userId) {
         try {
-            const response = await apiCall('/relationships/friend-request/reject', {
-                method: 'POST',
-                data: { userId }
+            const response = await apiCall(`/relationships/friend-request/${userId}/reject`, {
+                method: 'POST'
             });
             return response.data;
         } catch (error) {
@@ -418,12 +443,17 @@ export class RelationshipHandlers {
      */
     async showFriendsList() {
         try {
-            const response = await apiCall('/relationships/friends', {
+            if (!window.currentUser?.id) {
+                this.showToast('Please log in to view friends');
+                return;
+            }
+
+            const response = await apiCall(`/relationships/${window.currentUser.id}/friends`, {
                 method: 'GET'
             });
 
             if (response.ok) {
-                const friends = response.data.friends || [];
+                const friends = response.data?.friends || [];
                 this.displayFriendsForMessaging(friends);
             } else {
                 this.showToast('Failed to load friends list');
