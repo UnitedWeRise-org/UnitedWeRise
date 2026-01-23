@@ -751,6 +751,17 @@ export class FeedToggle {
             adminDebugLog('FeedToggle', `Switching feed from ${this.currentFeed} to ${feedType}`);
         }
 
+        // Check if there are unread posts when switching to Following
+        // Must check BEFORE resetting the count
+        let shouldBypassCache = false;
+        if (feedType === 'following') {
+            const unreadCount = await this.getUnreadCount();
+            shouldBypassCache = unreadCount > 0;
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('FeedToggle', `Following bypass cache: ${shouldBypassCache} (${unreadCount} unread)`);
+            }
+        }
+
         this.currentFeed = feedType;
         localStorage.setItem('preferredFeed', feedType);
 
@@ -762,8 +773,8 @@ export class FeedToggle {
         // Update UI
         this.updateToggleState();
 
-        // Load feed
-        await this.loadFeed(feedType);
+        // Load feed - bypass cache if there are unread posts
+        await this.loadFeed(feedType, shouldBypassCache);
     }
 
     async loadFeed(feedType, bypassCache = false) {
