@@ -228,8 +228,40 @@ class BackendIntegration {
                             }
                         }
 
-                        // Verify session with retry logic before logging out
-                        console.warn('⚠️ Received 401 - verifying session with retry...');
+                        // CRITICAL FIX: Try to refresh token BEFORE verifying with /auth/me
+                        // The refresh token (30 days) may still be valid even when access token (30 min) expired
+                        // This handles the case where tab was hidden overnight and access token expired
+                        console.log('🔄 Received 401 - attempting token refresh...');
+
+                        if (manager && !manager._isRefreshingToken) {
+                            try {
+                                const refreshed = await manager.refreshToken(true);
+                                if (refreshed) {
+                                    console.log('✅ Token refreshed successfully after 401 - session restored');
+                                    if (typeof adminDebugLog !== 'undefined') {
+                                        adminDebugLog('BackendIntegration', 'Token refreshed after 401 - session restored', {
+                                            originalUrl: args[0]
+                                        });
+                                    }
+                                    // Don't logout - token was refreshed successfully
+                                    // The original request failed but session is now valid
+                                    return response;
+                                }
+                            } catch (refreshError) {
+                                console.warn('⚠️ Token refresh failed after 401:', refreshError);
+                            }
+                        } else if (manager && manager._isRefreshingToken) {
+                            // Another refresh is in progress - wait for it
+                            console.log('⏳ Another refresh in progress, waiting...');
+                            await manager.waitForPendingRefresh(5000);
+                            if (manager.isAuthenticated()) {
+                                console.log('✅ Concurrent refresh completed - session valid');
+                                return response;
+                            }
+                        }
+
+                        // Refresh failed - verify session with /auth/me as fallback
+                        console.warn('⚠️ Token refresh failed - verifying session with retry...');
 
                         const verifyResult = await this._verifySessionWithRetry(2);
 
@@ -255,10 +287,10 @@ class BackendIntegration {
                             }
                             // Don't call handleAuthError - keep user logged in
                         } else if (verifyResult.expired) {
-                            // Token truly expired (401 from /auth/me) - log out silently
-                            console.log('🔒 Session verification confirmed token expired - updating UI');
+                            // Token truly expired AND refresh failed - log out silently
+                            console.log('🔒 Session verification confirmed token expired (refresh also failed) - updating UI');
                             if (typeof adminDebugLog !== 'undefined') {
-                                adminDebugLog('BackendIntegration', 'Token confirmed expired - silent logout', {
+                                adminDebugLog('BackendIntegration', 'Token confirmed expired, refresh failed - silent logout', {
                                     verifyStatus: verifyResult.status
                                 });
                             }

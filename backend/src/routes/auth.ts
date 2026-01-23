@@ -525,7 +525,11 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
       });
 
-      return res.json({
+      // Check if this is a mobile client (needs tokens in response body)
+      const isMobileClient = req.get('X-Client-Type') === 'mobile' ||
+                             req.get('User-Agent')?.includes('UnitedWeRise-iOS');
+
+      const responseData: any = {
         message: 'Login successful',
         user: {
           id: user.id,
@@ -537,8 +541,16 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           isModerator: user.isModerator
         },
         csrfToken,
-        totpVerified: true // Simple flag for frontend
-      });
+        totpVerified: true
+      };
+
+      // For mobile clients, include tokens in response body
+      if (isMobileClient) {
+        responseData.accessToken = token;
+        responseData.refreshToken = refreshToken;
+      }
+
+      return res.json(responseData);
     }
 
     // No TOTP required - regular login
@@ -592,7 +604,11 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
     });
 
-    res.json({
+    // Check if this is a mobile client (needs tokens in response body)
+    const isMobileClient = req.get('X-Client-Type') === 'mobile' ||
+                           req.get('User-Agent')?.includes('UnitedWeRise-iOS');
+
+    const responseData: any = {
       message: 'Login successful',
       user: {
         id: user.id,
@@ -604,8 +620,15 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         isModerator: user.isModerator
       },
       csrfToken
-      // Token is in httpOnly cookie only (not exposed to JavaScript)
-    });
+    };
+
+    // For mobile clients, include tokens in response body (they can't use httpOnly cookies)
+    if (isMobileClient) {
+      responseData.accessToken = token;
+      responseData.refreshToken = refreshToken;
+    }
+
+    res.json(responseData);
   } catch (error) {
     req.log.error({ error, email: req.body?.email }, 'Login error');
 

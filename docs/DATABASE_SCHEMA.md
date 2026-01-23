@@ -1,10 +1,10 @@
 # UnitedWeRise Database Schema Reference
 
 **Status**: ✅ Production Ready
-**Last Updated**: 2025-11-05
+**Last Updated**: 2026-01-22
 **Database**: PostgreSQL (Azure Flexible Server)
 **ORM**: Prisma
-**Total Models**: 88
+**Total Models**: 89
 
 ---
 
@@ -97,6 +97,7 @@ UnitedWeRise uses PostgreSQL with Prisma ORM for data management. The schema is 
 - `Friendship` - Friend request and connection management
 - `ReputationEvent` - User reputation score tracking
 - `UserQuestStreak` - Quest streak tracking (daily/weekly)
+- `DeviceToken` - Push notification device tokens (APNs/FCM)
 
 ### Content Models
 - `Post` - User-generated posts (text, images, political/non-political)
@@ -454,6 +455,78 @@ Long-lived session tokens that enable automatic token refresh without requiring 
 - Password changes revoke all refresh tokens (forces re-login on all devices)
 - Token rotation prevents replay attacks (old tokens invalidated immediately)
 - Device limit prevents token accumulation and enables multi-device session management
+
+---
+
+### DeviceToken Model
+
+```prisma
+model DeviceToken {
+  id          String   @id @default(cuid())
+  userId      String
+  deviceToken String   @unique
+  platform    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deviceName  String?
+  appVersion  String?
+
+  user User @relation("DeviceTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([platform])
+}
+```
+
+**Purpose:**
+Stores push notification device tokens for mobile apps. Enables sending push notifications via APNs (iOS) or FCM (Android) when users receive messages, friend requests, comments, or reactions.
+
+**Fields:**
+- `id`: Unique identifier for the device token record
+- `userId`: Foreign key to User table (CASCADE delete when user deleted)
+- `deviceToken`: The actual push notification token (APNs 64-char hex for iOS, FCM alphanumeric for Android)
+- `platform`: Platform identifier ("ios" or "android")
+- `createdAt`: Token registration timestamp
+- `updatedAt`: Last update timestamp (refreshed when token is re-registered)
+- `deviceName`: Optional device name/model for user-facing device management (e.g., "iPhone 15 Pro")
+- `appVersion`: Optional app version for debugging notification delivery issues
+
+**Relationships:**
+- `user`: Many-to-one relationship with User (CASCADE: deleting user deletes all device tokens)
+- Users can have multiple device tokens (multiple devices)
+
+**Indexes:**
+- `userId`: Fast lookup of all tokens for a user (send notifications to all devices)
+- `platform`: Analytics and platform-specific notification handling
+
+**Token Behavior:**
+- **Upsert on Register**: If token already exists for another user, it gets reassigned (user switched accounts)
+- **Unique Token**: Each device token can only belong to one user at a time
+- **Unregister on Logout**: Token deleted when user logs out to stop receiving notifications
+
+**Notification Events (Planned):**
+- New direct message received
+- Friend request received
+- Comment on user's post
+- Reaction on user's post
+- Quest completion reminders
+
+**API Endpoints:**
+- `POST /api/devices/register` - Register device token for push notifications
+- `DELETE /api/devices/:deviceToken` - Unregister device token on logout
+- `GET /api/devices` - List user's registered devices
+
+**Access Patterns:**
+- **Register Token**: `upsert({ where: { deviceToken }, create: {...}, update: {...} })`
+- **User Tokens**: `findMany({ where: { userId } })` - Fast via userId index
+- **Delete Token**: `delete({ where: { deviceToken } })` - O(1) via unique constraint
+- **Bulk Notify**: `findMany({ where: { userId: { in: userIds } } })` - For multi-user notifications
+
+**Business Logic:**
+- Token registration happens after successful authentication on mobile app
+- Tokens automatically reassigned when user signs into different account on same device
+- All device tokens deleted when user account is deleted (CASCADE)
+- App should re-register token on each launch (tokens can change)
 
 ---
 

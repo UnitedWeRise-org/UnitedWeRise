@@ -310,6 +310,8 @@ model User {
   pageViews                   PageView[]
   /// Refresh tokens for this user (CASCADE: deletes tokens when user deleted)
   refreshTokens               RefreshToken[]            @relation("RefreshTokens")
+  /// Device tokens for push notifications (CASCADE: deletes tokens when user deleted)
+  deviceTokens                DeviceToken[]             @relation("DeviceTokens")
 
   // RiseAI & Community Notes relationships
   /// Arguments authored by this user in RiseAI discourse
@@ -376,6 +378,35 @@ model RefreshToken {
   @@index([userId]) /// Fast lookup of all tokens for a user (logout all devices, device management)
   @@index([tokenHash]) /// Fast validation of incoming refresh token
   @@index([expiresAt]) /// Cleanup job to delete expired tokens periodically
+}
+
+/// Device token for push notifications (iOS/Android)
+/// @description Stores APNs (iOS) and FCM (Android) device tokens for push notification delivery.
+/// Each user can have multiple devices registered, tokens are automatically cleaned up on logout.
+model DeviceToken {
+  /// Unique identifier for the device token record
+  id          String   @id @default(cuid())
+  /// User ID this device token belongs to (foreign key to User)
+  userId      String
+  /// The push notification token (APNs token for iOS, FCM token for Android)
+  /// @description APNs tokens are 64-character hex strings, FCM tokens are longer alphanumeric strings
+  deviceToken String   @unique
+  /// Platform identifier (ios, android)
+  platform    String
+  /// Token registration timestamp
+  createdAt   DateTime @default(now())
+  /// Last update timestamp (refreshed when token is re-registered)
+  updatedAt   DateTime @updatedAt
+  /// Optional device name/model for user-facing device management
+  deviceName  String?
+  /// Optional app version for debugging notification delivery issues
+  appVersion  String?
+
+  /// Relationship to User (CASCADE: deleting user deletes all their device tokens)
+  user User @relation("DeviceTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId]) /// Fast lookup of all device tokens for a user
+  @@index([platform]) /// Filter devices by platform for platform-specific notifications
 }
 
 model UserActivity {
