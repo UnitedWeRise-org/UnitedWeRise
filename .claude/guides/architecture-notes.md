@@ -294,6 +294,94 @@ if (response.ok && response.data.success) {
 
 ---
 
+## Token Refresh & 401 Recovery Pattern
+
+**Context (January 2026):**
+
+Users were being logged out after extended inactivity (overnight) despite having valid refresh tokens (30 days). Investigation revealed a gap in the 401 error handling logic.
+
+**The Problem:**
+
+When access token (30 min) expires while tab is hidden:
+1. Background timers (WebSocket, quest tracker) fire API calls
+2. Calls fail with 401 (access token expired)
+3. 401 handler was verifying with `/auth/me` which also fails (needs valid access token)
+4. User logged out unnecessarily
+
+**Root Cause:**
+
+The 401 handler never tried to use the refresh token to recover the session. It just verified and logged out.
+
+**The Standard Pattern (OAuth 2.0 / JWT):**
+
+```
+401 Received → Try Refresh Token → If Success: Continue
+                                → If Fail: Logout
+```
+
+**Implementation:**
+
+Both main site and admin dashboard now implement this pattern:
+
+**Main Site (`backend-integration.js`):**
+```javascript
+if (response.status === 401) {
+    // Try refresh FIRST before verifying
+    const refreshed = await manager.refreshToken(true);
+    if (refreshed) {
+        console.log('✅ Token refreshed after 401 - session restored');
+        return response; // Don't logout
+    }
+    // Only if refresh fails, verify and logout
+    const verifyResult = await this._verifySessionWithRetry(2);
+    if (verifyResult.expired) {
+        this.handleAuthError(); // Logout
+    }
+}
+```
+
+**Admin Dashboard (`AdminAPI.js`):**
+```javascript
+if (response.status === 401) {
+    const refreshed = await window.adminAuth.refreshToken(true);
+    if (refreshed) {
+        return this.call(url, options, retryCount + 1); // Retry original request
+    }
+    this.triggerLogout('refresh failed');
+}
+```
+
+**Key Differences:**
+
+| Feature | Main Site | Admin Dashboard |
+|---------|-----------|-----------------|
+| Retry original request | No | Yes |
+| Retry count protection | No | Yes |
+| Concurrent refresh mutex | Via flag | Via Promise dedup |
+
+**Token Lifetimes:**
+
+| Token | Duration | Storage |
+|-------|----------|---------|
+| Access Token | 30 minutes | httpOnly cookie |
+| Refresh Token | 30 days (90 with Remember Me) | httpOnly cookie + database |
+| CSRF Token | 30-90 days | readable cookie |
+
+**Proactive Refresh:**
+
+- Timer runs every 14 minutes (half of 30-min access token)
+- Only runs when `!document.hidden` (no point refreshing when user isn't watching)
+- Visibility change triggers immediate refresh after extended absence (>5 min)
+
+**When Users Will Still Be Logged Out:**
+
+1. Refresh token truly expires (30+ days inactive)
+2. Server-side token revocation (password change, logout all devices)
+3. Browser clears cookies
+4. Network failure during refresh (after retries)
+
+---
+
 ## Admin Debug Logging
 
 **Context:**

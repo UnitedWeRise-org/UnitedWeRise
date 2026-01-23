@@ -1,10 +1,32 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 22, 2026
+**Last Updated**: January 23, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-23] - Session Persistence Fix
+
+### Fixed
+
+**Session Loss After Extended Inactivity**
+- Fixed bug where users were logged out after site inactive overnight
+- Root cause: 401 handler verified with `/auth/me` instead of trying refresh token
+- Now implements standard OAuth 2.0 pattern: 401 → try refresh → if fail, logout
+- Refresh token (30 days) now properly recovers expired access tokens (30 min)
+
+### Technical Details
+- Modified `frontend/src/integrations/backend-integration.js`
+- 401 handler now attempts token refresh before session verification
+- Concurrent 401s handled via mutex (prevents multiple simultaneous refreshes)
+- Admin dashboard (`AdminAPI.js`) already had correct pattern
+
+### Documentation
+- Added "Token Refresh & 401 Recovery Pattern" to `.claude/guides/architecture-notes.md`
+- Documents standard pattern, token lifetimes, and edge cases
 
 ---
 
