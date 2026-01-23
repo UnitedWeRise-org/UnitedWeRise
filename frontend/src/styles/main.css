@@ -2091,7 +2091,7 @@ details {
 /* Background image support for My Feed main content area */
 /* My Feed container styling */
 .my-feed {
-    max-width: 760px; /* 600px content + 80px scroll gutter on each side */
+    max-width: 700px; /* 540px content + 80px scroll gutter on each side */
     margin: 0 auto;
     padding: 0;
     height: 100%; /* Fill parent container height */
