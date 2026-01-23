@@ -31,6 +31,14 @@ export class MessagesHandlers {
     setupEventListeners() {
         document.addEventListener('click', this.handleMessageClick.bind(this));
         document.addEventListener('keypress', this.handleKeyPress.bind(this));
+
+        // Listen for openMessage custom event (from UserCard Message button)
+        window.addEventListener('openMessage', (event) => {
+            const userId = event.detail?.userId;
+            if (userId) {
+                this.openMessageWith(userId);
+            }
+        });
     }
 
     /**
@@ -271,12 +279,14 @@ export class MessagesHandlers {
      */
     showConversationView(conversationId, username, messages) {
         const body = document.getElementById('messagesBody');
+        const displayName = username || 'User';
+        const avatarLetter = displayName[0]?.toUpperCase() || '?';
 
         body.innerHTML = `
             <div style="display: flex; align-items: center; padding: 1vh; border-bottom: 1px solid #eee; background: #f9f9f9; min-height: 2vh;">
                 <button data-messaging-action="back-to-conversations" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 0.5rem;">←</button>
-                <div class="user-avatar" style="margin-right: 0.5rem;">${username[0].toUpperCase()}</div>
-                <span style="font-weight: bold;">${username}</span>
+                <div class="user-avatar" style="margin-right: 0.5rem;">${avatarLetter}</div>
+                <span style="font-weight: bold;">${displayName}</span>
             </div>
 
             <div id="messagesArea" style="height: 250px; overflow-y: auto; padding: 0.5rem; background: white;">

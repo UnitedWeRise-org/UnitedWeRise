@@ -569,8 +569,9 @@ export class RelationshipHandlers {
     }
 
     /**
-     * Display friends for messaging
-     * Extracted from index.html line 7154
+     * Display friends panel with search functionality
+     * Redesigned to support direct friend access and user search
+     * @param {Array} friends - List of friend objects
      */
     displayFriendsForMessaging(friends) {
         const messagesBody = document.getElementById('messagesBody');
@@ -578,29 +579,40 @@ export class RelationshipHandlers {
 
         let html = `
             <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9;">
-                <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-                    <button data-messages-action="back" style="background: #666; color: white; border: none; padding: 0.5rem; border-radius: 4px; cursor: pointer; margin-right: 1rem;">
-                        ← Back
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <h3 style="margin: 0;">👥 Friends</h3>
+                    <button data-friends-panel-action="show-conversations" style="background: #1976d2; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        💬 Conversations
                     </button>
-                    <h3 style="margin: 0; flex: 1;">Choose a Friend to Message</h3>
                 </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="friendSearchInput" placeholder="Search username to add friend..."
+                           style="flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; outline: none;">
+                    <button data-friends-panel-action="search-user" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+                        Search
+                    </button>
+                </div>
+                <div id="friendSearchResults" style="margin-top: 0.5rem;"></div>
             </div>
         `;
+
+        html += `<div style="padding: 0.5rem 1rem; background: #f5f5f5; color: #666; font-size: 0.85rem; border-bottom: 1px solid #eee;">
+            ${friends.length} friend${friends.length !== 1 ? 's' : ''}
+        </div>`;
 
         if (friends.length === 0) {
             html += `
                 <div style="text-align: center; padding: 2rem; color: #666;">
                     <div style="font-size: 2rem; margin-bottom: 1rem;">👥</div>
                     <h4>No Friends Yet</h4>
-                    <p>Add some friends to start messaging!</p>
+                    <p>Search for users above to send friend requests!</p>
                 </div>
             `;
         } else {
             html += '<div class="friends-list">';
             friends.forEach(friend => {
-                // Backend returns extracted user objects directly (not raw friendship objects)
                 html += `
-                    <div class="friend-item" data-conversation-start="${friend.id}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 1rem; transition: background-color 0.2s;" data-hover-effect="list-item">
+                    <div class="friend-item" data-conversation-start="${friend.id}" data-username="${friend.username}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 1rem; transition: background-color 0.2s;" data-hover-effect="list-item">
                         <div class="friend-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                             ${friend.firstName ? friend.firstName.charAt(0).toUpperCase() : '?'}
                         </div>
@@ -608,7 +620,7 @@ export class RelationshipHandlers {
                             <div style="font-weight: 500;">${friend.firstName || ''} ${friend.lastName || ''}</div>
                             <div style="color: #666; font-size: 0.9rem;">@${friend.username}</div>
                         </div>
-                        <div style="color: #4b5c09; font-size: 1.2rem;">💬</div>
+                        <div style="color: #4b5c09; font-size: 1.2rem;" title="Message">💬</div>
                     </div>
                 `;
             });
@@ -616,28 +628,125 @@ export class RelationshipHandlers {
         }
 
         messagesBody.innerHTML = html;
+        this.setupFriendsPanelEventListeners(messagesBody);
+    }
 
-        // Add event delegation for friend selection
-        messagesBody.addEventListener('click', (event) => {
+    /**
+     * Setup event listeners for the friends panel
+     * @param {HTMLElement} container - The messages body container
+     */
+    setupFriendsPanelEventListeners(container) {
+        // Remove old listeners by cloning
+        const newContainer = container.cloneNode(true);
+        container.parentNode.replaceChild(newContainer, container);
+
+        // Add event delegation
+        newContainer.addEventListener('click', async (event) => {
             const target = event.target;
 
+            // Handle conversation start (clicking on friend)
             const friendItem = target.closest('[data-conversation-start]');
-            if (friendItem) {
+            if (friendItem && !target.closest('[data-friends-panel-action]')) {
                 const friendId = friendItem.getAttribute('data-conversation-start');
+                const friendUsername = friendItem.getAttribute('data-username');
                 if (window.startConversationWithUser) {
-                    window.startConversationWithUser(friendId);
+                    window.startConversationWithUser(friendId, friendUsername);
                 }
                 return;
             }
 
-            const backButton = target.closest('[data-messages-action="back"]');
-            if (backButton) {
-                if (window.loadConversations) {
-                    window.loadConversations();
+            // Handle panel actions
+            const actionEl = target.closest('[data-friends-panel-action]');
+            if (actionEl) {
+                const action = actionEl.getAttribute('data-friends-panel-action');
+
+                if (action === 'show-conversations') {
+                    if (window.loadConversations) {
+                        window.loadConversations();
+                    }
+                    return;
                 }
-                return;
+
+                if (action === 'search-user') {
+                    const input = newContainer.querySelector('#friendSearchInput');
+                    if (input && input.value.trim()) {
+                        await this.searchUserByName(input.value.trim());
+                    }
+                    return;
+                }
+
+                if (action === 'send-friend-request') {
+                    const userId = actionEl.getAttribute('data-user-id');
+                    if (userId) {
+                        await this.sendFriendRequest(userId);
+                        this.showToast('Friend request sent!');
+                        // Clear search results
+                        const resultsEl = newContainer.querySelector('#friendSearchResults');
+                        if (resultsEl) resultsEl.innerHTML = '';
+                    }
+                    return;
+                }
             }
         });
+
+        // Handle Enter key in search input
+        const searchInput = newContainer.querySelector('#friendSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', async (event) => {
+                if (event.key === 'Enter' && searchInput.value.trim()) {
+                    await this.searchUserByName(searchInput.value.trim());
+                }
+            });
+        }
+    }
+
+    /**
+     * Search for users by username
+     * @param {string} query - The search query
+     */
+    async searchUserByName(query) {
+        const resultsEl = document.querySelector('#friendSearchResults');
+        if (!resultsEl) return;
+
+        resultsEl.innerHTML = '<div style="color: #666; font-size: 0.9rem; padding: 0.5rem 0;">Searching...</div>';
+
+        try {
+            const response = await apiCall(`/search/unified?query=${encodeURIComponent(query)}&types=users&limit=5`);
+
+            if (response.ok && response.data?.users?.length > 0) {
+                const users = response.data.users.filter(u => u.id !== window.currentUser?.id);
+
+                if (users.length === 0) {
+                    resultsEl.innerHTML = '<div style="color: #666; font-size: 0.9rem; padding: 0.5rem 0;">No users found</div>';
+                    return;
+                }
+
+                let html = '';
+                users.forEach(user => {
+                    html += `
+                        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; background: white; border: 1px solid #eee; border-radius: 4px; margin-bottom: 0.5rem;">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
+                                ${user.firstName ? user.firstName.charAt(0).toUpperCase() : user.username?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 500; font-size: 0.9rem;">${user.firstName || ''} ${user.lastName || ''}</div>
+                                <div style="color: #666; font-size: 0.8rem;">@${user.username}</div>
+                            </div>
+                            <button data-friends-panel-action="send-friend-request" data-user-id="${user.id}"
+                                    style="background: #4b5c09; color: white; border: none; padding: 0.35rem 0.75rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; white-space: nowrap;">
+                                + Add
+                            </button>
+                        </div>
+                    `;
+                });
+                resultsEl.innerHTML = html;
+            } else {
+                resultsEl.innerHTML = '<div style="color: #666; font-size: 0.9rem; padding: 0.5rem 0;">No users found</div>';
+            }
+        } catch (error) {
+            console.error('Error searching users:', error);
+            resultsEl.innerHTML = '<div style="color: #dc3545; font-size: 0.9rem; padding: 0.5rem 0;">Search failed</div>';
+        }
     }
 
     /**

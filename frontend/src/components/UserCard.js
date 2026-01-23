@@ -71,6 +71,9 @@ class UserCard {
             case 'declineFriend':
                 this.declineFriendRequest(userId);
                 break;
+            case 'sendMessage':
+                this.sendMessage(userId);
+                break;
             case 'reportPost':
                 this.reportPost(param1);
                 break;
@@ -370,6 +373,13 @@ class UserCard {
                             ${this.getFriendButtonText(friendStatus, isBlocked)}
                         </button>
 
+                        ${relationship.friend?.isFriend ? `
+                            <button data-card-action="sendMessage" data-user-id="${user.id}"
+                                    class="user-card-btn primary">
+                                💬 Message
+                            </button>
+                        ` : ''}
+
                         ${friendStatus === 'request_received' ? `
                             <button data-card-action="declineFriend" data-user-id="${user.id}"
                                     class="user-card-btn outline">
@@ -452,6 +462,20 @@ class UserCard {
             window.showAccountSettings();
         } else {
             console.error('showAccountSettings function not available');
+        }
+    }
+
+    /**
+     * Handle send message action for friends
+     * @param {string} userId - The friend's user ID
+     */
+    sendMessage(userId) {
+        this.hideCard();
+        if (window.openMessageWith) {
+            window.openMessageWith(userId);
+        } else {
+            // Dispatch custom event as fallback
+            window.dispatchEvent(new CustomEvent('openMessage', { detail: { userId } }));
         }
     }
 
