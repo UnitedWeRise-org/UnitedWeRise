@@ -7,6 +7,14 @@
 import { apiCall } from '../js/api-compatibility-shim.js';
 
 class PostComponent {
+    /**
+     * Set to track pending reaction requests and prevent duplicate submissions.
+     * Keys are in format: "postId-reactionType"
+     * @type {Set<string>}
+     * @private
+     */
+    _pendingReactions = new Set();
+
     constructor() {
         this.apiBase = window.API_BASE || '/api';
         this.initializeContentModeration();
@@ -201,6 +209,9 @@ class PostComponent {
 
     /**
      * Toggle reaction for a post (sentiment: LIKE/DISLIKE, stance: AGREE/DISAGREE)
+     * @param {string} postId - The post ID to react to
+     * @param {string} reactionType - 'sentiment' or 'stance'
+     * @param {string} reactionValue - 'LIKE'/'DISLIKE' for sentiment, 'AGREE'/'DISAGREE' for stance
      */
     async toggleReaction(postId, reactionType, reactionValue) {
         console.log('🔄 toggleReaction called:', { postId, reactionType, reactionValue });
@@ -212,6 +223,14 @@ class PostComponent {
             return;
         }
 
+        // Prevent concurrent requests for same post+type (race condition protection)
+        const requestKey = `${postId}-${reactionType}`;
+        if (this._pendingReactions.has(requestKey)) {
+            console.log('⏳ Reaction already in progress, ignoring click');
+            return;
+        }
+        this._pendingReactions.add(requestKey);
+
         // Find the post-actions container specifically (not any element with data-post-id)
         const postActions = document.querySelector(`.post-actions[data-post-id="${postId}"]`);
         if (!postActions) {
@@ -219,6 +238,7 @@ class PostComponent {
             // Fallback: try finding any container with the postId
             const fallbackContainer = document.querySelector(`[data-post-id="${postId}"]`);
             console.log('Fallback container:', fallbackContainer?.className);
+            this._pendingReactions.delete(requestKey);
             return;
         }
 
@@ -227,6 +247,7 @@ class PostComponent {
         if (!reactionBtn) {
             console.warn('⚠️ toggleReaction: reactionBtn not found:', { reactionType, reactionValue });
             console.log('Available buttons:', postActions.querySelectorAll('[data-reaction-type]').length);
+            this._pendingReactions.delete(requestKey);
             return;
         }
         console.log('✅ Found reaction button, proceeding with toggle');
@@ -312,6 +333,9 @@ class PostComponent {
                 }
                 state.button.querySelector('.reaction-count').textContent = state.originalCount;
             });
+        } finally {
+            // Always clear pending state to allow future reactions
+            this._pendingReactions.delete(requestKey);
         }
     }
 

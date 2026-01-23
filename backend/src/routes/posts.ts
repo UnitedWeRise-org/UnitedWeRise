@@ -1740,10 +1740,17 @@ router.post('/:postId/reaction', requireAuth, async (req: AuthRequest, res) => {
                     logger.error({ err: error, postId: req.params.id, userId: req.user!.id, reactionType: req.body.reactionType }, 'Failed to track reaction change');
                 }
             } else {
-                // Create new reaction
+                // Create new reaction (upsert handles race conditions idempotently)
                 await prisma.$transaction([
-                    prisma.reaction.create({
-                        data: reactionData
+                    prisma.reaction.upsert({
+                        where: {
+                            userId_postId: {
+                                userId,
+                                postId
+                            }
+                        },
+                        update: reactionData,
+                        create: reactionData
                     }),
                     // Update post counts
                     prisma.post.update({
