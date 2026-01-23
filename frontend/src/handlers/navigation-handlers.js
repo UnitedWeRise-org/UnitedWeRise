@@ -343,6 +343,9 @@ class NavigationHandlers {
             case 'messages':
                 this.toggleMessages();
                 break;
+            case 'friends':
+                this.toggleFriendsPanel();
+                break;
             case 'organizing':
             case 'civic-organizing':
                 // Admin-gated feature
@@ -1045,6 +1048,25 @@ class NavigationHandlers {
         }
     }
 
+    /**
+     * Toggle friends panel - opens directly to friends list
+     */
+    toggleFriendsPanel() {
+        const container = document.getElementById('messagesContainer');
+        if (!container) return;
+
+        if (container.style.display === 'none' || !container.style.display) {
+            container.style.display = 'block';
+            // Show friends list directly instead of conversations
+            if (typeof window.showFriendsList === 'function') {
+                window.showFriendsList();
+            }
+        } else {
+            container.style.display = 'none';
+            this.showDefaultView();
+        }
+    }
+
     openCivicOrganizing() {
         if (!window.currentUser) {
             if (typeof window.showToast === 'function') {
@@ -1422,6 +1444,7 @@ window.togglePanel = (name) => navigationHandlers.togglePanel(name);
 window.closePanel = (name) => navigationHandlers.closePanel(name);
 window.closeAllPanels = () => navigationHandlers.closeAllPanels();
 window.toggleMessages = () => navigationHandlers.toggleMessages();
+window.toggleFriendsPanel = () => navigationHandlers.toggleFriendsPanel();
 window.openCivicOrganizing = () => navigationHandlers.openCivicOrganizing();
 window.openOrganizations = () => navigationHandlers.openOrganizations();
 window.closeOrganizations = () => navigationHandlers.closeOrganizations();
