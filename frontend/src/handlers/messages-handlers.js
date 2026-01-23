@@ -22,6 +22,8 @@ import { apiCall } from '../js/api-compatibility-shim.js';
 
 export class MessagesHandlers {
     constructor() {
+        /** @type {string|null} Current conversation username for message refresh */
+        this.currentConversationUsername = null;
         this.setupEventListeners();
     }
 
@@ -280,6 +282,7 @@ export class MessagesHandlers {
     showConversationView(conversationId, username, messages) {
         const body = document.getElementById('messagesBody');
         const displayName = username || 'User';
+        this.currentConversationUsername = displayName;  // Store for message refresh
         const avatarLetter = displayName[0]?.toUpperCase() || '?';
 
         body.innerHTML = `
@@ -375,10 +378,9 @@ export class MessagesHandlers {
 
             if (response.ok) {
                 input.value = '';
-                // Refresh the conversation to show the new message
-                const username = document.querySelector('#messagesBody span[style*="font-weight: bold"]')?.textContent;
-                if (username) {
-                    this.openConversation(conversationId, username);
+                // Refresh the conversation to show the new message using stored username
+                if (this.currentConversationUsername) {
+                    this.openConversation(conversationId, this.currentConversationUsername);
                 }
             } else {
                 alert('Failed to send message');
@@ -462,13 +464,15 @@ export class MessagesHandlers {
             console.log('Opening message with friend:', userId);
 
             // Get user info first to have their username
-            const userResponse = await apiCall(`/users/profile/${userId}`);
-            if (!userResponse || !userResponse.username) {
-                showToast('Failed to load user information');
+            const response = await apiCall(`/users/${userId}`);
+            if (!response.ok || !response.data?.user?.username) {
+                if (typeof showToast === 'function') {
+                    showToast('Failed to load user information');
+                }
                 return;
             }
 
-            const username = userResponse.username;
+            const username = response.data.user.username;
 
             // Check if they're actually friends first
             if (window.FriendUtils && typeof window.FriendUtils.getFriendStatus === 'function') {
