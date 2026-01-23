@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: December 12, 2025
-**Version**: 5.9.0 (@RiseAI Agent System & Community Notes)
+**Last Updated**: January 22, 2026
+**Version**: 6.0.0 (iOS Native App & Push Notification Infrastructure)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
 > **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
@@ -27,6 +27,7 @@ Do NOT create separate documentation files. This consolidation was created after
 **API Documentation:**
 - `docs/API_QUESTS_BADGES.md` - Quest & Badge system API reference (19 endpoints)
 - `docs/API_SAVED_POSTS_GALLERY.md` - Saved Posts & Gallery API reference (8 endpoints)
+- `docs/API_MOBILE_DEVICES.md` - Mobile device token API reference (3 endpoints)
 
 **System Documentation:**
 - `docs/DATABASE_SCHEMA.md` - Complete database schema reference (94 models)
@@ -106,7 +107,8 @@ git push origin main          # Production auto-deploys
 9. [🔮 PROPOSED FEED ALGORITHM REDESIGN](#proposed-feed-algorithm-redesign)
 10. [🎨 UI/UX COMPONENTS](#ui-ux-components)
 11. [📱 MOBILE UI SYSTEM](#mobile-ui-system)
-12. [🎯 HISTORIC INLINE CODE ELIMINATION ACHIEVEMENT](#inline-code-elimination-achievement)
+12. [📲 iOS NATIVE APP](#ios-native-app)
+13. [🎯 HISTORIC INLINE CODE ELIMINATION ACHIEVEMENT](#inline-code-elimination-achievement)
 13. [⚙️ JAVASCRIPT MODULARIZATION](#javascript-modularization)
 14. [🔐 SECURITY & AUTHENTICATION](#security-authentication)
 15. [☁️ DEPLOYMENT & INFRASTRUCTURE](#deployment-infrastructure)
@@ -3258,9 +3260,9 @@ Comprehensive guide to the Quest & Badge gamification system:
 ## 🔌 API REFERENCE {#api-reference}
 
 **Status**: ✅ Production Ready
-**Last Updated**: 2025-10-09
+**Last Updated**: 2026-01-22
 **Total Endpoints**: 100+
-**Related Documentation**: See `docs/API_QUESTS_BADGES.md` and `docs/API_SAVED_POSTS_GALLERY.md`
+**Related Documentation**: See `docs/API_QUESTS_BADGES.md`, `docs/API_SAVED_POSTS_GALLERY.md`, and `docs/API_MOBILE_DEVICES.md`
 **Related Systems**: [System Architecture](#system-architecture), [Database Schema](#database-schema), [Security & Authentication](#security-authentication)
 
 ### Authentication Endpoints
@@ -4308,6 +4310,65 @@ Response:
     openai: "operational" | "degraded" | "down",
     blobStorage: "operational" | "degraded" | "down"
   }
+}
+```
+
+### Mobile Device Endpoints
+
+**Documentation**: See `docs/API_MOBILE_DEVICES.md` for complete details.
+
+Device token management for iOS and Android push notifications.
+
+#### POST /api/devices/register
+Register a device token for push notifications.
+```javascript
+Request:
+{
+  deviceToken: string,  // APNs (iOS) or FCM (Android) token
+  platform: "ios" | "android",
+  deviceName?: string,  // e.g., "iPhone 15 Pro"
+  appVersion?: string   // e.g., "1.0.0"
+}
+
+Response:
+{
+  success: true,
+  message: "Device token registered successfully",
+  data: {
+    id: string,
+    platform: string,
+    deviceName: string | null,
+    createdAt: Date,
+    updatedAt: Date
+  }
+}
+```
+
+#### DELETE /api/devices/:deviceToken
+Unregister device token on logout.
+```javascript
+Response:
+{
+  success: true,
+  message: "Device token unregistered successfully"
+}
+```
+
+#### GET /api/devices
+List all registered devices for current user.
+```javascript
+Response:
+{
+  success: true,
+  data: [
+    {
+      id: string,
+      platform: "ios" | "android",
+      deviceName: string | null,
+      createdAt: Date,
+      updatedAt: Date
+    }
+  ]
 }
 ```
 
@@ -5851,6 +5912,244 @@ input, textarea, select {
 - Advanced touch interactions (long press, multi-touch)
 - Mobile-specific notification handling
 - Offline capability for mobile users
+
+---
+
+## 📲 iOS NATIVE APP {#ios-native-app}
+
+**Status**: ✅ Production Ready (MVP)
+**Last Updated**: 2026-01-22
+**Repository**: `unitedwerise-ios` (sibling to main repo)
+**Target**: iOS 16+, Universal (iPhone + iPad)
+**Architecture**: SwiftUI + MVVM
+
+### Overview
+
+The UnitedWeRise iOS app is a native Swift/SwiftUI application that provides full platform functionality on iPhone and iPad. Built with modern iOS patterns including async/await, @MainActor, and Combine for reactive state management.
+
+### Repository Structure
+
+```
+unitedwerise-ios/
+├── UnitedWeRise.xcodeproj
+├── UnitedWeRise/
+│   ├── App/                    # Entry point, delegates, main views
+│   │   ├── UnitedWeRiseApp.swift
+│   │   ├── ContentView.swift
+│   │   ├── MainTabView.swift
+│   │   ├── NotificationManager.swift
+│   │   └── DeepLinkHandler.swift
+│   ├── Core/                   # Infrastructure
+│   │   ├── Config/AppEnvironment.swift
+│   │   ├── Network/APIClient.swift
+│   │   ├── Network/AuthManager.swift
+│   │   ├── Network/SocketIOManager.swift
+│   │   └── Keychain/KeychainService.swift
+│   ├── Features/               # Feature modules (MVVM)
+│   │   ├── Auth/               # Login, Register, Google Sign-In
+│   │   ├── Feed/               # Main feed with For You/Following tabs
+│   │   ├── Posts/              # Post detail, create, comments, reactions
+│   │   ├── Profile/            # User profiles, edit profile
+│   │   ├── Messaging/          # Conversations, real-time chat
+│   │   └── Friends/            # Friends list, requests
+│   ├── Shared/                 # Reusable components
+│   │   ├── Models/             # User, Post, Message, APIResponse
+│   │   ├── Components/         # LoadingView, ErrorView, AvatarView
+│   │   └── Extensions/         # View, Date, String extensions
+│   └── Resources/              # Assets, localization
+└── Tests/
+```
+
+### Dependencies (Swift Package Manager)
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| socket.io-client-swift | 16.0.0+ | Real-time messaging via WebSocket |
+| GoogleSignIn-iOS | 7.0.0+ | OAuth authentication |
+| Nuke | 12.0.0+ | Image loading and caching |
+| KeychainAccess | 4.2.0+ | Secure token storage |
+
+### Environment Configuration
+
+```swift
+enum AppEnvironment {
+    case development  // localhost:3001
+    case staging      // dev-api.unitedwerise.org
+    case production   // api.unitedwerise.org
+
+    var baseURL: String {
+        switch self {
+        case .development: return "http://localhost:3001"
+        case .staging: return "https://dev-api.unitedwerise.org"
+        case .production: return "https://api.unitedwerise.org"
+        }
+    }
+}
+```
+
+### Features Implemented
+
+**Authentication**
+- Email/password login and registration
+- Google Sign-In OAuth integration
+- JWT token management with automatic refresh
+- Secure token storage in iOS Keychain
+
+**Feed**
+- "For You" and "Following" tab switching
+- Infinite scroll pagination
+- Pull-to-refresh
+- Quick like action on posts
+
+**Posts**
+- Post detail view with full content
+- Thread continuation display
+- Nested comment threads (max 2 levels inline)
+- Reactions: LIKE/DISLIKE, AGREE/DISAGREE
+- Create post with preview
+
+**Profiles**
+- Own profile view with stats
+- Edit profile (display name, bio, avatar)
+- Other user profiles
+- Follow/unfollow actions
+
+**Messaging**
+- Conversations list with unread counts
+- Real-time chat via Socket.IO
+- Typing indicators
+- Message request handling (non-friend DMs)
+
+**Friends**
+- Friends list
+- Pending requests (incoming/outgoing)
+- Send/accept/decline friend requests
+
+**Push Notifications**
+- APNs token registration
+- Device token management
+- Deep linking from notifications
+
+### iPad Optimizations
+
+The app uses adaptive layouts for optimal iPad experience:
+
+```swift
+@Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+var body: some View {
+    if horizontalSizeClass == .regular {
+        // iPad: NavigationSplitView with sidebar
+        iPadLayout
+    } else {
+        // iPhone: Standard TabView
+        iPhoneLayout
+    }
+}
+```
+
+**iPad-Specific Features:**
+- `NavigationSplitView` with persistent sidebar
+- Split conversation/chat view for messages
+- Keyboard shortcuts (Cmd+1-5 for tab navigation)
+- Pointer/trackpad support
+
+### Backend Integration
+
+The iOS app uses the same REST API as the web platform. New endpoints added for mobile:
+
+**Device Token Management** (`/api/devices`):
+- `POST /api/devices/register` - Register APNs token
+- `DELETE /api/devices/:deviceToken` - Unregister on logout
+- `GET /api/devices` - List user's devices
+
+**Documentation**: See `docs/API_MOBILE_DEVICES.md`
+
+### Authentication Flow
+
+```
+1. User taps Login/Register
+2. Credentials sent to /api/auth/login or /api/auth/register
+3. Backend returns access token (30 min) + refresh token (30-90 days)
+4. Tokens stored in iOS Keychain via KeychainAccess
+5. APIClient attaches Bearer token to all requests
+6. On 401, APIClient calls /api/auth/refresh automatically
+7. On logout, device token unregistered, tokens cleared from Keychain
+```
+
+### Real-Time Messaging
+
+```swift
+class SocketIOManager {
+    // Connection lifecycle
+    func connect(token: String)
+    func disconnect()
+
+    // Messaging events
+    func sendMessage(conversationId: String, content: String)
+    func onNewMessage(_ handler: @escaping (Message) -> Void)
+    func startTyping(conversationId: String)
+    func stopTyping(conversationId: String)
+    func onTypingIndicator(_ handler: @escaping (String, Bool) -> Void)
+}
+```
+
+### Push Notification Flow
+
+```
+1. App requests notification permission on first launch
+2. User grants permission → iOS provides APNs device token
+3. App sends token to POST /api/devices/register after authentication
+4. Backend stores token in DeviceToken table
+5. When event occurs (message, friend request, etc.):
+   - Backend queries user's device tokens
+   - Sends push via APNs
+6. User taps notification → DeepLinkHandler navigates to content
+7. On logout: DELETE /api/devices/:deviceToken
+```
+
+### Development Workflow
+
+**Building the App:**
+1. Open `unitedwerise-ios/UnitedWeRise.xcodeproj` in Xcode
+2. Add Swift Package dependencies (if not already present)
+3. Select target device/simulator
+4. Build and run (Cmd+R)
+
+**Environment Switching:**
+- Debug builds use `.development` or `.staging`
+- Release builds use `.production`
+- Configure in scheme settings or AppEnvironment.swift
+
+**Testing:**
+- Unit tests in `Tests/` directory
+- UI tests for critical flows
+- Test on both iPhone and iPad simulators
+
+### Maintenance Notes
+
+**Token Refresh:**
+- Access tokens expire after 30 minutes
+- APIClient automatically refreshes using stored refresh token
+- If refresh fails, user is logged out and redirected to login
+
+**Socket.IO Reconnection:**
+- Auto-reconnect on network changes
+- Exponential backoff for failed connections
+- Re-authenticate on reconnect
+
+**Image Caching:**
+- Nuke handles memory and disk caching
+- Images cached for offline viewing
+- Cache cleared on memory pressure
+
+### Future Enhancements
+
+- [ ] Offline mode with local caching
+- [ ] Dark mode support
+- [ ] Widget for feed highlights
+- [ ] Apple Watch companion app
+- [ ] Siri Shortcuts integration
 
 ---
 
@@ -20228,6 +20527,7 @@ See `docs/DATABASE_SCHEMA.md` for complete documentation of all fields, relation
 ### API Documentation
 - **docs/API_QUESTS_BADGES.md** - Quest & Badge API (19 endpoints)
 - **docs/API_SAVED_POSTS_GALLERY.md** - Saved Posts & Gallery API (8 endpoints)
+- **docs/API_MOBILE_DEVICES.md** - Mobile Device Token API (3 endpoints)
 
 ### System Documentation
 - **docs/DATABASE_SCHEMA.md** - Complete database reference (94 models)
@@ -20242,6 +20542,7 @@ See `docs/DATABASE_SCHEMA.md` for complete documentation of all fields, relation
 - Core features → MASTER_DOCUMENTATION.md "API Reference" section
 - Quest/Badge system → docs/API_QUESTS_BADGES.md
 - Saved Posts/Gallery → docs/API_SAVED_POSTS_GALLERY.md
+- Mobile Device Tokens → docs/API_MOBILE_DEVICES.md
 
 **Need database info?**
 - Quick reference → MASTER_DOCUMENTATION.md "Database Schema" section

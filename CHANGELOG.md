@@ -1,10 +1,61 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 20, 2026
+**Last Updated**: January 22, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-22] - iOS Native App & Push Notification Infrastructure
+
+### Added
+
+**iOS Native App (UnitedWeRise-iOS)**
+- Complete SwiftUI iOS app targeting iOS 16+ (Universal: iPhone + iPad)
+- MVVM architecture with async/await patterns
+- Features implemented:
+  - Authentication (login, register, Google Sign-In)
+  - Feed with "For You" / "Following" tabs, infinite scroll, pull-to-refresh
+  - Posts (detail view, create post, comments with nested replies, reactions)
+  - Profiles (own profile, edit, other users, follow/unfollow)
+  - Real-time messaging via Socket.IO (conversations, chat, typing indicators)
+  - Friends system (list, pending requests, send/accept/decline)
+  - Push notification registration and handling
+- iPad optimizations:
+  - NavigationSplitView with sidebar navigation
+  - Adaptive layouts using horizontalSizeClass
+  - Keyboard shortcuts (Cmd+1-5 for tab switching)
+  - Split conversation/chat view for messages
+- Deep linking support for posts, profiles, conversations, friend requests
+
+**Push Notification Backend Infrastructure**
+- New `DeviceToken` model for storing APNs/FCM tokens
+- New `/api/devices` endpoints:
+  - `POST /api/devices/register` - Register device token for push notifications
+  - `DELETE /api/devices/:deviceToken` - Unregister device on logout
+  - `GET /api/devices` - List user's registered devices
+- Supports iOS (APNs) and Android (FCM) platforms
+- Automatic token reassignment when user switches accounts
+- CASCADE delete when user account is deleted
+
+**Dependencies (iOS)**
+- socket.io-client-swift (16.0.0+) - Real-time messaging
+- GoogleSignIn-iOS (7.0.0+) - OAuth authentication
+- Nuke (12.0.0+) - Image loading and caching
+- KeychainAccess (4.2.0+) - Secure token storage
+
+### Files Added
+- `/unitedwerise-ios/` - New iOS app repository (51 Swift files)
+- `backend/src/routes/devices.ts` - Device token management endpoints
+- `backend/prisma/migrations/20260122000000_add_device_tokens/` - Database migration
+- `docs/API_MOBILE_DEVICES.md` - Mobile device API documentation
+
+### Documentation
+- Updated `MASTER_DOCUMENTATION.md` with iOS Native App section
+- Updated `docs/DATABASE_SCHEMA.md` with DeviceToken model
+- Created `docs/API_MOBILE_DEVICES.md` for device endpoints
 
 ---
 
