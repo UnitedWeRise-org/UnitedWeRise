@@ -598,15 +598,15 @@ export class RelationshipHandlers {
         } else {
             html += '<div class="friends-list">';
             friends.forEach(friend => {
-                const friendUser = friend.user1Id === window.currentUser?.id ? friend.user2 : friend.user1;
+                // Backend returns extracted user objects directly (not raw friendship objects)
                 html += `
-                    <div class="friend-item" data-conversation-start="${friendUser.id}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 1rem; transition: background-color 0.2s;" data-hover-effect="list-item">
+                    <div class="friend-item" data-conversation-start="${friend.id}" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 1rem; transition: background-color 0.2s;" data-hover-effect="list-item">
                         <div class="friend-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                            ${friendUser.firstName ? friendUser.firstName.charAt(0).toUpperCase() : '?'}
+                            ${friend.firstName ? friend.firstName.charAt(0).toUpperCase() : '?'}
                         </div>
                         <div style="flex: 1;">
-                            <div style="font-weight: 500;">${friendUser.firstName} ${friendUser.lastName}</div>
-                            <div style="color: #666; font-size: 0.9rem;">@${friendUser.username}</div>
+                            <div style="font-weight: 500;">${friend.firstName || ''} ${friend.lastName || ''}</div>
+                            <div style="color: #666; font-size: 0.9rem;">@${friend.username}</div>
                         </div>
                         <div style="color: #4b5c09; font-size: 1.2rem;">💬</div>
                     </div>
