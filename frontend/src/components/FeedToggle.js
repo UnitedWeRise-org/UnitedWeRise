@@ -13,7 +13,8 @@ export class FeedToggle {
         this.caches = {
             following: [],
             discover: [],
-            saved: []
+            saved: [],
+            snippets: []
         };
         this.showNewUserBanner = false;
         this.showEmptyFollowingState = false;
@@ -109,6 +110,10 @@ export class FeedToggle {
                         <button class="feed-toggle-btn ${this.currentFeed === 'saved' ? 'active' : ''}" data-feed-type="saved">
                             <span class="feed-toggle-icon">🔖</span>
                             <span class="feed-toggle-label">Saved</span>
+                        </button>
+                        <button class="feed-toggle-btn ${this.currentFeed === 'snippets' ? 'active' : ''}" data-feed-type="snippets">
+                            <span class="feed-toggle-icon">🎬</span>
+                            <span class="feed-toggle-label">Snippets</span>
                         </button>
                         <button class="feed-toggle-btn disabled" data-action="filters-coming-soon">
                             <span class="feed-toggle-icon">⚙️</span>
@@ -742,7 +747,7 @@ export class FeedToggle {
         }
 
         // Validate feedType
-        if (!['discover', 'following', 'saved'].includes(feedType)) {
+        if (!['discover', 'following', 'saved', 'snippets'].includes(feedType)) {
             console.error(`Invalid feed type: ${feedType}`);
             return;
         }
@@ -812,6 +817,8 @@ export class FeedToggle {
                 posts = await this.loadFollowingFeed(bypassCache);
             } else if (feedType === 'saved') {
                 posts = await this.loadSavedFeed(bypassCache);
+            } else if (feedType === 'snippets') {
+                posts = await this.loadSnippetsFeed(bypassCache);
             } else {
                 posts = await this.loadDiscoverFeed(bypassCache);
             }
@@ -1014,6 +1021,61 @@ export class FeedToggle {
         return [];
     }
 
+    /**
+     * Load snippets feed (video content)
+     * @param {boolean} bypassCache - Whether to bypass cache
+     * @returns {Promise<Array>} Array of video objects
+     */
+    async loadSnippetsFeed(bypassCache = false) {
+        console.log('Loading snippets feed...', bypassCache ? '(bypassing cache)' : '');
+
+        // Check cache first (unless bypassing)
+        if (!bypassCache && this.caches.snippets && this.caches.snippets.length > 0) {
+            console.log('Using cached snippets feed');
+            return this.caches.snippets;
+        }
+
+        // Safety check: Ensure apiCall is available
+        if (typeof apiCall !== 'function') {
+            console.error('FeedToggle: apiCall not available, cannot load Snippets feed');
+            return [];
+        }
+
+        // Backend endpoint is /videos/feed
+        const url = bypassCache
+            ? `/videos/feed?limit=15&_=${Date.now()}`
+            : '/videos/feed?limit=15';
+
+        const response = await apiCall(url, {
+            method: 'GET'
+        });
+
+        console.log('Snippets feed response:', response);
+
+        // Handle different response formats
+        let videos = null;
+        if (response && response.videos) {
+            console.log('✅ Found videos at response.videos');
+            videos = response.videos;
+        } else if (response && response.data && response.data.videos) {
+            console.log('✅ Found videos at response.data.videos');
+            videos = response.data.videos;
+        } else if (response && response.ok && response.data && response.data.videos) {
+            console.log('✅ Found videos at response.ok.data.videos');
+            videos = response.data.videos;
+        } else {
+            console.error('❌ Could not find videos in snippets feed response');
+        }
+
+        if (videos && Array.isArray(videos)) {
+            console.log(`✅ Returning ${videos.length} videos for snippets feed`);
+            this.caches.snippets = videos;
+            return videos;
+        }
+
+        return [];
+    }
+
     async renderPosts(posts, feedType) {
         await adminDebugLog('FeedToggle', 'renderPosts called', {
             feedType,
@@ -1046,6 +1108,15 @@ export class FeedToggle {
                     <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No saved posts yet</p>
                     <p><small>Save posts by clicking the bookmark icon to read them later.</small></p>
                 `;
+            } else if (feedType === 'snippets') {
+                emptyDiv.innerHTML = `
+                    <div style="font-size: 48px; margin-bottom: 16px;">🎬</div>
+                    <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No snippets yet</p>
+                    <p><small>Be the first to create and share video snippets!</small></p>
+                    <button data-action="create-snippet" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: #4169E1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        + Create Snippet
+                    </button>
+                `;
             } else {
                 emptyDiv.innerHTML = `
                     <p>No posts available right now.</p>
@@ -1054,6 +1125,13 @@ export class FeedToggle {
             }
 
             container.appendChild(emptyDiv);
+            return;
+        }
+
+        // Handle snippets (video) feed differently
+        if (feedType === 'snippets') {
+            console.log(`✅ Rendering ${posts.length} snippets for snippets feed`);
+            this.renderSnippetCards(posts, container);
             return;
         }
 
@@ -1467,6 +1545,173 @@ export class FeedToggle {
             this.caches.following = [];
             this.caches.discover = [];
             this.caches.saved = [];
+            this.caches.snippets = [];
+        }
+    }
+
+    /**
+     * Render video snippet cards for the snippets feed
+     * @param {Array} videos - Array of video objects
+     * @param {HTMLElement} container - Container to render into
+     */
+    renderSnippetCards(videos, container) {
+        // Preserve feed controls before rendering
+        const feedControls = container.querySelector('.feed-controls-wrapper');
+        const feedBanners = Array.from(container.querySelectorAll('.feed-banner'));
+
+        // Create snippets grid HTML
+        const cardsHtml = videos.map(video => this.renderVideoCard(video)).join('');
+
+        // Clear container and add grid
+        const gridHtml = `
+            <div class="snippets-feed-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; padding: 1rem 0;">
+                ${cardsHtml}
+            </div>
+        `;
+
+        container.innerHTML = gridHtml;
+
+        // Restore feed controls at the top
+        if (feedControls) {
+            container.insertBefore(feedControls, container.firstChild);
+        }
+
+        // Restore banners after controls
+        if (feedBanners.length > 0) {
+            const insertAfter = feedControls || container.firstChild;
+            feedBanners.forEach(banner => {
+                if (insertAfter && insertAfter.nextSibling) {
+                    container.insertBefore(banner, insertAfter.nextSibling);
+                } else {
+                    container.appendChild(banner);
+                }
+            });
+        }
+
+        // Attach click handlers for video cards
+        container.querySelectorAll('.video-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const videoId = card.dataset.videoId;
+                this.openSnippetPlayer(videoId);
+            });
+        });
+    }
+
+    /**
+     * Render a single video card
+     * @param {Object} video - Video object
+     * @returns {string} HTML string for the card
+     */
+    renderVideoCard(video) {
+        const thumbnailUrl = video.thumbnailUrl || '/assets/images/video-placeholder.jpg';
+        const duration = this.formatVideoDuration(video.duration || 0);
+        const username = video.user?.username || 'Unknown';
+        const avatar = video.user?.avatar || '';
+        const viewCount = this.formatVideoCount(video.viewCount || 0);
+        const likeCount = this.formatVideoCount(video.likeCount || 0);
+
+        return `
+            <div class="video-card" data-video-id="${video.id}" data-action="open-snippet-player">
+                <div class="video-card__thumbnail">
+                    <img src="${thumbnailUrl}" alt="Video thumbnail" loading="lazy">
+                    <div class="video-card__play-overlay">
+                        <span class="video-card__play-icon">▶</span>
+                    </div>
+                    <span class="video-card__duration">${duration}</span>
+                </div>
+                <div class="video-card__info">
+                    ${avatar ? `<img src="${avatar}" class="video-card__avatar" alt="">` : `<div class="video-card__avatar-placeholder">👤</div>`}
+                    <span class="video-card__username">@${username}</span>
+                </div>
+                <div class="video-card__stats">
+                    <span>👁 ${viewCount}</span>
+                    <span>❤️ ${likeCount}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Format video duration in seconds to MM:SS
+     * @param {number} seconds - Duration in seconds
+     * @returns {string} Formatted duration
+     */
+    formatVideoDuration(seconds) {
+        if (!seconds || seconds <= 0) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Format count with K/M suffix
+     * @param {number} count - Count to format
+     * @returns {string} Formatted count
+     */
+    formatVideoCount(count) {
+        if (count >= 1000000) return (count / 1000000).toFixed(1) + 'M';
+        if (count >= 1000) return (count / 1000).toFixed(1) + 'K';
+        return count.toString();
+    }
+
+    /**
+     * Open snippet player for a video
+     * @param {string} videoId - Video ID
+     */
+    async openSnippetPlayer(videoId) {
+        const video = this.caches.snippets.find(v => v.id === videoId);
+        if (!video) {
+            console.error('Video not found in cache:', videoId);
+            return;
+        }
+
+        try {
+            // Dynamically import the ReelsFeed for fullscreen playback
+            const { ReelsFeed } = await import('../modules/features/video/ReelsFeed.js');
+
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.className = 'reels-modal-overlay';
+            modal.style.cssText = 'position: fixed; inset: 0; z-index: 1100; background: #000;';
+            modal.innerHTML = `
+                <button class="reels-close-btn" style="position: absolute; top: 1rem; right: 1rem; z-index: 1200; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 50%; width: 48px; height: 48px; cursor: pointer; font-size: 1.5rem;">×</button>
+                <div id="reelsPlayerContainer" style="width: 100%; height: 100%;"></div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Find index of current video in cache
+            const startIndex = this.caches.snippets.findIndex(v => v.id === videoId);
+
+            // Initialize ReelsFeed with videos starting from clicked one
+            const reelsFeed = new ReelsFeed({
+                container: document.getElementById('reelsPlayerContainer'),
+                videos: this.caches.snippets,
+                startIndex: startIndex >= 0 ? startIndex : 0
+            });
+
+            // Close button handler
+            modal.querySelector('.reels-close-btn').addEventListener('click', () => {
+                reelsFeed.destroy?.();
+                modal.remove();
+            });
+
+            // ESC key to close
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    reelsFeed.destroy?.();
+                    modal.remove();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+
+        } catch (error) {
+            console.error('Failed to open snippet player:', error);
+            // Fallback: open video URL directly
+            if (video.videoUrl) {
+                window.open(video.videoUrl, '_blank');
+            }
         }
     }
 

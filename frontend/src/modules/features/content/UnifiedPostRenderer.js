@@ -168,6 +168,8 @@ class UnifiedPostRenderer {
 
                 ${this.renderPostMedia(post.photos, settings)}
 
+                ${this.renderPostVideos(post.videos, settings)}
+
                 ${post.riseAIResponse ? this.renderInlineRiseAIResponse(post.riseAIResponse, post.id) : ''}
 
                 ${settings.showTopicIndicators && post.stance ? this.renderTopicIndicator(post.stance) : ''}
@@ -436,6 +438,58 @@ class UnifiedPostRenderer {
                 }).join('')}
             </div>
         `;
+    }
+
+    /**
+     * Render post videos with thumbnail and play button
+     * @param {Array} videos - Array of video objects
+     * @param {Object} settings - Render settings
+     * @returns {string} HTML string for videos
+     * @private
+     */
+    renderPostVideos(videos, settings) {
+        if (!videos || videos.length === 0) {
+            return '';
+        }
+
+        console.log('📹 RENDERER - renderPostVideos called', {
+            videosProvided: !!videos,
+            videosLength: videos.length
+        });
+
+        return `
+            <div class="post-videos" style="margin-top: 12px;">
+                ${videos.map(video => `
+                    <div class="post-video-item"
+                         data-video-id="${video.id}"
+                         data-action="playPostVideo"
+                         style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; margin-bottom: 8px;">
+                        <img src="${video.thumbnailUrl || '/assets/images/video-placeholder.jpg'}"
+                             alt="Video"
+                             loading="lazy"
+                             style="width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover;"
+                             onerror="this.src='/assets/images/video-placeholder.jpg'">
+                        <div class="video-play-overlay" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; background: rgba(0,0,0,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+                            <span class="play-icon">▶</span>
+                        </div>
+                        <span class="video-duration" style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.8); color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${this.formatVideoDuration(video.duration)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    /**
+     * Format video duration in seconds to MM:SS
+     * @param {number} seconds - Duration in seconds
+     * @returns {string} Formatted duration
+     * @private
+     */
+    formatVideoDuration(seconds) {
+        if (!seconds || seconds <= 0) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
     /**

@@ -357,6 +357,31 @@ class NavigationHandlers {
             case 'close-organizations':
                 this.closeOrganizations();
                 break;
+            case 'show-snippets':
+                this.openSnippetsDashboard();
+                break;
+            case 'close-snippets':
+                this.closeSnippetsDashboard();
+                break;
+            case 'create-snippet':
+                this.openSnippetCreator();
+                break;
+            case 'playPostVideo':
+                {
+                    const videoId = target.dataset.videoId;
+                    if (videoId) {
+                        this.playPostVideo(videoId);
+                    }
+                }
+                break;
+            case 'open-snippet-player':
+                {
+                    const videoId = target.closest('[data-video-id]')?.dataset.videoId;
+                    if (videoId) {
+                        this.playPostVideo(videoId);
+                    }
+                }
+                break;
             case 'map':
                 this.showMapFromSidebar();
                 break;
@@ -633,6 +658,12 @@ class NavigationHandlers {
                 } else {
                     console.error('SavedPostsView not available');
                     alert('Saved Posts feature is loading. Please try again in a moment.');
+                }
+                break;
+            case 'feed-snippets':
+                // Switch to snippets feed
+                if (window.feedToggle && typeof window.feedToggle.switchFeed === 'function') {
+                    window.feedToggle.switchFeed('snippets');
                 }
                 break;
 
@@ -1003,6 +1034,12 @@ class NavigationHandlers {
             organizations.style.display = 'none';
         }
 
+        // Hide Snippets Dashboard
+        const snippetsDashboard = document.getElementById('snippetsDashboard');
+        if (snippetsDashboard) {
+            snippetsDashboard.style.display = 'none';
+        }
+
         // Hide other main view systems
         const viewSelectors = [
             '.elections-main-view',
@@ -1160,6 +1197,173 @@ class NavigationHandlers {
         }
         // Show default view
         this.showDefaultView();
+    }
+
+    /**
+     * Open Snippets Dashboard
+     * Shows the user's video snippets management interface
+     */
+    async openSnippetsDashboard() {
+        if (!window.currentUser) {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Please log in to manage your snippets');
+            }
+            return;
+        }
+
+        // Hide other main view systems when opening
+        this.hideOtherMainViews();
+
+        // Hide other panels
+        document.querySelectorAll('.detail-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+
+        document.querySelectorAll('.info-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+
+        const container = document.getElementById('snippetsDashboard');
+        const contentEl = document.getElementById('snippetsDashboardContent');
+
+        if (container) {
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+        }
+
+        this.closeAllPanels();
+
+        // Dynamically load snippets dashboard
+        if (contentEl) {
+            try {
+                const { SnippetsDashboard } = await import('../modules/features/video/SnippetsDashboard.js');
+                if (!this.snippetsDashboard) {
+                    this.snippetsDashboard = new SnippetsDashboard(contentEl);
+                }
+                await this.snippetsDashboard.init();
+            } catch (error) {
+                console.error('Failed to load snippets dashboard:', error);
+                contentEl.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        <p>Failed to load snippets dashboard</p>
+                        <button data-action="show-snippets" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #4169E1; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /**
+     * Close Snippets Dashboard
+     */
+    closeSnippetsDashboard() {
+        const container = document.getElementById('snippetsDashboard');
+        if (container) {
+            container.style.display = 'none';
+        }
+        // Show default view
+        this.showDefaultView();
+    }
+
+    /**
+     * Open Snippet Creator Modal
+     * Shows modal for creating new video snippets
+     */
+    async openSnippetCreator() {
+        if (!window.currentUser) {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Please log in to create snippets');
+            }
+            return;
+        }
+
+        try {
+            const { SnippetCreatorModal } = await import('../modules/features/video/SnippetCreatorModal.js');
+            if (!this.snippetCreatorModal) {
+                this.snippetCreatorModal = new SnippetCreatorModal();
+            }
+            this.snippetCreatorModal.open();
+        } catch (error) {
+            console.error('Failed to load snippet creator:', error);
+            if (typeof window.showToast === 'function') {
+                window.showToast('Failed to load snippet creator');
+            }
+        }
+    }
+
+    /**
+     * Play a video from a post
+     * Opens the video player for inline or modal playback
+     * @param {string} videoId - Video ID to play
+     */
+    async playPostVideo(videoId) {
+        if (!videoId) {
+            console.error('playPostVideo: No video ID provided');
+            return;
+        }
+
+        try {
+            // First try to fetch video data from API
+            const { apiCall } = await import('../js/api-compatibility-shim.js');
+            const response = await apiCall(`/videos/${videoId}`, { method: 'GET' });
+
+            const video = response?.data?.video || response?.video || response?.data;
+            if (!video) {
+                throw new Error('Video not found');
+            }
+
+            // Import and use VideoPlayer
+            const { VideoPlayer } = await import('../modules/features/video/VideoPlayer.js');
+
+            // Create fullscreen player modal
+            const modal = document.createElement('div');
+            modal.className = 'video-player-overlay';
+            modal.style.cssText = 'position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center;';
+            modal.innerHTML = `
+                <button class="video-player-close" style="position: absolute; top: 1rem; right: 1rem; z-index: 1200; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 50%; width: 48px; height: 48px; cursor: pointer; font-size: 1.5rem;">×</button>
+                <div id="postVideoPlayerContainer" style="max-width: 500px; max-height: 90vh; width: 100%;"></div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Initialize player
+            const player = new VideoPlayer({
+                container: document.getElementById('postVideoPlayerContainer'),
+                video: video,
+                autoplay: true
+            });
+
+            // Close handlers
+            modal.querySelector('.video-player-close').addEventListener('click', () => {
+                player.destroy?.();
+                modal.remove();
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    player.destroy?.();
+                    modal.remove();
+                }
+            });
+
+            // ESC key to close
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    player.destroy?.();
+                    modal.remove();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+
+        } catch (error) {
+            console.error('Failed to play video:', error);
+            if (typeof window.showToast === 'function') {
+                window.showToast('Failed to load video');
+            }
+        }
     }
 
     showDefaultView() {
@@ -1448,6 +1652,10 @@ window.toggleFriendsPanel = () => navigationHandlers.toggleFriendsPanel();
 window.openCivicOrganizing = () => navigationHandlers.openCivicOrganizing();
 window.openOrganizations = () => navigationHandlers.openOrganizations();
 window.closeOrganizations = () => navigationHandlers.closeOrganizations();
+window.openSnippetsDashboard = () => navigationHandlers.openSnippetsDashboard();
+window.closeSnippetsDashboard = () => navigationHandlers.closeSnippetsDashboard();
+window.openSnippetCreator = () => navigationHandlers.openSnippetCreator();
+window.playPostVideo = (videoId) => navigationHandlers.playPostVideo(videoId);
 window.showDefaultView = () => navigationHandlers.showDefaultView();
 window.resetPanelsToDefault = () => navigationHandlers.resetPanelsToDefault();
 window.showMapFromSidebar = () => navigationHandlers.showMapFromSidebar();

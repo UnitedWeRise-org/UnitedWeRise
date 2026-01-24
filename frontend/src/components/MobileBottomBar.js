@@ -265,6 +265,10 @@ export class MobileBottomBar {
                         <span class="mobile-nav-submenu-icon">🔖</span>
                         <span class="mobile-nav-submenu-label">Saved Posts</span>
                     </a>
+                    <a href="#" class="mobile-nav-submenu-item" data-action="feed-snippets">
+                        <span class="mobile-nav-submenu-icon">🎬</span>
+                        <span class="mobile-nav-submenu-label">Snippets</span>
+                    </a>
                 `;
 
             case 'mobile-civic':
@@ -335,6 +339,7 @@ export class MobileBottomBar {
             'feed-following': 'mobile-feed',
             'feed-trending': 'mobile-feed',
             'feed-saved': 'mobile-feed',
+            'feed-snippets': 'mobile-feed',
             'civic-elections': 'mobile-civic',
             'civic-officials': 'mobile-civic',
             'civic-candidates': 'mobile-civic',
