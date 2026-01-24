@@ -901,25 +901,37 @@ router.post('/thread', requireAuth, checkUserSuspension, postLimiter, contentFil
  *   get:
  *     tags: [Post]
  *     summary: Get current user's own posts
- *     description: Returns authenticated user's posts with reaction and share data
+ *     description: |
+ *       Returns authenticated user's content with reaction and share data.
+ *       Use the type parameter to filter by:
+ *       - posts: User's authored posts (default)
+ *       - likes: Posts the user has liked
+ *       - replies: User's comments/replies on posts (returned in post-like format with parentPost info)
  *     security:
  *       - cookieAuth: []
  *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [posts, replies, likes]
+ *           default: posts
+ *         description: Type of content to retrieve
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 20
- *         description: Maximum number of posts to return
+ *         description: Maximum number of items to return
  *       - in: query
  *         name: offset
  *         schema:
  *           type: integer
  *           default: 0
- *         description: Number of posts to skip for pagination
+ *         description: Number of items to skip for pagination
  *     responses:
  *       200:
- *         description: Posts retrieved successfully
+ *         description: Content retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -950,7 +962,172 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
             req.query.limit as string | undefined,
             req.query.offset as string | undefined
         );
+        const type = req.query.type as string | undefined;
+        const validTypes = ['posts', 'replies', 'likes'];
+        const postType = validTypes.includes(type || '') ? type : 'posts';
 
+        // Handle different content types
+        if (postType === 'likes') {
+            // Get posts that the current user has liked
+            const likedPosts = await prisma.post.findMany({
+                where: {
+                    reactions: {
+                        some: {
+                            userId: userId,
+                            sentiment: 'LIKE'
+                        }
+                    }
+                },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true
+                        }
+                    },
+                    reactions: {
+                        where: { userId },
+                        select: {
+                            sentiment: true,
+                            stance: true
+                        }
+                    },
+                    shares: {
+                        where: { userId },
+                        select: {
+                            shareType: true,
+                            content: true
+                        }
+                    },
+                    _count: {
+                        select: {
+                            likes: true,
+                            comments: true
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: limitNum,
+                skip: offsetNum
+            });
+
+            const formattedPosts = likedPosts.map(post => {
+                const userReaction = post.reactions[0] || null;
+                const userShare = post.shares[0] || null;
+                return {
+                    ...post,
+                    likesCount: post._count.likes,
+                    commentsCount: post._count.comments,
+                    dislikesCount: post.dislikesCount || 0,
+                    agreesCount: post.agreesCount || 0,
+                    disagreesCount: post.disagreesCount || 0,
+                    userSentiment: userReaction?.sentiment || null,
+                    userStance: userReaction?.stance || null,
+                    isLiked: userReaction?.sentiment === 'LIKE',
+                    isShared: !!userShare,
+                    userShareType: userShare?.shareType || null,
+                    userShareContent: userShare?.content || null,
+                    reactions: undefined,
+                    shares: undefined,
+                    _count: undefined
+                };
+            });
+
+            return res.json({
+                posts: formattedPosts,
+                pagination: {
+                    limit: limitNum,
+                    offset: offsetNum,
+                    count: likedPosts.length
+                }
+            });
+        }
+
+        if (postType === 'replies') {
+            // Get user's comments with parent post info
+            const comments = await prisma.comment.findMany({
+                where: { userId: userId },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true
+                        }
+                    },
+                    post: {
+                        select: {
+                            id: true,
+                            content: true,
+                            authorId: true,
+                            author: {
+                                select: {
+                                    id: true,
+                                    username: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    avatar: true
+                                }
+                            }
+                        }
+                    },
+                    _count: {
+                        select: {
+                            replies: true
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: limitNum,
+                skip: offsetNum
+            });
+
+            // Transform comments to post-like format for iOS compatibility
+            const formattedReplies = comments.map(comment => ({
+                id: comment.id,
+                content: comment.content,
+                authorId: comment.userId,
+                author: comment.user,
+                createdAt: comment.createdAt,
+                updatedAt: comment.updatedAt,
+                // Include parent post context
+                parentPost: comment.post ? {
+                    id: comment.post.id,
+                    content: comment.post.content.substring(0, 200),
+                    author: comment.post.author
+                } : null,
+                // Set standard post fields to defaults
+                likesCount: comment.likesCount || 0,
+                commentsCount: comment._count.replies,
+                dislikesCount: 0,
+                agreesCount: 0,
+                disagreesCount: 0,
+                userSentiment: null,
+                userStance: null,
+                isLiked: false,
+                isShared: false,
+                // Flag to indicate this is a reply/comment
+                isReply: true
+            }));
+
+            return res.json({
+                posts: formattedReplies,
+                pagination: {
+                    limit: limitNum,
+                    offset: offsetNum,
+                    count: comments.length
+                }
+            });
+        }
+
+        // Default: posts - User's authored posts
         const posts = await prisma.post.findMany({
             where: { authorId: userId },
             include: {
@@ -2613,7 +2790,12 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
  *   get:
  *     tags: [Post]
  *     summary: Get posts by a specific user
- *     description: Retrieves all posts created by a specific user with engagement data
+ *     description: |
+ *       Retrieves posts related to a specific user with engagement data.
+ *       Use the type parameter to filter by:
+ *       - posts: User's authored posts (default)
+ *       - likes: Posts the user has liked
+ *       - replies: User's comments/replies on posts (returned in post-like format with parentPost info)
  *     parameters:
  *       - in: path
  *         name: userId
@@ -2622,20 +2804,27 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
  *           type: string
  *         description: User ID
  *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [posts, replies, likes]
+ *           default: posts
+ *         description: Type of content to retrieve
+ *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 20
- *         description: Maximum number of posts to return
+ *         description: Maximum number of items to return
  *       - in: query
  *         name: offset
  *         schema:
  *           type: integer
  *           default: 0
- *         description: Number of posts to skip for pagination
+ *         description: Number of items to skip for pagination
  *     responses:
  *       200:
- *         description: Posts retrieved successfully
+ *         description: Content retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -2659,8 +2848,12 @@ router.get('/user/:userId', async (req, res) => {
             req.query.limit as string | undefined,
             req.query.offset as string | undefined
         );
+        const type = req.query.type as string | undefined;
+        const validTypes = ['posts', 'replies', 'likes'];
+        const postType = validTypes.includes(type || '') ? type : 'posts';
+
         const currentUserId = req.headers.authorization ?
-            (req as any).user?.id : null; // Try to get user ID if authenticated
+            (req as any).user?.id : null;
 
         // Verify user exists
         const userExists = await prisma.user.findUnique({
@@ -2672,6 +2865,168 @@ router.get('/user/:userId', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
+        // Handle different content types
+        if (postType === 'likes') {
+            // Get posts that the user has liked
+            const likedPosts = await prisma.post.findMany({
+                where: {
+                    reactions: {
+                        some: {
+                            userId: userId,
+                            sentiment: 'LIKE'
+                        }
+                    }
+                },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true
+                        }
+                    },
+                    reactions: currentUserId ? {
+                        where: { userId: currentUserId },
+                        select: {
+                            sentiment: true,
+                            stance: true
+                        }
+                    } : false,
+                    shares: currentUserId ? {
+                        where: { userId: currentUserId },
+                        select: {
+                            shareType: true,
+                            content: true
+                        }
+                    } : false,
+                    _count: {
+                        select: {
+                            likes: true,
+                            comments: true
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: limitNum,
+                skip: offsetNum
+            });
+
+            const formattedPosts = likedPosts.map(post => {
+                const userReaction = post.reactions && post.reactions[0] ? post.reactions[0] : null;
+                const userShare = post.shares && post.shares[0] ? post.shares[0] : null;
+                return {
+                    ...post,
+                    likesCount: post._count.likes,
+                    commentsCount: post._count.comments,
+                    dislikesCount: post.dislikesCount || 0,
+                    agreesCount: post.agreesCount || 0,
+                    disagreesCount: post.disagreesCount || 0,
+                    userSentiment: userReaction?.sentiment || null,
+                    userStance: userReaction?.stance || null,
+                    isLiked: userReaction?.sentiment === 'LIKE',
+                    isShared: !!userShare,
+                    userShareType: userShare?.shareType || null,
+                    userShareContent: userShare?.content || null,
+                    reactions: undefined,
+                    shares: undefined,
+                    _count: undefined
+                };
+            });
+
+            return res.json({
+                posts: formattedPosts,
+                pagination: {
+                    limit: limitNum,
+                    offset: offsetNum,
+                    count: likedPosts.length
+                }
+            });
+        }
+
+        if (postType === 'replies') {
+            // Get user's comments with parent post info
+            const comments = await prisma.comment.findMany({
+                where: { userId: userId },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true
+                        }
+                    },
+                    post: {
+                        select: {
+                            id: true,
+                            content: true,
+                            authorId: true,
+                            author: {
+                                select: {
+                                    id: true,
+                                    username: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    avatar: true
+                                }
+                            }
+                        }
+                    },
+                    _count: {
+                        select: {
+                            replies: true
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: limitNum,
+                skip: offsetNum
+            });
+
+            // Transform comments to post-like format for iOS compatibility
+            const formattedReplies = comments.map(comment => ({
+                id: comment.id,
+                content: comment.content,
+                authorId: comment.userId,
+                author: comment.user,
+                createdAt: comment.createdAt,
+                updatedAt: comment.updatedAt,
+                // Include parent post context
+                parentPost: comment.post ? {
+                    id: comment.post.id,
+                    content: comment.post.content.substring(0, 200),
+                    author: comment.post.author
+                } : null,
+                // Set standard post fields to defaults
+                likesCount: comment.likesCount || 0,
+                commentsCount: comment._count.replies,
+                dislikesCount: 0,
+                agreesCount: 0,
+                disagreesCount: 0,
+                userSentiment: null,
+                userStance: null,
+                isLiked: false,
+                isShared: false,
+                // Flag to indicate this is a reply/comment
+                isReply: true
+            }));
+
+            return res.json({
+                posts: formattedReplies,
+                pagination: {
+                    limit: limitNum,
+                    offset: offsetNum,
+                    count: comments.length
+                }
+            });
+        }
+
+        // Default: posts - User's authored posts
         const posts = await prisma.post.findMany({
             where: { authorId: userId },
             include: {
@@ -2685,7 +3040,6 @@ router.get('/user/:userId', async (req, res) => {
                         verified: true
                     }
                 },
-                // Photo model removed - photos relation no longer exists
                 reactions: currentUserId ? {
                     where: { userId: currentUserId },
                     select: {
