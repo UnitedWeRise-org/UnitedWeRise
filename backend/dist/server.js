@@ -59,8 +59,12 @@ const discussions_1 = __importDefault(require("./routes/discussions"));
 const questionnaires_1 = __importDefault(require("./routes/questionnaires"));
 const endorsements_1 = __importDefault(require("./routes/endorsements"));
 const districts_1 = __importDefault(require("./routes/districts"));
+const devices_1 = __importDefault(require("./routes/devices"));
+const videos_1 = __importDefault(require("./routes/videos"));
+const mediaServices_1 = __importDefault(require("./routes/webhooks/mediaServices"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
 const analyticsCleanup_1 = __importDefault(require("./jobs/analyticsCleanup"));
+const scheduledVideoPublishJob_1 = __importDefault(require("./jobs/scheduledVideoPublishJob"));
 const rateLimiting_1 = require("./middleware/rateLimiting");
 const errorHandler_1 = require("./middleware/errorHandler");
 const swagger_1 = require("./swagger");
@@ -283,6 +287,9 @@ app.use('/api/discussions', discussions_1.default);
 app.use('/api/questionnaires', questionnaires_1.default);
 app.use('/api/endorsements', endorsements_1.default);
 app.use('/api/districts', districts_1.default);
+app.use('/api/devices', devices_1.default);
+app.use('/api/videos', videos_1.default);
+app.use('/webhooks/media-services', mediaServices_1.default);
 app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));
@@ -413,6 +420,7 @@ const gracefulShutdown = async () => {
     logger_2.logger.info('Received shutdown signal, closing server gracefully');
     // Stop cron jobs
     analyticsCleanup_1.default.stop();
+    scheduledVideoPublishJob_1.default.stop();
     // Close HTTP server
     httpServer.close(() => {
         logger_2.logger.info('HTTP server closed');
@@ -528,6 +536,7 @@ async function startServer() {
         validateEnvironmentConsistency();
         // Start cron jobs
         analyticsCleanup_1.default.start();
+        scheduledVideoPublishJob_1.default.start();
         // Start server only after all services are ready
         httpServer.listen(PORT, () => {
             logger_2.logger.info({ port: PORT }, 'Server running');

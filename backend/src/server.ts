@@ -54,8 +54,11 @@ import questionnairesRoutes from './routes/questionnaires';
 import endorsementsRoutes from './routes/endorsements';
 import districtsRoutes from './routes/districts';
 import devicesRoutes from './routes/devices';
+import videosRoutes from './routes/videos';
+import mediaServicesWebhook from './routes/webhooks/mediaServices';
 import WebSocketService from './services/WebSocketService';
 import analyticsCleanupJob from './jobs/analyticsCleanup';
+import scheduledVideoPublishJob from './jobs/scheduledVideoPublishJob';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
 import { setupSwagger } from './swagger';
@@ -314,6 +317,8 @@ app.use('/api/questionnaires', questionnairesRoutes);
 app.use('/api/endorsements', endorsementsRoutes);
 app.use('/api/districts', districtsRoutes);
 app.use('/api/devices', devicesRoutes);
+app.use('/api/videos', videosRoutes);
+app.use('/webhooks/media-services', mediaServicesWebhook);
 app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically
@@ -458,6 +463,7 @@ const gracefulShutdown = async () => {
 
   // Stop cron jobs
   analyticsCleanupJob.stop();
+  scheduledVideoPublishJob.stop();
 
   // Close HTTP server
   httpServer.close(() => {
@@ -590,6 +596,7 @@ async function startServer() {
 
     // Start cron jobs
     analyticsCleanupJob.start();
+    scheduledVideoPublishJob.start();
 
     // Start server only after all services are ready
     httpServer.listen(PORT, () => {

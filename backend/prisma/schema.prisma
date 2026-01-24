@@ -11,157 +11,157 @@ datasource db {
 /// Supports multiple authentication methods (password, OAuth) and political profile types.
 model User {
   /// Unique identifier for the user account
-  id                          String                    @id @default(cuid())
+  id                      String               @id @default(cuid())
   /// User's email address (unique across platform, used for login and communication)
-  email                       String                    @unique
+  email                   String               @unique
   /// Public username for display and mentions (unique, URL-safe)
-  username                    String                    @unique
+  username                String               @unique
   /// Hashed password (null for OAuth-only accounts using Google/Microsoft/Apple)
-  password                    String?
+  password                String?
   /// User's first name (optional, for personalization)
-  firstName                   String?
+  firstName               String?
   /// User's last name (optional, for personalization)
-  lastName                    String?
+  lastName                String?
   /// Avatar image URL (stored in Azure Blob Storage)
-  avatar                      String?
+  avatar                  String?
   /// User biography/about text (displayed on profile)
-  bio                         String?
+  bio                     String?
   /// Personal or campaign website URL
-  website                     String?
+  website                 String?
   /// General location description (not used for geospatial queries)
-  location                    String?
+  location                String?
   /// Whether user has been verified by platform (blue checkmark)
-  verified                    Boolean                   @default(false)
+  verified                Boolean              @default(false)
   /// Vector embedding for user profile similarity matching (AI-generated)
-  embedding                   Float[]                   @default([])
+  embedding               Float[]              @default([])
   /// Account creation timestamp
-  createdAt                   DateTime                  @default(now())
+  createdAt               DateTime             @default(now())
   /// Last profile update timestamp (auto-updated by Prisma)
-  updatedAt                   DateTime                  @updatedAt
+  updatedAt               DateTime             @updatedAt
   /// Street address line 1 (used for electoral district mapping and privacy displacement)
-  streetAddress               String?
+  streetAddress           String?
   /// Street address line 2 (apartment, suite, etc.)
-  streetAddress2              String?
+  streetAddress2          String?
   /// City name (used with state and zip for district mapping)
-  city                        String?
+  city                    String?
   /// State code (2-letter abbreviation, e.g., "CA", "NY")
-  state                       String?
+  state                   String?
   /// ZIP/postal code (used for electoral district lookup and geographic grouping)
-  zipCode                     String?
+  zipCode                 String?
   /// H3 geospatial index at configured resolution for location-based content discovery
   /// @description Used for feed proximity calculations and local content recommendations.
   /// Privacy displacement may offset from actual address to protect user location.
-  h3Index                     String?
+  h3Index                 String?
   /// Type of political profile (CITIZEN, CANDIDATE, ELECTED_OFFICIAL, POLITICAL_ORG)
-  politicalProfileType        PoliticalProfileType      @default(CITIZEN)
+  politicalProfileType    PoliticalProfileType @default(CITIZEN)
   /// Verification status for candidates and elected officials (PENDING, APPROVED, DENIED)
-  verificationStatus          VerificationStatus        @default(PENDING)
+  verificationStatus      VerificationStatus   @default(PENDING)
   /// Array of document URLs submitted for identity/position verification
-  verificationDocuments       String[]                  @default([])
+  verificationDocuments   String[]             @default([])
   /// Office title for elected officials (e.g., "Mayor", "State Senator")
-  office                      String?
+  office                  String?
   /// Campaign website URL for candidates
-  campaignWebsite             String?
+  campaignWebsite         String?
   /// Official title for elected officials or organizational representatives
-  officialTitle               String?
+  officialTitle           String?
   /// Term start date for elected officials
-  termStart                   DateTime?
+  termStart               DateTime?
   /// Term end date for elected officials
-  termEnd                     DateTime?
+  termEnd                 DateTime?
   /// Whether user's email address has been verified via confirmation link
-  emailVerified               Boolean                   @default(false)
+  emailVerified           Boolean              @default(false)
   /// Unique token sent in email verification link (expires after use or timeout)
-  emailVerifyToken            String?                   @unique
+  emailVerifyToken        String?              @unique
   /// Expiration timestamp for email verification token
-  emailVerifyExpiry           DateTime?
+  emailVerifyExpiry       DateTime?
   /// User's phone number (optional, for 2FA and notifications)
-  phoneNumber                 String?
+  phoneNumber             String?
   /// Whether phone number has been verified via SMS code
-  phoneVerified               Boolean                   @default(false)
+  phoneVerified           Boolean              @default(false)
   /// 6-digit verification code sent via SMS (expires after 10 minutes)
-  phoneVerifyCode             String?
+  phoneVerifyCode         String?
   /// Expiration timestamp for phone verification code
-  phoneVerifyExpiry           DateTime?
+  phoneVerifyExpiry       DateTime?
   /// User's marital status (optional profile field)
-  maritalStatus               String?
+  maritalStatus           String?
   /// JSON object defining privacy levels for each profile field
   /// @description Structure: { fieldName: "public"|"followers"|"friends"|"private" }
   /// Controls who can view each profile field (bio, city, state, phoneNumber, etc.)
-  profilePrivacySettings      Json?                     @default("{\"bio\": \"public\", \"city\": \"followers\", \"state\": \"followers\", \"website\": \"public\", \"phoneNumber\": \"private\", \"maritalStatus\": \"friends\"}")
+  profilePrivacySettings  Json?                @default("{\"bio\": \"public\", \"city\": \"followers\", \"state\": \"followers\", \"website\": \"public\", \"phoneNumber\": \"private\", \"maritalStatus\": \"friends\"}")
   /// Password reset token (unique, single-use, expires after 1 hour)
-  resetToken                  String?
+  resetToken              String?
   /// Expiration timestamp for password reset token
-  resetExpiry                 DateTime?
+  resetExpiry             DateTime?
   /// Real-time online status indicator (updated via WebSocket or periodic API calls)
-  isOnline                    Boolean                   @default(false)
+  isOnline                Boolean              @default(false)
   /// Last activity timestamp (updated on API requests, used for "last seen" display)
-  lastSeenAt                  DateTime                  @default(now())
+  lastSeenAt              DateTime             @default(now())
   /// Whether user has content moderation permissions
-  isModerator                 Boolean                   @default(false)
+  isModerator             Boolean              @default(false)
   /// Whether user has admin dashboard access and elevated permissions
-  isAdmin                     Boolean                   @default(false)
+  isAdmin                 Boolean              @default(false)
   /// Whether user has super admin access (system configuration, user management)
-  isSuperAdmin                Boolean                   @default(false)
+  isSuperAdmin            Boolean              @default(false)
   /// Whether user account is currently suspended (blocks login and content visibility)
-  isSuspended                 Boolean                   @default(false)
+  isSuspended             Boolean              @default(false)
   /// JSON data collected during onboarding flow (interests, location, preferences)
-  onboardingData              Json?
+  onboardingData          Json?
   /// Whether user has completed the onboarding process
-  onboardingCompleted         Boolean                   @default(false)
+  onboardingCompleted     Boolean              @default(false)
   /// Array of interest tags for content personalization (e.g., ["healthcare", "education"])
-  interests                   String[]                  @default([])
+  interests               String[]             @default([])
   /// JSON object configuring notification delivery preferences
   /// @description Structure: { email: boolean, push: boolean, types: { likes: boolean, comments: boolean, ... } }
-  notificationPreferences     Json?
+  notificationPreferences Json?
   /// JSON object storing UI preferences (dismissed modals, theme choices, etc.)
   /// @description Structure: { dismissedModals: string[], ... }
-  uiPreferences               Json?
+  uiPreferences           Json?
   /// User-chosen display name (may differ from username, used for formal contexts)
-  displayName                 String?
+  displayName             String?
   /// Cached count of users this user follows (denormalized for performance)
-  followingCount              Int                       @default(0)
+  followingCount          Int                  @default(0)
   /// Cached count of users following this user (denormalized for performance)
-  followersCount              Int                       @default(0)
+  followersCount          Int                  @default(0)
   /// JSON object containing browser/device fingerprint data for security monitoring
   /// @description Used to detect suspicious login patterns and account sharing
-  deviceFingerprint           Json?
+  deviceFingerprint       Json?
   /// Timestamp of user's last successful login
-  lastLoginAt                 DateTime?
+  lastLoginAt             DateTime?
   /// IP address of user's last successful login (for security monitoring)
-  lastLoginIp                 String?
+  lastLoginIp             String?
   /// Account lock expiration timestamp (prevents login during brute force protection)
-  lockedUntil                 DateTime?
+  lockedUntil             DateTime?
   /// Failed login attempt counter (resets on successful login, triggers lock after threshold)
-  loginAttempts               Int                       @default(0)
+  loginAttempts           Int                  @default(0)
   /// Timestamp of last password change (used for session invalidation and security checks)
-  passwordChangedAt           DateTime?                 @default(now())
+  passwordChangedAt       DateTime?            @default(now())
   /// Calculated security risk score based on login patterns and behavior (0-100)
-  riskScore                   Int                       @default(0)
+  riskScore               Int                  @default(0)
   /// Counter for suspicious activities (spam, reports, policy violations)
-  suspiciousActivityCount     Int                       @default(0)
+  suspiciousActivityCount Int                  @default(0)
   /// User's civic engagement reputation score (default 70, range 0-100)
   /// @description Affects content visibility, moderation, and platform privileges
-  reputationScore             Int?                      @default(70)
+  reputationScore         Int?                 @default(70)
   /// Timestamp of last reputation score recalculation
-  reputationUpdatedAt         DateTime?
+  reputationUpdatedAt     DateTime?
   /// Whether to restrict photo tagging to friends only (privacy setting)
-  allowTagsByFriendsOnly      Boolean                   @default(false)
+  allowTagsByFriendsOnly  Boolean              @default(false)
   /// Whether photo tagging is enabled at all (can disable completely)
-  photoTaggingEnabled         Boolean                   @default(true)
+  photoTaggingEnabled     Boolean              @default(true)
   /// Whether user must approve photo tags before they appear (privacy control)
-  requireTagApproval          Boolean                   @default(true)
+  requireTagApproval      Boolean              @default(true)
   /// Profile background/banner image URL (stored in Azure Blob Storage)
-  backgroundImage             String?
+  backgroundImage         String?
   /// Array of one-time backup codes for 2FA recovery (hashed, 10 codes generated)
-  totpBackupCodes             String[]                  @default([])
+  totpBackupCodes         String[]             @default([])
   /// Whether Time-based One-Time Password (TOTP) 2FA is enabled
-  totpEnabled                 Boolean                   @default(false)
+  totpEnabled             Boolean              @default(false)
   /// Timestamp of last TOTP code usage (for rate limiting and security monitoring)
-  totpLastUsedAt              DateTime?
+  totpLastUsedAt          DateTime?
   /// Encrypted TOTP secret key (shared with authenticator app, base32 encoded)
-  totpSecret                  String?
+  totpSecret              String?
   /// Timestamp when TOTP 2FA was first configured
-  totpSetupAt                 DateTime?
+  totpSetupAt             DateTime?
 
   // Relationships (CASCADE delete means deleting user deletes these)
   /// Address-to-district mappings verified by this user (moderator/admin action)
@@ -302,6 +302,8 @@ model User {
   badgeClaims                 BadgeClaim[]
   /// Photos uploaded by this user (CASCADE: deletes photos and Azure blobs)
   photos                      Photo[]
+  /// Videos uploaded by this user (CASCADE: deletes videos and Azure blobs)
+  videos                      Video[]
   /// Posts saved by this user (CASCADE: deletes saved post records)
   savedPosts                  SavedPost[]
   /// Custom feed filters created by this user (CASCADE: deletes filters)
@@ -315,29 +317,29 @@ model User {
 
   // RiseAI & Community Notes relationships
   /// Arguments authored by this user in RiseAI discourse
-  authoredArguments           ArgumentEntry[]           @relation("ArgumentAuthor")
+  authoredArguments  ArgumentEntry[]     @relation("ArgumentAuthor")
   /// Community Notes authored by this user
-  communityNotes              CommunityNote[]           @relation("NoteAuthor")
+  communityNotes     CommunityNote[]     @relation("NoteAuthor")
   /// Community Note votes cast by this user
-  communityNoteVotes          CommunityNoteVote[]       @relation("NoteVoter")
+  communityNoteVotes CommunityNoteVote[] @relation("NoteVoter")
   /// RiseAI interactions triggered by this user
-  riseAIInteractions          RiseAIInteraction[]       @relation("RiseAITrigger")
+  riseAIInteractions RiseAIInteraction[] @relation("RiseAITrigger")
   /// RiseAI daily usage tracking for this user
-  riseAIUsage                 RiseAIUsage[]
+  riseAIUsage        RiseAIUsage[]
   /// Application errors associated with this user (for debugging and support)
-  applicationErrors           ApplicationError[]
+  applicationErrors  ApplicationError[]
 
   // Organization relationships
   /// Organizations this user leads (as head)
-  ledOrganizations            Organization[]            @relation("OrgHead")
+  ledOrganizations        Organization[]           @relation("OrgHead")
   /// Organization memberships for this user
-  organizationMemberships     OrganizationMember[]      @relation("OrgMemberships")
+  organizationMemberships OrganizationMember[]     @relation("OrgMemberships")
   /// Organizations this user follows
-  organizationFollows         OrganizationFollow[]      @relation("OrgFollows")
+  organizationFollows     OrganizationFollow[]     @relation("OrgFollows")
   /// Organization discussions authored by this user
-  orgDiscussions              OrganizationDiscussion[]  @relation("OrgDiscussionAuthor")
+  orgDiscussions          OrganizationDiscussion[] @relation("OrgDiscussionAuthor")
   /// Organization discussion replies authored by this user
-  orgDiscussionReplies        DiscussionReply[]         @relation("DiscussionReplyAuthor")
+  orgDiscussionReplies    DiscussionReply[]        @relation("DiscussionReplyAuthor")
 
   @@index([username]) /// Fast lookup for @username mentions and profile pages
   @@index([createdAt]) /// Chronological sorting for admin user lists
@@ -352,25 +354,25 @@ model User {
 /// Implements token rotation (each refresh invalidates old token), device tracking, and "Remember Me" support.
 model RefreshToken {
   /// Unique identifier for the refresh token record
-  id           String    @id @default(cuid())
+  id         String    @id @default(cuid())
   /// User ID this refresh token belongs to (foreign key to User)
-  userId       String
+  userId     String
   /// SHA-256 hash of the refresh token (64-char hex, never store plaintext tokens)
-  tokenHash    String    @unique
+  tokenHash  String    @unique
   /// Expiration timestamp (30 days standard, 90 days with "Remember Me")
-  expiresAt    DateTime
+  expiresAt  DateTime
   /// Token creation timestamp
-  createdAt    DateTime  @default(now())
+  createdAt  DateTime  @default(now())
   /// Last time this token was used to refresh access token
-  lastUsedAt   DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
   /// Revocation timestamp (null if active, set on logout or security events)
-  revokedAt    DateTime?
+  revokedAt  DateTime?
   /// Device information for security and session management
   /// @description JSON structure: { userAgent: string, ipAddress: string, deviceFingerprint?: object }
   /// Used to detect suspicious token usage from different devices/locations
-  deviceInfo   Json?
+  deviceInfo Json?
   /// Whether this token was issued with "Remember Me" option (extends expiration to 90 days)
-  rememberMe   Boolean   @default(false)
+  rememberMe Boolean   @default(false)
 
   /// Relationship to User (CASCADE: deleting user deletes all their refresh tokens)
   user User @relation("RefreshTokens", fields: [userId], references: [id], onDelete: Cascade)
@@ -473,20 +475,20 @@ model Friendship {
 /// Mute relationship - hides content from muted user without notifying them
 /// Muted users' posts won't appear in feed, but they can still see muter's content
 model Mute {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   /// User who initiated the mute
   muterId   String
   /// User being muted
   mutedId   String
   /// When the mute was created
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   /// Optional expiration (null = permanent)
   expiresAt DateTime?
   /// Reason for muting (optional, for user's reference)
   reason    String?
 
-  muter     User     @relation("Muter", fields: [muterId], references: [id], onDelete: Cascade)
-  muted     User     @relation("Muted", fields: [mutedId], references: [id], onDelete: Cascade)
+  muter User @relation("Muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muted User @relation("Muted", fields: [mutedId], references: [id], onDelete: Cascade)
 
   @@unique([muterId, mutedId])
   @@index([muterId])
@@ -507,8 +509,8 @@ model Block {
   /// Reason for blocking (optional, for admin review if needed)
   reason    String?
 
-  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
-  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
 
   @@unique([blockerId, blockedId])
   @@index([blockerId])
@@ -520,7 +522,7 @@ model Block {
 /// Supports text, images, location tagging, and political/civic discussion.
 model Post {
   /// Unique post identifier
-  id                 String            @id @default(cuid())
+  id                 String       @id @default(cuid())
   /// Post text content (required, supports markdown-like formatting)
   content            String
   /// Extended content for longer posts (optional, displayed with "Read more")
@@ -530,31 +532,31 @@ model Post {
   /// Author's user ID (foreign key to User)
   authorId           String
   /// Vector embedding for content similarity and AI recommendations
-  embedding          Float[]           @default([])
+  embedding          Float[]      @default([])
   /// Post creation timestamp
-  createdAt          DateTime          @default(now())
+  createdAt          DateTime     @default(now())
   /// Last modification timestamp (auto-updated by Prisma)
-  updatedAt          DateTime          @updatedAt
+  updatedAt          DateTime     @updatedAt
   /// Whether post contains political content (AI-detected or user-flagged)
-  isPolitical        Boolean           @default(false)
+  isPolitical        Boolean      @default(false)
   /// Hashtags and topic tags (e.g., ["healthcare", "education"])
-  tags               String[]          @default([])
+  tags               String[]     @default([])
   /// Cached count of "like" reactions (denormalized for performance)
-  likesCount         Int               @default(0)
+  likesCount         Int          @default(0)
   /// Cached count of "dislike" reactions (denormalized)
-  dislikesCount      Int               @default(0)
+  dislikesCount      Int          @default(0)
   /// Cached count of "agree" stance reactions (denormalized)
-  agreesCount        Int               @default(0)
+  agreesCount        Int          @default(0)
   /// Cached count of "disagree" stance reactions (denormalized)
-  disagreesCount     Int               @default(0)
+  disagreesCount     Int          @default(0)
   /// Cached count of comments (denormalized)
-  commentsCount      Int               @default(0)
+  commentsCount      Int          @default(0)
   /// Cached count of shares (denormalized)
-  sharesCount        Int               @default(0)
+  sharesCount        Int          @default(0)
   /// View/impression count
-  viewsCount         Int               @default(0)
+  viewsCount         Int          @default(0)
   /// Whether post contains citizen feedback/issue report (AI-detected)
-  containsFeedback   Boolean?          @default(false)
+  containsFeedback   Boolean?     @default(false)
   /// Category of feedback if detected (e.g., "infrastructure", "public safety")
   feedbackCategory   String?
   /// AI confidence score for feedback detection (0.0-1.0)
@@ -562,7 +564,7 @@ model Post {
   /// Priority level assigned to feedback ("low", "medium", "high", "urgent")
   feedbackPriority   String?
   /// Feedback processing status ("new", "reviewed", "in_progress", "resolved")
-  feedbackStatus     String?           @default("new")
+  feedbackStatus     String?      @default("new")
   /// AI-generated summary of the feedback issue
   feedbackSummary    String?
   /// Type of feedback ("complaint", "suggestion", "question", "report")
@@ -570,19 +572,19 @@ model Post {
   /// Snapshot of author's reputation score at time of post creation
   authorReputation   Int?
   /// Soft delete flag (post hidden but not removed from database)
-  isDeleted          Boolean           @default(false)
+  isDeleted          Boolean      @default(false)
   /// Timestamp when post was soft-deleted
   deletedAt          DateTime?
   /// Reason for deletion (moderation action, user request, policy violation)
   deletedReason      String?
   /// Whether post appears in search results (can be disabled by moderators)
-  searchable         Boolean           @default(true)
+  searchable         Boolean      @default(true)
   /// Whether post appears in public feeds (can be hidden by moderators)
-  feedVisible        Boolean           @default(true)
+  feedVisible        Boolean      @default(true)
   /// Target audience for this post (PUBLIC, NON_FRIENDS, FRIENDS_ONLY)
-  audience           PostAudience      @default(PUBLIC)
+  audience           PostAudience @default(PUBLIC)
   /// Number of times post has been edited by author
-  editCount          Int               @default(0)
+  editCount          Int          @default(0)
   /// Timestamp of most recent edit
   lastEditedAt       DateTime?
   /// JSON array of previous content versions with timestamps
@@ -600,43 +602,45 @@ model Post {
   /// Original H3 index before privacy displacement (stored for admin audit)
   originalH3Index    String?
   /// Whether location has been offset for privacy protection
-  privacyDisplaced   Boolean           @default(true)
+  privacyDisplaced   Boolean      @default(true)
 
   // Thread linking (for multi-post threads, Twitter-style)
   /// Thread head post ID for thread continuations (null = standalone or is head)
   /// @description All continuations in a thread point to the same head post. Head posts have null.
-  threadHeadId       String?           @map("thread_head_id")
+  threadHeadId   String? @map("thread_head_id")
   /// Position in thread (0 = head/standalone, 1+ = continuations in order)
-  threadPosition     Int               @default(0) @map("thread_position")
+  threadPosition Int     @default(0) @map("thread_position")
 
   // Organization authorship (optional - null = personal post)
   /// Organization ID if this post is published on behalf of an organization
   /// @description When set, post displays with org name/avatar as author.
   /// authorId remains the user who created it (for audit purposes).
-  organizationId     String?
+  organizationId String?
   /// Organization relationship
-  organization       Organization?     @relation("OrgPosts", fields: [organizationId], references: [id], onDelete: SetNull)
+  organization   Organization? @relation("OrgPosts", fields: [organizationId], references: [id], onDelete: SetNull)
 
   // Relationships
   /// Comments on this post (CASCADE: deleting post deletes all comments)
-  comments           Comment[]
+  comments         Comment[]
   /// Legacy "like" records (CASCADE: deleting post deletes all likes)
   /// @deprecated Replaced by reactions table, but kept for migration compatibility
-  likes              Like[]
+  likes            Like[]
   /// Post author relationship (CASCADE: deleting user soft-deletes their posts)
-  author             User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author           User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
   /// Photos attached to this post (CASCADE: deleting post deletes photos)
-  photos             Photo[]
+  photos           Photo[]
+  /// Videos attached to this post (CASCADE: deleting post deletes videos)
+  videos           Video[]
   /// Reactions (like/dislike/agree/disagree) on this post (CASCADE)
-  reactions          Reaction[]
+  reactions        Reaction[]
   /// Reputation events triggered by this post (CASCADE: deletes reputation history)
-  reputationEvents   ReputationEvent[]
+  reputationEvents ReputationEvent[]
   /// Shares of this post (CASCADE: deleting post deletes shares)
-  shares             Share[]
+  shares           Share[]
   /// Topic associations for this post (CASCADE: deletes topic links)
-  topics             TopicPost[]
+  topics           TopicPost[]
   /// Users who saved this post (CASCADE: deletes saved post records)
-  savedBy            SavedPost[]
+  savedBy          SavedPost[]
 
   // RiseAI & Community Notes relationships
   /// Community Notes attached to this post
@@ -648,9 +652,9 @@ model Post {
 
   // Thread relationships (self-referential)
   /// Relationship to thread head post (for continuations)
-  threadHead         Post?             @relation("ThreadPosts", fields: [threadHeadId], references: [id], onDelete: SetNull)
+  threadHead  Post?  @relation("ThreadPosts", fields: [threadHeadId], references: [id], onDelete: SetNull)
   /// Thread continuation posts (for head posts)
-  threadPosts        Post[]            @relation("ThreadPosts")
+  threadPosts Post[] @relation("ThreadPosts")
 
   @@index([authorId]) /// Fast lookup of all posts by a user
   @@index([createdAt]) /// Chronological feed sorting
@@ -720,7 +724,7 @@ model Share {
 /// Comments can be replied to (nested comments) with depth tracking for UI rendering.
 model Comment {
   /// Unique comment identifier
-  id              String     @id @default(cuid())
+  id              String    @id @default(cuid())
   /// Comment text content
   content         String
   /// Comment author's user ID
@@ -731,43 +735,43 @@ model Comment {
   parentId        String?
   /// Nesting depth level (0 = top-level, 1 = first reply, 2 = reply to reply, etc.)
   /// @description Used to limit max nesting depth in UI (typically max 3-5 levels)
-  depth           Int        @default(0)
+  depth           Int       @default(0)
   /// Comment creation timestamp
-  createdAt       DateTime   @default(now())
+  createdAt       DateTime  @default(now())
   /// Last modification timestamp (auto-updated by Prisma)
-  updatedAt       DateTime   @updatedAt
+  updatedAt       DateTime  @updatedAt
   /// Soft delete flag (comment hidden but preserved for thread continuity)
-  isDeleted       Boolean    @default(false)
+  isDeleted       Boolean   @default(false)
   /// Timestamp when comment was soft-deleted
   deletedAt       DateTime?
   /// Whether to display commenter's username (false = anonymous comment)
-  showUsername    Boolean    @default(true)
+  showUsername    Boolean   @default(true)
   /// Number of times comment has been edited
-  editCount       Int        @default(0)
+  editCount       Int       @default(0)
   /// Timestamp of most recent edit
   lastEditedAt    DateTime?
   /// Original comment content before any edits (preserved for moderation)
   originalContent String?
   /// Cached count of "like" reactions (denormalized for performance)
-  likesCount      Int        @default(0)
+  likesCount      Int       @default(0)
   /// Cached count of "dislike" reactions (denormalized)
-  dislikesCount   Int        @default(0)
+  dislikesCount   Int       @default(0)
   /// Cached count of "agree" stance reactions (denormalized)
-  agreesCount     Int        @default(0)
+  agreesCount     Int       @default(0)
   /// Cached count of "disagree" stance reactions (denormalized)
-  disagreesCount  Int        @default(0)
+  disagreesCount  Int       @default(0)
 
   // Relationships
   /// Parent comment for threaded replies (self-referential)
-  parent          Comment?   @relation("CommentReplies", fields: [parentId], references: [id])
+  parent    Comment?   @relation("CommentReplies", fields: [parentId], references: [id])
   /// Child comments (replies) to this comment (self-referential)
-  replies         Comment[]  @relation("CommentReplies")
+  replies   Comment[]  @relation("CommentReplies")
   /// Post this comment belongs to (CASCADE: deleting post deletes all comments)
-  post            Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
   /// Comment author (CASCADE: deleting user deletes their comments)
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Reactions (like/dislike/agree/disagree) on this comment (CASCADE)
-  reactions       Reaction[]
+  reactions Reaction[]
 
   @@index([postId]) /// Fast lookup of all comments on a post
   @@index([userId]) /// Fast lookup of all comments by a user
@@ -892,7 +896,7 @@ model Candidate {
 
   // Organization endorsement relations
   /// Endorsement applications submitted by this candidate
-  orgEndorsementApplications EndorsementApplication[] @relation("OrgEndorsementApplications")
+  orgEndorsementApplications EndorsementApplication[]  @relation("OrgEndorsementApplications")
   /// Organization endorsements received by this candidate
   orgEndorsementsReceived    OrganizationEndorsement[] @relation("OrgEndorsementsReceived")
 
@@ -1942,7 +1946,7 @@ model BlockedIP {
   metadata    Json?
 
   /// Relation to admin who created the block
-  blockedBy   User      @relation("BlockedIPAdmin", fields: [blockedById], references: [id])
+  blockedBy User @relation("BlockedIPAdmin", fields: [blockedById], references: [id])
 
   @@index([ipAddress])
   @@index([blockedById])
@@ -2036,8 +2040,8 @@ model CivicEvent {
   /// Organization relationship
   organization   Organization? @relation("OrgEvents", fields: [organizationId], references: [id], onDelete: SetNull)
 
-  creator       User          @relation("EventCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  rsvps         EventRSVP[]
+  creator User        @relation("EventCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  rsvps   EventRSVP[]
 
   @@index([eventType, category])
   @@index([scheduledDate, status])
@@ -2303,22 +2307,22 @@ enum MOTDTargetAudience {
 
 /// Message of the Day model for platform-wide announcements
 model MessageOfTheDay {
-  id             String              @id @default(cuid())
+  id             String             @id @default(cuid())
   title          String?
   content        String
-  isActive       Boolean             @default(false)
-  targetAudience MOTDTargetAudience  @default(ALL)
-  isDismissible  Boolean             @default(true)
-  showOnce       Boolean             @default(false)
+  isActive       Boolean            @default(false)
+  targetAudience MOTDTargetAudience @default(ALL)
+  isDismissible  Boolean            @default(true)
+  showOnce       Boolean            @default(false)
   startDate      DateTime?
   endDate        DateTime?
-  showToNewUsers Boolean             @default(true)
+  showToNewUsers Boolean            @default(true)
   createdById    String
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
   dismissals     MOTDDismissal[]
   views          MOTDView[]
-  createdBy      User                @relation("CreatedMOTDs", fields: [createdById], references: [id])
+  createdBy      User               @relation("CreatedMOTDs", fields: [createdById], references: [id])
 
   @@index([isActive, startDate, endDate])
   @@index([createdAt])
@@ -2413,49 +2417,49 @@ enum NotificationType {
   FRIEND_REQUEST
   FRIEND_ACCEPTED
   REACTION
-  NEW_POST         /// Subscription notification when subscribed user posts
-  MESSAGE_REQUEST  /// DM request from non-friend
+  NEW_POST /// Subscription notification when subscribed user posts
+  MESSAGE_REQUEST /// DM request from non-friend
 
   // Organization notifications
-  ORG_INVITE                       /// Invitation to join an organization
-  ORG_APPLICATION_RECEIVED         /// Someone wants to join your org
-  ORG_APPLICATION_APPROVED         /// Your membership application approved
-  ORG_APPLICATION_DENIED           /// Your membership application denied
-  ORG_ROLE_ASSIGNED                /// You were assigned a role in an org
-  ORG_ROLE_REMOVED                 /// Your role was removed
+  ORG_INVITE /// Invitation to join an organization
+  ORG_APPLICATION_RECEIVED /// Someone wants to join your org
+  ORG_APPLICATION_APPROVED /// Your membership application approved
+  ORG_APPLICATION_DENIED /// Your membership application denied
+  ORG_ROLE_ASSIGNED /// You were assigned a role in an org
+  ORG_ROLE_REMOVED /// Your role was removed
 
   // Affiliation notifications
-  ORG_AFFILIATION_PROPOSED         /// Affiliation proposal received
-  ORG_AFFILIATION_APPROVED         /// Affiliation accepted
-  ORG_AFFILIATION_REVOKED          /// Affiliation ended
+  ORG_AFFILIATION_PROPOSED /// Affiliation proposal received
+  ORG_AFFILIATION_APPROVED /// Affiliation accepted
+  ORG_AFFILIATION_REVOKED /// Affiliation ended
 
   // Merger notifications
-  ORG_MERGE_PROPOSED               /// Merge proposal received
-  ORG_MERGE_ACCEPTED               /// Merge accepted by target org
-  ORG_MERGE_COMPLETED              /// Merge process completed
+  ORG_MERGE_PROPOSED /// Merge proposal received
+  ORG_MERGE_ACCEPTED /// Merge accepted by target org
+  ORG_MERGE_COMPLETED /// Merge process completed
 
   // Endorsement notifications
   ENDORSEMENT_APPLICATION_RECEIVED /// Candidate applied for endorsement
-  ENDORSEMENT_VOTE_CAST            /// Vote cast on endorsement application
-  ENDORSEMENT_APPROVED             /// Endorsement application approved
-  ENDORSEMENT_DENIED               /// Endorsement application denied
-  ENDORSEMENT_PUBLISHED            /// Endorsement made public
-  ENDORSEMENT_REVOKED              /// Endorsement revoked
+  ENDORSEMENT_VOTE_CAST /// Vote cast on endorsement application
+  ENDORSEMENT_APPROVED /// Endorsement application approved
+  ENDORSEMENT_DENIED /// Endorsement application denied
+  ENDORSEMENT_PUBLISHED /// Endorsement made public
+  ENDORSEMENT_REVOKED /// Endorsement revoked
 
   // Event notifications
-  ORG_EVENT_CREATED                /// New event created by org you follow
-  ORG_EVENT_UPDATED                /// Event details changed
-  ORG_EVENT_CANCELLED              /// Event was cancelled
-  ORG_EVENT_REMINDER               /// 24h and 1h before event reminders
+  ORG_EVENT_CREATED /// New event created by org you follow
+  ORG_EVENT_UPDATED /// Event details changed
+  ORG_EVENT_CANCELLED /// Event was cancelled
+  ORG_EVENT_REMINDER /// 24h and 1h before event reminders
 
   // Discussion notifications
-  ORG_DISCUSSION_CREATED           /// New discussion in your org
-  ORG_DISCUSSION_REPLY             /// Reply to your discussion
-  ORG_DISCUSSION_MENTION           /// @mentioned in discussion
+  ORG_DISCUSSION_CREATED /// New discussion in your org
+  ORG_DISCUSSION_REPLY /// Reply to your discussion
+  ORG_DISCUSSION_MENTION /// @mentioned in discussion
 
   // Verification notifications
-  ORG_VERIFICATION_APPROVED        /// Org verification approved
-  ORG_VERIFICATION_DENIED          /// Org verification denied
+  ORG_VERIFICATION_APPROVED /// Org verification approved
+  ORG_VERIFICATION_DENIED /// Org verification denied
 }
 
 enum FriendshipStatus {
@@ -2517,15 +2521,15 @@ enum MessageType {
 
 /// Status of a direct message for DM request system
 enum MessageStatus {
-  PENDING    /// Initial message from non-friend, awaiting recipient approval
-  ACCEPTED   /// Recipient accepted the message request, message is delivered
-  DELIVERED  /// Normal delivered message (friends or after acceptance)
+  PENDING /// Initial message from non-friend, awaiting recipient approval
+  ACCEPTED /// Recipient accepted the message request, message is delivered
+  DELIVERED /// Normal delivered message (friends or after acceptance)
 }
 
 /// Post audience visibility setting
 enum PostAudience {
-  PUBLIC       /// Visible to everyone
-  NON_FRIENDS  /// Visible to everyone except friends (separating professional/public from personal)
+  PUBLIC /// Visible to everyone
+  NON_FRIENDS /// Visible to everyone except friends (separating professional/public from personal)
   FRIENDS_ONLY /// Only visible to friends
 }
 
@@ -2883,16 +2887,16 @@ enum GeographicScope {
 }
 
 enum FilterType {
-  QUICK_FILTER       // Pre-defined system filters (Today, This Week, etc.)
-  CUSTOM             // User-created custom filters
-  SMART              // AI-suggested filters based on behavior
+  QUICK_FILTER // Pre-defined system filters (Today, This Week, etc.)
+  CUSTOM // User-created custom filters
+  SMART // AI-suggested filters based on behavior
 }
 
 enum FeedSource {
-  DISCOVER           // Global discover feed
-  FOLLOWING          // Following feed only
-  SAVED              // Saved posts only
-  COMBINED           // Mix of multiple sources
+  DISCOVER // Global discover feed
+  FOLLOWING // Following feed only
+  SAVED // Saved posts only
+  COMBINED // Mix of multiple sources
 }
 
 enum FilterTimeframe {
@@ -2902,15 +2906,15 @@ enum FilterTimeframe {
   THIS_MONTH
   THIS_YEAR
   ALL_TIME
-  CUSTOM             // Use customStartDate/customEndDate
+  CUSTOM // Use customStartDate/customEndDate
 }
 
 enum FilterSortBy {
-  RELEVANCE          // Algorithmic relevance
-  RECENT             // Most recent first
-  POPULAR            // Most engagement
-  TRENDING           // Trending score
-  PROXIMITY          // Closest geographically
+  RELEVANCE // Algorithmic relevance
+  RECENT // Most recent first
+  POPULAR // Most engagement
+  TRENDING // Trending score
+  PROXIMITY // Closest geographically
 }
 
 enum SortOrder {
@@ -3057,7 +3061,7 @@ enum AgreementLevel {
 /// Quests encourage civic participation through daily habits, special events, and educational activities.
 model Quest {
   /// Unique quest identifier
-  id               String              @id @default(cuid())
+  id               String         @id @default(cuid())
   /// Quest type (DAILY_HABIT, WEEKLY_ENGAGEMENT, SPECIAL_EVENT, etc.)
   type             QuestType
   /// Quest category for organization (INFORMATION, PARTICIPATION, COMMUNITY, etc.)
@@ -3065,7 +3069,7 @@ model Quest {
   /// Quest title shown to users (e.g., "Vote in your district", "Attend town hall")
   title            String
   /// Full quest description with instructions and context
-  description      String              @db.Text
+  description      String         @db.Text
   /// Brief summary for quest list views (1-2 sentences)
   shortDescription String?
   /// JSON structure defining completion requirements
@@ -3079,23 +3083,23 @@ model Quest {
   /// Quest time period (DAILY, WEEKLY, MONTHLY, ONGOING, LIMITED_TIME)
   timeframe        QuestTimeframe
   /// Sort order for display in quest list (lower numbers appear first)
-  displayOrder     Int                 @default(0)
+  displayOrder     Int            @default(0)
   /// Whether quest is currently available for users
-  isActive         Boolean             @default(true)
+  isActive         Boolean        @default(true)
   /// Start date for special event or limited-time quests (null for ongoing quests)
   startDate        DateTime?
   /// End date for limited-time quests (null for ongoing quests)
   endDate          DateTime?
   /// Quest creation timestamp
-  createdAt        DateTime            @default(now())
+  createdAt        DateTime       @default(now())
   /// Last modification timestamp (auto-updated by Prisma)
-  updatedAt        DateTime            @updatedAt
+  updatedAt        DateTime       @updatedAt
   /// Admin user ID who created this quest (null for system-generated)
   createdBy        String?
 
   // Relationships
   /// User progress tracking records for this quest (CASCADE: deletes progress if quest deleted)
-  userProgress     UserQuestProgress[]
+  userProgress UserQuestProgress[]
 
   @@index([type]) /// Filter quests by type
   @@index([isActive]) /// Show only active quests to users
@@ -3127,9 +3131,9 @@ model UserQuestProgress {
 
   // Relationships
   /// User tracking this quest (CASCADE: deletes progress if user deleted)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Quest being tracked (CASCADE: deletes progress if quest deleted)
-  quest       Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
 
   @@unique([userId, questId]) /// One progress record per user per quest
   @@index([userId]) /// Fast lookup of all quests a user is tracking
@@ -3164,7 +3168,7 @@ model UserQuestStreak {
 
   // Relationships
   /// User owning this streak record (1:1, CASCADE: deletes streak if user deleted)
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId]) /// Redundant with unique constraint but explicit for queries
 }
@@ -3174,11 +3178,11 @@ model UserQuestStreak {
 /// Badges are displayed on profiles as achievement indicators.
 model Badge {
   /// Unique badge identifier
-  id                    String      @id @default(cuid())
+  id                    String   @id @default(cuid())
   /// Badge name (unique, e.g., "First Vote", "Community Leader", "Engagement Champion")
-  name                  String      @unique
+  name                  String   @unique
   /// Badge description explaining how to earn it
-  description           String      @db.Text
+  description           String   @db.Text
   /// URL to badge image in Azure Blob Storage (PNG/SVG recommended)
   imageUrl              String
   /// JSON structure defining qualification criteria
@@ -3186,27 +3190,27 @@ model Badge {
   /// For auto-awarded badges: system checks these criteria automatically
   qualificationCriteria Json
   /// Sort order for display in badge gallery (lower numbers appear first)
-  displayOrder          Int         @default(0)
+  displayOrder          Int      @default(0)
   /// Whether badge is currently available for earning
-  isActive              Boolean     @default(true)
+  isActive              Boolean  @default(true)
   /// Whether system automatically awards badge when criteria met
   /// @description False means admin must manually award (for special recognition)
-  isAutoAwarded         Boolean     @default(true)
+  isAutoAwarded         Boolean  @default(true)
   /// Optional limit on total number of users who can earn this badge (null = unlimited)
   /// @description Used for exclusive badges (e.g., "First 100 Users", "Beta Tester")
   maxAwards             Int?
   /// Badge creation timestamp
-  createdAt             DateTime    @default(now())
+  createdAt             DateTime @default(now())
   /// Last modification timestamp (auto-updated by Prisma)
-  updatedAt             DateTime    @updatedAt
+  updatedAt             DateTime @updatedAt
   /// Admin user ID who created this badge (null for system-generated)
   createdBy             String?
 
   // Relationships
   /// User badge awards for this badge (CASCADE: deletes awards if badge deleted)
-  userBadges            UserBadge[]
+  userBadges UserBadge[]
   /// Claim codes for this badge (CASCADE: deletes codes if badge deleted)
-  claimCodes            BadgeClaimCode[]
+  claimCodes BadgeClaimCode[]
 
   @@index([isActive]) /// Show only active badges in gallery
   @@index([name]) /// Fast lookup by badge name
@@ -3235,9 +3239,9 @@ model UserBadge {
 
   // Relationships
   /// User who earned this badge (CASCADE: deletes award if user deleted)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Badge that was earned (CASCADE: deletes award if badge deleted)
-  badge        Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId]) /// One award per user per badge (no duplicates)
   @@index([userId]) /// Fast lookup of all badges earned by user
@@ -3249,33 +3253,33 @@ model UserBadge {
 /// @description Supports both shared codes (one code, many users) and individual unique codes
 model BadgeClaimCode {
   /// Unique claim code record identifier
-  id            String    @id @default(cuid())
+  id      String        @id @default(cuid())
   /// Claim code string (e.g., "KICKSTARTER2025" or "XJ3K-9PL2-QW8R")
-  code          String    @unique
+  code    String        @unique
   /// Badge ID this code awards
-  badgeId       String
+  badgeId String
   /// Code type: SHARED (one code, multiple claims) or INDIVIDUAL (one-time use)
-  type          ClaimCodeType
+  type    ClaimCodeType
 
   /// Maximum number of claims allowed (null = unlimited, typically used with SHARED codes)
-  maxClaims     Int?
+  maxClaims Int?
   /// Optional expiration timestamp (null = never expires)
-  expiresAt     DateTime?
+  expiresAt DateTime?
 
   /// Number of times this code has been claimed
-  claimsUsed    Int       @default(0)
+  claimsUsed Int      @default(0)
   /// Whether code is currently active (false = deactivated by admin)
-  isActive      Boolean   @default(true)
+  isActive   Boolean  @default(true)
   /// Admin user ID who created this code
-  createdBy     String
+  createdBy  String
   /// Code creation timestamp
-  createdAt     DateTime  @default(now())
+  createdAt  DateTime @default(now())
 
   // Relationships
   /// Badge awarded by this code (CASCADE: deletes codes if badge deleted)
-  badge         Badge     @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  badge  Badge        @relation(fields: [badgeId], references: [id], onDelete: Cascade)
   /// Individual claims made with this code
-  claims        BadgeClaim[]
+  claims BadgeClaim[]
 
   @@index([code]) /// Fast lookup by claim code
   @@index([badgeId]) /// Admin analytics: all codes for a badge
@@ -3286,19 +3290,19 @@ model BadgeClaimCode {
 /// @description Tracks who claimed what code and when, prevents duplicate claims
 model BadgeClaim {
   /// Unique claim record identifier
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   /// Claim code ID that was used
   claimCodeId String
   /// User ID who claimed the code
   userId      String
   /// Timestamp when code was claimed
-  claimedAt   DateTime  @default(now())
+  claimedAt   DateTime @default(now())
 
   // Relationships
   /// Claim code that was used (CASCADE: deletes claims if code deleted)
-  claimCode   BadgeClaimCode @relation(fields: [claimCodeId], references: [id], onDelete: Cascade)
+  claimCode BadgeClaimCode @relation(fields: [claimCodeId], references: [id], onDelete: Cascade)
   /// User who claimed the code (CASCADE: deletes claim if user deleted)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([claimCodeId, userId]) /// User can't claim same code twice
   @@index([userId]) /// Fast lookup of all codes claimed by user
@@ -3307,8 +3311,8 @@ model BadgeClaim {
 
 /// Claim code type enum
 enum ClaimCodeType {
-  SHARED      /// One code, multiple users can claim (e.g., "CONVENTION2025" for all attendees)
-  INDIVIDUAL  /// Unique code, single-use only (e.g., individual backer codes)
+  SHARED /// One code, multiple users can claim (e.g., "CONVENTION2025" for all attendees)
+  INDIVIDUAL /// Unique code, single-use only (e.g., individual backer codes)
 }
 
 enum QuestType {
@@ -3349,27 +3353,27 @@ enum JurisdictionType {
   STATE
   COUNTY
   CITY
-  CONGRESSIONAL      /// US Congressional district (e.g., "TX-13")
-  STATE_SENATE       /// State Senate district (e.g., "TX-S-14")
-  STATE_HOUSE        /// State House/Assembly district (e.g., "TX-H-52")
+  CONGRESSIONAL /// US Congressional district (e.g., "TX-13")
+  STATE_SENATE /// State Senate district (e.g., "TX-S-14")
+  STATE_HOUSE /// State House/Assembly district (e.g., "TX-H-52")
   CUSTOM
 }
 
 /// Voting threshold type for organization endorsement decisions
 enum VotingThresholdType {
-  SIMPLE_MAJORITY    /// > 50% of votes
-  TWO_THIRDS         /// >= 66.67% of votes
-  THREE_QUARTERS     /// >= 75% of votes
-  UNANIMOUS          /// 100% of votes (no AGAINST)
-  PERCENTAGE         /// Custom percentage (use votingThresholdValue)
+  SIMPLE_MAJORITY /// > 50% of votes
+  TWO_THIRDS /// >= 66.67% of votes
+  THREE_QUARTERS /// >= 75% of votes
+  UNANIMOUS /// 100% of votes (no AGAINST)
+  PERCENTAGE /// Custom percentage (use votingThresholdValue)
 }
 
 /// Organization membership status
 enum MembershipStatus {
-  PENDING            /// Awaiting approval
-  ACTIVE             /// Full member
-  SUSPENDED          /// Temporarily restricted
-  REMOVED            /// No longer member
+  PENDING /// Awaiting approval
+  ACTIVE /// Full member
+  SUSPENDED /// Temporarily restricted
+  REMOVED /// No longer member
 }
 
 /// Organization affiliation status
@@ -3381,11 +3385,11 @@ enum AffiliationStatus {
 
 /// Organization merge request status
 enum MergeRequestStatus {
-  PENDING            /// Awaiting fromOrg acceptance
-  ACCEPTED           /// fromOrg accepted, awaiting processing
-  COMPLETED          /// Merge executed
-  REJECTED           /// fromOrg declined
-  CANCELLED          /// toOrg withdrew
+  PENDING /// Awaiting fromOrg acceptance
+  ACCEPTED /// fromOrg accepted, awaiting processing
+  COMPLETED /// Merge executed
+  REJECTED /// fromOrg declined
+  CANCELLED /// toOrg withdrew
 }
 
 /// Question types for endorsement questionnaires
@@ -3395,16 +3399,16 @@ enum QuestionType {
   MULTIPLE_CHOICE
   CHECKBOX
   YES_NO
-  SCALE              /// 1-5 or 1-10
+  SCALE /// 1-5 or 1-10
 }
 
 /// Endorsement application status
 enum EndorsementApplicationStatus {
-  SUBMITTED          /// Awaiting review
-  UNDER_REVIEW       /// Being discussed/voted on
-  APPROVED           /// Endorsed
-  DENIED             /// Not endorsed
-  WITHDRAWN          /// Candidate withdrew
+  SUBMITTED /// Awaiting review
+  UNDER_REVIEW /// Being discussed/voted on
+  APPROVED /// Endorsed
+  DENIED /// Not endorsed
+  WITHDRAWN /// Candidate withdrew
 }
 
 /// Vote choice for endorsement decisions
@@ -3416,9 +3420,9 @@ enum EndorsementVoteChoice {
 
 /// Discussion visibility levels within organization
 enum DiscussionVisibility {
-  ALL_MEMBERS        /// All org members can see
-  ROLE_HOLDERS       /// Only members with roles can see
-  LEADERSHIP         /// Only head + designated leadership roles
+  ALL_MEMBERS /// All org members can see
+  ROLE_HOLDERS /// Only members with roles can see
+  LEADERSHIP /// Only head + designated leadership roles
 }
 
 /// Organization verification status
@@ -3493,58 +3497,58 @@ enum OrgCapability {
 /// Photos can be avatars, gallery images, or post attachments.
 model Photo {
   /// Unique photo identifier (UUID format)
-  id                String    @id @default(uuid())
+  id                   String    @id @default(uuid())
   /// User ID who uploaded the photo
-  userId            String
+  userId               String
   /// Optional post ID if photo attached to post (null for avatars/gallery)
-  postId            String?
+  postId               String?
   /// Public URL to access the photo (Azure Blob Storage CDN)
-  url               String
+  url                  String
   /// Blob storage identifier for file management and deletion
-  blobName          String
+  blobName             String
   /// Processed MIME type (e.g., "image/jpeg", "image/png", "image/webp")
-  mimeType          String
+  mimeType             String
   /// Original uploaded MIME type before processing
-  originalMimeType  String
+  originalMimeType     String
   /// Original file size in bytes before processing
-  originalSize      Int
+  originalSize         Int
   /// Processed file size in bytes after optimization
-  processedSize     Int
+  processedSize        Int
   /// Image width in pixels (null if processing failed)
-  width             Int?
+  width                Int?
   /// Image height in pixels (null if processing failed)
-  height            Int?
+  height               Int?
   /// AI moderation decision ('APPROVE', 'WARN', 'BLOCK')
   /// @description APPROVE = safe content, WARN = sensitive but allowed, BLOCK = prohibited
-  moderationStatus  String
+  moderationStatus     String
   /// Reason for moderation action (e.g., "adult content", "violence", "safe")
-  moderationReason  String?
+  moderationReason     String?
   /// AI confidence score for moderation decision (0.0-1.0)
   moderationConfidence Float?
   /// Type of content detected by moderation AI (e.g., "racy", "adult", "violence")
-  moderationType    String?
+  moderationType       String?
   /// Whether EXIF metadata was stripped for privacy (always true for user protection)
-  exifStripped      Boolean   @default(true)
+  exifStripped         Boolean   @default(true)
   /// Photo upload timestamp
-  uploadedAt        DateTime  @default(now())
+  uploadedAt           DateTime  @default(now())
   /// Soft delete timestamp (null if active, set when photo deleted)
-  deletedAt         DateTime?
+  deletedAt            DateTime?
   /// Photo usage category ('AVATAR', 'GALLERY', 'POST_MEDIA')
-  photoType         String?
+  photoType            String?
   /// Optional gallery name for photo organization (user-defined collections)
-  gallery           String?
+  gallery              String?
   /// User-provided photo caption/description
-  caption           String?
+  caption              String?
   /// URL to optimized thumbnail version (smaller size for previews)
-  thumbnailUrl      String?
+  thumbnailUrl         String?
   /// Whether photo is active and visible (false if moderation blocked or user deleted)
-  isActive          Boolean   @default(true)
+  isActive             Boolean   @default(true)
 
   // Relationships
   /// User who uploaded this photo (CASCADE: deletes photo and blob if user deleted)
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Post this photo is attached to if applicable (CASCADE: deletes photo if post deleted)
-  post              Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([userId]) /// Fast lookup of all photos by user
   @@index([postId]) /// Fast lookup of photos attached to post
@@ -3552,24 +3556,159 @@ model Photo {
   @@index([moderationStatus]) /// Admin moderation queue filtering
 }
 
+/// Video content uploaded by users (reels or post attachments)
+/// @description Supports TikTok-style short-form videos (max 3 minutes) with adaptive bitrate streaming.
+/// Videos go through encoding pipeline: PENDING → ENCODING → READY/FAILED
+model Video {
+  /// Unique video identifier (UUID format)
+  id String @id @default(uuid())
+
+  /// User ID who uploaded the video
+  userId String
+  /// Owner of the video
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Optional post ID if video attached to post (null for standalone reels)
+  postId String?
+  /// Post this video is attached to if applicable
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  /// Video type: REEL (standalone full-screen vertical) or POST_ATTACHMENT (embedded in post)
+  videoType String @default("REEL")
+
+  // === Storage URLs ===
+  /// Original uploaded file URL (kept for re-encoding if needed)
+  originalUrl      String
+  /// Blob storage identifier for original file management and deletion
+  originalBlobName String
+
+  /// HLS manifest URL (.m3u8) for adaptive streaming (null until encoding completes)
+  hlsManifestUrl String?
+
+  /// Direct MP4 URL for fallback/download (null until encoding completes)
+  mp4Url String?
+
+  /// Thumbnail/poster image URL extracted from video (null until encoding completes)
+  thumbnailUrl String?
+
+  // === Metadata ===
+  /// Duration in seconds (max 180 for 3 minutes)
+  duration Float
+
+  /// Original video width in pixels
+  width Int
+
+  /// Original video height in pixels
+  height Int
+
+  /// Aspect ratio category for display optimization
+  /// @description VERTICAL_9_16 (TikTok/Reels), HORIZONTAL_16_9, SQUARE_1_1, PORTRAIT_4_5
+  aspectRatio String
+
+  /// Original file size in bytes (max 524288000 = 500MB)
+  originalSize Int
+
+  /// Original MIME type (video/mp4, video/webm, video/quicktime)
+  originalMimeType String
+
+  // === Processing Status ===
+  /// Encoding pipeline status: PENDING, ENCODING, READY, FAILED
+  /// @description PENDING = queued, ENCODING = in progress, READY = playable, FAILED = error
+  encodingStatus      String    @default("PENDING")
+  /// Error message if encoding failed
+  encodingError       String?
+  /// Timestamp when encoding job started
+  encodingStartedAt   DateTime?
+  /// Timestamp when encoding job completed
+  encodingCompletedAt DateTime?
+
+  // === Moderation ===
+  /// Content moderation status: PENDING, APPROVED, REJECTED
+  /// @description Videos are moderated after encoding completes using Azure Content Safety
+  moderationStatus     String  @default("PENDING")
+  /// Reason for moderation rejection if applicable
+  moderationReason     String?
+  /// AI confidence score for moderation decision (0.0-1.0)
+  moderationConfidence Float?
+
+  // === Audio Policy ===
+  /// Audio analysis status: PENDING, PASS, FLAGGED, MUTED
+  /// @description Checked for copyrighted music. FLAGGED = detected music, MUTED = audio stripped
+  audioStatus String  @default("PENDING")
+  /// Whether audio track was removed due to policy violation
+  audioMuted  Boolean @default(false)
+
+  // === Engagement (denormalized for performance) ===
+  /// Total view count (incremented via /api/videos/:id/view endpoint)
+  viewCount    Int @default(0)
+  /// Like reaction count (denormalized from reactions)
+  likeCount    Int @default(0)
+  /// Comment count (denormalized)
+  commentCount Int @default(0)
+  /// Share count (denormalized)
+  shareCount   Int @default(0)
+
+  // === Content ===
+  /// User-provided caption/description (supports hashtags)
+  caption String?
+
+  /// Hashtags extracted from caption (e.g., ["civic", "election", "local"])
+  hashtags String[] @default([])
+
+  // === Publishing Status ===
+  /// Publish workflow status: DRAFT, SCHEDULED, PUBLISHED
+  /// @description DRAFT = not visible, SCHEDULED = auto-publish at scheduledPublishAt, PUBLISHED = live
+  publishStatus String @default("DRAFT")
+
+  /// Scheduled publish time (null = publish immediately when ready)
+  scheduledPublishAt DateTime?
+
+  /// Actual publish time (set when video goes live)
+  publishedAt DateTime?
+
+  // === Timestamps ===
+  /// Video upload timestamp
+  createdAt DateTime  @default(now())
+  /// Last modification timestamp (auto-updated by Prisma)
+  updatedAt DateTime  @updatedAt
+  /// Soft delete timestamp (null if active, set when video deleted)
+  deletedAt DateTime?
+
+  /// Visibility flag (false = hidden from feeds, true = visible)
+  /// @description Set to true when video is published and moderation approved
+  isActive Boolean @default(false)
+
+  // === Indexes ===
+  @@index([userId]) /// Fast lookup of all videos by user
+  @@index([postId]) /// Fast lookup of videos attached to post
+  @@index([videoType]) /// Filter reels vs post attachments
+  @@index([encodingStatus]) /// Encoding job monitoring
+  @@index([moderationStatus]) /// Admin moderation queue filtering
+  @@index([publishStatus]) /// Draft/scheduled/published filtering
+  @@index([scheduledPublishAt]) /// Cron job for scheduled publishing
+  @@index([createdAt]) /// Chronological sorting
+  @@index([publishedAt]) /// Feed sorting by publish time
+  @@index([viewCount]) /// Trending/popular videos sorting
+}
+
 /// Saved post record (user bookmarks)
 /// @description Tracks posts users save for later viewing ("bookmark" or "save for later" feature).
 /// One record per user per post (unique constraint).
 model SavedPost {
   /// Unique saved post record identifier (UUID format)
-  id        String   @id @default(uuid())
+  id      String   @id @default(uuid())
   /// User ID who saved the post
-  userId    String
+  userId  String
   /// Post ID that was saved
-  postId    String
+  postId  String
   /// Timestamp when post was saved
-  savedAt   DateTime @default(now())
+  savedAt DateTime @default(now())
 
   // Relationships
   /// User who saved this post (CASCADE: deletes save record if user deleted)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Post that was saved (CASCADE: deletes save record if post deleted)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId]) /// One save record per user per post (no duplicate saves)
   @@index([userId]) /// Fast lookup of all posts saved by user
@@ -3578,61 +3717,61 @@ model SavedPost {
 }
 
 model FeedFilter {
-  id                String              @id @default(uuid())
-  userId            String
-  name              String              // User-defined name, e.g. "Local Politics"
-  filterType        FilterType          @default(CUSTOM)
+  id         String     @id @default(uuid())
+  userId     String
+  name       String // User-defined name, e.g. "Local Politics"
+  filterType FilterType @default(CUSTOM)
 
   // Feed Source
-  feedSource        FeedSource          @default(DISCOVER) // DISCOVER, FOLLOWING, SAVED
+  feedSource FeedSource @default(DISCOVER) // DISCOVER, FOLLOWING, SAVED
 
   // Content Filters
-  isPolitical       Boolean?            // null = both, true = political only, false = non-political only
-  tags              String[]            @default([])        // Filter by tags
+  isPolitical Boolean? // null = both, true = political only, false = non-political only
+  tags        String[] @default([]) // Filter by tags
 
   // Geographic Filters
-  geographicScope   GeographicScope?    // LOCAL, COUNTY, STATE, NATIONAL, null = all
-  h3Resolution      Int?                // H3 resolution for proximity (null = use user's location)
-  centerLat         Float?              // Custom center point
-  centerLng         Float?
-  radiusMiles       Float?              // Proximity radius
+  geographicScope GeographicScope? // LOCAL, COUNTY, STATE, NATIONAL, null = all
+  h3Resolution    Int? // H3 resolution for proximity (null = use user's location)
+  centerLat       Float? // Custom center point
+  centerLng       Float?
+  radiusMiles     Float? // Proximity radius
 
   // Author Filters
-  authorTypes       PoliticalProfileType[] @default([]) // CITIZEN, CANDIDATE, ELECTED_OFFICIAL, etc.
-  authorIds         String[]            @default([])    // Specific users to include/exclude
-  excludeAuthorIds  String[]            @default([])
+  authorTypes      PoliticalProfileType[] @default([]) // CITIZEN, CANDIDATE, ELECTED_OFFICIAL, etc.
+  authorIds        String[]               @default([]) // Specific users to include/exclude
+  excludeAuthorIds String[]               @default([])
 
   // Topic & Category Filters
-  topicIds          String[]            @default([])    // Filter by topics
-  categories        IssueCategory[]     @default([])    // HEALTHCARE, EDUCATION, etc.
+  topicIds   String[]        @default([]) // Filter by topics
+  categories IssueCategory[] @default([]) // HEALTHCARE, EDUCATION, etc.
 
   // Engagement Filters
-  minLikes          Int?                // Minimum engagement thresholds
-  minComments       Int?
-  minShares         Int?
+  minLikes    Int? // Minimum engagement thresholds
+  minComments Int?
+  minShares   Int?
 
   // Time Filters
-  timeframe         FilterTimeframe     @default(ALL_TIME)
-  customStartDate   DateTime?           // For custom timeframe
-  customEndDate     DateTime?
+  timeframe       FilterTimeframe @default(ALL_TIME)
+  customStartDate DateTime? // For custom timeframe
+  customEndDate   DateTime?
 
   // Sort & Display
-  sortBy            FilterSortBy        @default(RELEVANCE)
-  sortOrder         SortOrder           @default(DESC)
+  sortBy    FilterSortBy @default(RELEVANCE)
+  sortOrder SortOrder    @default(DESC)
 
   // User Preferences
-  isDefault         Boolean             @default(false)  // User's default filter
-  isPinned          Boolean             @default(false)  // Show in quick access
-  displayOrder      Int                 @default(0)      // Order in user's filter list
+  isDefault    Boolean @default(false) // User's default filter
+  isPinned     Boolean @default(false) // Show in quick access
+  displayOrder Int     @default(0) // Order in user's filter list
 
   // Metadata
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  lastUsedAt        DateTime?
-  useCount          Int                 @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastUsedAt DateTime?
+  useCount   Int       @default(0)
 
   // Relations
-  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name])
   @@index([userId, isPinned])
@@ -3653,28 +3792,28 @@ model FeedFilter {
 /// Auto-deleted after DATA_RETENTION_DAYS (default 30) to minimize storage and comply with GDPR.
 model PageView {
   /// Unique identifier for this page view
-  id                String    @id @default(cuid())
+  id              String   @id @default(cuid())
   /// Page path visited (e.g., "/", "/profile", "/post/123")
-  path              String
+  path            String
   /// SHA256 hash of IP address + daily rotating salt (prevents cross-day tracking)
-  ipHash            String
+  ipHash          String
   /// Browser User-Agent string for bot detection and device analytics
-  userAgent         String
+  userAgent       String
   /// Referrer URL (where visitor came from)
-  referrer          String?
+  referrer        String?
   /// Associated user ID if visitor is authenticated (null for anonymous)
-  userId            String?
+  userId          String?
   /// Whether this pageview was identified as bot traffic
-  isBot             Boolean   @default(false)
+  isBot           Boolean  @default(false)
   /// Whether this visit shows suspicious activity patterns (>500 views/day, rapid requests)
-  isSuspicious      Boolean   @default(false)
+  isSuspicious    Boolean  @default(false)
   /// Timestamp of page view
-  createdAt         DateTime  @default(now())
+  createdAt       DateTime @default(now())
   /// Session duration in seconds (calculated on next pageview or session end)
-  sessionDuration   Int?
+  sessionDuration Int?
 
   /// Relation to User model (null for anonymous visitors)
-  user              User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([ipHash, createdAt])
   @@index([path, createdAt])
@@ -3722,19 +3861,19 @@ model DailyVisitStats {
 /// Records auto-expire after 24 hours or when block expires.
 model IPRateLimit {
   /// Unique identifier for this rate limit record
-  id             String    @id @default(cuid())
+  id           String    @id @default(cuid())
   /// SHA256 hash of IP address + daily rotating salt
-  ipHash         String
+  ipHash       String
   /// Number of requests in current time window
-  requestCount   Int       @default(0)
+  requestCount Int       @default(0)
   /// Timestamp of most recent request
-  lastRequest    DateTime  @default(now())
+  lastRequest  DateTime  @default(now())
   /// If blocked, timestamp when block expires (null if not blocked)
-  blockedUntil   DateTime?
+  blockedUntil DateTime?
   /// Reason for block if applicable
-  blockReason    String?
+  blockReason  String?
   /// Timestamp when this record was created
-  createdAt      DateTime  @default(now())
+  createdAt    DateTime  @default(now())
 
   @@unique([ipHash])
   @@index([ipHash, lastRequest])
@@ -3746,23 +3885,23 @@ model IPRateLimit {
 /// Single-row table (id always "default") for easy access.
 model AnalyticsConfig {
   /// Fixed ID for singleton pattern
-  id                    String   @id @default("default")
+  id                  String   @id @default("default")
   /// Maximum requests per hour per IP before rate limiting
-  rateLimitPerHour      Int      @default(100)
+  rateLimitPerHour    Int      @default(100)
   /// Number of days to retain PageView records before auto-deletion
-  dataRetentionDays     Int      @default(30)
+  dataRetentionDays   Int      @default(30)
   /// Number of pageviews per day to flag as suspicious
-  suspiciousThreshold   Int      @default(500)
+  suspiciousThreshold Int      @default(500)
   /// Duration in hours to block IPs that violate rate limits
-  blockDurationHours    Int      @default(24)
+  blockDurationHours  Int      @default(24)
   /// Current daily salt for IP hashing (rotates at midnight UTC)
-  currentDailySalt      String   @default(cuid())
+  currentDailySalt    String   @default(cuid())
   /// Timestamp of last salt rotation
-  lastSaltRotation      DateTime @default(now())
+  lastSaltRotation    DateTime @default(now())
   /// Whether visitor tracking is enabled
-  trackingEnabled       Boolean  @default(true)
+  trackingEnabled     Boolean  @default(true)
   /// Last configuration update timestamp
-  updatedAt             DateTime @updatedAt
+  updatedAt           DateTime @updatedAt
 }
 
 // ============================================================================
@@ -3775,29 +3914,29 @@ model AnalyticsConfig {
 /// to arguments depending on them. If a fact is debunked, all dependent arguments become dubious.
 model FactClaim {
   /// Unique identifier for this factual claim
-  id                 String              @id @default(cuid())
+  id           String  @id @default(cuid())
   /// The factual assertion text
-  claim              String
+  claim        String
   /// Post where this claim was originally extracted from
-  sourcePostId       String?
+  sourcePostId String?
   /// User who made the claim
-  sourceUserId       String?
+  sourceUserId String?
   /// Vector embedding for semantic matching (1536-dim from Azure OpenAI)
-  embedding          Float[]             @default([])
+  embedding    Float[] @default([])
 
   /// Confidence score (0-1) - updated by Community Notes
-  confidence         Float               @default(0.5)
+  confidence        Float @default(0.5)
   /// History of confidence changes with timestamps and reasons
   /// @description Format: [{ timestamp: DateTime, oldScore: number, newScore: number, reason: string }]
-  confidenceHistory  Json                @default("[]")
+  confidenceHistory Json  @default("[]")
 
   /// Number of times this fact is referenced in arguments
-  citationCount      Int                 @default(0)
+  citationCount  Int @default(0)
   /// Number of Community Notes challenging this fact
-  challengeCount     Int                 @default(0)
+  challengeCount Int @default(0)
 
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   /// Arguments that depend on this fact
   dependentArguments ArgumentFactLink[]
@@ -3814,51 +3953,51 @@ model FactClaim {
 /// Notes are displayed based on reputation-weighted voting. Original posters can appeal.
 model CommunityNote {
   /// Unique identifier for this note
-  id                 String              @id @default(cuid())
+  id          String  @id @default(cuid())
   /// FactClaim this note is attached to (null if attached to post directly)
-  factClaimId        String?
+  factClaimId String?
   /// Post this note is attached to (null if attached to FactClaim)
-  postId             String?
+  postId      String?
   /// User who authored this note
-  authorId           String
+  authorId    String
 
   /// The note content (markdown supported)
-  content            String
+  content  String
   /// Type of note: "correction", "context", "source", "disputed"
-  noteType           String
+  noteType String
 
   /// Reputation-weighted helpful score (sum of vote × voter.reputationScore)
-  helpfulScore       Float               @default(0)
+  helpfulScore    Float @default(0)
   /// Reputation-weighted not-helpful score
-  notHelpfulScore    Float               @default(0)
+  notHelpfulScore Float @default(0)
   /// Total number of votes on this note
-  voteCount          Int                 @default(0)
+  voteCount       Int   @default(0)
 
   /// Whether this note is displayed publicly (auto-set when threshold reached)
-  isDisplayed        Boolean             @default(false)
+  isDisplayed      Boolean @default(false)
   /// Threshold ratio for auto-display (helpfulScore / total > threshold)
-  displayThreshold   Float               @default(0.7)
+  displayThreshold Float   @default(0.7)
   /// Whether original poster has appealed this note
-  isAppealed         Boolean             @default(false)
+  isAppealed       Boolean @default(false)
   /// Whether admin has resolved the appeal
-  appealResolved     Boolean             @default(false)
+  appealResolved   Boolean @default(false)
   /// Outcome of appeal: "upheld", "removed", or null
-  appealOutcome      String?
+  appealOutcome    String?
 
   /// Impact on fact confidence when this note is displayed (-0.5 to +0.5)
-  confidenceImpact   Float?
+  confidenceImpact Float?
 
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   /// FactClaim this note is attached to
-  factClaim          FactClaim?          @relation(fields: [factClaimId], references: [id], onDelete: Cascade)
+  factClaim FactClaim?          @relation(fields: [factClaimId], references: [id], onDelete: Cascade)
   /// Post this note is attached to
-  post               Post?               @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      Post?               @relation(fields: [postId], references: [id], onDelete: Cascade)
   /// User who authored this note
-  author             User                @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  author    User                @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   /// Individual votes on this note
-  votes              CommunityNoteVote[]
+  votes     CommunityNoteVote[]
 
   @@index([factClaimId])
   @@index([postId])
@@ -3871,22 +4010,22 @@ model CommunityNote {
 /// This allows recalculating note scores if reputation system changes.
 model CommunityNoteVote {
   /// Unique identifier for this vote
-  id                 String              @id @default(cuid())
+  id              String  @id @default(cuid())
   /// Note being voted on
-  noteId             String
+  noteId          String
   /// User casting the vote
-  voterId            String
+  voterId         String
   /// Whether the voter found this note helpful
-  isHelpful          Boolean
+  isHelpful       Boolean
   /// Snapshot of voter's reputation score at time of vote
-  voterReputation    Float
+  voterReputation Float
 
-  createdAt          DateTime            @default(now())
+  createdAt DateTime @default(now())
 
   /// The note being voted on
-  note               CommunityNote       @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  note  CommunityNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
   /// The user who voted
-  voter              User                @relation("NoteVoter", fields: [voterId], references: [id], onDelete: Cascade)
+  voter User          @relation("NoteVoter", fields: [voterId], references: [id], onDelete: Cascade)
 
   @@unique([noteId, voterId])
   @@index([noteId])
@@ -3898,18 +4037,18 @@ model CommunityNoteVote {
 /// is calculated as: own_confidence × avg(dependentFacts.confidence)
 model ArgumentFactLink {
   /// Unique identifier for this link
-  id                 String              @id @default(cuid())
+  id                 String @id @default(cuid())
   /// Argument that depends on the fact
   argumentId         String
   /// Fact that the argument depends on
   factClaimId        String
   /// How strongly this argument depends on the fact (0-1, default 1.0)
-  dependencyStrength Float               @default(1.0)
+  dependencyStrength Float  @default(1.0)
 
   /// The dependent argument
-  argument           ArgumentEntry       @relation(fields: [argumentId], references: [id], onDelete: Cascade)
+  argument  ArgumentEntry @relation(fields: [argumentId], references: [id], onDelete: Cascade)
   /// The underlying fact
-  factClaim          FactClaim           @relation(fields: [factClaimId], references: [id], onDelete: Cascade)
+  factClaim FactClaim     @relation(fields: [factClaimId], references: [id], onDelete: Cascade)
 
   @@unique([argumentId, factClaimId])
   @@index([factClaimId])
@@ -3922,59 +4061,59 @@ model ArgumentFactLink {
 /// Confidence propagates to semantically similar arguments.
 model ArgumentEntry {
   /// Unique identifier for this argument
-  id                 String              @id @default(cuid())
+  id           String  @id @default(cuid())
   /// The argument text content
-  content            String
+  content      String
   /// AI-generated summary of the argument
-  summary            String?
+  summary      String?
   /// Post this argument was extracted from
-  sourcePostId       String
+  sourcePostId String
   /// User who made this argument
-  sourceUserId       String
+  sourceUserId String
   /// Vector embedding for semantic matching (1536-dim)
-  embedding          Float[]             @default([])
+  embedding    Float[] @default([])
 
   /// Own confidence score (0-1), starts neutral at 0.5
-  confidence         Float               @default(0.5)
+  confidence        Float @default(0.5)
   /// History of confidence changes
   /// @description Format: [{ timestamp: DateTime, oldScore: number, newScore: number, reason: string }]
-  confidenceHistory  Json                @default("[]")
+  confidenceHistory Json  @default("[]")
 
   /// AI-assessed logical validity (0-1): Does conclusion follow from premises?
-  logicalValidity    Float?
+  logicalValidity Float?
   /// AI-assessed evidence quality (0-1): Quality of cited evidence
-  evidenceQuality    Float?
+  evidenceQuality Float?
   /// AI-assessed coherence (0-1): Internal consistency
-  coherence          Float?
+  coherence       Float?
 
   /// Entropy/stability assessment (0-10): 10 = promotes stability, 0 = increases chaos
-  entropyScore       Float?
+  entropyScore Float?
 
   /// Count of arguments that support this one
-  supportCount       Int                 @default(0)
+  supportCount  Int @default(0)
   /// Count of arguments that refute this one
-  refuteCount        Int                 @default(0)
+  refuteCount   Int @default(0)
   /// Times this argument was referenced by RiseAI in responses
-  citationCount      Int                 @default(0)
+  citationCount Int @default(0)
 
   /// Semantic cluster this argument belongs to (for consolidation)
-  clusterId          String?
+  clusterId     String?
   /// Whether this is the representative argument for its cluster
-  isClusterHead      Boolean             @default(false)
+  isClusterHead Boolean @default(false)
 
   /// Effective confidence = confidence × avg(dependentFacts.confidence)
   /// @description Automatically reduced if underlying facts are disputed
   effectiveConfidence Float?
 
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   /// Post this argument was extracted from
-  sourcePost         Post                @relation(fields: [sourcePostId], references: [id], onDelete: Cascade)
+  sourcePost       Post               @relation(fields: [sourcePostId], references: [id], onDelete: Cascade)
   /// User who made this argument
-  sourceUser         User                @relation("ArgumentAuthor", fields: [sourceUserId], references: [id], onDelete: Cascade)
+  sourceUser       User               @relation("ArgumentAuthor", fields: [sourceUserId], references: [id], onDelete: Cascade)
   /// Facts this argument depends on
-  factDependencies   ArgumentFactLink[]
+  factDependencies ArgumentFactLink[]
 
   @@index([embedding])
   @@index([clusterId])
@@ -3989,47 +4128,47 @@ model ArgumentEntry {
 /// arguments referenced, and the response posted.
 model RiseAIInteraction {
   /// Unique identifier for this interaction
-  id                   String              @id @default(cuid())
+  id               String  @id @default(cuid())
   /// Comment that tagged @RiseAI (null if triggered from post body)
-  triggerCommentId     String?
+  triggerCommentId String?
   /// Post being analyzed
-  triggerPostId        String
+  triggerPostId    String
   /// User who triggered the analysis
-  triggerUserId        String
+  triggerUserId    String
   /// Content that was analyzed (stripped of @RiseAI mention)
-  targetContent        String
+  targetContent    String
   /// Full original content including @RiseAI mention
-  fullContent          String?
+  fullContent      String?
 
   /// Full structured analysis result (JSON)
   /// @description Contains argumentValidity, factCheck, fallacyDetection, entropyScore, legalFramework
-  analysisResult       Json?
+  analysisResult      Json?
   /// Entropy/stability score (0-10)
-  entropyScore         Float?
+  entropyScore        Float?
   /// Fallacies detected in the content
-  fallaciesFound       String[]            @default([])
+  fallaciesFound      String[] @default([])
   /// ArgumentEntry IDs that were used in synthesizing the response
-  argumentsUsed        String[]            @default([])
+  argumentsUsed       String[] @default([])
   /// ArgumentEntry IDs that were surfaced/referenced in the response
-  argumentsReferenced  String[]            @default([])
+  argumentsReferenced String[] @default([])
 
   /// Comment ID where RiseAI posted its response
-  responseCommentId    String?
+  responseCommentId String?
   /// The actual response text posted
-  responseContent      String?
+  responseContent   String?
 
   /// Interaction status: "pending", "analyzing", "complete", "challenged"
-  status               String              @default("pending")
+  status        String @default("pending")
   /// Number of follow-up interactions in this thread
-  followUpCount        Int                 @default(0)
+  followUpCount Int    @default(0)
 
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   /// Post being analyzed
-  triggerPost          Post                @relation(fields: [triggerPostId], references: [id], onDelete: Cascade)
+  triggerPost Post @relation(fields: [triggerPostId], references: [id], onDelete: Cascade)
   /// User who triggered the analysis
-  triggerUser          User                @relation("RiseAITrigger", fields: [triggerUserId], references: [id], onDelete: Cascade)
+  triggerUser User @relation("RiseAITrigger", fields: [triggerUserId], references: [id], onDelete: Cascade)
 
   @@index([triggerPostId])
   @@index([triggerUserId])
@@ -4042,23 +4181,23 @@ model RiseAIInteraction {
 /// and debugging. Records why confidence changed and how it propagated.
 model ConfidenceUpdate {
   /// Unique identifier for this update record
-  id                 String              @id @default(cuid())
+  id               String  @id @default(cuid())
   /// Argument that was updated
-  argumentId         String
+  argumentId       String
   /// RiseAI interaction that triggered this update (null if from propagation)
-  interactionId      String?
+  interactionId    String?
   /// Confidence score before update
-  oldConfidence      Float
+  oldConfidence    Float
   /// Confidence score after update
-  newConfidence      Float
+  newConfidence    Float
   /// Reason for update: "supported_by_discourse", "refuted", "propagated_from_similar", "fact_debunked"
-  reason             String
+  reason           String
   /// If propagated, the source argument ID
-  propagatedFrom     String?
+  propagatedFrom   String?
   /// Cosine similarity to source (for propagation auditing)
-  cosineSimilarity   Float?
+  cosineSimilarity Float?
 
-  createdAt          DateTime            @default(now())
+  createdAt DateTime @default(now())
 
   @@index([argumentId])
   @@index([interactionId])
@@ -4070,19 +4209,19 @@ model ConfidenceUpdate {
 /// Admins can adjust rate limits, thresholds, and enable/disable the system.
 model RiseAISettings {
   /// Fixed ID for singleton pattern (always "default")
-  id                    String              @id @default("default")
+  id                  String  @id @default("default")
   /// Daily invocation limit for non-admin users
-  dailyLimitNonAdmin    Int                 @default(10)
+  dailyLimitNonAdmin  Int     @default(10)
   /// Daily invocation limit for admin users (-1 = unlimited)
-  dailyLimitAdmin       Int                 @default(-1)
+  dailyLimitAdmin     Int     @default(-1)
   /// Cosine similarity threshold for confidence propagation (0-1)
-  confidenceThreshold   Float               @default(0.85)
+  confidenceThreshold Float   @default(0.85)
   /// Kill switch to disable RiseAI system
-  isEnabled             Boolean             @default(true)
+  isEnabled           Boolean @default(true)
 
-  updatedAt             DateTime            @updatedAt
+  updatedAt   DateTime @updatedAt
   /// Admin who last updated these settings
-  updatedById           String?
+  updatedById String?
 }
 
 /// Daily usage tracking for RiseAI rate limiting
@@ -4090,16 +4229,16 @@ model RiseAISettings {
 /// Used to enforce daily rate limits.
 model RiseAIUsage {
   /// Unique identifier for this usage record
-  id                 String              @id @default(cuid())
+  id     String   @id @default(cuid())
   /// User being tracked
-  userId             String
+  userId String
   /// Date (without time) for grouping
-  date               DateTime            @db.Date
+  date   DateTime @db.Date
   /// Number of invocations on this date
-  count              Int                 @default(0)
+  count  Int      @default(0)
 
   /// User this usage record belongs to
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@index([userId])
@@ -4112,34 +4251,34 @@ model RiseAIUsage {
 /// Unlike container logs that roll over, these errors persist indefinitely.
 model ApplicationError {
   /// Unique identifier for this error record
-  id          String   @id @default(cuid())
+  id         String   @id @default(cuid())
   /// Service that generated the error (riseai, azure-openai, auth, feed, etc.)
-  service     String
+  service    String
   /// Specific operation that failed (generateTier1Completion, processInteraction, etc.)
-  operation   String
+  operation  String
   /// Error type/class name (AzureOpenAIError, NetworkError, ValidationError, etc.)
-  errorType   String
+  errorType  String
   /// Human-readable error message
-  message     String
+  message    String
   /// Full error object including status codes, response body, etc.
-  details     Json?
+  details    Json?
   /// Stack trace if available
-  stack       String?  @db.Text
+  stack      String?  @db.Text
   /// User who triggered the error (if applicable, null for system errors)
-  userId      String?
+  userId     String?
   /// Request ID for correlation with Pino logs
-  requestId   String?
+  requestId  String?
   /// Whether the error has been investigated and resolved
-  resolved    Boolean  @default(false)
+  resolved   Boolean  @default(false)
   /// Notes from investigation or resolution steps taken
-  resolution  String?  @db.Text
+  resolution String?  @db.Text
   /// Error creation timestamp
-  createdAt   DateTime @default(now())
+  createdAt  DateTime @default(now())
   /// Last update timestamp (for resolution updates)
-  updatedAt   DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   /// Optional relation to User (SetNull: keeps error record if user deleted)
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([service, createdAt])
   @@index([errorType])
@@ -4154,27 +4293,27 @@ model ApplicationError {
 /// Retained indefinitely for audit purposes.
 model AuditLog {
   /// Unique identifier for this audit record
-  id          String   @id @default(cuid())
+  id         String   @id @default(cuid())
   /// Admin action performed (e.g., "USER_SUSPENDED", "REPORT_RESOLVED", "CONFIG_UPDATED")
-  action      String
+  action     String
   /// Admin who performed the action
-  adminId     String
+  adminId    String
   /// Type of target entity (e.g., "user", "post", "report", "config")
-  targetType  String?
+  targetType String?
   /// ID of the target entity
-  targetId    String?
+  targetId   String?
   /// Additional details about the action (JSON object with context)
-  details     Json?
+  details    Json?
   /// IP address of the admin at time of action
-  ipAddress   String?
+  ipAddress  String?
   /// User agent string of the admin's browser
-  userAgent   String?
+  userAgent  String?
   /// Timestamp of the action
-  createdAt   DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   /// Relationship to User (admin who performed the action)
   /// SetNull: keeps audit record if admin account deleted
-  admin       User     @relation("AdminAuditLogs", fields: [adminId], references: [id], onDelete: SetNull)
+  admin User @relation("AdminAuditLogs", fields: [adminId], references: [id], onDelete: SetNull)
 
   @@index([adminId])
   @@index([action])
@@ -4191,49 +4330,49 @@ model AuditLog {
 /// membership management, endorsements, and civic engagement features.
 model Organization {
   /// Unique identifier for the organization
-  id                    String                @id @default(cuid())
+  id          String  @id @default(cuid())
   /// Organization display name
-  name                  String
+  name        String
   /// URL-friendly unique identifier
-  slug                  String                @unique
+  slug        String  @unique
   /// Organization description/about text
-  description           String?
+  description String?
   /// Avatar/logo image URL
-  avatar                String?
+  avatar      String?
   /// Organization website URL
-  website               String?
+  website     String?
 
   // Hierarchy
   /// Parent organization ID (null = top-level organization)
-  parentId              String?
+  parentId String?
   /// Parent organization relationship
-  parent                Organization?         @relation("OrgHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  parent   Organization?  @relation("OrgHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   /// Child organizations
-  children              Organization[]        @relation("OrgHierarchy")
+  children Organization[] @relation("OrgHierarchy")
 
   // Leadership (required, exactly one head)
   /// User ID of the organization head
-  headUserId            String
+  headUserId String
   /// Organization head user relationship
-  head                  User                  @relation("OrgHead", fields: [headUserId], references: [id], onDelete: Restrict)
+  head       User   @relation("OrgHead", fields: [headUserId], references: [id], onDelete: Restrict)
 
   // Jurisdiction (optional)
   /// Type of jurisdiction (NATIONAL, STATE, COUNTY, CITY, CUSTOM)
-  jurisdictionType      JurisdictionType?
+  jurisdictionType  JurisdictionType?
   /// Jurisdiction value (e.g., "TX", "Travis County, TX", "Austin, TX")
-  jurisdictionValue     String?
+  jurisdictionValue String?
   /// H3 cell indices covering the jurisdiction area
-  h3Cells               String[]              @default([])
+  h3Cells           String[]          @default([])
 
   // Endorsement settings
   /// Whether endorsements are enabled for this organization
-  endorsementsEnabled   Boolean               @default(false)
+  endorsementsEnabled  Boolean             @default(false)
   /// Voting threshold type for endorsement decisions
-  votingThresholdType   VotingThresholdType   @default(SIMPLE_MAJORITY)
+  votingThresholdType  VotingThresholdType @default(SIMPLE_MAJORITY)
   /// Custom voting threshold percentage (for PERCENTAGE type)
-  votingThresholdValue  Int?
+  votingThresholdValue Int?
   /// Minimum participation percentage for quorum (0 = no quorum required)
-  votingQuorumPercent   Int                   @default(0)
+  votingQuorumPercent  Int                 @default(0)
 
   // Verification
   /// Whether organization has been verified by platform
@@ -4249,26 +4388,26 @@ model Organization {
 
   // Metadata
   /// Whether organization is active (not dissolved)
-  isActive              Boolean               @default(true)
+  isActive  Boolean  @default(true)
   /// Organization creation timestamp
-  createdAt             DateTime              @default(now())
+  createdAt DateTime @default(now())
   /// Last update timestamp
-  updatedAt             DateTime              @updatedAt
+  updatedAt DateTime @updatedAt
 
   // Relations
-  members                 OrganizationMember[]
-  roles                   OrganizationRole[]
-  affiliationsFrom        OrganizationAffiliation[]     @relation("AffiliationFrom")
-  affiliationsTo          OrganizationAffiliation[]     @relation("AffiliationTo")
-  mergeRequestsSent       OrganizationMergeRequest[]    @relation("MergeRequestFrom")
-  mergeRequestsReceived   OrganizationMergeRequest[]    @relation("MergeRequestTo")
-  questionnaires          EndorsementQuestionnaire[]
-  orgEndorsements         OrganizationEndorsement[]
-  posts                   Post[]                        @relation("OrgPosts")
-  events                  CivicEvent[]                  @relation("OrgEvents")
-  followers               OrganizationFollow[]
-  discussions             OrganizationDiscussion[]
-  verificationRequests    OrganizationVerificationRequest[]
+  members               OrganizationMember[]
+  roles                 OrganizationRole[]
+  affiliationsFrom      OrganizationAffiliation[]         @relation("AffiliationFrom")
+  affiliationsTo        OrganizationAffiliation[]         @relation("AffiliationTo")
+  mergeRequestsSent     OrganizationMergeRequest[]        @relation("MergeRequestFrom")
+  mergeRequestsReceived OrganizationMergeRequest[]        @relation("MergeRequestTo")
+  questionnaires        EndorsementQuestionnaire[]
+  orgEndorsements       OrganizationEndorsement[]
+  posts                 Post[]                            @relation("OrgPosts")
+  events                CivicEvent[]                      @relation("OrgEvents")
+  followers             OrganizationFollow[]
+  discussions           OrganizationDiscussion[]
+  verificationRequests  OrganizationVerificationRequest[]
 
   @@index([parentId])
   @@index([headUserId])
@@ -4281,34 +4420,34 @@ model Organization {
 /// @description Tracks user membership in organizations with role assignments and status.
 model OrganizationMember {
   /// Unique identifier for this membership
-  id              String            @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Organization ID
-  organizationId  String
+  organizationId String
   /// Organization relationship
-  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// User ID of the member
-  userId          String
+  userId String
   /// User relationship
-  user            User              @relation("OrgMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("OrgMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
   /// Role assignment (nullable = regular member with no special role)
-  roleId          String?
+  roleId String?
   /// Role relationship
-  role            OrganizationRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  role   OrganizationRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
 
   /// Membership status
-  status          MembershipStatus  @default(PENDING)
+  status    MembershipStatus @default(PENDING)
   /// Timestamp when membership was approved
-  joinedAt        DateTime?
+  joinedAt  DateTime?
   /// User ID who invited this member (null = self-request)
-  invitedBy       String?
+  invitedBy String?
 
   /// Membership creation timestamp
-  createdAt       DateTime          @default(now())
+  createdAt DateTime @default(now())
   /// Last update timestamp
-  updatedAt       DateTime          @updatedAt
+  updatedAt DateTime @updatedAt
 
   // Relations
   endorsementVotes EndorsementVote[]
@@ -4323,31 +4462,31 @@ model OrganizationMember {
 /// @description Defines custom roles within an organization with assigned capabilities.
 model OrganizationRole {
   /// Unique identifier for this role
-  id              String            @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Organization ID
-  organizationId  String
+  organizationId String
   /// Organization relationship
-  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// Role display name (e.g., "Co-Chair", "Electoral Committee Lead")
-  name            String
+  name        String
   /// Role description
-  description     String?
+  description String?
 
   /// Capabilities granted to this role
-  capabilities    OrgCapability[]
+  capabilities OrgCapability[]
 
   /// Maximum number of users who can hold this role (null = unlimited)
-  maxHolders      Int               @default(1)
+  maxHolders Int @default(1)
 
   /// Role creation timestamp
-  createdAt       DateTime          @default(now())
+  createdAt DateTime @default(now())
   /// Last update timestamp
-  updatedAt       DateTime          @updatedAt
+  updatedAt DateTime @updatedAt
 
   /// Members assigned to this role
-  members         OrganizationMember[]
+  members OrganizationMember[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -4357,20 +4496,20 @@ model OrganizationRole {
 /// @description Tracks users following organizations for feed updates.
 model OrganizationFollow {
   /// Unique identifier for this follow
-  id              String        @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Organization ID being followed
-  organizationId  String
+  organizationId String
   /// Organization relationship
-  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// User ID of the follower
-  userId          String
+  userId String
   /// User relationship
-  user            User          @relation("OrgFollows", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("OrgFollows", fields: [userId], references: [id], onDelete: Cascade)
 
   /// Follow creation timestamp
-  createdAt       DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -4381,34 +4520,34 @@ model OrganizationFollow {
 /// @description Tracks partnerships between organizations without parent-child hierarchy.
 model OrganizationAffiliation {
   /// Unique identifier for this affiliation
-  id              String            @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Proposing organization ID
-  fromOrgId       String
+  fromOrgId String
   /// Proposing organization relationship
-  fromOrg         Organization      @relation("AffiliationFrom", fields: [fromOrgId], references: [id], onDelete: Cascade)
+  fromOrg   Organization @relation("AffiliationFrom", fields: [fromOrgId], references: [id], onDelete: Cascade)
 
   /// Target organization ID
-  toOrgId         String
+  toOrgId String
   /// Target organization relationship
-  toOrg           Organization      @relation("AffiliationTo", fields: [toOrgId], references: [id], onDelete: Cascade)
+  toOrg   Organization @relation("AffiliationTo", fields: [toOrgId], references: [id], onDelete: Cascade)
 
   /// Affiliation status
-  status          AffiliationStatus @default(PENDING)
+  status AffiliationStatus @default(PENDING)
 
   /// User ID who proposed the affiliation
-  proposedBy      String
+  proposedBy String
   /// User ID who approved the affiliation
-  approvedBy      String?
+  approvedBy String?
   /// User ID who revoked the affiliation
-  revokedBy       String?
+  revokedBy  String?
 
   /// Affiliation creation timestamp
-  createdAt       DateTime          @default(now())
+  createdAt  DateTime  @default(now())
   /// Approval timestamp
-  approvedAt      DateTime?
+  approvedAt DateTime?
   /// Revocation timestamp
-  revokedAt       DateTime?
+  revokedAt  DateTime?
 
   @@unique([fromOrgId, toOrgId])
   @@index([toOrgId, status])
@@ -4418,38 +4557,38 @@ model OrganizationAffiliation {
 /// @description Tracks requests for one organization to absorb another.
 model OrganizationMergeRequest {
   /// Unique identifier for this merge request
-  id                    String              @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Organization being absorbed
-  fromOrgId             String
+  fromOrgId String
   /// Organization being absorbed relationship
-  fromOrg               Organization        @relation("MergeRequestFrom", fields: [fromOrgId], references: [id], onDelete: Cascade)
+  fromOrg   Organization @relation("MergeRequestFrom", fields: [fromOrgId], references: [id], onDelete: Cascade)
 
   /// Organization absorbing
-  toOrgId               String
+  toOrgId String
   /// Organization absorbing relationship
-  toOrg                 Organization        @relation("MergeRequestTo", fields: [toOrgId], references: [id], onDelete: Cascade)
+  toOrg   Organization @relation("MergeRequestTo", fields: [toOrgId], references: [id], onDelete: Cascade)
 
   /// Proposed parent organization ID (null = becomes direct child of toOrg)
-  proposedParentId      String?
+  proposedParentId String?
 
   /// Merge request status
-  status                MergeRequestStatus  @default(PENDING)
+  status MergeRequestStatus @default(PENDING)
 
   /// Capabilities the absorbed org will retain
-  retainedCapabilities  OrgCapability[]
+  retainedCapabilities OrgCapability[]
 
   /// User ID who initiated the merge (from toOrg)
-  initiatedBy           String
+  initiatedBy String
   /// User ID who accepted the merge (head of fromOrg)
-  acceptedBy            String?
+  acceptedBy  String?
 
   /// Request creation timestamp
-  createdAt             DateTime            @default(now())
+  createdAt   DateTime  @default(now())
   /// Acceptance timestamp
-  acceptedAt            DateTime?
+  acceptedAt  DateTime?
   /// Completion timestamp
-  completedAt           DateTime?
+  completedAt DateTime?
 
   @@index([fromOrgId])
   @@index([toOrgId, status])
@@ -4463,31 +4602,31 @@ model OrganizationMergeRequest {
 /// @description Organizations create questionnaires that candidates fill out to seek endorsement.
 model EndorsementQuestionnaire {
   /// Unique identifier for this questionnaire
-  id              String                    @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Organization ID that created this questionnaire
-  organizationId  String
+  organizationId String
   /// Organization relationship
-  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// Questionnaire title (e.g., "2024 Endorsement Questionnaire")
-  title           String
+  title       String
   /// Questionnaire description/instructions
-  description     String?
+  description String?
   /// Whether questionnaire is accepting applications
-  isActive        Boolean                   @default(true)
+  isActive    Boolean @default(true)
 
   /// Questionnaire creation timestamp
-  createdAt       DateTime                  @default(now())
+  createdAt DateTime @default(now())
   /// Last update timestamp
-  updatedAt       DateTime                  @updatedAt
+  updatedAt DateTime @updatedAt
   /// User ID who created the questionnaire
-  createdBy       String
+  createdBy String
 
   /// Questions in this questionnaire
-  questions       QuestionnaireQuestion[]
+  questions    QuestionnaireQuestion[]
   /// Applications submitted to this questionnaire
-  applications    EndorsementApplication[]
+  applications EndorsementApplication[]
 
   @@index([organizationId, isActive])
 }
@@ -4496,31 +4635,31 @@ model EndorsementQuestionnaire {
 /// @description Individual questions that candidates must answer.
 model QuestionnaireQuestion {
   /// Unique identifier for this question
-  id              String                    @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Questionnaire ID
   questionnaireId String
   /// Questionnaire relationship
-  questionnaire   EndorsementQuestionnaire  @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  questionnaire   EndorsementQuestionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
 
   /// Question text
-  text            String
+  text         String
   /// Help text/description for the question
-  description     String?
+  description  String?
   /// Question type (SHORT_TEXT, LONG_TEXT, MULTIPLE_CHOICE, etc.)
-  type            QuestionType
+  type         QuestionType
   /// Options for MULTIPLE_CHOICE and CHECKBOX types (JSON array)
-  options         String[]                  @default([])
+  options      String[]     @default([])
   /// Whether response is required
-  isRequired      Boolean                   @default(true)
+  isRequired   Boolean      @default(true)
   /// Display order (lower = earlier)
-  displayOrder    Int
+  displayOrder Int
 
   /// Whether response should be shown on candidate's public page
-  isPublic        Boolean                   @default(true)
+  isPublic Boolean @default(true)
 
   /// Responses to this question
-  responses       QuestionResponse[]
+  responses QuestionResponse[]
 
   @@index([questionnaireId, displayOrder])
 }
@@ -4529,20 +4668,20 @@ model QuestionnaireQuestion {
 /// @description Stores the candidate's answer to each question.
 model QuestionResponse {
   /// Unique identifier for this response
-  id              String                    @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Application ID
-  applicationId   String
+  applicationId String
   /// Application relationship
-  application     EndorsementApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application   EndorsementApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   /// Question ID
-  questionId      String
+  questionId String
   /// Question relationship
-  question        QuestionnaireQuestion     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question   QuestionnaireQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   /// Response content (JSON for complex types)
-  response        String
+  response String
 
   @@unique([applicationId, questionId])
 }
@@ -4551,37 +4690,37 @@ model QuestionResponse {
 /// @description Tracks a candidate's application for endorsement including voting.
 model EndorsementApplication {
   /// Unique identifier for this application
-  id              String                      @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Questionnaire ID
   questionnaireId String
   /// Questionnaire relationship
-  questionnaire   EndorsementQuestionnaire    @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  questionnaire   EndorsementQuestionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
 
   /// Candidate ID applying for endorsement
-  candidateId     String
+  candidateId String
   /// Candidate relationship
-  candidate       Candidate                   @relation("OrgEndorsementApplications", fields: [candidateId], references: [id], onDelete: Cascade)
+  candidate   Candidate @relation("OrgEndorsementApplications", fields: [candidateId], references: [id], onDelete: Cascade)
 
   /// Application status
-  status          EndorsementApplicationStatus @default(SUBMITTED)
+  status EndorsementApplicationStatus @default(SUBMITTED)
 
   /// Submission timestamp
-  submittedAt     DateTime                    @default(now())
+  submittedAt DateTime  @default(now())
   /// Review completion timestamp
-  reviewedAt      DateTime?
+  reviewedAt  DateTime?
 
   /// Cached vote counts (denormalized for performance)
-  votesFor        Int                         @default(0)
-  votesAgainst    Int                         @default(0)
-  votesAbstain    Int                         @default(0)
+  votesFor     Int @default(0)
+  votesAgainst Int @default(0)
+  votesAbstain Int @default(0)
 
   /// Responses to questionnaire questions
-  responses       QuestionResponse[]
+  responses      QuestionResponse[]
   /// Individual member votes
-  votes           EndorsementVote[]
+  votes          EndorsementVote[]
   /// Published endorsement (if approved)
-  orgEndorsement  OrganizationEndorsement?
+  orgEndorsement OrganizationEndorsement?
 
   @@unique([questionnaireId, candidateId])
   @@index([questionnaireId, status])
@@ -4592,25 +4731,25 @@ model EndorsementApplication {
 /// @description Tracks each member's vote on whether to endorse a candidate.
 model EndorsementVote {
   /// Unique identifier for this vote
-  id              String                    @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Application ID being voted on
-  applicationId   String
+  applicationId String
   /// Application relationship
-  application     EndorsementApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application   EndorsementApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   /// Member ID casting the vote
-  memberId        String
+  memberId String
   /// Member relationship
-  member          OrganizationMember        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member   OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   /// Vote choice (FOR, AGAINST, ABSTAIN)
-  vote            EndorsementVoteChoice
+  vote    EndorsementVoteChoice
   /// Optional internal comment/note
-  comment         String?
+  comment String?
 
   /// Vote timestamp
-  createdAt       DateTime                  @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([applicationId, memberId])
   @@index([applicationId])
@@ -4620,37 +4759,37 @@ model EndorsementVote {
 /// @description Represents an official endorsement after approval.
 model OrganizationEndorsement {
   /// Unique identifier for this endorsement
-  id              String                    @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Organization ID making the endorsement
-  organizationId  String
+  organizationId String
   /// Organization relationship
-  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// Candidate ID being endorsed
-  candidateId     String
+  candidateId String
   /// Candidate relationship
-  candidate       Candidate                 @relation("OrgEndorsementsReceived", fields: [candidateId], references: [id], onDelete: Cascade)
+  candidate   Candidate @relation("OrgEndorsementsReceived", fields: [candidateId], references: [id], onDelete: Cascade)
 
   /// Application ID this endorsement originated from
-  applicationId   String                    @unique
+  applicationId String                 @unique
   /// Application relationship
-  application     EndorsementApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application   EndorsementApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   /// Public endorsement statement
-  statement       String?
+  statement String?
 
   /// Publication timestamp
-  publishedAt     DateTime                  @default(now())
+  publishedAt DateTime @default(now())
   /// User ID who published the endorsement
-  publishedBy     String
+  publishedBy String
 
   /// Whether endorsement is currently active
-  isActive        Boolean                   @default(true)
+  isActive         Boolean   @default(true)
   /// Revocation timestamp
-  revokedAt       DateTime?
+  revokedAt        DateTime?
   /// User ID who revoked the endorsement
-  revokedBy       String?
+  revokedBy        String?
   /// Reason for revocation
   revocationReason String?
 
@@ -4666,40 +4805,40 @@ model OrganizationEndorsement {
 /// @description Internal discussions visible only to organization members.
 model OrganizationDiscussion {
   /// Unique identifier for this discussion
-  id              String                    @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Organization ID
-  organizationId  String
+  organizationId String
   /// Organization relationship
-  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// Discussion title
-  title           String
+  title   String
   /// Initial discussion content
-  content         String
+  content String
 
   /// Who can see this discussion
-  visibility      DiscussionVisibility      @default(ALL_MEMBERS)
+  visibility DiscussionVisibility @default(ALL_MEMBERS)
 
   /// Whether discussion is pinned to top
-  isPinned        Boolean                   @default(false)
+  isPinned Boolean   @default(false)
   /// Pinned timestamp
-  pinnedAt        DateTime?
+  pinnedAt DateTime?
   /// User ID who pinned the discussion
-  pinnedBy        String?
+  pinnedBy String?
 
   /// Author user ID
-  authorId        String
+  authorId String
   /// Author relationship
-  author          User                      @relation("OrgDiscussionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  author   User   @relation("OrgDiscussionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
 
   /// Discussion creation timestamp
-  createdAt       DateTime                  @default(now())
+  createdAt DateTime @default(now())
   /// Last update timestamp
-  updatedAt       DateTime                  @updatedAt
+  updatedAt DateTime @updatedAt
 
   /// Replies to this discussion
-  replies         DiscussionReply[]
+  replies DiscussionReply[]
 
   @@index([organizationId, isPinned, createdAt])
   @@index([authorId])
@@ -4709,32 +4848,32 @@ model OrganizationDiscussion {
 /// @description Supports threaded replies with parent-child relationships.
 model DiscussionReply {
   /// Unique identifier for this reply
-  id              String                    @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Discussion ID
-  discussionId    String
+  discussionId String
   /// Discussion relationship
-  discussion      OrganizationDiscussion    @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  discussion   OrganizationDiscussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
 
   /// Reply content
-  content         String
+  content String
 
   /// Parent reply ID for threaded replies (null = direct reply to discussion)
-  parentReplyId   String?
+  parentReplyId String?
   /// Parent reply relationship
-  parentReply     DiscussionReply?          @relation("ReplyThread", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  parentReply   DiscussionReply?  @relation("ReplyThread", fields: [parentReplyId], references: [id], onDelete: Cascade)
   /// Child replies
-  childReplies    DiscussionReply[]         @relation("ReplyThread")
+  childReplies  DiscussionReply[] @relation("ReplyThread")
 
   /// Author user ID
-  authorId        String
+  authorId String
   /// Author relationship
-  author          User                      @relation("DiscussionReplyAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  author   User   @relation("DiscussionReplyAuthor", fields: [authorId], references: [id], onDelete: Cascade)
 
   /// Reply creation timestamp
-  createdAt       DateTime                  @default(now())
+  createdAt DateTime @default(now())
   /// Last update timestamp
-  updatedAt       DateTime                  @updatedAt
+  updatedAt DateTime @updatedAt
 
   @@index([discussionId, createdAt])
   @@index([parentReplyId])
@@ -4749,34 +4888,34 @@ model DiscussionReply {
 /// @description Tracks requests for platform verification of organizations.
 model OrganizationVerificationRequest {
   /// Unique identifier for this request
-  id              String                    @id @default(cuid())
+  id String @id @default(cuid())
 
   /// Organization ID requesting verification
-  organizationId  String
+  organizationId String
   /// Organization relationship
-  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// Type of organization
-  orgType         OrgType
+  orgType OrgType
 
   /// Supporting documentation URLs
-  documents       String[]                  @default([])
+  documents String[] @default([])
   /// Statement explaining why org should be verified
-  statement       String
+  statement String
 
   /// Verification request status
-  status          OrgVerificationStatus     @default(PENDING)
+  status       OrgVerificationStatus @default(PENDING)
   /// Admin user ID who reviewed the request
-  reviewedBy      String?
+  reviewedBy   String?
   /// Review timestamp
-  reviewedAt      DateTime?
+  reviewedAt   DateTime?
   /// Admin review notes (internal)
-  reviewNotes     String?
+  reviewNotes  String?
   /// Reason for denial (if denied)
-  denialReason    String?
+  denialReason String?
 
   /// Request creation timestamp
-  createdAt       DateTime                  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([status])
   @@index([organizationId])

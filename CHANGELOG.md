@@ -1,10 +1,98 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 23, 2026
+**Last Updated**: January 24, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-24] - Short-Form Video Feature (TikTok-style Reels)
+
+### Added
+
+**Video Model & Database Schema**
+- Comprehensive `Video` model in Prisma with 40+ fields
+- Support for two video types: REEL (standalone) and POST_ATTACHMENT
+- Publishing workflow state machine: DRAFT → SCHEDULED → PUBLISHED
+- Encoding status tracking: PENDING → ENCODING → READY → FAILED
+- Content moderation status: PENDING → APPROVED → REJECTED
+- Audio policy system: PENDING → PASS → FLAGGED → MUTED
+- Engagement metrics: viewCount, likeCount, commentCount, shareCount
+- Relations to User and Post models with CASCADE delete
+
+**Backend Video Services**
+- `VideoStorageService.ts` - Azure Blob Storage integration for three containers:
+  - `videos-raw` - Original uploads
+  - `videos-encoded` - HLS segments and MP4 outputs
+  - `videos-thumbnails` - Poster images
+- `VideoEncodingService.ts` - Azure Media Services wrapper (stub implementation)
+- `VideoPipeline.ts` - 6-stage processing pipeline:
+  1. Validation (size, duration, format)
+  2. Metadata extraction (FFprobe)
+  3. Raw upload to blob storage
+  4. Encoding job submission
+  5. Thumbnail generation
+  6. Database persistence
+- `videoContentModerationService.ts` - Azure Content Safety integration
+
+**Video API Endpoints**
+- `POST /api/videos/upload` - Upload new video (chunked support)
+- `GET /api/videos/:id` - Get video details
+- `GET /api/videos/:id/stream` - Redirect to HLS manifest
+- `DELETE /api/videos/:id` - Soft delete video
+- `GET /api/videos/feed` - Reels feed with cursor pagination
+- `GET /api/videos/user/:userId` - User's published videos
+- `POST /api/videos/:id/view` - Record view for analytics
+- `GET /api/videos/drafts` - User's draft videos
+- `GET /api/videos/scheduled` - User's scheduled videos
+- `PATCH /api/videos/:id/publish` - Publish immediately
+- `PATCH /api/videos/:id/schedule` - Schedule for future publication
+- `PATCH /api/videos/:id/unschedule` - Cancel scheduled publish
+
+**Webhook & Background Jobs**
+- `POST /webhooks/media-services` - Azure Media Services encoding completion webhook
+- Scheduled video publishing cron job (runs every minute)
+- Stuck video check job (runs every 15 minutes)
+
+**Frontend Video Components**
+- `VideoUploader.js` - Drag-drop upload with progress tracking, preview, caption input
+- `VideoPlayer.js` - HLS.js adaptive streaming player with MP4 fallback
+- `ReelsFeed.js` - TikTok-style full-screen vertical swipe navigation
+- `video.css` - Complete styling for all video components
+
+### Technical Details
+- Max upload size: 500MB
+- Max duration: 3 minutes (180 seconds)
+- Supported formats: MP4, WebM, MOV
+- Aspect ratio detection: VERTICAL_9_16, HORIZONTAL_16_9, SQUARE_1_1, PORTRAIT_4_5
+- HLS adaptive bitrate tiers: 1080p, 720p, 480p, 360p
+- IntersectionObserver for auto-play when visible
+- Scroll-snap for smooth TikTok-style navigation
+
+### Files Added
+- `backend/prisma/migrations/20260124000000_add_video_model/migration.sql`
+- `backend/src/services/VideoStorageService.ts`
+- `backend/src/services/VideoEncodingService.ts`
+- `backend/src/services/VideoPipeline.ts`
+- `backend/src/services/videoContentModerationService.ts`
+- `backend/src/routes/videos/index.ts`
+- `backend/src/routes/webhooks/mediaServices.ts`
+- `backend/src/jobs/publishScheduledVideos.ts`
+- `backend/src/jobs/scheduledVideoPublishJob.ts`
+- `frontend/src/modules/features/video/VideoUploader.js`
+- `frontend/src/modules/features/video/VideoPlayer.js`
+- `frontend/src/modules/features/video/ReelsFeed.js`
+- `frontend/src/modules/features/video/index.js`
+- `frontend/src/css/video.css`
+- `scripts/azure/setup-video-infrastructure.sh`
+
+### Infrastructure
+- Azure Blob Storage containers: videos-raw, videos-encoded, videos-thumbnails
+- Azure Media Services for adaptive bitrate encoding
+- Azure CDN for video delivery
+- Azure Content Safety for moderation
 
 ---
 
