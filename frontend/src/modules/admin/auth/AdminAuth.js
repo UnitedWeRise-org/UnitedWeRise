@@ -25,6 +25,7 @@ class AdminAuth {
         this.refreshPromise = null; // Shared promise for concurrent callers to await
         this.refreshPending = false; // Flag to signal refresh is about to start (during debounce)
         this.lastWakeTimestamp = null; // Timestamp of last visibility change (for race condition detection)
+        this.lastHiddenTimestamp = null; // Timestamp of when tab was hidden (for extended absence detection)
         this.isRecovering = false; // Flag to suppress error displays during wake recovery
         this.visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this.API_BASE = this.getApiBase();
@@ -270,69 +271,99 @@ class AdminAuth {
      * Debounced to prevent rapid-fire refreshes from multiple visibility events
      * FIXED: Sets refreshPending immediately so API calls wait during debounce period
      * FIXED: Uses isRecovering flag to suppress error displays during wake recovery
+     * FIXED: Extended absences (>5 min) skip debounce for immediate refresh
      */
     handleVisibilityChange() {
+        const EXTENDED_ABSENCE_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
+
         // Clear any pending debounce timer and reset pending flag
         if (this.visibilityChangeDebounceTimer) {
             clearTimeout(this.visibilityChangeDebounceTimer);
             this.refreshPending = false;
         }
 
+        // Track when tab becomes hidden for extended absence detection
+        if (document.hidden) {
+            this.lastHiddenTimestamp = Date.now();
+            return; // Nothing more to do when tab is hidden
+        }
+
         // Set lastWakeTimestamp IMMEDIATELY and unconditionally when tab becomes visible
         // This allows didJustWakeUp() to detect recent wake even if isAuthenticated() is false
         // due to race condition where API calls fire before visibility change
-        if (!document.hidden) {
-            this.lastWakeTimestamp = Date.now();
-        }
+        this.lastWakeTimestamp = Date.now();
+
+        // Calculate how long the tab was hidden
+        const hiddenDuration = this.lastHiddenTimestamp
+            ? Date.now() - this.lastHiddenTimestamp
+            : 0;
+        const isExtendedAbsence = hiddenDuration > EXTENDED_ABSENCE_THRESHOLD;
 
         // Set refreshPending and isRecovering IMMEDIATELY if refresh will be needed
-        // This signals API calls to wait during the 1-second debounce period
+        // This signals API calls to wait during the debounce period
         // and suppresses error displays until recovery completes
         // NOTE: We still check isAuthenticated() here for the refreshPending flag because
         // the time-based logic (5 min check) requires knowing if we were authenticated
         // The didJustWakeUp() fallback in AdminAPI.js handles the race condition case
-        if (!document.hidden && this.isAuthenticated()) {
+        if (this.isAuthenticated()) {
             const now = new Date();
             const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
 
             if (timeSinceLastRefresh > 5) {
                 this.refreshPending = true;
                 this.isRecovering = true; // Enter recovery mode - suppress error displays
-                console.log(`⏳ Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - entering recovery mode`);
+                console.log(`⏳ Tab visible after ${Math.floor(hiddenDuration / 1000 / 60)} minutes (extended: ${isExtendedAbsence}) - entering recovery mode`);
+
+                // Extended absence: Skip debounce and refresh immediately
+                // This prevents API calls from firing during the 1-second debounce gap
+                if (isExtendedAbsence) {
+                    console.log('🚀 Extended absence detected - refreshing immediately (no debounce)');
+                    this._performVisibilityRefresh();
+                    return;
+                }
             }
         }
 
-        // Debounce visibility changes by 1 second to prevent rapid-fire refreshes
-        this.visibilityChangeDebounceTimer = setTimeout(async () => {
-            try {
-                if (!document.hidden && this.isAuthenticated()) {
-                    // Prevent concurrent refreshes from visibility changes
-                    if (this.isRefreshingToken) {
-                        console.log('⏸️ Visibility change refresh skipped (refresh already in progress)');
-                        return;
-                    }
+        // Short absence: Debounce visibility changes by 1 second to prevent rapid-fire refreshes
+        this.visibilityChangeDebounceTimer = setTimeout(() => {
+            this._performVisibilityRefresh();
+        }, 1000);
+    }
 
-                    // Tab became visible - check if token needs refresh
-                    const now = new Date();
-                    const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
-
-                    // If more than 5 minutes since last refresh, refresh immediately
-                    // BUGFIX: Align threshold with 5-minute auto-refresh interval (was 10, caused 403s)
-                    if (timeSinceLastRefresh > 5) {
-                        // Wait for network before attempting refresh (helps with wake-from-sleep)
-                        await this.waitForNetworkReady(5000);
-
-                        console.log(`🔄 Starting token refresh...`);
-                        await this.refreshToken(true); // Force refresh
-                        console.log('✅ Recovery mode complete');
-                    }
+    /**
+     * Internal method to perform the actual visibility change refresh
+     * Separated to allow both debounced and immediate refresh paths
+     * @private
+     */
+    async _performVisibilityRefresh() {
+        try {
+            if (!document.hidden && this.isAuthenticated()) {
+                // Prevent concurrent refreshes from visibility changes
+                if (this.isRefreshingToken) {
+                    console.log('⏸️ Visibility change refresh skipped (refresh already in progress)');
+                    return;
                 }
-            } finally {
-                // Always clear pending and recovery flags after debounce completes
-                this.refreshPending = false;
-                this.isRecovering = false;
+
+                // Tab became visible - check if token needs refresh
+                const now = new Date();
+                const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
+
+                // If more than 5 minutes since last refresh, refresh immediately
+                // BUGFIX: Align threshold with 5-minute auto-refresh interval (was 10, caused 403s)
+                if (timeSinceLastRefresh > 5) {
+                    // Wait for network before attempting refresh (helps with wake-from-sleep)
+                    await this.waitForNetworkReady(5000);
+
+                    console.log(`🔄 Starting token refresh...`);
+                    await this.refreshToken(true); // Force refresh
+                    console.log('✅ Recovery mode complete');
+                }
             }
-        }, 1000); // 1 second debounce
+        } finally {
+            // Always clear pending and recovery flags after refresh completes
+            this.refreshPending = false;
+            this.isRecovering = false;
+        }
     }
 
     /**
@@ -560,11 +591,28 @@ class AdminAuth {
     /**
      * Check if the page just woke up (became visible recently)
      * Used as a fallback when refreshPending is false due to race conditions
-     * @param {number} thresholdMs - Time window to consider "just woke" (default 3 seconds)
+     * IMPROVED: Uses longer window (10 seconds) for extended absences (>5 min)
+     * @param {number} defaultMs - Default time window to consider "just woke" (default 3 seconds)
      * @returns {boolean} True if page became visible within threshold
      */
-    didJustWakeUp(thresholdMs = 3000) {
-        return this.lastWakeTimestamp && (Date.now() - this.lastWakeTimestamp < thresholdMs);
+    didJustWakeUp(defaultMs = 3000) {
+        if (!this.lastWakeTimestamp) {
+            return false;
+        }
+
+        // Calculate how long the tab was hidden to determine appropriate threshold
+        const EXTENDED_ABSENCE_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
+        const hiddenDuration = this.lastHiddenTimestamp && this.lastWakeTimestamp > this.lastHiddenTimestamp
+            ? this.lastWakeTimestamp - this.lastHiddenTimestamp
+            : 0;
+
+        // Use longer window (10 seconds) for extended absences to ensure
+        // all API calls wait for refresh to complete
+        const windowMs = hiddenDuration > EXTENDED_ABSENCE_THRESHOLD
+            ? 10000  // 10 seconds for extended absences
+            : defaultMs;
+
+        return Date.now() - this.lastWakeTimestamp < windowMs;
     }
 
     /**

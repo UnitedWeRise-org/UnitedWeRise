@@ -342,13 +342,36 @@ class SessionManager {
             }, 'SECURITY: Token rotation attempted with non-existent token');
             throw new Error('Refresh token not found');
         }
-        // Check if this token was already rotated (potential replay attack)
+        // Check if this token was already rotated
+        // IDEMPOTENCY: If already rotated, return the new token instead of throwing
+        // This handles concurrent refresh requests during session resume
         if (oldRefreshToken.revokedAt) {
+            // Find the token that was created during the rotation
+            const existingNewToken = await prisma_1.prisma.refreshToken.findFirst({
+                where: {
+                    userId: oldRefreshToken.userId,
+                    createdAt: { gt: oldRefreshToken.createdAt },
+                    revokedAt: null,
+                    expiresAt: { gt: new Date() }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+            if (existingNewToken) {
+                logger_1.logger.info({
+                    tokenId: oldRefreshToken.id,
+                    userId: oldRefreshToken.userId,
+                    existingNewTokenId: existingNewToken.id,
+                    revokedAt: oldRefreshToken.revokedAt
+                }, 'Token already rotated - returning existing new token (idempotent refresh)');
+                // Return the existing new token - concurrent refresh is idempotent
+                return existingNewToken;
+            }
+            // No valid new token found - this could be a replay attack or expired session
             logger_1.logger.warn({
                 tokenId: oldRefreshToken.id,
                 userId: oldRefreshToken.userId,
                 revokedAt: oldRefreshToken.revokedAt
-            }, 'SECURITY: Token rotation attempted on already-revoked token - possible token theft');
+            }, 'SECURITY: Token rotation attempted on revoked token without valid successor - possible token theft');
             throw new Error('Refresh token already revoked');
         }
         const now = new Date();

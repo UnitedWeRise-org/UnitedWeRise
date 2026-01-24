@@ -302,15 +302,33 @@ class AdminAPI {
             if (response.status === 401) {
                 console.warn('⚠️ Admin API: Received 401 - attempting token refresh...');
 
-                // If this is a retry, don't retry again - session is truly invalid
+                // If this is a retry, verify session before giving up
                 if (retryCount > 0) {
-                    console.error('🔒 401 after retry - session is invalid');
-                    await adminDebugError('AdminAPI', '401 error persists after retry - logging out', {
+                    console.log('🔍 401 after retry - verifying session before logout decision...');
+
+                    // IMPROVEMENT: Verify session with /auth/me before logging out
+                    // This handles race conditions where refresh succeeded but request used stale token
+                    const sessionValid = await this.verifySessionOnce();
+
+                    if (sessionValid) {
+                        console.log('✅ Session still valid despite 401 after retry - retrying once more');
+                        await adminDebugLog('AdminAPI', 'Session verified valid after 401 retry - retrying request', {
+                            url: url,
+                            retryCount: retryCount
+                        });
+
+                        // Retry one more time now that we've confirmed session is valid
+                        return this.call(url, options, retryCount + 1);
+                    }
+
+                    console.error('🔒 401 after retry AND session verification failed - session is invalid');
+                    await adminDebugError('AdminAPI', '401 error persists after retry and session verification - logging out', {
                         url: url,
-                        retryCount: retryCount
+                        retryCount: retryCount,
+                        sessionValid: false
                     });
 
-                    this.triggerLogout('401 persists after token refresh - session invalid');
+                    this.triggerLogout('401 persists after token refresh and session verification - session invalid');
                     return response;
                 }
 
