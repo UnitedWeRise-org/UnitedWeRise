@@ -279,6 +279,226 @@ router.post(
 );
 
 // ========================================
+// IMPORTANT: Literal routes must be defined before /:id routes
+// Express matches routes in order, so /feed, /drafts, /scheduled
+// must come before /:id or they'll be caught as video IDs.
+// ========================================
+
+// ========================================
+// Reels Feed
+// ========================================
+
+/**
+ * @swagger
+ * /api/videos/feed:
+ *   get:
+ *     tags: [Video]
+ *     summary: Get reels feed
+ *     description: Returns a paginated feed of published reels for TikTok-style viewing
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *         description: Number of videos to return
+ *       - in: query
+ *         name: cursor
+ *         schema:
+ *           type: string
+ *         description: Cursor for pagination (video ID)
+ *     responses:
+ *       200:
+ *         description: Reels feed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 videos:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Video'
+ *                 nextCursor:
+ *                   type: string
+ */
+router.get('/feed', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const cursor = req.query.cursor as string | undefined;
+
+    const videos = await prisma.video.findMany({
+      where: {
+        videoType: 'REEL',
+        publishStatus: 'PUBLISHED',
+        isActive: true,
+        encodingStatus: 'READY',
+        moderationStatus: 'APPROVED',
+        deletedAt: null
+      },
+      orderBy: [
+        { publishedAt: 'desc' },
+        { id: 'desc' }
+      ],
+      take: limit + 1, // Fetch one extra to check for more
+      ...(cursor ? {
+        cursor: { id: cursor },
+        skip: 1
+      } : {}),
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatar: true,
+            verified: true
+          }
+        }
+      }
+    });
+
+    const hasMore = videos.length > limit;
+    const feedVideos = hasMore ? videos.slice(0, -1) : videos;
+    const nextCursor = hasMore ? feedVideos[feedVideos.length - 1]?.id : undefined;
+
+    res.json({
+      success: true,
+      videos: feedVideos.map(video => ({
+        id: video.id,
+        hlsManifestUrl: video.hlsManifestUrl,
+        mp4Url: video.mp4Url,
+        thumbnailUrl: video.thumbnailUrl,
+        duration: video.duration,
+        aspectRatio: video.aspectRatio,
+        caption: video.caption,
+        hashtags: video.hashtags,
+        viewCount: video.viewCount,
+        likeCount: video.likeCount,
+        commentCount: video.commentCount,
+        shareCount: video.shareCount,
+        publishedAt: video.publishedAt,
+        user: video.user
+      })),
+      nextCursor
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to get feed');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get feed'
+    });
+  }
+});
+
+// ========================================
+// Draft Management
+// ========================================
+
+/**
+ * @swagger
+ * /api/videos/drafts:
+ *   get:
+ *     tags: [Video]
+ *     summary: Get user's draft videos
+ *     description: Returns videos in DRAFT status for the authenticated user
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Draft videos
+ */
+router.get('/drafts', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const videos = await prisma.video.findMany({
+      where: {
+        userId: req.user?.id,
+        publishStatus: 'DRAFT',
+        deletedAt: null
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        thumbnailUrl: true,
+        duration: true,
+        caption: true,
+        encodingStatus: true,
+        moderationStatus: true,
+        createdAt: true
+      }
+    });
+
+    res.json({
+      success: true,
+      videos
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to get drafts');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get drafts'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/scheduled:
+ *   get:
+ *     tags: [Video]
+ *     summary: Get user's scheduled videos
+ *     description: Returns videos scheduled for future publishing
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Scheduled videos
+ */
+router.get('/scheduled', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const videos = await prisma.video.findMany({
+      where: {
+        userId: req.user?.id,
+        publishStatus: 'SCHEDULED',
+        deletedAt: null
+      },
+      orderBy: { scheduledPublishAt: 'asc' },
+      select: {
+        id: true,
+        thumbnailUrl: true,
+        duration: true,
+        caption: true,
+        scheduledPublishAt: true,
+        encodingStatus: true,
+        moderationStatus: true
+      }
+    });
+
+    res.json({
+      success: true,
+      videos
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to get scheduled videos');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get scheduled videos'
+    });
+  }
+});
+
+// ========================================
+// Parameterized routes (/:id) below
+// These must come AFTER literal routes
+// ========================================
+
+// ========================================
 // Get Video Details
 // ========================================
 
@@ -534,117 +754,6 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // ========================================
-// Reels Feed
-// ========================================
-
-/**
- * @swagger
- * /api/videos/feed:
- *   get:
- *     tags: [Video]
- *     summary: Get reels feed
- *     description: Returns a paginated feed of published reels for TikTok-style viewing
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *           maximum: 50
- *         description: Number of videos to return
- *       - in: query
- *         name: cursor
- *         schema:
- *           type: string
- *         description: Cursor for pagination (video ID)
- *     responses:
- *       200:
- *         description: Reels feed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 videos:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Video'
- *                 nextCursor:
- *                   type: string
- */
-router.get('/feed', async (req, res) => {
-  try {
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-    const cursor = req.query.cursor as string | undefined;
-
-    const videos = await prisma.video.findMany({
-      where: {
-        videoType: 'REEL',
-        publishStatus: 'PUBLISHED',
-        isActive: true,
-        encodingStatus: 'READY',
-        moderationStatus: 'APPROVED',
-        deletedAt: null
-      },
-      orderBy: [
-        { publishedAt: 'desc' },
-        { id: 'desc' }
-      ],
-      take: limit + 1, // Fetch one extra to check for more
-      ...(cursor ? {
-        cursor: { id: cursor },
-        skip: 1
-      } : {}),
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatar: true,
-            verified: true
-          }
-        }
-      }
-    });
-
-    const hasMore = videos.length > limit;
-    const feedVideos = hasMore ? videos.slice(0, -1) : videos;
-    const nextCursor = hasMore ? feedVideos[feedVideos.length - 1]?.id : undefined;
-
-    res.json({
-      success: true,
-      videos: feedVideos.map(video => ({
-        id: video.id,
-        hlsManifestUrl: video.hlsManifestUrl,
-        mp4Url: video.mp4Url,
-        thumbnailUrl: video.thumbnailUrl,
-        duration: video.duration,
-        aspectRatio: video.aspectRatio,
-        caption: video.caption,
-        hashtags: video.hashtags,
-        viewCount: video.viewCount,
-        likeCount: video.likeCount,
-        commentCount: video.commentCount,
-        shareCount: video.shareCount,
-        publishedAt: video.publishedAt,
-        user: video.user
-      })),
-      nextCursor
-    });
-
-  } catch (error) {
-    logger.error({ error }, 'Failed to get feed');
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get feed'
-    });
-  }
-});
-
-// ========================================
 // User's Videos
 // ========================================
 
@@ -763,104 +872,6 @@ router.post('/:id/view', async (req, res) => {
   } catch (error) {
     // Don't fail the request for view tracking errors
     res.json({ success: true });
-  }
-});
-
-// ========================================
-// Draft Management
-// ========================================
-
-/**
- * @swagger
- * /api/videos/drafts:
- *   get:
- *     tags: [Video]
- *     summary: Get user's draft videos
- *     description: Returns videos in DRAFT status for the authenticated user
- *     security:
- *       - cookieAuth: []
- *     responses:
- *       200:
- *         description: Draft videos
- */
-router.get('/drafts', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const videos = await prisma.video.findMany({
-      where: {
-        userId: req.user?.id,
-        publishStatus: 'DRAFT',
-        deletedAt: null
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        thumbnailUrl: true,
-        duration: true,
-        caption: true,
-        encodingStatus: true,
-        moderationStatus: true,
-        createdAt: true
-      }
-    });
-
-    res.json({
-      success: true,
-      videos
-    });
-
-  } catch (error) {
-    logger.error({ error }, 'Failed to get drafts');
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get drafts'
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/videos/scheduled:
- *   get:
- *     tags: [Video]
- *     summary: Get user's scheduled videos
- *     description: Returns videos scheduled for future publishing
- *     security:
- *       - cookieAuth: []
- *     responses:
- *       200:
- *         description: Scheduled videos
- */
-router.get('/scheduled', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const videos = await prisma.video.findMany({
-      where: {
-        userId: req.user?.id,
-        publishStatus: 'SCHEDULED',
-        deletedAt: null
-      },
-      orderBy: { scheduledPublishAt: 'asc' },
-      select: {
-        id: true,
-        thumbnailUrl: true,
-        duration: true,
-        caption: true,
-        scheduledPublishAt: true,
-        encodingStatus: true,
-        moderationStatus: true
-      }
-    });
-
-    res.json({
-      success: true,
-      videos
-    });
-
-  } catch (error) {
-    logger.error({ error }, 'Failed to get scheduled videos');
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get scheduled videos'
-    });
   }
 });
 
