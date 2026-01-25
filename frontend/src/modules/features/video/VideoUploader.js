@@ -341,7 +341,7 @@ export class VideoUploader {
             xhr.addEventListener('error', () => reject(new Error('Network error')));
             xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-            xhr.open('POST', '/api/videos/upload');
+            xhr.open('POST', window.API_CONFIG.url('videos/upload'));
             xhr.withCredentials = true;
             xhr.send(formData);
         });
