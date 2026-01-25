@@ -343,6 +343,13 @@ export class VideoUploader {
 
             xhr.open('POST', window.API_CONFIG.url('videos/upload'));
             xhr.withCredentials = true;
+
+            // Add CSRF token for cross-origin POST request
+            const csrfToken = window.csrfToken || document.cookie.match(/csrf-token(?:_dev)?=([^;]+)/)?.[1];
+            if (csrfToken) {
+                xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+            }
+
             xhr.send(formData);
         });
     }
