@@ -1130,6 +1130,112 @@
 }
 
 /* ========================================
+   Snippet Modal Player (In-Feed Variant)
+   ======================================== */
+
+.snippet-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.snippet-modal-player {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    max-height: 80vh;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.snippet-modal-player video {
+    width: 100%;
+    height: auto;
+    max-height: 80vh;
+    object-fit: contain;
+    display: block;
+}
+
+.snippet-modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.snippet-modal-close:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.snippet-modal-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    color: white;
+}
+
+.snippet-modal-user {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.snippet-modal-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.snippet-modal-username {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.snippet-modal-caption {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin: 0;
+    max-height: 60px;
+    overflow: hidden;
+}
+
+/* Mobile adjustments for snippet modal */
+@media (max-width: 480px) {
+    .snippet-modal-overlay {
+        padding: 1rem;
+    }
+
+    .snippet-modal-player {
+        max-width: 100%;
+        max-height: 85vh;
+    }
+}
+
+/* ========================================
    Snippets Feed Grid
    ======================================== */
 

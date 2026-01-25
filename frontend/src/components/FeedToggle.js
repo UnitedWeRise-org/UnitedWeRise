@@ -1656,63 +1656,84 @@ export class FeedToggle {
 
     /**
      * Open snippet player for a video
+     * Uses a constrained modal instead of fullscreen takeover
      * @param {string} videoId - Video ID
      */
-    async openSnippetPlayer(videoId) {
+    openSnippetPlayer(videoId) {
         const video = this.caches.snippets.find(v => v.id === videoId);
         if (!video) {
             console.error('Video not found in cache:', videoId);
             return;
         }
 
-        try {
-            // Dynamically import the ReelsFeed for fullscreen playback
-            const { ReelsFeed } = await import('../modules/features/video/ReelsFeed.js');
+        // Create modal overlay with constrained player
+        const modal = document.createElement('div');
+        modal.className = 'snippet-modal-overlay';
 
-            // Create modal overlay
-            const modal = document.createElement('div');
-            modal.className = 'reels-modal-overlay';
-            modal.style.cssText = 'position: fixed; inset: 0; z-index: 1100; background: #000;';
-            modal.innerHTML = `
-                <button class="reels-close-btn" style="position: absolute; top: 1rem; right: 1rem; z-index: 1200; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 50%; width: 48px; height: 48px; cursor: pointer; font-size: 1.5rem;">×</button>
-                <div id="reelsPlayerContainer" style="width: 100%; height: 100%;"></div>
-            `;
+        // Build user info HTML
+        const userAvatarUrl = video.user?.avatarUrl || video.user?.avatar;
+        const username = video.user?.displayName || video.user?.username || 'Unknown';
+        const avatarHtml = userAvatarUrl
+            ? `<img class="snippet-modal-avatar" src="${userAvatarUrl}" alt="${username}">`
+            : `<div class="snippet-modal-avatar" style="background: #666; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white;">${username.charAt(0).toUpperCase()}</div>`;
 
-            document.body.appendChild(modal);
+        modal.innerHTML = `
+            <div class="snippet-modal-player">
+                <button class="snippet-modal-close">×</button>
+                <video
+                    src="${video.videoUrl}"
+                    poster="${video.thumbnailUrl || ''}"
+                    playsinline
+                    autoplay
+                    controls
+                ></video>
+                <div class="snippet-modal-info">
+                    <div class="snippet-modal-user">
+                        ${avatarHtml}
+                        <span class="snippet-modal-username">@${username}</span>
+                    </div>
+                    ${video.caption ? `<p class="snippet-modal-caption">${video.caption}</p>` : ''}
+                </div>
+            </div>
+        `;
 
-            // Find index of current video in cache
-            const startIndex = this.caches.snippets.findIndex(v => v.id === videoId);
+        document.body.appendChild(modal);
 
-            // Initialize ReelsFeed with videos starting from clicked one
-            const reelsFeed = new ReelsFeed({
-                container: document.getElementById('reelsPlayerContainer'),
-                videos: this.caches.snippets,
-                startIndex: startIndex >= 0 ? startIndex : 0
-            });
+        const videoEl = modal.querySelector('video');
+        const closeBtn = modal.querySelector('.snippet-modal-close');
 
-            // Close button handler
-            modal.querySelector('.reels-close-btn').addEventListener('click', () => {
-                reelsFeed.destroy?.();
-                modal.remove();
-            });
+        // Close modal function
+        const closeModal = () => {
+            videoEl.pause();
+            modal.remove();
+            document.removeEventListener('keydown', escHandler);
+        };
 
-            // ESC key to close
-            const escHandler = (e) => {
-                if (e.key === 'Escape') {
-                    reelsFeed.destroy?.();
-                    modal.remove();
-                    document.removeEventListener('keydown', escHandler);
-                }
-            };
-            document.addEventListener('keydown', escHandler);
+        // Close button handler
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeModal();
+        });
 
-        } catch (error) {
-            console.error('Failed to open snippet player:', error);
-            // Fallback: open video URL directly
-            if (video.videoUrl) {
-                window.open(video.videoUrl, '_blank');
+        // Click outside player to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
             }
-        }
+        });
+
+        // ESC key to close
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+
+        // Handle video errors
+        videoEl.addEventListener('error', () => {
+            console.error('Failed to load video:', video.videoUrl);
+        });
     }
 
     getCurrentFeed() {
