@@ -25,8 +25,8 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine AS production
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init curl
+# Install dumb-init for proper signal handling and ffmpeg for video processing
+RUN apk add --no-cache dumb-init curl ffmpeg
 
 # Create app directory and user first
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
