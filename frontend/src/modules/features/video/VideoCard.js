@@ -10,6 +10,9 @@
  * @module features/video/VideoCard
  */
 
+/** Inline SVG placeholder for videos without thumbnails - prevents 404 errors */
+const VIDEO_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 16' fill='%231a1a1a'%3E%3Crect width='9' height='16'/%3E%3Cpath d='M3.5 5.5l3 2.5-3 2.5z' fill='white'/%3E%3C/svg%3E";
+
 export class VideoCard {
     /**
      * Create a VideoCard renderer
@@ -38,7 +41,7 @@ export class VideoCard {
             return '';
         }
 
-        const thumbnailUrl = video.thumbnailUrl || '/assets/images/video-placeholder.jpg';
+        const thumbnailUrl = video.thumbnailUrl || VIDEO_PLACEHOLDER;
         const duration = this.formatDuration(video.duration || 0);
         const caption = video.caption || '';
 
@@ -50,7 +53,7 @@ export class VideoCard {
                     <img src="${thumbnailUrl}"
                          alt="${this.escapeHtml(caption)}"
                          loading="lazy"
-                         onerror="this.src='/assets/images/video-placeholder.jpg'">
+                         onerror="this.src='${VIDEO_PLACEHOLDER}'">
                     <div class="video-card__play-overlay">
                         <span class="video-card__play-icon">▶</span>
                     </div>
@@ -155,7 +158,7 @@ export class VideoCard {
      * @returns {string} HTML string for post video display
      */
     renderForPost(video) {
-        const thumbnailUrl = video.thumbnailUrl || '/assets/images/video-placeholder.jpg';
+        const thumbnailUrl = video.thumbnailUrl || VIDEO_PLACEHOLDER;
         const duration = this.formatDuration(video.duration || 0);
 
         return `
@@ -165,7 +168,7 @@ export class VideoCard {
                 <img src="${thumbnailUrl}"
                      alt="Video"
                      loading="lazy"
-                     onerror="this.src='/assets/images/video-placeholder.jpg'">
+                     onerror="this.src='${VIDEO_PLACEHOLDER}'"
                 <div class="video-play-overlay">
                     <span class="play-icon">▶</span>
                 </div>

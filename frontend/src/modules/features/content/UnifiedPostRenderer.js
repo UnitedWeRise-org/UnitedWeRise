@@ -16,6 +16,9 @@
  * @module UnifiedPostRenderer
  */
 
+/** Inline SVG placeholder for videos without thumbnails - prevents 404 errors */
+const VIDEO_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 16' fill='%231a1a1a'%3E%3Crect width='9' height='16'/%3E%3Cpath d='M3.5 5.5l3 2.5-3 2.5z' fill='white'/%3E%3C/svg%3E";
+
 class UnifiedPostRenderer {
     constructor() {
         this.defaultOptions = {
@@ -464,11 +467,11 @@ class UnifiedPostRenderer {
                          data-video-id="${video.id}"
                          data-action="playPostVideo"
                          style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; margin-bottom: 8px;">
-                        <img src="${video.thumbnailUrl || '/assets/images/video-placeholder.jpg'}"
+                        <img src="${video.thumbnailUrl || VIDEO_PLACEHOLDER}"
                              alt="Video"
                              loading="lazy"
                              style="width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover;"
-                             onerror="this.src='/assets/images/video-placeholder.jpg'">
+                             onerror="this.src='${VIDEO_PLACEHOLDER}'"
                         <div class="video-play-overlay" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; background: rgba(0,0,0,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
                             <span class="play-icon">▶</span>
                         </div>
