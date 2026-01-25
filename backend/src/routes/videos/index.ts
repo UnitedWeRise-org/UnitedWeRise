@@ -931,6 +931,29 @@ router.patch('/:id/publish', requireAuth, async (req: AuthRequest, res: Response
       });
     }
 
+    // Auto-simulate encoding for stuck PENDING videos (staging/dev environments)
+    if (video.encodingStatus === 'PENDING') {
+      const videoRecord = await prisma.video.findUnique({
+        where: { id },
+        select: { id: true, originalUrl: true }
+      });
+
+      if (videoRecord?.originalUrl) {
+        logger.info({ videoId: id }, 'Auto-simulating encoding for PENDING video on publish');
+        await videoEncodingService.simulateEncodingForDevelopment(id, videoRecord.originalUrl);
+
+        // Re-fetch to get updated status
+        const refreshed = await prisma.video.findUnique({
+          where: { id },
+          select: { encodingStatus: true, moderationStatus: true }
+        });
+        if (refreshed) {
+          video.encodingStatus = refreshed.encodingStatus;
+          video.moderationStatus = refreshed.moderationStatus;
+        }
+      }
+    }
+
     // Check if video is ready for publishing
     if (video.encodingStatus !== 'READY') {
       return res.status(400).json({

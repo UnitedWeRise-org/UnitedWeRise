@@ -334,7 +334,7 @@ export class VideoPipeline {
     return new Promise((resolve) => {
       const ffmpeg = spawn('ffmpeg', [
         '-i', 'pipe:0',
-        '-ss', '1', // Seek to 1 second
+        '-ss', '0.5', // Seek to 0.5 seconds (earlier for short videos)
         '-vframes', '1', // Extract 1 frame
         '-f', 'image2pipe',
         '-vcodec', 'mjpeg',
@@ -343,14 +343,23 @@ export class VideoPipeline {
       ]);
 
       const chunks: Buffer[] = [];
+      let stderrOutput = '';
 
       ffmpeg.stdout.on('data', (data) => {
         chunks.push(data);
       });
 
+      ffmpeg.stderr.on('data', (data) => {
+        stderrOutput += data.toString();
+      });
+
       ffmpeg.on('close', async (code) => {
         if (code !== 0 || chunks.length === 0) {
-          this.log(requestId, 'THUMBNAIL_GENERATION_FAILED', { videoId, code });
+          this.log(requestId, 'THUMBNAIL_GENERATION_FAILED', {
+            videoId,
+            code,
+            stderr: stderrOutput.slice(-500) // Last 500 chars for diagnostics
+          });
           resolve(undefined);
           return;
         }
@@ -513,7 +522,7 @@ export class VideoPipeline {
       try {
         thumbnailUrl = await Promise.race([
           thumbnailPromise,
-          new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 10000))
+          new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 30000))
         ]);
       } catch {
         thumbnailUrl = undefined;

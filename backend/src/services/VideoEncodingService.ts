@@ -130,10 +130,11 @@ export class VideoEncodingService {
   }
 
   /**
-   * Simulate encoding for development environments
+   * Simulate encoding for development/staging environments
    * Sets video to READY with the original URL as fallback MP4
+   * Made public so publish endpoint can trigger simulation for stuck videos
    */
-  private async simulateEncodingForDevelopment(videoId: string, inputUrl: string): Promise<void> {
+  public async simulateEncodingForDevelopment(videoId: string, inputUrl: string): Promise<void> {
     logger.info({ videoId }, 'Simulating video encoding for development');
 
     // Update to ENCODING status
