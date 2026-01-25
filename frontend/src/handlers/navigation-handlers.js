@@ -364,7 +364,10 @@ class NavigationHandlers {
                 this.closeSnippetsDashboard();
                 break;
             case 'create-snippet':
-                this.openSnippetCreator();
+                {
+                    const context = target.dataset.context || 'dashboard';
+                    this.openSnippetCreator(context);
+                }
                 break;
             case 'playPostVideo':
                 {
@@ -1229,6 +1232,11 @@ class NavigationHandlers {
         if (container) {
             container.style.display = 'flex';
             container.style.flexDirection = 'column';
+
+            // Update sidebar-expanded class based on current sidebar state
+            const sidebar = document.getElementById('sidebar');
+            const isExpanded = sidebar?.classList.contains('expanded');
+            container.classList.toggle('sidebar-expanded', isExpanded);
         }
 
         this.closeAllPanels();
@@ -1270,8 +1278,9 @@ class NavigationHandlers {
     /**
      * Open Snippet Creator Modal
      * Shows modal for creating new video snippets
+     * @param {string} context - Context of creation: 'feed' (auto-publish) or 'dashboard' (draft)
      */
-    async openSnippetCreator() {
+    async openSnippetCreator(context = 'dashboard') {
         if (!window.currentUser) {
             if (typeof window.showToast === 'function') {
                 window.showToast('Please log in to create snippets');
@@ -1279,12 +1288,15 @@ class NavigationHandlers {
             return;
         }
 
+        // Store context for upload behavior
+        this.snippetUploadContext = context;
+
         try {
             const { SnippetCreatorModal } = await import('../modules/features/video/SnippetCreatorModal.js');
             if (!this.snippetCreatorModal) {
                 this.snippetCreatorModal = new SnippetCreatorModal();
             }
-            this.snippetCreatorModal.open();
+            this.snippetCreatorModal.open(context);
         } catch (error) {
             console.error('Failed to load snippet creator:', error);
             if (typeof window.showToast === 'function') {
@@ -1589,8 +1601,9 @@ class NavigationHandlers {
                 const arrow = document.querySelector('.arrow-icon');
 
                 sidebar.classList.toggle('expanded');
+                const isExpanded = sidebar.classList.contains('expanded');
 
-                if (sidebar.classList.contains('expanded')) {
+                if (isExpanded) {
                     arrow.textContent = '◀';
                     toggleSidebar.title = 'Collapse Sidebar';
                 } else {
@@ -1607,6 +1620,12 @@ class NavigationHandlers {
                         civicToggle.classList.remove('open');
                     }
                     this.civicHubOpen = false;
+                }
+
+                // Update sidebar-expanded class on snippets dashboard if visible
+                const snippetsDashboard = document.getElementById('snippetsDashboard');
+                if (snippetsDashboard && snippetsDashboard.style.display !== 'none') {
+                    snippetsDashboard.classList.toggle('sidebar-expanded', isExpanded);
                 }
             });
 
@@ -1654,7 +1673,7 @@ window.openOrganizations = () => navigationHandlers.openOrganizations();
 window.closeOrganizations = () => navigationHandlers.closeOrganizations();
 window.openSnippetsDashboard = () => navigationHandlers.openSnippetsDashboard();
 window.closeSnippetsDashboard = () => navigationHandlers.closeSnippetsDashboard();
-window.openSnippetCreator = () => navigationHandlers.openSnippetCreator();
+window.openSnippetCreator = (context) => navigationHandlers.openSnippetCreator(context);
 window.playPostVideo = (videoId) => navigationHandlers.playPostVideo(videoId);
 window.showDefaultView = () => navigationHandlers.showDefaultView();
 window.resetPanelsToDefault = () => navigationHandlers.resetPanelsToDefault();

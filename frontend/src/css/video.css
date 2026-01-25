@@ -679,11 +679,25 @@
    ======================================== */
 
 .snippets-dashboard {
-    padding: 1rem;
-    max-width: 900px;
-    margin: 0 auto;
+    position: fixed;
+    top: 6vh;
+    left: 3.5vw;
+    right: 26%;
+    height: calc(100vh - 6vh);
     background: var(--bg-primary, #f8f9fa);
-    min-height: 100vh;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: left 0.3s ease;
+    box-sizing: border-box;
+}
+
+.snippets-dashboard.sidebar-expanded {
+    left: 10.5vw;
 }
 
 .snippets-dashboard__header {
@@ -1252,6 +1266,11 @@
 
 @media (max-width: 768px) {
     .snippets-dashboard {
+        top: 10vh;
+        left: 2vw;
+        right: 2vw;
+        width: 96vw;
+        height: 85vh;
         padding: 0.75rem;
     }
 

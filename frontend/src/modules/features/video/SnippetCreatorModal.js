@@ -4,10 +4,15 @@
  * Provides a modal interface that wraps the existing VideoUploader component
  * for creating new video snippets.
  *
+ * Context-aware publishing:
+ * - 'feed' context: Auto-publish video so it appears in feed immediately
+ * - 'dashboard' context: Save as draft for manual publishing later
+ *
  * @module features/video/SnippetCreatorModal
  */
 
 import { VideoUploader } from './VideoUploader.js';
+import { apiCall } from '../../../js/api-compatibility-shim.js';
 
 export class SnippetCreatorModal {
     /**
@@ -17,15 +22,20 @@ export class SnippetCreatorModal {
         this.modal = null;
         this.uploader = null;
         this.isOpen = false;
+        this.context = 'dashboard'; // Default context
     }
 
     /**
      * Open the snippet creator modal
+     * @param {string} context - Context of creation: 'feed' (auto-publish) or 'dashboard' (draft)
      */
-    open() {
+    open(context = 'dashboard') {
         if (this.isOpen) {
             return;
         }
+
+        // Store context for post-upload behavior
+        this.context = context;
 
         // Create modal element
         this.modal = document.createElement('div');
@@ -181,28 +191,75 @@ export class SnippetCreatorModal {
 
     /**
      * Handle successful upload completion
+     * Context-aware behavior:
+     * - 'feed' context: Auto-publish and refresh feed
+     * - 'dashboard' context: Keep as draft and open dashboard
      * @param {Object} video - Uploaded video data
      */
-    handleUploadComplete(video) {
-        console.log('Upload complete:', video);
-
-        // Show success message
-        if (typeof window.showToast === 'function') {
-            window.showToast('Snippet created! You can find it in your Snippets dashboard.');
-        }
+    async handleUploadComplete(video) {
+        console.log('Upload complete:', video, 'Context:', this.context);
 
         // Re-enable close
         this.enableClose();
 
-        // Close modal after brief delay
-        setTimeout(() => {
-            this.close();
+        // Context-aware post-upload behavior
+        if (this.context === 'feed') {
+            // Auto-publish the video for immediate feed visibility
+            try {
+                const publishResponse = await apiCall(`/videos/${video.id}/publish`, {
+                    method: 'PATCH'
+                });
 
-            // Open snippets dashboard to show the new snippet
-            if (typeof window.openSnippetsDashboard === 'function') {
-                window.openSnippetsDashboard();
+                if (publishResponse?.success || publishResponse?.ok) {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('Snippet published! It now appears in the feed.');
+                    }
+
+                    // Close modal
+                    this.close();
+
+                    // Refresh the snippets feed to show the new video
+                    if (window.feedToggle && typeof window.feedToggle.loadFeed === 'function') {
+                        window.feedToggle.clearCache('snippets');
+                        await window.feedToggle.loadFeed('snippets', true);
+                    }
+                } else {
+                    // Publish failed, but video was uploaded as draft
+                    console.warn('Auto-publish failed, video saved as draft:', publishResponse);
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('Snippet saved as draft. You can publish it from the dashboard.');
+                    }
+                    this.close();
+                    if (typeof window.openSnippetsDashboard === 'function') {
+                        window.openSnippetsDashboard();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to auto-publish video:', error);
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Snippet saved as draft. You can publish it from the dashboard.');
+                }
+                this.close();
+                if (typeof window.openSnippetsDashboard === 'function') {
+                    window.openSnippetsDashboard();
+                }
             }
-        }, 1500);
+        } else {
+            // Dashboard context: Keep as draft, navigate to dashboard
+            if (typeof window.showToast === 'function') {
+                window.showToast('Snippet created! You can find it in your Snippets dashboard.');
+            }
+
+            // Close modal after brief delay
+            setTimeout(() => {
+                this.close();
+
+                // Open snippets dashboard to show the new snippet
+                if (typeof window.openSnippetsDashboard === 'function') {
+                    window.openSnippetsDashboard();
+                }
+            }, 1500);
+        }
     }
 
     /**

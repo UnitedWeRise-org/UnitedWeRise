@@ -1116,7 +1116,7 @@ export class FeedToggle {
                     <div style="font-size: 48px; margin-bottom: 16px;">🎬</div>
                     <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No snippets yet</p>
                     <p><small>Be the first to create and share video snippets!</small></p>
-                    <button data-action="create-snippet" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: #4169E1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <button data-action="create-snippet" data-context="feed" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: #4169E1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
                         + Create Snippet
                     </button>
                 `;
