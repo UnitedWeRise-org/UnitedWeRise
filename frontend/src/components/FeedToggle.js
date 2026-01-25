@@ -1598,6 +1598,54 @@ export class FeedToggle {
                 this.openSnippetPlayer(videoId);
             });
         });
+
+        // Preload first few videos for faster playback
+        this.preloadVideos(videos.slice(0, 3));
+    }
+
+    /**
+     * Preload first few seconds of videos for instant playback
+     * Uses HTTP Range requests to fetch only ~1MB per video (4-6 seconds)
+     * instead of downloading entire files (20-50MB each)
+     * @param {Array} videos - Array of video objects to preload
+     */
+    async preloadVideos(videos) {
+        const PRELOAD_BYTES = 1048576; // 1MB (~4-6 seconds of video at typical mobile bitrate)
+        const MAX_VIDEOS = 3;
+
+        const videosToPreload = videos.slice(0, MAX_VIDEOS);
+
+        // Initialize tracking Set if needed
+        if (!this.preloadedUrls) {
+            this.preloadedUrls = new Set();
+        }
+
+        // Preload in parallel with individual error handling
+        await Promise.allSettled(
+            videosToPreload.map(async (video) => {
+                const videoSrc = video.mp4Url || video.originalUrl;
+                if (!videoSrc) return;
+
+                // Skip if already preloaded
+                if (this.preloadedUrls.has(videoSrc)) return;
+
+                try {
+                    const response = await fetch(videoSrc, {
+                        headers: { 'Range': `bytes=0-${PRELOAD_BYTES - 1}` },
+                        signal: AbortSignal.timeout(5000) // 5s timeout
+                    });
+
+                    if (response.status === 206) {
+                        // Force browser to cache the partial content
+                        await response.blob();
+                        this.preloadedUrls.add(videoSrc);
+                    }
+                } catch (error) {
+                    // Silent fail - preloading is best-effort optimization
+                    // Videos will still load normally when user clicks
+                }
+            })
+        );
     }
 
     /**
@@ -1680,11 +1728,14 @@ export class FeedToggle {
             ? `<img class="snippet-modal-avatar" src="${userAvatarUrl}" alt="${username}">`
             : `<div class="snippet-modal-avatar" style="background: #666; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white;">${username.charAt(0).toUpperCase()}</div>`;
 
+        // Build video source URL - prefer mp4Url, then hlsManifestUrl, then originalUrl
+        const videoSrc = video.mp4Url || video.hlsManifestUrl || video.originalUrl || '';
+
         modal.innerHTML = `
             <div class="snippet-modal-player">
                 <button class="snippet-modal-close">×</button>
                 <video
-                    src="${video.videoUrl}"
+                    src="${videoSrc}"
                     poster="${video.thumbnailUrl || ''}"
                     playsinline
                     autoplay
