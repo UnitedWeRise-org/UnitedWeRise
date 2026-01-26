@@ -28,6 +28,7 @@
 
 import { prisma } from '../lib/prisma.js';
 import { logger } from './logger';
+import { videoStorageService } from './VideoStorageService';
 
 // ========================================
 // Types
@@ -131,10 +132,13 @@ export class VideoEncodingService {
 
   /**
    * Simulate encoding for development/staging environments
-   * Sets video to READY with the original URL as fallback MP4
+   * Copies video from private raw container to public encoded container
    * Made public so publish endpoint can trigger simulation for stuck videos
+   *
+   * @param videoId - The video record ID
+   * @param _inputUrl - Original URL (unused, kept for API compatibility)
    */
-  public async simulateEncodingForDevelopment(videoId: string, inputUrl: string): Promise<void> {
+  public async simulateEncodingForDevelopment(videoId: string, _inputUrl: string): Promise<void> {
     logger.info({ videoId }, 'Simulating video encoding for development');
 
     // Update to ENCODING status
@@ -146,24 +150,34 @@ export class VideoEncodingService {
       }
     });
 
-    // Simulate processing delay (1 second)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Get the raw blob name from the video record
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      select: { originalBlobName: true }
+    });
 
-    // Mark as READY with original URL as fallback
+    if (!video?.originalBlobName) {
+      throw new Error(`Video ${videoId} has no originalBlobName`);
+    }
+
+    // Copy video from private raw container to public encoded container
+    const result = await videoStorageService.copyRawToEncoded(videoId, video.originalBlobName);
+
+    // Mark as READY with public URL
     await prisma.video.update({
       where: { id: videoId },
       data: {
         encodingStatus: 'READY',
         encodingCompletedAt: new Date(),
-        // Use original URL as fallback MP4 for playback
-        mp4Url: inputUrl,
+        // Now points to PUBLIC videos-encoded container
+        mp4Url: result.url,
         // Auto-approve moderation in development
         moderationStatus: 'APPROVED',
         audioStatus: 'PASS'
       }
     });
 
-    logger.info({ videoId }, 'Development encoding simulation complete');
+    logger.info({ videoId, mp4Url: result.url }, 'Development encoding simulation complete');
   }
 
   /**

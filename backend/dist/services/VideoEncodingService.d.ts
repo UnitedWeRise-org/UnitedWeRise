@@ -73,10 +73,14 @@ export declare class VideoEncodingService {
      */
     submitEncodingJob(videoId: string, inputUrl: string): Promise<string | null>;
     /**
-     * Simulate encoding for development environments
-     * Sets video to READY with the original URL as fallback MP4
+     * Simulate encoding for development/staging environments
+     * Copies video from private raw container to public encoded container
+     * Made public so publish endpoint can trigger simulation for stuck videos
+     *
+     * @param videoId - The video record ID
+     * @param _inputUrl - Original URL (unused, kept for API compatibility)
      */
-    private simulateEncodingForDevelopment;
+    simulateEncodingForDevelopment(videoId: string, _inputUrl: string): Promise<void>;
     /**
      * Handle encoding job completion (called from webhook)
      *

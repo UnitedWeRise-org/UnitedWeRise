@@ -248,6 +248,46 @@ export class VideoStorageService {
   }
 
   /**
+   * Copy video from raw container to encoded container (for dev stub)
+   * Uses Azure server-side copy for efficiency
+   *
+   * @param videoId - The video record ID
+   * @param rawBlobName - The blob name in the raw container (e.g., "videoId/original.mp4")
+   * @returns VideoUploadResult with the public URL
+   */
+  async copyRawToEncoded(videoId: string, rawBlobName: string): Promise<VideoUploadResult> {
+    await this.ensureInitialized();
+
+    // Source blob in videos-raw
+    const sourceBlob = this.rawContainer!.getBlockBlobClient(rawBlobName);
+
+    // Destination in videos-encoded
+    const destBlobName = `${videoId}/video.mp4`;
+    const destBlob = this.encodedContainer!.getBlockBlobClient(destBlobName);
+
+    // Server-side copy (no download/upload needed)
+    const copyPoller = await destBlob.beginCopyFromURL(sourceBlob.url);
+    await copyPoller.pollUntilDone();
+
+    // Set proper headers on copied blob
+    await destBlob.setHTTPHeaders({
+      blobContentType: 'video/mp4',
+      blobCacheControl: CACHE_CONTROL_MP4,
+      blobContentDisposition: 'inline'
+    });
+
+    const url = `https://${this.accountName}.blob.core.windows.net/${CONTAINER_ENCODED}/${destBlobName}`;
+
+    logger.info({ videoId, destBlobName }, 'Video copied to encoded container');
+
+    return {
+      blobName: destBlobName,
+      url,
+      container: CONTAINER_ENCODED
+    };
+  }
+
+  /**
    * Get public URL for encoded video
    */
   getEncodedVideoUrl(videoId: string, filename: string): string {

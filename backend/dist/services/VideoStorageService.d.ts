@@ -49,6 +49,15 @@ export declare class VideoStorageService {
      */
     deleteVideo(videoId: string): Promise<void>;
     /**
+     * Copy video from raw container to encoded container (for dev stub)
+     * Uses Azure server-side copy for efficiency
+     *
+     * @param videoId - The video record ID
+     * @param rawBlobName - The blob name in the raw container (e.g., "videoId/original.mp4")
+     * @returns VideoUploadResult with the public URL
+     */
+    copyRawToEncoded(videoId: string, rawBlobName: string): Promise<VideoUploadResult>;
+    /**
      * Get public URL for encoded video
      */
     getEncodedVideoUrl(videoId: string, filename: string): string;

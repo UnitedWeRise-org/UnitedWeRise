@@ -30,6 +30,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.videoEncodingService = exports.VideoEncodingService = void 0;
 const prisma_js_1 = require("../lib/prisma.js");
 const logger_1 = require("./logger");
+const VideoStorageService_1 = require("./VideoStorageService");
 // ========================================
 // VideoEncodingService Class (Stub Implementation)
 // ========================================
@@ -100,10 +101,14 @@ class VideoEncodingService {
         return null;
     }
     /**
-     * Simulate encoding for development environments
-     * Sets video to READY with the original URL as fallback MP4
+     * Simulate encoding for development/staging environments
+     * Copies video from private raw container to public encoded container
+     * Made public so publish endpoint can trigger simulation for stuck videos
+     *
+     * @param videoId - The video record ID
+     * @param _inputUrl - Original URL (unused, kept for API compatibility)
      */
-    async simulateEncodingForDevelopment(videoId, inputUrl) {
+    async simulateEncodingForDevelopment(videoId, _inputUrl) {
         logger_1.logger.info({ videoId }, 'Simulating video encoding for development');
         // Update to ENCODING status
         await prisma_js_1.prisma.video.update({
@@ -113,22 +118,30 @@ class VideoEncodingService {
                 encodingStartedAt: new Date()
             }
         });
-        // Simulate processing delay (1 second)
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        // Mark as READY with original URL as fallback
+        // Get the raw blob name from the video record
+        const video = await prisma_js_1.prisma.video.findUnique({
+            where: { id: videoId },
+            select: { originalBlobName: true }
+        });
+        if (!video?.originalBlobName) {
+            throw new Error(`Video ${videoId} has no originalBlobName`);
+        }
+        // Copy video from private raw container to public encoded container
+        const result = await VideoStorageService_1.videoStorageService.copyRawToEncoded(videoId, video.originalBlobName);
+        // Mark as READY with public URL
         await prisma_js_1.prisma.video.update({
             where: { id: videoId },
             data: {
                 encodingStatus: 'READY',
                 encodingCompletedAt: new Date(),
-                // Use original URL as fallback MP4 for playback
-                mp4Url: inputUrl,
+                // Now points to PUBLIC videos-encoded container
+                mp4Url: result.url,
                 // Auto-approve moderation in development
                 moderationStatus: 'APPROVED',
                 audioStatus: 'PASS'
             }
         });
-        logger_1.logger.info({ videoId }, 'Development encoding simulation complete');
+        logger_1.logger.info({ videoId, mp4Url: result.url }, 'Development encoding simulation complete');
     }
     /**
      * Handle encoding job completion (called from webhook)
