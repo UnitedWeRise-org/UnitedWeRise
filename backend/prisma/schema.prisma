@@ -341,6 +341,12 @@ model User {
   /// Organization discussion replies authored by this user
   orgDiscussionReplies    DiscussionReply[]        @relation("DiscussionReplyAuthor")
 
+  // Video interactions
+  /// Comments made by this user on videos
+  videoComments           VideoComment[]
+  /// Video likes by this user
+  videoLikes              VideoLike[]
+
   @@index([username]) /// Fast lookup for @username mentions and profile pages
   @@index([createdAt]) /// Chronological sorting for admin user lists
   @@index([h3Index]) /// Geospatial queries for local content discovery
@@ -3678,6 +3684,12 @@ model Video {
   /// @description Set to true when video is published and moderation approved
   isActive Boolean @default(false)
 
+  // === Relations ===
+  /// Comments on this video
+  comments VideoComment[]
+  /// Likes on this video
+  likes    VideoLike[]
+
   // === Indexes ===
   @@index([userId]) /// Fast lookup of all videos by user
   @@index([postId]) /// Fast lookup of videos attached to post
@@ -3689,6 +3701,69 @@ model Video {
   @@index([createdAt]) /// Chronological sorting
   @@index([publishedAt]) /// Feed sorting by publish time
   @@index([viewCount]) /// Trending/popular videos sorting
+}
+
+/// Video comment - user comments on video snippets
+/// @description Stores comments made on video content (snippets/reels).
+/// Comments can be replied to (parentId for threading).
+model VideoComment {
+  /// Unique comment identifier (UUID format)
+  id String @id @default(uuid())
+
+  /// Video this comment belongs to
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  /// User who made the comment
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Comment text content
+  content String @db.Text
+
+  /// Parent comment ID for replies (null for top-level comments)
+  parentId String?
+  parent   VideoComment?  @relation("VideoCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  VideoComment[] @relation("VideoCommentReplies")
+
+  /// Like count on this comment (denormalized)
+  likeCount Int @default(0)
+
+  /// Moderation status: VISIBLE, HIDDEN, FLAGGED
+  status String @default("VISIBLE")
+
+  /// Comment creation timestamp
+  createdAt DateTime @default(now())
+  /// Last edit timestamp
+  updatedAt DateTime @updatedAt
+
+  @@index([videoId]) /// Fast lookup of comments by video
+  @@index([userId]) /// Fast lookup of comments by user
+  @@index([parentId]) /// Fast lookup of replies
+  @@index([createdAt]) /// Chronological sorting
+}
+
+/// Video like - user likes on video snippets
+/// @description Tracks user likes on videos. One like per user per video.
+model VideoLike {
+  /// Unique like identifier (UUID format)
+  id String @id @default(uuid())
+
+  /// Video that was liked
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  /// User who liked the video
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Like creation timestamp
+  createdAt DateTime @default(now())
+
+  /// One like per user per video
+  @@unique([videoId, userId])
+  @@index([videoId]) /// Fast lookup of likes by video
+  @@index([userId]) /// Fast lookup of likes by user
 }
 
 /// Saved post record (user bookmarks)

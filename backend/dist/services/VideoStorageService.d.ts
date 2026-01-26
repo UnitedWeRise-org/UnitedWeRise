@@ -22,6 +22,7 @@ export interface VideoStorageConfig {
 export declare class VideoStorageService {
     private blobServiceClient;
     private accountName;
+    private accountKey;
     private cdnEndpoint?;
     private initialized;
     private rawContainer?;
@@ -48,6 +49,13 @@ export declare class VideoStorageService {
      * Delete all files associated with a video
      */
     deleteVideo(videoId: string): Promise<void>;
+    /**
+     * Generate a SAS URL for a blob in the raw container (for server-side copy)
+     * @param blobName - The blob name in the raw container
+     * @param expiresInMinutes - How long the SAS should be valid (default 15 minutes)
+     * @returns SAS URL for the blob
+     */
+    generateRawBlobSasUrl(blobName: string, expiresInMinutes?: number): string;
     /**
      * Copy video from raw container to encoded container (for dev stub)
      * Uses Azure server-side copy for efficiency

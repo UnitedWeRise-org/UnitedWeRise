@@ -16,10 +16,11 @@
 import express, { Response } from 'express';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-import { requireAuth, requireStagingAuth, AuthRequest } from '../../middleware/auth';
+import { requireAuth, requireStagingAuth, requireAdmin, AuthRequest } from '../../middleware/auth';
 import { videoPipeline } from '../../services/VideoPipeline';
 import { videoStorageService } from '../../services/VideoStorageService';
 import { videoEncodingService } from '../../services/VideoEncodingService';
+import { videoEncodingQueue } from '../../queues/videoEncodingQueue';
 import { prisma } from '../../lib/prisma.js';
 import { logger } from '../../services/logger';
 
@@ -1175,6 +1176,955 @@ router.patch('/:id/unschedule', requireAuth, async (req: AuthRequest, res: Respo
       success: false,
       error: 'Failed to unschedule video'
     });
+  }
+});
+
+// ========================================
+// Admin: Reprocess Video
+// ========================================
+
+/**
+ * @swagger
+ * /api/videos/{id}/reprocess:
+ *   post:
+ *     tags: [Video]
+ *     summary: Reprocess a stuck video (Admin)
+ *     description: |
+ *       Re-runs the encoding simulation for videos stuck in PENDING status.
+ *       This copies the video from the private raw container to the public
+ *       encoded container and marks it as READY.
+ *
+ *       Use this to fix videos that failed encoding or were uploaded before
+ *       the encoding pipeline was properly configured.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Video ID
+ *     responses:
+ *       200:
+ *         description: Video reprocessed successfully
+ *       400:
+ *         description: Video cannot be reprocessed
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Video not found
+ */
+router.post('/:id/reprocess', requireStagingAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const video = await prisma.video.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        originalUrl: true,
+        originalBlobName: true,
+        encodingStatus: true,
+        publishStatus: true
+      }
+    });
+
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        error: 'Video not found'
+      });
+    }
+
+    if (!video.originalBlobName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Video has no original blob name - cannot reprocess'
+      });
+    }
+
+    // Log the reprocess action
+    logger.info({
+      videoId: id,
+      adminId: req.user?.id,
+      adminUsername: req.user?.username,
+      previousStatus: video.encodingStatus
+    }, 'Admin initiated video reprocess');
+
+    // Run encoding simulation (copies from private to public container)
+    await videoEncodingService.simulateEncodingForDevelopment(id, video.originalUrl || '');
+
+    // Fetch updated video state
+    const updatedVideo = await prisma.video.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        encodingStatus: true,
+        moderationStatus: true,
+        mp4Url: true,
+        hlsManifestUrl: true,
+        publishStatus: true
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Video reprocessed successfully',
+      video: updatedVideo
+    });
+
+  } catch (error: any) {
+    logger.error({ error }, 'Failed to reprocess video');
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to reprocess video'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/admin/list:
+ *   get:
+ *     tags: [Video]
+ *     summary: List all videos with filters (Admin)
+ *     description: Returns all videos with optional status filters for admin review
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: encodingStatus
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, ENCODING, READY, FAILED]
+ *         description: Filter by encoding status
+ *       - in: query
+ *         name: moderationStatus
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, APPROVED, REJECTED]
+ *         description: Filter by moderation status
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: cursor
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of videos
+ */
+router.get('/admin/list', requireStagingAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const cursor = req.query.cursor as string | undefined;
+    const encodingStatus = req.query.encodingStatus as string | undefined;
+    const moderationStatus = req.query.moderationStatus as string | undefined;
+
+    const where: any = { deletedAt: null };
+
+    if (encodingStatus) {
+      where.encodingStatus = encodingStatus;
+    }
+    if (moderationStatus) {
+      where.moderationStatus = moderationStatus;
+    }
+
+    const videos = await prisma.video.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(cursor ? {
+        cursor: { id: cursor },
+        skip: 1
+      } : {}),
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true
+          }
+        }
+      }
+    });
+
+    const hasMore = videos.length > limit;
+    const adminVideos = hasMore ? videos.slice(0, -1) : videos;
+    const nextCursor = hasMore ? adminVideos[adminVideos.length - 1]?.id : undefined;
+
+    res.json({
+      success: true,
+      videos: adminVideos.map(v => ({
+        id: v.id,
+        thumbnailUrl: v.thumbnailUrl,
+        mp4Url: v.mp4Url,
+        duration: v.duration,
+        caption: v.caption,
+        encodingStatus: v.encodingStatus,
+        moderationStatus: v.moderationStatus,
+        publishStatus: v.publishStatus,
+        createdAt: v.createdAt,
+        user: v.user
+      })),
+      nextCursor
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to list admin videos');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to list videos'
+    });
+  }
+});
+
+// ========================================
+// Admin: Video Moderation Queue
+// ========================================
+
+/**
+ * @swagger
+ * /api/videos/admin/moderation-queue:
+ *   get:
+ *     tags: [Video]
+ *     summary: Get videos pending moderation (Admin)
+ *     security:
+ *       - cookieAuth: []
+ */
+router.get('/admin/moderation-queue', requireStagingAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const cursor = req.query.cursor as string | undefined;
+
+    const videos = await prisma.video.findMany({
+      where: {
+        moderationStatus: 'PENDING',
+        encodingStatus: 'READY', // Only videos that finished encoding
+        deletedAt: null
+      },
+      orderBy: { createdAt: 'asc' }, // Oldest first
+      take: limit + 1,
+      ...(cursor ? {
+        cursor: { id: cursor },
+        skip: 1
+      } : {}),
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true
+          }
+        }
+      }
+    });
+
+    const hasMore = videos.length > limit;
+    const queueVideos = hasMore ? videos.slice(0, -1) : videos;
+    const nextCursor = hasMore ? queueVideos[queueVideos.length - 1]?.id : undefined;
+
+    res.json({
+      success: true,
+      videos: queueVideos.map(v => ({
+        id: v.id,
+        thumbnailUrl: v.thumbnailUrl,
+        mp4Url: v.mp4Url,
+        duration: v.duration,
+        caption: v.caption,
+        createdAt: v.createdAt,
+        user: v.user
+      })),
+      nextCursor,
+      totalPending: await prisma.video.count({
+        where: { moderationStatus: 'PENDING', encodingStatus: 'READY', deletedAt: null }
+      })
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to get moderation queue');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get moderation queue'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/admin/{id}/approve:
+ *   post:
+ *     tags: [Video]
+ *     summary: Approve a video (Admin)
+ *     security:
+ *       - cookieAuth: []
+ */
+router.post('/admin/:id/approve', requireStagingAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const video = await prisma.video.findUnique({
+      where: { id },
+      select: { id: true, moderationStatus: true }
+    });
+
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        error: 'Video not found'
+      });
+    }
+
+    await prisma.video.update({
+      where: { id },
+      data: {
+        moderationStatus: 'APPROVED',
+        moderationReason: null
+      }
+    });
+
+    logger.info({
+      videoId: id,
+      adminId: req.user?.id,
+      adminUsername: req.user?.username,
+      previousStatus: video.moderationStatus
+    }, 'Admin approved video');
+
+    res.json({
+      success: true,
+      message: 'Video approved'
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to approve video');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to approve video'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/admin/{id}/reject:
+ *   post:
+ *     tags: [Video]
+ *     summary: Reject a video (Admin)
+ *     security:
+ *       - cookieAuth: []
+ */
+router.post('/admin/:id/reject', requireStagingAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rejection reason is required'
+      });
+    }
+
+    const video = await prisma.video.findUnique({
+      where: { id },
+      select: { id: true, moderationStatus: true }
+    });
+
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        error: 'Video not found'
+      });
+    }
+
+    await prisma.video.update({
+      where: { id },
+      data: {
+        moderationStatus: 'REJECTED',
+        moderationReason: reason,
+        isActive: false
+      }
+    });
+
+    logger.info({
+      videoId: id,
+      adminId: req.user?.id,
+      adminUsername: req.user?.username,
+      reason
+    }, 'Admin rejected video');
+
+    res.json({
+      success: true,
+      message: 'Video rejected'
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to reject video');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reject video'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/admin/stats:
+ *   get:
+ *     tags: [Video]
+ *     summary: Get video statistics (Admin)
+ *     security:
+ *       - cookieAuth: []
+ */
+router.get('/admin/stats', requireStagingAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const [
+      totalVideos,
+      pendingEncoding,
+      pendingModeration,
+      published,
+      failedEncoding,
+      rejected,
+      totalViews,
+      totalLikes
+    ] = await Promise.all([
+      prisma.video.count({ where: { deletedAt: null } }),
+      prisma.video.count({ where: { encodingStatus: 'PENDING', deletedAt: null } }),
+      prisma.video.count({ where: { moderationStatus: 'PENDING', encodingStatus: 'READY', deletedAt: null } }),
+      prisma.video.count({ where: { publishStatus: 'PUBLISHED', deletedAt: null } }),
+      prisma.video.count({ where: { encodingStatus: 'FAILED', deletedAt: null } }),
+      prisma.video.count({ where: { moderationStatus: 'REJECTED', deletedAt: null } }),
+      prisma.video.aggregate({ _sum: { viewCount: true }, where: { deletedAt: null } }),
+      prisma.video.aggregate({ _sum: { likeCount: true }, where: { deletedAt: null } })
+    ]);
+
+    // Get encoding queue stats
+    const queueStats = videoEncodingQueue.getStats();
+
+    res.json({
+      success: true,
+      stats: {
+        totalVideos,
+        pendingEncoding,
+        pendingModeration,
+        published,
+        failedEncoding,
+        rejected,
+        totalViews: totalViews._sum.viewCount || 0,
+        totalLikes: totalLikes._sum.likeCount || 0,
+        encodingQueue: queueStats
+      }
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to get video stats');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get video stats'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/admin/{id}/delete:
+ *   delete:
+ *     tags: [Video]
+ *     summary: Hard delete a video (Admin)
+ *     description: Permanently deletes a video and its storage blobs
+ *     security:
+ *       - cookieAuth: []
+ */
+router.delete('/admin/:id/delete', requireStagingAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const video = await prisma.video.findUnique({
+      where: { id },
+      select: { id: true, userId: true, originalBlobName: true }
+    });
+
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        error: 'Video not found'
+      });
+    }
+
+    // Hard delete from database
+    await prisma.video.delete({
+      where: { id }
+    });
+
+    // Delete storage blobs
+    videoStorageService.deleteVideo(id).catch((error) => {
+      logger.error({ error, videoId: id }, 'Failed to delete video storage');
+    });
+
+    logger.info({
+      videoId: id,
+      adminId: req.user?.id,
+      adminUsername: req.user?.username
+    }, 'Admin hard deleted video');
+
+    res.json({
+      success: true,
+      message: 'Video permanently deleted'
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to delete video');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete video'
+    });
+  }
+});
+
+// ========================================
+// Video Interactions: Likes
+// ========================================
+
+/**
+ * @swagger
+ * /api/videos/{id}/like:
+ *   post:
+ *     tags: [Video]
+ *     summary: Like a video
+ *     description: Adds a like to a video. If already liked, returns current state.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Like recorded
+ */
+router.post('/:id/like', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id!;
+
+    // Check video exists
+    const video = await prisma.video.findUnique({
+      where: { id },
+      select: { id: true, isActive: true }
+    });
+
+    if (!video || !video.isActive) {
+      return res.status(404).json({
+        success: false,
+        error: 'Video not found'
+      });
+    }
+
+    // Upsert like (create if not exists)
+    await prisma.videoLike.upsert({
+      where: {
+        videoId_userId: { videoId: id, userId }
+      },
+      create: { videoId: id, userId },
+      update: {} // No-op if exists
+    });
+
+    // Update denormalized count
+    const likeCount = await prisma.videoLike.count({
+      where: { videoId: id }
+    });
+
+    await prisma.video.update({
+      where: { id },
+      data: { likeCount }
+    });
+
+    res.json({
+      success: true,
+      liked: true,
+      likeCount
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to like video');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to like video'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/{id}/unlike:
+ *   post:
+ *     tags: [Video]
+ *     summary: Remove like from a video
+ *     security:
+ *       - cookieAuth: []
+ */
+router.post('/:id/unlike', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id!;
+
+    // Delete like if exists
+    await prisma.videoLike.deleteMany({
+      where: { videoId: id, userId }
+    });
+
+    // Update denormalized count
+    const likeCount = await prisma.videoLike.count({
+      where: { videoId: id }
+    });
+
+    await prisma.video.update({
+      where: { id },
+      data: { likeCount }
+    });
+
+    res.json({
+      success: true,
+      liked: false,
+      likeCount
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to unlike video');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to unlike video'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/{id}/like-status:
+ *   get:
+ *     tags: [Video]
+ *     summary: Check if current user liked a video
+ *     security:
+ *       - cookieAuth: []
+ */
+router.get('/:id/like-status', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id!;
+
+    const like = await prisma.videoLike.findUnique({
+      where: {
+        videoId_userId: { videoId: id, userId }
+      }
+    });
+
+    res.json({
+      success: true,
+      liked: !!like
+    });
+
+  } catch (error) {
+    res.json({
+      success: true,
+      liked: false
+    });
+  }
+});
+
+// ========================================
+// Video Interactions: Comments
+// ========================================
+
+/**
+ * @swagger
+ * /api/videos/{id}/comments:
+ *   get:
+ *     tags: [Video]
+ *     summary: Get comments on a video
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: cursor
+ *         schema:
+ *           type: string
+ */
+router.get('/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const cursor = req.query.cursor as string | undefined;
+
+    const comments = await prisma.videoComment.findMany({
+      where: {
+        videoId: id,
+        parentId: null, // Only top-level comments
+        status: 'VISIBLE'
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(cursor ? {
+        cursor: { id: cursor },
+        skip: 1
+      } : {}),
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatar: true,
+            verified: true
+          }
+        },
+        _count: {
+          select: { replies: true }
+        }
+      }
+    });
+
+    const hasMore = comments.length > limit;
+    const resultComments = hasMore ? comments.slice(0, -1) : comments;
+    const nextCursor = hasMore ? resultComments[resultComments.length - 1]?.id : undefined;
+
+    res.json({
+      success: true,
+      comments: resultComments.map(c => ({
+        id: c.id,
+        content: c.content,
+        likeCount: c.likeCount,
+        replyCount: c._count.replies,
+        createdAt: c.createdAt,
+        user: c.user
+      })),
+      nextCursor
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to get comments');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get comments'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/{id}/comments:
+ *   post:
+ *     tags: [Video]
+ *     summary: Add a comment to a video
+ *     security:
+ *       - cookieAuth: []
+ */
+router.post('/:id/comments', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { content, parentId } = req.body;
+    const userId = req.user?.id!;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Comment content is required'
+      });
+    }
+
+    if (content.length > 2200) {
+      return res.status(400).json({
+        success: false,
+        error: 'Comment too long (max 2200 characters)'
+      });
+    }
+
+    // Verify video exists and is active
+    const video = await prisma.video.findUnique({
+      where: { id },
+      select: { id: true, isActive: true }
+    });
+
+    if (!video || !video.isActive) {
+      return res.status(404).json({
+        success: false,
+        error: 'Video not found'
+      });
+    }
+
+    // If reply, verify parent exists
+    if (parentId) {
+      const parent = await prisma.videoComment.findUnique({
+        where: { id: parentId },
+        select: { id: true, videoId: true }
+      });
+
+      if (!parent || parent.videoId !== id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Parent comment not found'
+        });
+      }
+    }
+
+    // Create comment
+    const comment = await prisma.videoComment.create({
+      data: {
+        videoId: id,
+        userId,
+        content: content.trim(),
+        parentId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatar: true,
+            verified: true
+          }
+        }
+      }
+    });
+
+    // Update denormalized count
+    const commentCount = await prisma.videoComment.count({
+      where: { videoId: id, status: 'VISIBLE' }
+    });
+
+    await prisma.video.update({
+      where: { id },
+      data: { commentCount }
+    });
+
+    res.status(201).json({
+      success: true,
+      comment: {
+        id: comment.id,
+        content: comment.content,
+        likeCount: 0,
+        replyCount: 0,
+        createdAt: comment.createdAt,
+        user: comment.user
+      },
+      commentCount
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to add comment');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add comment'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/videos/{videoId}/comments/{commentId}:
+ *   delete:
+ *     tags: [Video]
+ *     summary: Delete a comment
+ *     security:
+ *       - cookieAuth: []
+ */
+router.delete('/:videoId/comments/:commentId', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { videoId, commentId } = req.params;
+    const userId = req.user?.id!;
+
+    const comment = await prisma.videoComment.findUnique({
+      where: { id: commentId },
+      select: { userId: true, videoId: true }
+    });
+
+    if (!comment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Comment not found'
+      });
+    }
+
+    if (comment.userId !== userId && !req.user?.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to delete this comment'
+      });
+    }
+
+    // Soft delete by hiding
+    await prisma.videoComment.update({
+      where: { id: commentId },
+      data: { status: 'HIDDEN' }
+    });
+
+    // Update denormalized count
+    const commentCount = await prisma.videoComment.count({
+      where: { videoId, status: 'VISIBLE' }
+    });
+
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { commentCount }
+    });
+
+    res.json({
+      success: true,
+      commentCount
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to delete comment');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete comment'
+    });
+  }
+});
+
+// ========================================
+// Video Interactions: Shares
+// ========================================
+
+/**
+ * @swagger
+ * /api/videos/{id}/share:
+ *   post:
+ *     tags: [Video]
+ *     summary: Record a video share
+ *     description: Increments share count for analytics
+ */
+router.post('/:id/share', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Increment share count atomically
+    await prisma.video.update({
+      where: { id },
+      data: {
+        shareCount: { increment: 1 }
+      }
+    });
+
+    res.json({ success: true });
+
+  } catch (error) {
+    // Don't fail for share tracking errors
+    res.json({ success: true });
   }
 });
 

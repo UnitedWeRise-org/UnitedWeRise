@@ -65,6 +65,7 @@ const mediaServices_1 = __importDefault(require("./routes/webhooks/mediaServices
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
 const analyticsCleanup_1 = __importDefault(require("./jobs/analyticsCleanup"));
 const scheduledVideoPublishJob_1 = __importDefault(require("./jobs/scheduledVideoPublishJob"));
+const videoEncodingWorker_1 = require("./workers/videoEncodingWorker");
 const rateLimiting_1 = require("./middleware/rateLimiting");
 const errorHandler_1 = require("./middleware/errorHandler");
 const swagger_1 = require("./swagger");
@@ -179,7 +180,7 @@ app.use((0, cors_1.default)({
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'X-TOTP-Verified', 'X-TOTP-Token', 'X-Recent-Auth', 'X-Dismissal-Token', 'X-CSRF-Token']
 }));
 // Basic middleware - Apply body parsing only for appropriate content types
@@ -421,6 +422,10 @@ const gracefulShutdown = async () => {
     // Stop cron jobs
     analyticsCleanup_1.default.stop();
     scheduledVideoPublishJob_1.default.stop();
+    // Stop video encoding worker
+    videoEncodingWorker_1.videoEncodingWorker.stop().catch((error) => {
+        logger_2.logger.error({ error }, 'Error stopping video encoding worker');
+    });
     // Close HTTP server
     httpServer.close(() => {
         logger_2.logger.info('HTTP server closed');
@@ -537,6 +542,10 @@ async function startServer() {
         // Start cron jobs
         analyticsCleanup_1.default.start();
         scheduledVideoPublishJob_1.default.start();
+        // Start video encoding worker
+        videoEncodingWorker_1.videoEncodingWorker.start().catch((error) => {
+            logger_2.logger.error({ error }, 'Failed to start video encoding worker');
+        });
         // Start server only after all services are ready
         httpServer.listen(PORT, () => {
             logger_2.logger.info({ port: PORT }, 'Server running');

@@ -2,23 +2,14 @@
  * VideoEncodingService
  *
  * Abstraction layer for video encoding operations.
- * Designed for portability to Azure Media Services, FFmpeg, or other solutions.
+ * Now integrated with FFmpeg-based encoding pipeline.
  *
- * CURRENT STATUS: Stub implementation
- * - In development mode: Auto-marks videos as READY for testing
- * - In production: Videos remain in PENDING status until Azure Media Services
- *   SDK is installed and configured
+ * Modes:
+ * 1. Queue Mode (production): Jobs are queued and processed by worker
+ * 2. Immediate Mode (development): Videos are encoded immediately
+ * 3. Fallback Mode: Copy raw to public container if FFmpeg unavailable
  *
- * TO ENABLE FULL AZURE MEDIA SERVICES:
- * 1. Install: npm install @azure/identity @azure/arm-mediaservices
- * 2. Configure environment variables:
- *    - AZURE_MEDIA_SERVICES_SUBSCRIPTION_ID
- *    - AZURE_MEDIA_SERVICES_RESOURCE_GROUP
- *    - AZURE_MEDIA_SERVICES_ACCOUNT_NAME
- * 3. Replace this stub implementation with full Azure SDK integration
- *
- * Planned Encoding Tiers:
- * - 1080p @ 4.5 Mbps
+ * Encoding Tiers:
  * - 720p @ 2.5 Mbps
  * - 480p @ 1.2 Mbps
  * - 360p @ 0.6 Mbps
@@ -50,26 +41,25 @@ export interface EncodingConfig {
 export declare class VideoEncodingService {
     private config;
     private initialized;
-    private sdkAvailable;
+    private queueEnabled;
     /**
      * Initialize the encoding service
-     * Currently checks for configuration but SDK support is stubbed
      */
     initialize(): Promise<void>;
     /**
      * Check if encoding service is available
-     * Returns false in stub mode
+     * Returns true since we always have at least the fallback
      */
     isAvailable(): boolean;
     /**
      * Submit a video for encoding
      *
-     * In development: Simulates encoding by auto-marking as READY
-     * In production: Leaves video in PENDING status
+     * Queue mode: Adds to encoding queue for background processing
+     * Immediate mode: Processes immediately (development)
      *
      * @param videoId - The video record ID
      * @param inputUrl - URL to the raw video in blob storage
-     * @returns Job name for tracking, or null if encoding not available
+     * @returns Job name for tracking
      */
     submitEncodingJob(videoId: string, inputUrl: string): Promise<string | null>;
     /**

@@ -59,6 +59,7 @@ import mediaServicesWebhook from './routes/webhooks/mediaServices';
 import WebSocketService from './services/WebSocketService';
 import analyticsCleanupJob from './jobs/analyticsCleanup';
 import scheduledVideoPublishJob from './jobs/scheduledVideoPublishJob';
+import { videoEncodingWorker } from './workers/videoEncodingWorker';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
 import { setupSwagger } from './swagger';
@@ -465,6 +466,11 @@ const gracefulShutdown = async () => {
   analyticsCleanupJob.stop();
   scheduledVideoPublishJob.stop();
 
+  // Stop video encoding worker
+  videoEncodingWorker.stop().catch((error) => {
+    pinoLogger.error({ error }, 'Error stopping video encoding worker');
+  });
+
   // Close HTTP server
   httpServer.close(() => {
     pinoLogger.info('HTTP server closed');
@@ -597,6 +603,11 @@ async function startServer() {
     // Start cron jobs
     analyticsCleanupJob.start();
     scheduledVideoPublishJob.start();
+
+    // Start video encoding worker
+    videoEncodingWorker.start().catch((error) => {
+      pinoLogger.error({ error }, 'Failed to start video encoding worker');
+    });
 
     // Start server only after all services are ready
     httpServer.listen(PORT, () => {

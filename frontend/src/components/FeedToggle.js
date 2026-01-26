@@ -1728,14 +1728,10 @@ export class FeedToggle {
             ? `<img class="snippet-modal-avatar" src="${userAvatarUrl}" alt="${username}">`
             : `<div class="snippet-modal-avatar" style="background: #666; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white;">${username.charAt(0).toUpperCase()}</div>`;
 
-        // Build video source URL - prefer mp4Url, then hlsManifestUrl, then originalUrl
-        const videoSrc = video.mp4Url || video.hlsManifestUrl || video.originalUrl || '';
-
         modal.innerHTML = `
             <div class="snippet-modal-player">
                 <button class="snippet-modal-close">×</button>
                 <video
-                    src="${videoSrc}"
                     poster="${video.thumbnailUrl || ''}"
                     playsinline
                     autoplay
@@ -1755,10 +1751,19 @@ export class FeedToggle {
 
         const videoEl = modal.querySelector('video');
         const closeBtn = modal.querySelector('.snippet-modal-close');
+        let hlsInstance = null;
+
+        // Setup video source with HLS.js support
+        this.setupVideoSource(videoEl, video).then(hls => {
+            hlsInstance = hls;
+        });
 
         // Close modal function
         const closeModal = () => {
             videoEl.pause();
+            if (hlsInstance) {
+                hlsInstance.destroy();
+            }
             modal.remove();
             document.removeEventListener('keydown', escHandler);
         };
@@ -1786,8 +1791,68 @@ export class FeedToggle {
 
         // Handle video errors
         videoEl.addEventListener('error', () => {
-            console.error('Failed to load video:', video.videoUrl);
+            console.error('Failed to load video:', video.mp4Url || video.hlsManifestUrl);
         });
+    }
+
+    /**
+     * Setup video source with HLS.js for adaptive streaming
+     * Falls back to MP4 or native HLS support
+     * @param {HTMLVideoElement} videoEl - Video element
+     * @param {Object} video - Video data object
+     * @returns {Promise<Hls|null>} HLS instance if created
+     */
+    async setupVideoSource(videoEl, video) {
+        const hlsUrl = video.hlsManifestUrl;
+        const mp4Url = video.mp4Url;
+
+        // Check if HLS.js is available and we have an HLS URL
+        if (hlsUrl && typeof Hls !== 'undefined' && Hls.isSupported()) {
+            console.log('Using HLS.js for adaptive streaming:', hlsUrl);
+            const hls = new Hls({
+                startLevel: -1, // Auto quality selection
+                capLevelToPlayerSize: true
+            });
+
+            hls.loadSource(hlsUrl);
+            hls.attachMedia(videoEl);
+
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    console.error('HLS.js fatal error:', data.type);
+                    // Fallback to MP4 if HLS fails
+                    if (mp4Url) {
+                        console.log('Falling back to MP4:', mp4Url);
+                        videoEl.src = mp4Url;
+                        videoEl.play().catch(() => {});
+                    }
+                }
+            });
+
+            return hls;
+        }
+
+        // Safari native HLS support
+        if (hlsUrl && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+            console.log('Using native HLS support:', hlsUrl);
+            videoEl.src = hlsUrl;
+            return null;
+        }
+
+        // Fallback to MP4
+        if (mp4Url) {
+            console.log('Using MP4 fallback:', mp4Url);
+            videoEl.src = mp4Url;
+            return null;
+        }
+
+        // Last resort: try original URL
+        if (video.originalUrl) {
+            console.log('Using original URL:', video.originalUrl);
+            videoEl.src = video.originalUrl;
+        }
+
+        return null;
     }
 
     getCurrentFeed() {

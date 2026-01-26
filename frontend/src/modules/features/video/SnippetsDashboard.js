@@ -365,7 +365,19 @@ export class SnippetsDashboard {
                 if (typeof window.showToast === 'function') {
                     window.showToast('Snippet published successfully!');
                 }
-                await this.loadTab(this.currentTab);
+
+                // Remove the card from current view with animation
+                const card = document.querySelector(`[data-video-id="${videoId}"]`)?.closest('.snippet-card');
+                if (card) {
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => card.remove(), 300);
+                }
+
+                // Clear cache so next tab load gets fresh data
+                this.snippets.drafts = null;
+                this.snippets.published = null;
             } else {
                 throw new Error(response?.error || 'Failed to publish');
             }
@@ -652,10 +664,13 @@ export class SnippetsDashboard {
 
             document.body.appendChild(modal);
 
-            // Initialize player
+            // Initialize player with correct parameters
             const player = new VideoPlayer({
                 container: document.getElementById('snippetPlayerContainer'),
-                video: snippet,
+                hlsUrl: snippet.hlsManifestUrl,
+                mp4Url: snippet.mp4Url || snippet.originalUrl,
+                thumbnailUrl: snippet.thumbnailUrl,
+                aspectRatio: snippet.aspectRatio,
                 autoplay: true
             });
 

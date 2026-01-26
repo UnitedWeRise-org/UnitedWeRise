@@ -2266,6 +2266,75 @@ model MOTDLog {
 
 ---
 
+## Video (Snippets) Models
+
+### Video
+
+Short-form video content (TikTok-style reels).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String (UUID) | Primary key |
+| userId | String | Creator's user ID |
+| postId | String? | Post attachment (null for standalone reels) |
+| videoType | String | REEL or POST_ATTACHMENT |
+| originalUrl | String | Raw video blob URL |
+| originalBlobName | String | Blob storage identifier |
+| hlsManifestUrl | String? | HLS manifest for adaptive streaming |
+| mp4Url | String? | MP4 fallback URL |
+| thumbnailUrl | String? | Poster image URL |
+| duration | Float | Duration in seconds (max 180) |
+| width/height | Int | Video dimensions |
+| aspectRatio | String | VERTICAL_9_16, HORIZONTAL_16_9, etc. |
+| encodingStatus | String | PENDING, ENCODING, READY, FAILED |
+| moderationStatus | String | PENDING, APPROVED, REJECTED |
+| publishStatus | String | DRAFT, SCHEDULED, PUBLISHED |
+| viewCount | Int | Denormalized view count |
+| likeCount | Int | Denormalized like count |
+| commentCount | Int | Denormalized comment count |
+| shareCount | Int | Denormalized share count |
+| caption | String? | User caption with hashtags |
+| hashtags | String[] | Extracted hashtags |
+| publishedAt | DateTime? | When video went live |
+| scheduledPublishAt | DateTime? | Scheduled publish time |
+| createdAt | DateTime | Upload timestamp |
+| deletedAt | DateTime? | Soft delete timestamp |
+
+**Indexes**: userId, postId, videoType, encodingStatus, moderationStatus, publishStatus, scheduledPublishAt, createdAt, publishedAt, viewCount
+
+### VideoComment
+
+Comments on videos.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String (UUID) | Primary key |
+| videoId | String | Video being commented on |
+| userId | String | Commenter's user ID |
+| content | Text | Comment content |
+| parentId | String? | Parent comment for replies |
+| likeCount | Int | Denormalized like count |
+| status | String | VISIBLE, HIDDEN, FLAGGED |
+| createdAt | DateTime | Comment timestamp |
+
+**Indexes**: videoId, userId, parentId, createdAt
+
+### VideoLike
+
+User likes on videos.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String (UUID) | Primary key |
+| videoId | String | Liked video |
+| userId | String | User who liked |
+| createdAt | DateTime | Like timestamp |
+
+**Unique Constraint**: (videoId, userId)
+**Indexes**: videoId, userId
+
+---
+
 ## Conclusion
 
 This database schema supports a comprehensive civic engagement platform with:
@@ -2285,7 +2354,7 @@ The schema is designed for scalability, maintainability, and extensibility with:
 - Comprehensive enum types for type safety
 - Relationship integrity via foreign keys
 
-**Total Models**: 86
+**Total Models**: 88
 **Total Indexes**: 285+ (including 3 new performance indexes added October 2025)
 **Total Enums**: 74
 

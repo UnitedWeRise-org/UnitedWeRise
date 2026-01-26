@@ -10,7 +10,7 @@
  * @module services/VideoStorageService
  */
 
-import { BlobServiceClient, ContainerClient, BlockBlobClient } from '@azure/storage-blob';
+import { BlobServiceClient, ContainerClient, BlockBlobClient, BlobSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential } from '@azure/storage-blob';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from './logger';
 
@@ -51,6 +51,7 @@ const CACHE_CONTROL_THUMBNAIL = 'public, max-age=31536000'; // 1 year for thumbn
 export class VideoStorageService {
   private blobServiceClient: BlobServiceClient;
   private accountName: string;
+  private accountKey: string;
   private cdnEndpoint?: string;
   private initialized: boolean = false;
 
@@ -70,6 +71,13 @@ export class VideoStorageService {
     if (!accountName) {
       throw new Error('AZURE_STORAGE_ACCOUNT_NAME environment variable not set');
     }
+
+    // Extract account key from connection string for SAS generation
+    const accountKeyMatch = connectionString.match(/AccountKey=([^;]+)/);
+    if (!accountKeyMatch) {
+      throw new Error('AccountKey not found in connection string');
+    }
+    this.accountKey = accountKeyMatch[1];
 
     this.blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
     this.accountName = accountName;
@@ -248,6 +256,32 @@ export class VideoStorageService {
   }
 
   /**
+   * Generate a SAS URL for a blob in the raw container (for server-side copy)
+   * @param blobName - The blob name in the raw container
+   * @param expiresInMinutes - How long the SAS should be valid (default 15 minutes)
+   * @returns SAS URL for the blob
+   */
+  generateRawBlobSasUrl(blobName: string, expiresInMinutes: number = 15): string {
+    const sharedKeyCredential = new StorageSharedKeyCredential(
+      this.accountName,
+      this.accountKey
+    );
+
+    const startsOn = new Date();
+    const expiresOn = new Date(startsOn.getTime() + expiresInMinutes * 60 * 1000);
+
+    const sasToken = generateBlobSASQueryParameters({
+      containerName: CONTAINER_RAW,
+      blobName,
+      permissions: BlobSASPermissions.parse('r'), // Read-only
+      startsOn,
+      expiresOn
+    }, sharedKeyCredential).toString();
+
+    return `https://${this.accountName}.blob.core.windows.net/${CONTAINER_RAW}/${blobName}?${sasToken}`;
+  }
+
+  /**
    * Copy video from raw container to encoded container (for dev stub)
    * Uses Azure server-side copy for efficiency
    *
@@ -258,15 +292,15 @@ export class VideoStorageService {
   async copyRawToEncoded(videoId: string, rawBlobName: string): Promise<VideoUploadResult> {
     await this.ensureInitialized();
 
-    // Source blob in videos-raw
-    const sourceBlob = this.rawContainer!.getBlockBlobClient(rawBlobName);
+    // Generate SAS URL for source blob (raw container is private)
+    const sourceSasUrl = this.generateRawBlobSasUrl(rawBlobName);
 
     // Destination in videos-encoded
     const destBlobName = `${videoId}/video.mp4`;
     const destBlob = this.encodedContainer!.getBlockBlobClient(destBlobName);
 
-    // Server-side copy (no download/upload needed)
-    const copyPoller = await destBlob.beginCopyFromURL(sourceBlob.url);
+    // Server-side copy using SAS URL (no download/upload needed)
+    const copyPoller = await destBlob.beginCopyFromURL(sourceSasUrl);
     await copyPoller.pollUntilDone();
 
     // Set proper headers on copied blob

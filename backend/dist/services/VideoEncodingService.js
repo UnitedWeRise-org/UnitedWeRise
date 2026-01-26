@@ -3,23 +3,14 @@
  * VideoEncodingService
  *
  * Abstraction layer for video encoding operations.
- * Designed for portability to Azure Media Services, FFmpeg, or other solutions.
+ * Now integrated with FFmpeg-based encoding pipeline.
  *
- * CURRENT STATUS: Stub implementation
- * - In development mode: Auto-marks videos as READY for testing
- * - In production: Videos remain in PENDING status until Azure Media Services
- *   SDK is installed and configured
+ * Modes:
+ * 1. Queue Mode (production): Jobs are queued and processed by worker
+ * 2. Immediate Mode (development): Videos are encoded immediately
+ * 3. Fallback Mode: Copy raw to public container if FFmpeg unavailable
  *
- * TO ENABLE FULL AZURE MEDIA SERVICES:
- * 1. Install: npm install @azure/identity @azure/arm-mediaservices
- * 2. Configure environment variables:
- *    - AZURE_MEDIA_SERVICES_SUBSCRIPTION_ID
- *    - AZURE_MEDIA_SERVICES_RESOURCE_GROUP
- *    - AZURE_MEDIA_SERVICES_ACCOUNT_NAME
- * 3. Replace this stub implementation with full Azure SDK integration
- *
- * Planned Encoding Tiers:
- * - 1080p @ 4.5 Mbps
+ * Encoding Tiers:
  * - 720p @ 2.5 Mbps
  * - 480p @ 1.2 Mbps
  * - 360p @ 0.6 Mbps
@@ -31,6 +22,7 @@ exports.videoEncodingService = exports.VideoEncodingService = void 0;
 const prisma_js_1 = require("../lib/prisma.js");
 const logger_1 = require("./logger");
 const VideoStorageService_1 = require("./VideoStorageService");
+const videoEncodingQueue_1 = require("../queues/videoEncodingQueue");
 // ========================================
 // VideoEncodingService Class (Stub Implementation)
 // ========================================
@@ -45,10 +37,9 @@ const VideoStorageService_1 = require("./VideoStorageService");
 class VideoEncodingService {
     config = null;
     initialized = false;
-    sdkAvailable = false;
+    queueEnabled = false;
     /**
      * Initialize the encoding service
-     * Currently checks for configuration but SDK support is stubbed
      */
     async initialize() {
         if (this.initialized)
@@ -58,47 +49,60 @@ class VideoEncodingService {
         const accountName = process.env.AZURE_MEDIA_SERVICES_ACCOUNT_NAME;
         if (subscriptionId && resourceGroup && accountName) {
             this.config = { subscriptionId, resourceGroup, accountName };
-            logger_1.logger.info('VideoEncodingService: Azure config detected but SDK not installed');
-            logger_1.logger.info('To enable encoding: npm install @azure/identity @azure/arm-mediaservices');
         }
-        else {
-            logger_1.logger.warn('VideoEncodingService: Azure Media Services not configured');
-        }
-        // SDK is not available in this stub implementation
-        this.sdkAvailable = false;
+        // Queue mode is enabled when VIDEO_ENCODING_QUEUE=true
+        this.queueEnabled = process.env.VIDEO_ENCODING_QUEUE === 'true';
+        logger_1.logger.info({
+            queueEnabled: this.queueEnabled,
+            hasAzureConfig: !!this.config
+        }, 'VideoEncodingService initialized');
         this.initialized = true;
     }
     /**
      * Check if encoding service is available
-     * Returns false in stub mode
+     * Returns true since we always have at least the fallback
      */
     isAvailable() {
-        return this.initialized && this.sdkAvailable;
+        return true;
     }
     /**
      * Submit a video for encoding
      *
-     * In development: Simulates encoding by auto-marking as READY
-     * In production: Leaves video in PENDING status
+     * Queue mode: Adds to encoding queue for background processing
+     * Immediate mode: Processes immediately (development)
      *
      * @param videoId - The video record ID
      * @param inputUrl - URL to the raw video in blob storage
-     * @returns Job name for tracking, or null if encoding not available
+     * @returns Job name for tracking
      */
     async submitEncodingJob(videoId, inputUrl) {
         await this.initialize();
+        // Get the blob name for the video
+        const video = await prisma_js_1.prisma.video.findUnique({
+            where: { id: videoId },
+            select: { originalBlobName: true }
+        });
+        if (!video?.originalBlobName) {
+            logger_1.logger.error({ videoId }, 'Cannot submit encoding job - no original blob name');
+            return null;
+        }
+        if (this.queueEnabled) {
+            // Queue mode: Add to background queue
+            const jobId = videoEncodingQueue_1.videoEncodingQueue.addJob(videoId, video.originalBlobName);
+            logger_1.logger.info({ videoId, jobId }, 'Video encoding job queued');
+            return jobId;
+        }
+        // Immediate mode: Process now (for development/staging)
         const isDevelopment = process.env.NODE_ENV !== 'production';
         if (isDevelopment) {
-            // Development mode: simulate encoding
+            // Development mode: simulate encoding with copy
             await this.simulateEncodingForDevelopment(videoId, inputUrl);
-            return `simulated-job-${videoId}`;
+            return `immediate-job-${videoId}`;
         }
-        // Production without SDK: log warning, leave in PENDING
-        logger_1.logger.warn({
-            videoId,
-            hasConfig: !!this.config
-        }, 'Video encoding service not available. Video will remain in PENDING status.');
-        return null;
+        // Production without queue: add to queue anyway for worker to pick up
+        const jobId = videoEncodingQueue_1.videoEncodingQueue.addJob(videoId, video.originalBlobName);
+        logger_1.logger.info({ videoId, jobId }, 'Video encoding job added to queue (worker will process)');
+        return jobId;
     }
     /**
      * Simulate encoding for development/staging environments

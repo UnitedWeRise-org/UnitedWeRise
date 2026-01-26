@@ -261,11 +261,16 @@ export class VideoPlayer {
      * Play video
      */
     async play() {
+        if (!this.container || !this.videoEl) return;
+
         try {
             await this.videoEl.play();
         } catch (error) {
             // Auto-play blocked, show play button
-            this.container.querySelector('#playOverlay').style.display = 'flex';
+            const overlay = this.container.querySelector('#playOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
         }
     }
 
@@ -273,7 +278,9 @@ export class VideoPlayer {
      * Pause video
      */
     pause() {
-        this.videoEl.pause();
+        if (this.videoEl) {
+            this.videoEl.pause();
+        }
     }
 
     /**
@@ -319,7 +326,10 @@ export class VideoPlayer {
      */
     handlePlay() {
         this.isPlaying = true;
-        this.container.querySelector('#playOverlay').style.display = 'none';
+        const overlay = this.container?.querySelector('#playOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
         this.updatePlayPauseButton();
         this.onPlay();
     }
@@ -338,7 +348,10 @@ export class VideoPlayer {
      */
     handleEnded() {
         this.isPlaying = false;
-        this.container.querySelector('#playOverlay').style.display = 'flex';
+        const overlay = this.container?.querySelector('#playOverlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
         this.updatePlayPauseButton();
         this.onEnded();
     }
