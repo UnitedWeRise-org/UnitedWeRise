@@ -425,6 +425,9 @@ router.get('/drafts', requireAuth, async (req: AuthRequest, res: Response) => {
       select: {
         id: true,
         thumbnailUrl: true,
+        hlsManifestUrl: true,
+        mp4Url: true,
+        originalUrl: true,
         duration: true,
         caption: true,
         encodingStatus: true,

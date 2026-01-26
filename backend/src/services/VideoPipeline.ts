@@ -358,6 +358,7 @@ export class VideoPipeline {
           this.log(requestId, 'THUMBNAIL_GENERATION_FAILED', {
             videoId,
             code,
+            chunksLength: chunks.length,
             stderr: stderrOutput.slice(-500) // Last 500 chars for diagnostics
           });
           resolve(undefined);

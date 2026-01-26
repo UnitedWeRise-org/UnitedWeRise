@@ -277,6 +277,7 @@ export class SnippetsDashboard {
                 </div>
                 <div class="snippet-card__info">
                     <p class="snippet-card__caption" title="${this.escapeHtml(caption)}">${this.escapeHtml(this.truncate(caption, 60))}</p>
+                    <p class="snippet-card__timestamp">${this.formatDate(snippet.createdAt)}</p>
                     ${this.renderStatusBadge(snippet, tab)}
                     ${tab === 'scheduled' && snippet.scheduledAt ? `
                         <div class="snippet-card__scheduled-time">

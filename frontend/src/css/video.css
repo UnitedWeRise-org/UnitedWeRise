@@ -832,12 +832,18 @@
 }
 
 .snippet-card__caption {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.25rem 0;
     font-size: 0.9rem;
     color: var(--text-primary, #333);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.snippet-card__timestamp {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.75rem;
+    color: var(--text-muted, #888);
 }
 
 .snippet-card__status {
