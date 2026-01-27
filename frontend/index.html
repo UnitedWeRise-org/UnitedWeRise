@@ -1058,10 +1058,17 @@
                 <button class="snippets-close-btn" data-action="close-snippets" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
             </div>
         </div>
-        <div class="snippets-dashboard__tabs">
-            <button class="tab active" data-tab="drafts">Drafts</button>
-            <button class="tab" data-tab="scheduled">Scheduled</button>
-            <button class="tab" data-tab="published">Published</button>
+        <div class="snippets-dashboard__filters">
+            <select id="snippetsStatusFilter" class="snippets-filter-select">
+                <option value="all">All Statuses</option>
+                <option value="DRAFT">Drafts</option>
+                <option value="SCHEDULED">Scheduled</option>
+                <option value="PUBLISHED">Published</option>
+            </select>
+            <select id="snippetsSortBy" class="snippets-filter-select">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+            </select>
         </div>
         <div id="snippetsDashboardContent" style="overflow-y: auto; max-height: calc(100vh - 180px);">
             <!-- Snippets will be dynamically loaded here -->

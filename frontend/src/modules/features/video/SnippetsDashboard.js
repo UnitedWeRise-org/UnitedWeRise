@@ -1,10 +1,13 @@
 /**
  * SnippetsDashboard - Management interface for user's video snippets
  *
- * Provides tabbed interface for:
- * - Drafts: Unpublished videos that can be edited/published/scheduled
- * - Scheduled: Videos scheduled for future publication
- * - Published: Live videos with analytics (views, likes, comments)
+ * Provides a unified list interface with filters for:
+ * - All videos with status badges (Draft, Scheduled, Published)
+ * - Filter by status (All, Drafts, Scheduled, Published)
+ * - Sort by date (Newest/Oldest first)
+ *
+ * Features real-time state updates without page reload when
+ * publishing, scheduling, or deleting videos.
  *
  * @module features/video/SnippetsDashboard
  */
@@ -21,18 +24,17 @@ export class SnippetsDashboard {
      */
     constructor(container) {
         this.container = container;
-        this.currentTab = 'drafts';
-        this.snippets = {
-            drafts: [],
-            scheduled: [],
-            published: []
-        };
+        /** @type {Array} All user snippets in a unified list */
+        this.allSnippets = [];
+        /** @type {string} Current filter value: 'all', 'DRAFT', 'SCHEDULED', 'PUBLISHED' */
+        this.currentFilter = 'all';
+        /** @type {string} Current sort value: 'newest', 'oldest' */
+        this.currentSort = 'newest';
         this.loading = false;
 
         // Listen for upload events from SnippetCreatorModal
         window.addEventListener('snippetUploaded', () => {
-            this.snippets.drafts = null;
-            this.loadTab('drafts', true);
+            this.loadSnippets();
         });
     }
 
@@ -42,7 +44,7 @@ export class SnippetsDashboard {
     async init() {
         this.render();
         this.attachEventListeners();
-        await this.loadTab(this.currentTab);
+        await this.loadSnippets();
     }
 
     /**
@@ -62,18 +64,24 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Attach event listeners for tab switching and actions
+     * Attach event listeners for filters and actions
      */
     attachEventListeners() {
-        // Tab switching (on the parent dashboard element)
-        const tabContainer = document.querySelector('.snippets-dashboard__tabs');
-        if (tabContainer) {
-            tabContainer.addEventListener('click', (e) => {
-                const tabBtn = e.target.closest('.tab');
-                if (tabBtn) {
-                    const tab = tabBtn.dataset.tab;
-                    this.switchTab(tab);
-                }
+        // Filter dropdown
+        const filterSelect = document.getElementById('snippetsStatusFilter');
+        if (filterSelect) {
+            filterSelect.addEventListener('change', (e) => {
+                this.currentFilter = e.target.value;
+                this.renderFilteredSnippets();
+            });
+        }
+
+        // Sort dropdown
+        const sortSelect = document.getElementById('snippetsSortBy');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', (e) => {
+                this.currentSort = e.target.value;
+                this.renderFilteredSnippets();
             });
         }
 
@@ -115,28 +123,9 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Switch to a different tab
-     * @param {string} tab - Tab name (drafts, scheduled, published)
+     * Load all snippets from the unified endpoint
      */
-    async switchTab(tab) {
-        // Update tab buttons
-        document.querySelectorAll('.snippets-dashboard__tabs .tab').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === tab);
-        });
-
-        const previousTab = this.currentTab;
-        this.currentTab = tab;
-        await this.loadTab(tab, previousTab !== tab);
-    }
-
-    /**
-     * Load snippets for a specific tab
-     * @param {string} tab - Tab name
-     * @param {boolean} forceReload - Force reload even if same tab
-     */
-    async loadTab(tab, forceReload = false) {
-        if (tab === this.currentTab && !forceReload) return;
-
+    async loadSnippets() {
         const content = document.getElementById('snippetsTabContent');
         if (!content) return;
 
@@ -144,34 +133,21 @@ export class SnippetsDashboard {
         content.innerHTML = `
             <div class="snippets-loading" style="text-align: center; padding: 2rem;">
                 <div class="loading-spinner"></div>
-                <p>Loading ${tab}...</p>
+                <p>Loading snippets...</p>
             </div>
         `;
 
         this.loading = true;
 
         try {
-            let snippets = [];
-
-            switch (tab) {
-                case 'drafts':
-                    snippets = await this.fetchDrafts();
-                    break;
-                case 'scheduled':
-                    snippets = await this.fetchScheduled();
-                    break;
-                case 'published':
-                    snippets = await this.fetchPublished();
-                    break;
-            }
-
-            this.snippets[tab] = snippets;
-            this.renderSnippets(snippets, tab, content);
+            const response = await apiCall('/videos/my-snippets', { method: 'GET' });
+            this.allSnippets = response?.data?.videos || response?.videos || [];
+            this.renderFilteredSnippets();
         } catch (error) {
-            console.error(`Failed to load ${tab}:`, error);
+            console.error('Failed to load snippets:', error);
             content.innerHTML = `
                 <div class="snippets-error" style="text-align: center; padding: 2rem; color: #dc3545;">
-                    <p>Failed to load ${tab}</p>
+                    <p>Failed to load snippets</p>
                     <button onclick="window.openSnippetsDashboard()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #4169E1; color: white; border: none; border-radius: 4px; cursor: pointer;">
                         Retry
                     </button>
@@ -183,79 +159,88 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Fetch user's draft snippets
+     * Get filtered and sorted snippets based on current selections
+     * @returns {Array} Filtered and sorted snippets
      */
-    async fetchDrafts() {
-        const response = await apiCall('/videos/drafts', { method: 'GET' });
-        return response?.data?.videos || response?.videos || [];
+    getFilteredSnippets() {
+        let snippets = [...this.allSnippets];
+
+        // Apply filter
+        if (this.currentFilter !== 'all') {
+            snippets = snippets.filter(s => s.publishStatus === this.currentFilter);
+        }
+
+        // Apply sort
+        snippets.sort((a, b) => {
+            const dateA = new Date(a.createdAt);
+            const dateB = new Date(b.createdAt);
+            return this.currentSort === 'newest' ? dateB - dateA : dateA - dateB;
+        });
+
+        return snippets;
     }
 
     /**
-     * Fetch user's scheduled snippets
+     * Render snippets with current filter and sort applied
      */
-    async fetchScheduled() {
-        const response = await apiCall('/videos/scheduled', { method: 'GET' });
-        return response?.data?.videos || response?.videos || [];
+    renderFilteredSnippets() {
+        const content = document.getElementById('snippetsTabContent');
+        if (!content) return;
+
+        const filteredSnippets = this.getFilteredSnippets();
+        this.renderSnippets(filteredSnippets, content);
     }
 
     /**
-     * Fetch user's published snippets
-     */
-    async fetchPublished() {
-        const userId = window.currentUser?.id;
-        if (!userId) return [];
-
-        const response = await apiCall(`/videos/user/${userId}`, { method: 'GET' });
-        return response?.data?.videos || response?.videos || [];
-    }
-
-    /**
-     * Render snippets for a tab
+     * Render snippets list
      * @param {Array} snippets - Array of snippet objects
-     * @param {string} tab - Current tab name
      * @param {HTMLElement} container - Container to render into
      */
-    renderSnippets(snippets, tab, container) {
+    renderSnippets(snippets, container) {
         if (!snippets || snippets.length === 0) {
-            container.innerHTML = this.renderEmptyState(tab);
+            container.innerHTML = this.renderEmptyState();
             return;
         }
 
-        const cardsHtml = snippets.map(snippet => this.renderSnippetCard(snippet, tab)).join('');
+        const cardsHtml = snippets.map(snippet => this.renderSnippetCard(snippet)).join('');
         container.innerHTML = `<div class="snippets-grid">${cardsHtml}</div>`;
     }
 
     /**
-     * Render empty state for a tab
-     * @param {string} tab - Tab name
+     * Render empty state
      */
-    renderEmptyState(tab) {
-        const messages = {
-            drafts: {
-                icon: '📝',
-                title: 'No drafts yet',
+    renderEmptyState() {
+        const filterMessages = {
+            'all': {
+                icon: '🎬',
+                title: 'No snippets yet',
                 description: 'Start creating your first snippet!'
             },
-            scheduled: {
+            'DRAFT': {
+                icon: '📝',
+                title: 'No drafts',
+                description: 'All your videos have been published or scheduled'
+            },
+            'SCHEDULED': {
                 icon: '📅',
                 title: 'Nothing scheduled',
                 description: 'Schedule snippets to publish them later'
             },
-            published: {
-                icon: '🎬',
+            'PUBLISHED': {
+                icon: '✅',
                 title: 'No published snippets',
                 description: 'Publish your drafts to share with the world'
             }
         };
 
-        const msg = messages[tab] || messages.drafts;
+        const msg = filterMessages[this.currentFilter] || filterMessages.all;
 
         return `
             <div class="snippets-empty" style="text-align: center; padding: 3rem;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">${msg.icon}</div>
                 <h3 style="margin: 0 0 0.5rem 0;">${msg.title}</h3>
                 <p style="color: #666; margin: 0;">${msg.description}</p>
-                ${tab === 'drafts' ? `
+                ${this.currentFilter === 'all' || this.currentFilter === 'DRAFT' ? `
                     <button data-action="create-snippet" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #4169E1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
                         + Create Snippet
                     </button>
@@ -265,11 +250,10 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Render a single snippet card
+     * Render a single snippet card with status badge
      * @param {Object} snippet - Snippet data
-     * @param {string} tab - Current tab name
      */
-    renderSnippetCard(snippet, tab) {
+    renderSnippetCard(snippet) {
         const thumbnailUrl = snippet.thumbnailUrl || VIDEO_PLACEHOLDER;
         const caption = snippet.caption || 'No caption';
         const duration = this.formatDuration(snippet.duration || 0);
@@ -285,43 +269,42 @@ export class SnippetsDashboard {
                 </div>
                 <div class="snippet-card__info">
                     <p class="snippet-card__caption" title="${this.escapeHtml(caption)}">${this.escapeHtml(this.truncate(caption, 60))}</p>
-                    <p class="snippet-card__timestamp">${tab === 'published' && snippet.publishedAt
+                    <p class="snippet-card__timestamp">${snippet.publishStatus === 'PUBLISHED' && snippet.publishedAt
                         ? this.formatDate(snippet.publishedAt)
                         : this.formatDate(snippet.createdAt)}</p>
-                    ${this.renderStatusBadge(snippet, tab)}
-                    ${tab === 'scheduled' && snippet.scheduledPublishAt ? `
+                    ${this.renderStatusBadge(snippet)}
+                    ${snippet.publishStatus === 'SCHEDULED' && snippet.scheduledPublishAt ? `
                         <div class="snippet-card__scheduled-time">
                             📅 ${this.formatDate(snippet.scheduledPublishAt)}
                         </div>
                     ` : ''}
                 </div>
-                ${tab === 'published' ? this.renderStats(snippet) : ''}
+                ${snippet.publishStatus === 'PUBLISHED' ? this.renderStats(snippet) : ''}
                 <div class="snippet-card__actions">
-                    ${this.renderActions(snippet, tab)}
+                    ${this.renderActions(snippet)}
                 </div>
             </div>
         `;
     }
 
     /**
-     * Render status badge
+     * Render status badge based on publishStatus
      * @param {Object} snippet - Snippet data
-     * @param {string} tab - Current tab
      */
-    renderStatusBadge(snippet, tab) {
+    renderStatusBadge(snippet) {
         const statusConfig = {
-            drafts: { class: 'draft', text: 'Draft' },
-            scheduled: { class: 'scheduled', text: 'Scheduled' },
-            published: { class: 'published', text: 'Published' }
+            'DRAFT': { class: 'draft', text: 'Draft' },
+            'SCHEDULED': { class: 'scheduled', text: 'Scheduled' },
+            'PUBLISHED': { class: 'published', text: 'Published' }
         };
 
-        const config = statusConfig[tab] || statusConfig.drafts;
+        const config = statusConfig[snippet.publishStatus] || statusConfig.DRAFT;
 
         return `<span class="snippet-card__status snippet-card__status--${config.class}">${config.text}</span>`;
     }
 
     /**
-     * Render snippet stats (for published tab)
+     * Render snippet stats (for published snippets)
      * @param {Object} snippet - Snippet data
      */
     renderStats(snippet) {
@@ -335,26 +318,25 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Render action buttons based on tab
+     * Render action buttons based on publish status
      * @param {Object} snippet - Snippet data
-     * @param {string} tab - Current tab
      */
-    renderActions(snippet, tab) {
-        switch (tab) {
-            case 'drafts':
+    renderActions(snippet) {
+        switch (snippet.publishStatus) {
+            case 'DRAFT':
                 return `
                     <button class="snippet-action-btn snippet-action-btn--primary" data-snippet-action="publish" data-video-id="${snippet.id}" title="Publish now">Publish</button>
                     <button class="snippet-action-btn" data-snippet-action="schedule" data-video-id="${snippet.id}" title="Schedule for later">Schedule</button>
                     <button class="snippet-action-btn" data-snippet-action="edit" data-video-id="${snippet.id}" title="Edit caption">Edit</button>
                     <button class="snippet-action-btn snippet-action-btn--danger" data-snippet-action="delete" data-video-id="${snippet.id}" title="Delete">🗑</button>
                 `;
-            case 'scheduled':
+            case 'SCHEDULED':
                 return `
                     <button class="snippet-action-btn" data-snippet-action="schedule" data-video-id="${snippet.id}" title="Change schedule">Reschedule</button>
                     <button class="snippet-action-btn" data-snippet-action="unschedule" data-video-id="${snippet.id}" title="Move to drafts">Unschedule</button>
                     <button class="snippet-action-btn snippet-action-btn--danger" data-snippet-action="delete" data-video-id="${snippet.id}" title="Delete">🗑</button>
                 `;
-            case 'published':
+            case 'PUBLISHED':
                 return `
                     <button class="snippet-action-btn" data-snippet-action="view-analytics" data-video-id="${snippet.id}" title="View analytics">📊 Stats</button>
                     <button class="snippet-action-btn" data-snippet-action="unpublish" data-video-id="${snippet.id}" title="Move to drafts">Unpublish</button>
@@ -366,30 +348,27 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Publish a snippet immediately
+     * Publish a snippet immediately - updates local state for real-time UX
      * @param {string} videoId - Video ID
      */
     async publishSnippet(videoId) {
         try {
             const response = await apiCall(`/videos/${videoId}/publish`, { method: 'PATCH' });
             if (response?.ok !== false && response?.success !== false) {
+                // Update local state immediately (real-time update)
+                const snippet = this.findSnippetById(videoId);
+                if (snippet) {
+                    snippet.publishStatus = 'PUBLISHED';
+                    snippet.publishedAt = new Date().toISOString();
+                    snippet.scheduledPublishAt = null;
+                }
+
+                // Re-render with current filter
+                this.renderFilteredSnippets();
+
                 if (typeof window.showToast === 'function') {
                     window.showToast('Snippet published successfully!');
                 }
-
-                // Remove the card from current view with animation
-                const card = document.querySelector(`[data-video-id="${videoId}"]`)?.closest('.snippet-card');
-                if (card) {
-                    card.style.transition = 'opacity 0.3s, transform 0.3s';
-                    card.style.opacity = '0';
-                    card.style.transform = 'scale(0.9)';
-                    setTimeout(() => card.remove(), 300);
-                }
-
-                // Clear cache and reload current tab
-                this.snippets.drafts = null;
-                this.snippets.published = null;
-                await this.loadTab(this.currentTab, true);
             } else {
                 throw new Error(response?.error || 'Failed to publish');
             }
@@ -406,7 +385,6 @@ export class SnippetsDashboard {
      * @param {string} videoId - Video ID
      */
     showScheduleDialog(videoId) {
-        // Create a simple datetime picker modal
         const modal = document.createElement('div');
         modal.className = 'schedule-dialog-overlay';
         modal.innerHTML = `
@@ -423,7 +401,6 @@ export class SnippetsDashboard {
 
         document.body.appendChild(modal);
 
-        // Event handlers
         modal.querySelector('.schedule-dialog-cancel').addEventListener('click', () => {
             modal.remove();
         });
@@ -448,7 +425,7 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Schedule a snippet for future publication
+     * Schedule a snippet for future publication - updates local state
      * @param {string} videoId - Video ID
      * @param {string} scheduledAt - ISO date string
      */
@@ -461,10 +438,18 @@ export class SnippetsDashboard {
             });
 
             if (response?.ok !== false && response?.success !== false) {
+                // Update local state immediately
+                const snippet = this.findSnippetById(videoId);
+                if (snippet) {
+                    snippet.publishStatus = 'SCHEDULED';
+                    snippet.scheduledPublishAt = scheduledAt;
+                }
+
+                this.renderFilteredSnippets();
+
                 if (typeof window.showToast === 'function') {
                     window.showToast('Snippet scheduled successfully!');
                 }
-                await this.loadTab(this.currentTab);
             } else {
                 throw new Error(response?.error || 'Failed to schedule');
             }
@@ -477,17 +462,25 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Unschedule a snippet (move back to drafts)
+     * Unschedule a snippet (move back to drafts) - updates local state
      * @param {string} videoId - Video ID
      */
     async unscheduleSnippet(videoId) {
         try {
             const response = await apiCall(`/videos/${videoId}/unschedule`, { method: 'PATCH' });
             if (response?.ok !== false && response?.success !== false) {
+                // Update local state immediately
+                const snippet = this.findSnippetById(videoId);
+                if (snippet) {
+                    snippet.publishStatus = 'DRAFT';
+                    snippet.scheduledPublishAt = null;
+                }
+
+                this.renderFilteredSnippets();
+
                 if (typeof window.showToast === 'function') {
                     window.showToast('Snippet unscheduled');
                 }
-                await this.loadTab(this.currentTab);
             } else {
                 throw new Error(response?.error || 'Failed to unschedule');
             }
@@ -500,7 +493,7 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Unpublish a snippet (move back to drafts)
+     * Unpublish a snippet (move back to drafts) - updates local state
      * @param {string} videoId - Video ID
      */
     async unpublishSnippet(videoId) {
@@ -509,10 +502,18 @@ export class SnippetsDashboard {
         try {
             const response = await apiCall(`/videos/${videoId}/unpublish`, { method: 'PATCH' });
             if (response?.ok !== false && response?.success !== false) {
+                // Update local state immediately
+                const snippet = this.findSnippetById(videoId);
+                if (snippet) {
+                    snippet.publishStatus = 'DRAFT';
+                    snippet.publishedAt = null;
+                }
+
+                this.renderFilteredSnippets();
+
                 if (typeof window.showToast === 'function') {
                     window.showToast('Snippet unpublished');
                 }
-                await this.loadTab(this.currentTab);
             } else {
                 throw new Error(response?.error || 'Failed to unpublish');
             }
@@ -525,7 +526,7 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Delete a snippet
+     * Delete a snippet - removes from local state
      * @param {string} videoId - Video ID
      */
     async deleteSnippet(videoId) {
@@ -534,10 +535,14 @@ export class SnippetsDashboard {
         try {
             const response = await apiCall(`/videos/${videoId}`, { method: 'DELETE' });
             if (response?.ok !== false && response?.success !== false) {
+                // Remove from local state immediately
+                this.allSnippets = this.allSnippets.filter(s => s.id !== videoId);
+
+                this.renderFilteredSnippets();
+
                 if (typeof window.showToast === 'function') {
                     window.showToast('Snippet deleted');
                 }
-                await this.loadTab(this.currentTab);
             } else {
                 throw new Error(response?.error || 'Failed to delete');
             }
@@ -554,10 +559,9 @@ export class SnippetsDashboard {
      * @param {string} videoId - Video ID
      */
     editSnippet(videoId) {
-        const snippet = this.snippets[this.currentTab].find(s => s.id === videoId);
+        const snippet = this.findSnippetById(videoId);
         if (!snippet) return;
 
-        // Create edit modal
         const modal = document.createElement('div');
         modal.className = 'schedule-dialog-overlay';
         modal.innerHTML = `
@@ -592,11 +596,16 @@ export class SnippetsDashboard {
                 });
 
                 if (response?.ok !== false && response?.success !== false) {
+                    // Update local state
+                    snippet.caption = caption;
+                    snippet.hashtags = hashtags;
+
+                    this.renderFilteredSnippets();
+
                     if (typeof window.showToast === 'function') {
                         window.showToast('Snippet updated');
                     }
                     modal.remove();
-                    await this.loadTab(this.currentTab);
                 } else {
                     throw new Error(response?.error || 'Failed to update');
                 }
@@ -614,7 +623,7 @@ export class SnippetsDashboard {
      * @param {string} videoId - Video ID
      */
     viewAnalytics(videoId) {
-        const snippet = this.snippets.published.find(s => s.id === videoId);
+        const snippet = this.findSnippetById(videoId);
         if (!snippet) return;
 
         const modal = document.createElement('div');
@@ -657,20 +666,22 @@ export class SnippetsDashboard {
      * @param {string} videoId - Video ID
      */
     async playSnippet(videoId) {
-        const snippet = this.snippets[this.currentTab].find(s => s.id === videoId);
+        const snippet = this.findSnippetById(videoId);
         if (!snippet) return;
 
         try {
-            // Try to use ReelsFeed for playback
             const { VideoPlayer } = await import('./VideoPlayer.js');
+
+            // Determine modal size class based on aspect ratio
+            const aspectRatioClass = this.getAspectRatioClass(snippet.aspectRatio);
 
             // Create fullscreen player modal
             const modal = document.createElement('div');
             modal.className = 'video-player-overlay';
             modal.innerHTML = `
-                <div class="video-player-modal">
+                <div class="video-player-modal ${aspectRatioClass}">
                     <button class="video-player-close" style="position: absolute; top: 1rem; right: 1rem; z-index: 100; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.5rem;">×</button>
-                    <div id="snippetPlayerContainer"></div>
+                    <div id="snippetPlayerContainer" class="video-player-container"></div>
                 </div>
             `;
 
@@ -700,10 +711,33 @@ export class SnippetsDashboard {
         } catch (error) {
             console.error('Failed to open video player:', error);
             // Fallback: open video URL directly
-            if (snippet.videoUrl) {
-                window.open(snippet.videoUrl, '_blank');
+            if (snippet.mp4Url || snippet.originalUrl) {
+                window.open(snippet.mp4Url || snippet.originalUrl, '_blank');
             }
         }
+    }
+
+    /**
+     * Find a snippet by ID from the unified list
+     * @param {string} videoId - Video ID
+     * @returns {Object|null} Snippet object or null
+     */
+    findSnippetById(videoId) {
+        return this.allSnippets?.find(s => s.id === videoId) || null;
+    }
+
+    /**
+     * Get CSS class for modal sizing based on aspect ratio
+     * @param {string} aspectRatio - Aspect ratio string (e.g., 'VERTICAL_9_16')
+     * @returns {string} CSS class name
+     */
+    getAspectRatioClass(aspectRatio) {
+        const ratioMap = {
+            'VERTICAL_9_16': 'video-player-modal--vertical_9_16',
+            'HORIZONTAL_16_9': 'video-player-modal--horizontal_16_9',
+            'SQUARE_1_1': 'video-player-modal--square_1_1'
+        };
+        return ratioMap[aspectRatio] || 'video-player-modal--vertical_9_16';
     }
 
     // ============ Utility Methods ============

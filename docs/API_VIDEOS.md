@@ -166,23 +166,65 @@ GET /api/videos/{id}
 
 ---
 
-### Get User's Drafts
+### Get All User's Snippets (Unified)
+```
+GET /api/videos/my-snippets
+Authorization: Cookie
+```
+
+Returns all videos belonging to the authenticated user in a single list with all statuses (DRAFT, SCHEDULED, PUBLISHED). This is the recommended endpoint for the snippets dashboard.
+
+**Response:**
+```json
+{
+  "success": true,
+  "videos": [
+    {
+      "id": "uuid",
+      "thumbnailUrl": "https://...",
+      "hlsManifestUrl": "https://...",
+      "mp4Url": "https://...",
+      "originalUrl": "https://...",
+      "duration": 30,
+      "caption": "My video caption",
+      "hashtags": ["tag1", "tag2"],
+      "publishStatus": "DRAFT|SCHEDULED|PUBLISHED",
+      "encodingStatus": "PENDING|READY|FAILED",
+      "moderationStatus": "PENDING|APPROVED|REJECTED",
+      "createdAt": "2024-01-15T11:30:00Z",
+      "publishedAt": "2024-01-15T12:00:00Z",
+      "scheduledPublishAt": "2024-01-20T10:00:00Z",
+      "aspectRatio": "VERTICAL_9_16",
+      "viewCount": 100,
+      "likeCount": 25,
+      "commentCount": 5,
+      "shareCount": 3
+    }
+  ]
+}
+```
+
+---
+
+### Get User's Drafts (Legacy)
 ```
 GET /api/videos/drafts
 Authorization: Cookie
 ```
 
 Returns the authenticated user's draft videos.
+> **Note:** Consider using `/my-snippets` for a unified list with client-side filtering.
 
 ---
 
-### Get User's Scheduled Videos
+### Get User's Scheduled Videos (Legacy)
 ```
 GET /api/videos/scheduled
 Authorization: Cookie
 ```
 
 Returns the authenticated user's scheduled videos.
+> **Note:** Consider using `/my-snippets` for a unified list with client-side filtering.
 
 ---
 

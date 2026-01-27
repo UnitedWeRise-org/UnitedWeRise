@@ -501,6 +501,118 @@ router.get('/scheduled', requireAuth, async (req: AuthRequest, res: Response) =>
 });
 
 // ========================================
+// Unified Snippets Endpoint
+// ========================================
+
+/**
+ * @swagger
+ * /api/videos/my-snippets:
+ *   get:
+ *     tags: [Video]
+ *     summary: Get all user's snippets (unified list)
+ *     description: |
+ *       Returns all videos belonging to the authenticated user in a single list.
+ *       Includes drafts, scheduled, and published videos with their status.
+ *       Use this for the unified snippets dashboard with client-side filtering.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: All user videos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 videos:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       thumbnailUrl:
+ *                         type: string
+ *                       hlsManifestUrl:
+ *                         type: string
+ *                       mp4Url:
+ *                         type: string
+ *                       originalUrl:
+ *                         type: string
+ *                       duration:
+ *                         type: number
+ *                       caption:
+ *                         type: string
+ *                       publishStatus:
+ *                         type: string
+ *                         enum: [DRAFT, SCHEDULED, PUBLISHED]
+ *                       encodingStatus:
+ *                         type: string
+ *                       moderationStatus:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                       publishedAt:
+ *                         type: string
+ *                       scheduledPublishAt:
+ *                         type: string
+ *                       aspectRatio:
+ *                         type: string
+ *                       viewCount:
+ *                         type: integer
+ *                       likeCount:
+ *                         type: integer
+ *                       commentCount:
+ *                         type: integer
+ */
+router.get('/my-snippets', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const videos = await prisma.video.findMany({
+      where: {
+        userId: req.user?.id,
+        deletedAt: null
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        thumbnailUrl: true,
+        hlsManifestUrl: true,
+        mp4Url: true,
+        originalUrl: true,
+        duration: true,
+        caption: true,
+        hashtags: true,
+        publishStatus: true,
+        encodingStatus: true,
+        moderationStatus: true,
+        createdAt: true,
+        publishedAt: true,
+        scheduledPublishAt: true,
+        aspectRatio: true,
+        viewCount: true,
+        likeCount: true,
+        commentCount: true,
+        shareCount: true
+      }
+    });
+
+    res.json({
+      success: true,
+      videos
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to get user snippets');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user snippets'
+    });
+  }
+});
+
+// ========================================
 // Parameterized routes (/:id) below
 // These must come AFTER literal routes
 // ========================================

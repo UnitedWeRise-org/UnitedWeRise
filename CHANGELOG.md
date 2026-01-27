@@ -1,10 +1,40 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 24, 2026
+**Last Updated**: January 27, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-27] - Snippets Dashboard UX Overhaul
+
+### Changed
+
+**Unified Snippets Dashboard**
+- Replaced confusing 3-tab interface (Drafts/Scheduled/Published) with unified list
+- Added status filter dropdown (All, Drafts, Scheduled, Published)
+- Added sort dropdown (Newest/Oldest first)
+- Status badges now displayed on each video card (Draft, Scheduled, Published)
+- Real-time state updates: status changes reflected immediately without page reload
+
+**Video Player Modal**
+- Fixed modal player container sizing issue (video no longer appears tiny)
+- Modal now sizes appropriately based on video aspect ratio
+- Added CSS classes for vertical (9:16), horizontal (16:9), and square (1:1) videos
+
+### Added
+
+**Backend**
+- `GET /api/videos/my-snippets` - Unified endpoint returning all user videos with all statuses
+- Includes publishStatus, encodingStatus, moderationStatus, analytics counts
+- Keeps legacy `/drafts` and `/scheduled` endpoints for backwards compatibility
+
+**Frontend**
+- Real-time local state updates on publish/schedule/unschedule/unpublish/delete
+- Filter and sort operations performed client-side for instant responsiveness
+- Improved empty states for each filter combination
 
 ---
 

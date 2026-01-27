@@ -234,7 +234,9 @@ router.post('/upload', auth_1.requireStagingAuth, upload.single('file'), async (
                 aspectRatio: result.aspectRatio,
                 originalSize: result.originalSize,
                 encodingStatus: result.encodingStatus,
-                publishStatus: 'DRAFT'
+                publishStatus: 'DRAFT',
+                mp4Url: result.mp4Url,
+                hlsManifestUrl: result.hlsManifestUrl
             },
             requestId
         });
@@ -395,11 +397,15 @@ router.get('/drafts', auth_1.requireAuth, async (req, res) => {
             select: {
                 id: true,
                 thumbnailUrl: true,
+                hlsManifestUrl: true,
+                mp4Url: true,
+                originalUrl: true,
                 duration: true,
                 caption: true,
                 encodingStatus: true,
                 moderationStatus: true,
-                createdAt: true
+                createdAt: true,
+                scheduledPublishAt: true
             }
         });
         res.json({
@@ -457,6 +463,115 @@ router.get('/scheduled', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to get scheduled videos'
+        });
+    }
+});
+// ========================================
+// Unified Snippets Endpoint
+// ========================================
+/**
+ * @swagger
+ * /api/videos/my-snippets:
+ *   get:
+ *     tags: [Video]
+ *     summary: Get all user's snippets (unified list)
+ *     description: |
+ *       Returns all videos belonging to the authenticated user in a single list.
+ *       Includes drafts, scheduled, and published videos with their status.
+ *       Use this for the unified snippets dashboard with client-side filtering.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: All user videos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 videos:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       thumbnailUrl:
+ *                         type: string
+ *                       hlsManifestUrl:
+ *                         type: string
+ *                       mp4Url:
+ *                         type: string
+ *                       originalUrl:
+ *                         type: string
+ *                       duration:
+ *                         type: number
+ *                       caption:
+ *                         type: string
+ *                       publishStatus:
+ *                         type: string
+ *                         enum: [DRAFT, SCHEDULED, PUBLISHED]
+ *                       encodingStatus:
+ *                         type: string
+ *                       moderationStatus:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                       publishedAt:
+ *                         type: string
+ *                       scheduledPublishAt:
+ *                         type: string
+ *                       aspectRatio:
+ *                         type: string
+ *                       viewCount:
+ *                         type: integer
+ *                       likeCount:
+ *                         type: integer
+ *                       commentCount:
+ *                         type: integer
+ */
+router.get('/my-snippets', auth_1.requireAuth, async (req, res) => {
+    try {
+        const videos = await prisma_js_1.prisma.video.findMany({
+            where: {
+                userId: req.user?.id,
+                deletedAt: null
+            },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                thumbnailUrl: true,
+                hlsManifestUrl: true,
+                mp4Url: true,
+                originalUrl: true,
+                duration: true,
+                caption: true,
+                hashtags: true,
+                publishStatus: true,
+                encodingStatus: true,
+                moderationStatus: true,
+                createdAt: true,
+                publishedAt: true,
+                scheduledPublishAt: true,
+                aspectRatio: true,
+                viewCount: true,
+                likeCount: true,
+                commentCount: true,
+                shareCount: true
+            }
+        });
+        res.json({
+            success: true,
+            videos
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ error }, 'Failed to get user snippets');
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get user snippets'
         });
     }
 });
@@ -922,6 +1037,74 @@ router.patch('/:id/publish', auth_1.requireAuth, async (req, res) => {
 });
 /**
  * @swagger
+ * /api/videos/{id}/unpublish:
+ *   patch:
+ *     tags: [Video]
+ *     summary: Unpublish a video (move back to drafts)
+ *     description: Changes video status from PUBLISHED back to DRAFT
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Video ID
+ *     responses:
+ *       200:
+ *         description: Video unpublished
+ *       400:
+ *         description: Video is not published
+ *       403:
+ *         description: Not authorized
+ */
+router.patch('/:id/unpublish', auth_1.requireStagingAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const video = await prisma_js_1.prisma.video.findFirst({
+            where: { id, userId }
+        });
+        if (!video) {
+            return res.status(404).json({
+                success: false,
+                error: 'Video not found'
+            });
+        }
+        if (video.publishStatus !== 'PUBLISHED') {
+            return res.status(400).json({
+                success: false,
+                error: 'Video is not published'
+            });
+        }
+        const updatedVideo = await prisma_js_1.prisma.video.update({
+            where: { id },
+            data: {
+                publishStatus: 'DRAFT',
+                publishedAt: null,
+                isActive: false
+            },
+            select: {
+                id: true,
+                publishStatus: true
+            }
+        });
+        res.json({
+            success: true,
+            video: updatedVideo
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ error }, 'Failed to unpublish video');
+        res.status(500).json({
+            success: false,
+            error: 'Failed to unpublish video'
+        });
+    }
+});
+/**
+ * @swagger
  * /api/videos/{id}/schedule:
  *   patch:
  *     tags: [Video]
@@ -955,14 +1138,14 @@ router.patch('/:id/publish', auth_1.requireAuth, async (req, res) => {
 router.patch('/:id/schedule', auth_1.requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
-        const { publishAt } = req.body;
-        if (!publishAt) {
+        const { scheduledAt } = req.body;
+        if (!scheduledAt) {
             return res.status(400).json({
                 success: false,
-                error: 'publishAt is required'
+                error: 'scheduledAt is required'
             });
         }
-        const scheduledTime = new Date(publishAt);
+        const scheduledTime = new Date(scheduledAt);
         if (isNaN(scheduledTime.getTime())) {
             return res.status(400).json({
                 success: false,
