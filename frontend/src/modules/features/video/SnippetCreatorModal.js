@@ -245,7 +245,7 @@ export class SnippetCreatorModal {
                 }
             }
         } else {
-            // Dashboard context: Keep as draft, navigate to dashboard
+            // Dashboard context: Keep as draft, notify existing dashboard to refresh
             if (typeof window.showToast === 'function') {
                 window.showToast('Snippet created! You can find it in your Snippets dashboard.');
             }
@@ -254,7 +254,12 @@ export class SnippetCreatorModal {
             setTimeout(() => {
                 this.close();
 
-                // Open snippets dashboard to show the new snippet
+                // Dispatch event for existing dashboard to refresh instead of recreating
+                window.dispatchEvent(new CustomEvent('snippetUploaded', {
+                    detail: { video }
+                }));
+
+                // Open snippets dashboard if not already open
                 if (typeof window.openSnippetsDashboard === 'function') {
                     window.openSnippetsDashboard();
                 }

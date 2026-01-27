@@ -70,7 +70,9 @@ export interface VideoProcessingResult {
   aspectRatio: string;
   originalSize: number;
   originalMimeType: string;
-  encodingStatus: 'PENDING';
+  encodingStatus: 'PENDING' | 'ENCODING' | 'READY' | 'FAILED';
+  mp4Url?: string;
+  hlsManifestUrl?: string;
 }
 
 interface ValidationResult {
@@ -558,6 +560,37 @@ export class VideoPipeline {
 
       this.log(requestId, 'PIPELINE_COMPLETE', { videoId });
 
+      // In dev/staging where encoding is synchronous, fetch fresh data from DB
+      // This ensures mp4Url is included in the response after encoding completes
+      if (isDev) {
+        const freshVideo = await prisma.video.findUnique({
+          where: { id: videoId },
+          select: {
+            encodingStatus: true,
+            mp4Url: true,
+            hlsManifestUrl: true
+          }
+        });
+
+        return {
+          videoId,
+          originalUrl: uploadResult.url,
+          originalBlobName: uploadResult.blobName,
+          thumbnailUrl,
+          requestId,
+          duration: metadata.duration,
+          width: metadata.width,
+          height: metadata.height,
+          aspectRatio: metadata.aspectRatio,
+          originalSize: file.size,
+          originalMimeType: file.mimetype,
+          encodingStatus: (freshVideo?.encodingStatus as 'PENDING' | 'ENCODING' | 'READY' | 'FAILED') || 'PENDING',
+          mp4Url: freshVideo?.mp4Url || undefined,
+          hlsManifestUrl: freshVideo?.hlsManifestUrl || undefined
+        };
+      }
+
+      // Production: return immediately with PENDING status
       return {
         videoId,
         originalUrl: uploadResult.url,

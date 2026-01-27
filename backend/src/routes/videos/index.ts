@@ -254,7 +254,9 @@ router.post(
           aspectRatio: result.aspectRatio,
           originalSize: result.originalSize,
           encodingStatus: result.encodingStatus,
-          publishStatus: 'DRAFT'
+          publishStatus: 'DRAFT',
+          mp4Url: result.mp4Url,
+          hlsManifestUrl: result.hlsManifestUrl
         },
         requestId
       });
@@ -432,7 +434,8 @@ router.get('/drafts', requireAuth, async (req: AuthRequest, res: Response) => {
         caption: true,
         encodingStatus: true,
         moderationStatus: true,
-        createdAt: true
+        createdAt: true,
+        scheduledPublishAt: true
       }
     });
 
@@ -1004,6 +1007,80 @@ router.patch('/:id/publish', requireAuth, async (req: AuthRequest, res: Response
 
 /**
  * @swagger
+ * /api/videos/{id}/unpublish:
+ *   patch:
+ *     tags: [Video]
+ *     summary: Unpublish a video (move back to drafts)
+ *     description: Changes video status from PUBLISHED back to DRAFT
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Video ID
+ *     responses:
+ *       200:
+ *         description: Video unpublished
+ *       400:
+ *         description: Video is not published
+ *       403:
+ *         description: Not authorized
+ */
+router.patch('/:id/unpublish', requireStagingAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const video = await prisma.video.findFirst({
+      where: { id, userId }
+    });
+
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        error: 'Video not found'
+      });
+    }
+
+    if (video.publishStatus !== 'PUBLISHED') {
+      return res.status(400).json({
+        success: false,
+        error: 'Video is not published'
+      });
+    }
+
+    const updatedVideo = await prisma.video.update({
+      where: { id },
+      data: {
+        publishStatus: 'DRAFT',
+        publishedAt: null,
+        isActive: false
+      },
+      select: {
+        id: true,
+        publishStatus: true
+      }
+    });
+
+    res.json({
+      success: true,
+      video: updatedVideo
+    });
+
+  } catch (error) {
+    logger.error({ error }, 'Failed to unpublish video');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to unpublish video'
+    });
+  }
+});
+
+/**
+ * @swagger
  * /api/videos/{id}/schedule:
  *   patch:
  *     tags: [Video]
@@ -1037,16 +1114,16 @@ router.patch('/:id/publish', requireAuth, async (req: AuthRequest, res: Response
 router.patch('/:id/schedule', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { publishAt } = req.body;
+    const { scheduledAt } = req.body;
 
-    if (!publishAt) {
+    if (!scheduledAt) {
       return res.status(400).json({
         success: false,
-        error: 'publishAt is required'
+        error: 'scheduledAt is required'
       });
     }
 
-    const scheduledTime = new Date(publishAt);
+    const scheduledTime = new Date(scheduledAt);
     if (isNaN(scheduledTime.getTime())) {
       return res.status(400).json({
         success: false,

@@ -28,6 +28,12 @@ export class SnippetsDashboard {
             published: []
         };
         this.loading = false;
+
+        // Listen for upload events from SnippetCreatorModal
+        window.addEventListener('snippetUploaded', () => {
+            this.snippets.drafts = null;
+            this.loadTab('drafts', true);
+        });
     }
 
     /**
@@ -113,22 +119,24 @@ export class SnippetsDashboard {
      * @param {string} tab - Tab name (drafts, scheduled, published)
      */
     async switchTab(tab) {
-        if (tab === this.currentTab) return;
-
         // Update tab buttons
         document.querySelectorAll('.snippets-dashboard__tabs .tab').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tab);
         });
 
+        const previousTab = this.currentTab;
         this.currentTab = tab;
-        await this.loadTab(tab);
+        await this.loadTab(tab, previousTab !== tab);
     }
 
     /**
      * Load snippets for a specific tab
      * @param {string} tab - Tab name
+     * @param {boolean} forceReload - Force reload even if same tab
      */
-    async loadTab(tab) {
+    async loadTab(tab, forceReload = false) {
+        if (tab === this.currentTab && !forceReload) return;
+
         const content = document.getElementById('snippetsTabContent');
         if (!content) return;
 
@@ -277,11 +285,13 @@ export class SnippetsDashboard {
                 </div>
                 <div class="snippet-card__info">
                     <p class="snippet-card__caption" title="${this.escapeHtml(caption)}">${this.escapeHtml(this.truncate(caption, 60))}</p>
-                    <p class="snippet-card__timestamp">${this.formatDate(snippet.createdAt)}</p>
+                    <p class="snippet-card__timestamp">${tab === 'published' && snippet.publishedAt
+                        ? this.formatDate(snippet.publishedAt)
+                        : this.formatDate(snippet.createdAt)}</p>
                     ${this.renderStatusBadge(snippet, tab)}
-                    ${tab === 'scheduled' && snippet.scheduledAt ? `
+                    ${tab === 'scheduled' && snippet.scheduledPublishAt ? `
                         <div class="snippet-card__scheduled-time">
-                            📅 ${this.formatDate(snippet.scheduledAt)}
+                            📅 ${this.formatDate(snippet.scheduledPublishAt)}
                         </div>
                     ` : ''}
                 </div>
@@ -376,9 +386,10 @@ export class SnippetsDashboard {
                     setTimeout(() => card.remove(), 300);
                 }
 
-                // Clear cache so next tab load gets fresh data
+                // Clear cache and reload current tab
                 this.snippets.drafts = null;
                 this.snippets.published = null;
+                await this.loadTab(this.currentTab, true);
             } else {
                 throw new Error(response?.error || 'Failed to publish');
             }
