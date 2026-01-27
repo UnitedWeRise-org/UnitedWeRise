@@ -54,6 +54,16 @@ export class VideoPlayer {
         this.videoEl = null;
         this.observer = null;
         this.isPlaying = false;
+        this.destroyed = false;
+
+        // Bound event handlers (for removal on destroy)
+        this.boundHandlePlay = null;
+        this.boundHandlePause = null;
+        this.boundHandleEnded = null;
+        this.boundUpdateProgress = null;
+        this.boundShowLoadingTrue = null;
+        this.boundShowLoadingFalse = null;
+        this.boundHandleError = null;
 
         this.init();
     }
@@ -225,14 +235,23 @@ export class VideoPlayer {
             this.seekTo(percent);
         });
 
-        // Video events
-        this.videoEl.addEventListener('play', () => this.handlePlay());
-        this.videoEl.addEventListener('pause', () => this.handlePause());
-        this.videoEl.addEventListener('ended', () => this.handleEnded());
-        this.videoEl.addEventListener('timeupdate', () => this.updateProgress());
-        this.videoEl.addEventListener('waiting', () => this.showLoading(true));
-        this.videoEl.addEventListener('playing', () => this.showLoading(false));
-        this.videoEl.addEventListener('error', () => this.handleError('Video playback error'));
+        // Store bound handlers for removal on destroy
+        this.boundHandlePlay = () => this.handlePlay();
+        this.boundHandlePause = () => this.handlePause();
+        this.boundHandleEnded = () => this.handleEnded();
+        this.boundUpdateProgress = () => this.updateProgress();
+        this.boundShowLoadingTrue = () => this.showLoading(true);
+        this.boundShowLoadingFalse = () => this.showLoading(false);
+        this.boundHandleError = () => this.handleError('Video playback error');
+
+        // Video events (using stored handlers for cleanup)
+        this.videoEl.addEventListener('play', this.boundHandlePlay);
+        this.videoEl.addEventListener('pause', this.boundHandlePause);
+        this.videoEl.addEventListener('ended', this.boundHandleEnded);
+        this.videoEl.addEventListener('timeupdate', this.boundUpdateProgress);
+        this.videoEl.addEventListener('waiting', this.boundShowLoadingTrue);
+        this.videoEl.addEventListener('playing', this.boundShowLoadingFalse);
+        this.videoEl.addEventListener('error', this.boundHandleError);
 
         // Click video to toggle play (for non-overlay clicks)
         this.videoEl.addEventListener('click', () => this.togglePlay());
@@ -325,6 +344,7 @@ export class VideoPlayer {
      * Handle play event
      */
     handlePlay() {
+        if (this.destroyed) return;
         this.isPlaying = true;
         const overlay = this.container?.querySelector('#playOverlay');
         if (overlay) {
@@ -338,6 +358,7 @@ export class VideoPlayer {
      * Handle pause event
      */
     handlePause() {
+        if (this.destroyed) return;
         this.isPlaying = false;
         this.updatePlayPauseButton();
         this.onPause();
@@ -347,6 +368,7 @@ export class VideoPlayer {
      * Handle ended event
      */
     handleEnded() {
+        if (this.destroyed) return;
         this.isPlaying = false;
         const overlay = this.container?.querySelector('#playOverlay');
         if (overlay) {
@@ -369,16 +391,21 @@ export class VideoPlayer {
      * Update progress bar
      */
     updateProgress() {
+        if (this.destroyed || !this.container) return;
+        const progressBar = this.container.querySelector('#progressBar');
+        if (!progressBar) return;
         const percent = (this.videoEl.currentTime / this.videoEl.duration) * 100;
-        this.container.querySelector('#progressBar').style.width = `${percent}%`;
+        progressBar.style.width = `${percent}%`;
     }
 
     /**
      * Update play/pause button state
      */
     updatePlayPauseButton() {
+        if (this.destroyed || !this.container) return;
         const playIcon = this.container.querySelector('.video-player__icon-play');
         const pauseIcon = this.container.querySelector('.video-player__icon-pause');
+        if (!playIcon || !pauseIcon) return;
 
         if (this.isPlaying) {
             playIcon.style.display = 'none';
@@ -393,8 +420,10 @@ export class VideoPlayer {
      * Update mute button state
      */
     updateMuteButton() {
+        if (this.destroyed || !this.container) return;
         const volumeIcon = this.container.querySelector('.video-player__icon-volume');
         const mutedIcon = this.container.querySelector('.video-player__icon-muted');
+        if (!volumeIcon || !mutedIcon) return;
 
         if (this.videoEl.muted) {
             volumeIcon.style.display = 'none';
@@ -410,13 +439,19 @@ export class VideoPlayer {
      * @param {boolean} show - Show or hide
      */
     showLoading(show) {
-        this.container.querySelector('#loading').style.display = show ? 'flex' : 'none';
+        if (this.destroyed || !this.container) return;
+        const loading = this.container.querySelector('#loading');
+        if (!loading) return;
+        loading.style.display = show ? 'flex' : 'none';
     }
 
     /**
      * Destroy the player
      */
     destroy() {
+        // Set destroyed flag FIRST to stop all event handlers
+        this.destroyed = true;
+
         if (this.observer) {
             this.observer.disconnect();
         }
@@ -425,7 +460,30 @@ export class VideoPlayer {
             this.hls.destroy();
         }
 
+        // Remove event listeners before clearing DOM
         if (this.videoEl) {
+            if (this.boundHandlePlay) {
+                this.videoEl.removeEventListener('play', this.boundHandlePlay);
+            }
+            if (this.boundHandlePause) {
+                this.videoEl.removeEventListener('pause', this.boundHandlePause);
+            }
+            if (this.boundHandleEnded) {
+                this.videoEl.removeEventListener('ended', this.boundHandleEnded);
+            }
+            if (this.boundUpdateProgress) {
+                this.videoEl.removeEventListener('timeupdate', this.boundUpdateProgress);
+            }
+            if (this.boundShowLoadingTrue) {
+                this.videoEl.removeEventListener('waiting', this.boundShowLoadingTrue);
+            }
+            if (this.boundShowLoadingFalse) {
+                this.videoEl.removeEventListener('playing', this.boundShowLoadingFalse);
+            }
+            if (this.boundHandleError) {
+                this.videoEl.removeEventListener('error', this.boundHandleError);
+            }
+
             this.videoEl.pause();
             this.videoEl.src = '';
         }
