@@ -7,9 +7,13 @@
  * - Stage 1: File validation (size, duration, format, dimensions)
  * - Stage 2: Metadata extraction (FFprobe for duration, codec, dimensions)
  * - Stage 3: Upload raw video to blob storage
- * - Stage 4: Queue encoding job (Azure Media Services)
- * - Stage 5: Thumbnail generation (extract frame at 1s mark)
- * - Stage 6: Database persistence
+ * - Stage 4: Thumbnail generation (extract frame at 0.5s mark)
+ * - Stage 5: Database persistence (MUST happen before encoding)
+ * - Stage 6: Queue encoding job (record must exist for encoding to update)
+ *
+ * CRITICAL: Stages 5-6 order matters! The database record must exist
+ * before encoding runs, or the encoding service cannot update the record
+ * with mp4Url/hlsManifestUrl when encoding completes.
  *
  * Features:
  * - Structured logging with requestId tracing
@@ -333,6 +337,17 @@ export class VideoPipeline {
   ): Promise<string | undefined> {
     this.log(requestId, 'THUMBNAIL_GENERATION_START', { videoId });
 
+    // Diagnostic: Check if FFmpeg is available
+    try {
+      const { execSync } = require('child_process');
+      const ffmpegPath = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
+      this.log(requestId, 'THUMBNAIL_FFMPEG_CHECK', { videoId, ffmpegPath, status: 'found' });
+    } catch (ffmpegCheckError) {
+      logger.error({ videoId, requestId, error: ffmpegCheckError }, 'FFmpeg not found on system PATH - thumbnail generation will fail');
+      this.log(requestId, 'THUMBNAIL_FFMPEG_CHECK', { videoId, status: 'not_found' });
+      return undefined;
+    }
+
     return new Promise((resolve) => {
       const ffmpeg = spawn('ffmpeg', [
         '-i', 'pipe:0',
@@ -511,7 +526,33 @@ export class VideoPipeline {
         requestId
       );
 
-      // Stage 4: Queue encoding job
+      // Stage 4: Generate thumbnail (with timeout)
+      const thumbnailPromise = this.generateThumbnail(file.buffer, videoId, requestId);
+      let thumbnailUrl: string | undefined;
+      try {
+        thumbnailUrl = await Promise.race([
+          thumbnailPromise,
+          new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 30000))
+        ]);
+      } catch {
+        thumbnailUrl = undefined;
+      }
+
+      // Stage 5: Persist to database FIRST (before encoding)
+      // CRITICAL: Record must exist before encoding tries to update it
+      await this.persistToDatabase(
+        videoId,
+        userId,
+        uploadResult,
+        metadata,
+        file.size,
+        file.mimetype,
+        thumbnailUrl,
+        { videoType, caption, postId },
+        requestId
+      );
+
+      // Stage 6: Queue encoding job (record now exists!)
       // In dev/staging, await encoding for immediate playback
       // In production, run async for faster upload response
       const isDev = process.env.NODE_ENV !== 'production';
@@ -530,33 +571,6 @@ export class VideoPipeline {
           logger.error({ error, videoId }, 'Failed to queue encoding job');
         });
       }
-
-      // Stage 5: Generate thumbnail (non-blocking for fast response)
-      const thumbnailPromise = this.generateThumbnail(file.buffer, videoId, requestId);
-
-      // Wait for thumbnail (with timeout)
-      let thumbnailUrl: string | undefined;
-      try {
-        thumbnailUrl = await Promise.race([
-          thumbnailPromise,
-          new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 30000))
-        ]);
-      } catch {
-        thumbnailUrl = undefined;
-      }
-
-      // Stage 6: Persist to database
-      await this.persistToDatabase(
-        videoId,
-        userId,
-        uploadResult,
-        metadata,
-        file.size,
-        file.mimetype,
-        thumbnailUrl,
-        { videoType, caption, postId },
-        requestId
-      );
 
       this.log(requestId, 'PIPELINE_COMPLETE', { videoId });
 

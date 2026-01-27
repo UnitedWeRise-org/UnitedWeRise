@@ -254,15 +254,18 @@ export class SnippetCreatorModal {
             setTimeout(() => {
                 this.close();
 
-                // Dispatch event for existing dashboard to refresh instead of recreating
-                window.dispatchEvent(new CustomEvent('snippetUploaded', {
-                    detail: { video }
-                }));
-
-                // Open snippets dashboard if not already open
+                // Open snippets dashboard FIRST (so DOM exists for event handler)
                 if (typeof window.openSnippetsDashboard === 'function') {
                     window.openSnippetsDashboard();
                 }
+
+                // THEN dispatch event after small delay for DOM to render
+                // This ensures the dashboard's event listener can find its tab content element
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('snippetUploaded', {
+                        detail: { video }
+                    }));
+                }, 100);
             }, 1500);
         }
     }
