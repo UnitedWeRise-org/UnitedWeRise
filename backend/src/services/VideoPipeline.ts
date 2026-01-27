@@ -509,11 +509,25 @@ export class VideoPipeline {
         requestId
       );
 
-      // Stage 4: Queue encoding job (non-blocking)
-      // Don't await this - let it run in background
-      this.queueEncodingJob(videoId, uploadResult.url, requestId).catch((error) => {
-        logger.error({ error, videoId }, 'Failed to queue encoding job');
-      });
+      // Stage 4: Queue encoding job
+      // In dev/staging, await encoding for immediate playback
+      // In production, run async for faster upload response
+      const isDev = process.env.NODE_ENV !== 'production';
+      if (isDev) {
+        try {
+          this.log(requestId, 'ENCODING_JOB_STARTING_SYNC', { videoId });
+          await this.queueEncodingJob(videoId, uploadResult.url, requestId);
+          this.log(requestId, 'ENCODING_COMPLETED_SYNC', { videoId });
+        } catch (error) {
+          logger.error({ error, videoId, requestId }, 'Encoding job failed in sync mode');
+          // Continue - video can still be retried later
+        }
+      } else {
+        // Production: async for faster response
+        this.queueEncodingJob(videoId, uploadResult.url, requestId).catch((error) => {
+          logger.error({ error, videoId }, 'Failed to queue encoding job');
+        });
+      }
 
       // Stage 5: Generate thumbnail (non-blocking for fast response)
       const thumbnailPromise = this.generateThumbnail(file.buffer, videoId, requestId);

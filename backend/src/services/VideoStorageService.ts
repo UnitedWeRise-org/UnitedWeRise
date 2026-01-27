@@ -292,6 +292,8 @@ export class VideoStorageService {
   async copyRawToEncoded(videoId: string, rawBlobName: string): Promise<VideoUploadResult> {
     await this.ensureInitialized();
 
+    logger.info({ videoId, rawBlobName }, 'Starting copy from raw to encoded container');
+
     // Generate SAS URL for source blob (raw container is private)
     const sourceSasUrl = this.generateRawBlobSasUrl(rawBlobName);
 
@@ -312,7 +314,7 @@ export class VideoStorageService {
 
     const url = `https://${this.accountName}.blob.core.windows.net/${CONTAINER_ENCODED}/${destBlobName}`;
 
-    logger.info({ videoId, destBlobName }, 'Video copied to encoded container');
+    logger.info({ videoId, destBlobName, url }, 'Copy to encoded container complete');
 
     return {
       blobName: destBlobName,

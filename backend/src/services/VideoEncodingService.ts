@@ -106,6 +106,9 @@ export class VideoEncodingService {
   async submitEncodingJob(videoId: string, inputUrl: string): Promise<string | null> {
     await this.initialize();
 
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    logger.info({ videoId, isDevelopment }, 'Encoding job received');
+
     // Get the blob name for the video
     const video = await prisma.video.findUnique({
       where: { id: videoId },
@@ -125,8 +128,6 @@ export class VideoEncodingService {
     }
 
     // Immediate mode: Process now (for development/staging)
-    const isDevelopment = process.env.NODE_ENV !== 'production';
-
     if (isDevelopment) {
       // Development mode: simulate encoding with copy
       await this.simulateEncodingForDevelopment(videoId, inputUrl);
@@ -148,7 +149,7 @@ export class VideoEncodingService {
    * @param _inputUrl - Original URL (unused, kept for API compatibility)
    */
   public async simulateEncodingForDevelopment(videoId: string, _inputUrl: string): Promise<void> {
-    logger.info({ videoId }, 'Simulating video encoding for development');
+    logger.info({ videoId }, 'Starting simulated encoding (dev/staging)');
 
     // Update to ENCODING status
     await prisma.video.update({
@@ -172,6 +173,8 @@ export class VideoEncodingService {
     // Copy video from private raw container to public encoded container
     const result = await videoStorageService.copyRawToEncoded(videoId, video.originalBlobName);
 
+    logger.info({ videoId, mp4Url: result.url }, 'Video copied to public container');
+
     // Mark as READY with public URL
     await prisma.video.update({
       where: { id: videoId },
@@ -186,6 +189,7 @@ export class VideoEncodingService {
       }
     });
 
+    logger.info({ videoId }, 'Database updated with encoded URLs');
     logger.info({ videoId, mp4Url: result.url }, 'Development encoding simulation complete');
   }
 
