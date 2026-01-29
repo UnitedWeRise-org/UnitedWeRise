@@ -662,56 +662,110 @@ export class SnippetsDashboard {
     }
 
     /**
-     * Play a snippet in the video player
-     * @param {string} videoId - Video ID
+     * Play a snippet in a reels-style fullscreen scroll feed
+     * Opens at the clicked video's position within the current filtered list.
+     * Uses IntersectionObserver for auto-play/pause on scroll.
+     * @param {string} videoId - Video ID to start at
      */
     async playSnippet(videoId) {
-        const snippet = this.findSnippetById(videoId);
-        if (!snippet) return;
+        const filteredSnippets = this.getFilteredSnippets();
+        const startIndex = filteredSnippets.findIndex(s => s.id === videoId);
+        if (startIndex === -1) return;
 
         try {
             const { VideoPlayer } = await import('./VideoPlayer.js');
 
-            // Determine modal size class based on aspect ratio
-            const aspectRatioClass = this.getAspectRatioClass(snippet.aspectRatio);
-
-            // Create fullscreen player modal
-            const modal = document.createElement('div');
-            modal.className = 'video-player-overlay';
-            modal.innerHTML = `
-                <div class="video-player-modal ${aspectRatioClass}">
-                    <button class="video-player-close" style="position: absolute; top: 1rem; right: 1rem; z-index: 100; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.5rem;">×</button>
-                    <div id="snippetPlayerContainer" class="video-player-container"></div>
+            // Create fullscreen reels overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'snippets-reels-overlay';
+            overlay.innerHTML = `
+                <button class="snippets-reels-close">&times;</button>
+                <div class="snippets-reels-container">
+                    ${filteredSnippets.map((snippet, i) => `
+                        <div class="snippets-reels-item" data-index="${i}" data-video-id="${snippet.id}">
+                            <div class="snippets-reels-video" id="reelsPlayer-${snippet.id}"></div>
+                            ${snippet.caption ? `<div class="snippets-reels-caption"><p>${this.escapeHtml(snippet.caption)}</p></div>` : ''}
+                        </div>
+                    `).join('')}
                 </div>
             `;
 
-            document.body.appendChild(modal);
+            document.body.appendChild(overlay);
+            document.body.style.overflow = 'hidden';
 
-            // Initialize player with correct parameters
-            const player = new VideoPlayer({
-                container: document.getElementById('snippetPlayerContainer'),
-                hlsUrl: snippet.hlsManifestUrl,
-                mp4Url: snippet.mp4Url || snippet.originalUrl,
-                thumbnailUrl: snippet.thumbnailUrl,
-                aspectRatio: snippet.aspectRatio,
-                autoplay: true
+            // Initialize a VideoPlayer for each snippet
+            const players = new Map();
+            filteredSnippets.forEach(snippet => {
+                const container = document.getElementById(`reelsPlayer-${snippet.id}`);
+                if (!container) return;
+                const player = new VideoPlayer({
+                    container,
+                    hlsUrl: snippet.hlsManifestUrl,
+                    mp4Url: snippet.mp4Url || snippet.originalUrl,
+                    thumbnailUrl: snippet.thumbnailUrl,
+                    aspectRatio: snippet.aspectRatio,
+                    autoplay: false,
+                    muted: false,
+                    loop: true
+                });
+                players.set(snippet.id, player);
             });
 
-            modal.querySelector('.video-player-close').addEventListener('click', () => {
-                player.destroy?.();
-                modal.remove();
+            // Scroll to the clicked video
+            const startItem = overlay.querySelector(`[data-index="${startIndex}"]`);
+            if (startItem) {
+                startItem.scrollIntoView({ behavior: 'instant' });
+            }
+
+            // Auto-play the first video
+            let currentlyPlaying = filteredSnippets[startIndex].id;
+            const firstPlayer = players.get(currentlyPlaying);
+            if (firstPlayer) firstPlayer.play();
+
+            // IntersectionObserver for auto-play on scroll
+            const scrollContainer = overlay.querySelector('.snippets-reels-container');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const vid = entry.target.dataset.videoId;
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                        if (vid !== currentlyPlaying) {
+                            const oldPlayer = players.get(currentlyPlaying);
+                            if (oldPlayer) oldPlayer.pause();
+                            const newPlayer = players.get(vid);
+                            if (newPlayer) newPlayer.play();
+                            currentlyPlaying = vid;
+                        }
+                    }
+                });
+            }, { root: scrollContainer, threshold: 0.5 });
+
+            overlay.querySelectorAll('.snippets-reels-item').forEach(item => {
+                observer.observe(item);
             });
 
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    player.destroy?.();
-                    modal.remove();
-                }
-            });
+            // Cleanup function
+            const cleanup = () => {
+                observer.disconnect();
+                players.forEach(p => p.destroy());
+                players.clear();
+                overlay.remove();
+                document.body.style.overflow = '';
+                document.removeEventListener('keydown', handleEsc);
+            };
+
+            // Close button
+            overlay.querySelector('.snippets-reels-close').addEventListener('click', cleanup);
+
+            // Escape key
+            const handleEsc = (e) => {
+                if (e.key === 'Escape') cleanup();
+            };
+            document.addEventListener('keydown', handleEsc);
         } catch (error) {
-            console.error('Failed to open video player:', error);
+            console.error('Failed to open reels player:', error);
             // Fallback: open video URL directly
-            if (snippet.mp4Url || snippet.originalUrl) {
+            const snippet = this.findSnippetById(videoId);
+            if (snippet && (snippet.mp4Url || snippet.originalUrl)) {
                 window.open(snippet.mp4Url || snippet.originalUrl, '_blank');
             }
         }

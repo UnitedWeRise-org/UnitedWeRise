@@ -104,7 +104,7 @@ export class VideoPlayer {
                 ></video>
 
                 <!-- Play Button Overlay -->
-                <div class="video-player__overlay" id="playOverlay">
+                <div class="video-player__overlay" id="playOverlay" style="${this.autoplay ? 'display:none' : ''}">
                     <button class="video-player__play-btn" id="playButton">
                         <svg viewBox="0 0 24 24" fill="currentColor">
                             <polygon points="5,3 19,12 5,21"/>
@@ -347,9 +347,9 @@ export class VideoPlayer {
         if (this.destroyed) return;
         this.isPlaying = true;
         const overlay = this.container?.querySelector('#playOverlay');
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
+        if (overlay) overlay.style.display = 'none';
+        const player = this.container?.querySelector('.video-player');
+        if (player) player.classList.add('is-playing');
         this.updatePlayPauseButton();
         this.onPlay();
     }
@@ -360,6 +360,8 @@ export class VideoPlayer {
     handlePause() {
         if (this.destroyed) return;
         this.isPlaying = false;
+        const player = this.container?.querySelector('.video-player');
+        if (player) player.classList.remove('is-playing');
         this.updatePlayPauseButton();
         this.onPause();
     }
@@ -371,9 +373,9 @@ export class VideoPlayer {
         if (this.destroyed) return;
         this.isPlaying = false;
         const overlay = this.container?.querySelector('#playOverlay');
-        if (overlay) {
-            overlay.style.display = 'flex';
-        }
+        if (overlay) overlay.style.display = 'flex';
+        const player = this.container?.querySelector('.video-player');
+        if (player) player.classList.remove('is-playing');
         this.updatePlayPauseButton();
         this.onEnded();
     }
