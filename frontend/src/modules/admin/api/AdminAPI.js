@@ -100,11 +100,31 @@ class AdminAPI {
     /**
      * Wait for any in-progress OR pending token refresh to complete
      * Prevents race condition where API call uses old token during:
-     * 1. Active refresh (isRefreshingToken = true)
-     * 2. Visibility change debounce period (refreshPending = true)
-     * 3. Recent wake (didJustWakeUp = true) - fallback for race conditions
+     * 1. Recovery barrier exists (preferred - use Promise-based waiting)
+     * 2. Active refresh (isRefreshingToken = true)
+     * 3. Visibility change debounce period (refreshPending = true)
+     * 4. Recent wake (didJustWakeUp = true) - fallback for race conditions
+     *
+     * IMPROVED: Uses Promise-based barrier for more reliable coordination
      */
     async waitForTokenRefresh() {
+        // FIRST: Check for recovery barrier (most reliable method)
+        const recoveryBarrier = window.adminAuth?.getRecoveryBarrier?.();
+        if (recoveryBarrier) {
+            console.log('⏸️ Recovery barrier detected - waiting for session recovery...');
+            try {
+                await recoveryBarrier;
+                console.log('✅ Recovery barrier resolved - proceeding with API call');
+                return;
+            } catch (error) {
+                // Barrier rejected means session recovery failed
+                // Let the API call proceed - it will get 401 and handle logout
+                console.warn('⚠️ Recovery barrier rejected - session invalid, proceeding anyway');
+                return;
+            }
+        }
+
+        // FALLBACK: Use flag-based polling if no barrier exists
         const isRefreshActive = () => window.adminAuth?.isRefreshingToken;
         const isRefreshPending = () => window.adminAuth?.refreshPending;
         // Fallback check: if we just woke up, wait for refresh even if flags aren't set
@@ -121,6 +141,19 @@ class AdminAPI {
             // Wait for refresh to complete OR wake grace period to pass
             // Include didJustWakeUp in condition so we wait for potential refresh to start
             while ((isRefreshActive() || isRefreshPending() || didJustWakeUp()) && (Date.now() - startTime) < maxWait) {
+                // Re-check for barrier in case it was created during polling
+                const barrier = window.adminAuth?.getRecoveryBarrier?.();
+                if (barrier) {
+                    console.log('⏸️ Recovery barrier appeared - switching to barrier-based waiting');
+                    try {
+                        await barrier;
+                        console.log('✅ Recovery barrier resolved - proceeding with API call');
+                        return;
+                    } catch (error) {
+                        console.warn('⚠️ Recovery barrier rejected - session invalid');
+                        return;
+                    }
+                }
                 await new Promise(resolve => setTimeout(resolve, 100)); // Check every 100ms
             }
 
@@ -300,29 +333,39 @@ class AdminAPI {
             // FIXED: Always try refresh first for ANY 401, not just ACCESS_TOKEN_EXPIRED
             // This handles: expired cookies, missing cookies, token rotation edge cases
             if (response.status === 401) {
-                console.warn('⚠️ Admin API: Received 401 - attempting token refresh...');
+                // Suppress error logging during recovery mode
+                const isRecovering = window.adminAuth?.isRecovering;
+                if (!isRecovering) {
+                    console.warn('⚠️ Admin API: Received 401 - attempting token refresh...');
+                } else {
+                    console.log('⏸️ Admin API: 401 during recovery mode - will retry after barrier');
+                }
 
-                // If this is a retry, verify session before giving up
-                if (retryCount > 0) {
-                    console.log('🔍 401 after retry - verifying session before logout decision...');
+                // FIXED: Allow at least 2 retries before considering logout
+                // This prevents premature logout when cookie propagation is slow
+                if (retryCount >= 2) {
+                    console.log('🔍 401 after multiple retries - verifying session before logout decision...');
 
                     // IMPROVEMENT: Verify session with /auth/me before logging out
                     // This handles race conditions where refresh succeeded but request used stale token
                     const sessionValid = await this.verifySessionOnce();
 
                     if (sessionValid) {
-                        console.log('✅ Session still valid despite 401 after retry - retrying once more');
-                        await adminDebugLog('AdminAPI', 'Session verified valid after 401 retry - retrying request', {
+                        console.log('✅ Session still valid despite 401 after retries - retrying once more');
+                        await adminDebugLog('AdminAPI', 'Session verified valid after 401 retries - retrying request', {
                             url: url,
                             retryCount: retryCount
                         });
+
+                        // Add delay before retry to allow cookie propagation
+                        await new Promise(resolve => setTimeout(resolve, 500));
 
                         // Retry one more time now that we've confirmed session is valid
                         return this.call(url, options, retryCount + 1);
                     }
 
-                    console.error('🔒 401 after retry AND session verification failed - session is invalid');
-                    await adminDebugError('AdminAPI', '401 error persists after retry and session verification - logging out', {
+                    console.error('🔒 401 after retries AND session verification failed - session is invalid');
+                    await adminDebugError('AdminAPI', '401 error persists after retries and session verification - logging out', {
                         url: url,
                         retryCount: retryCount,
                         sessionValid: false
@@ -372,6 +415,9 @@ class AdminAPI {
                     if (refreshSucceeded) {
                         console.log('✅ Token refreshed successfully - retrying request');
                         await adminDebugLog('AdminAPI', 'Token refresh successful - retrying original request');
+
+                        // Add delay before retry to allow cookie propagation
+                        await new Promise(resolve => setTimeout(resolve, 500));
 
                         // Retry original request with incremented retry count
                         return this.call(url, options, retryCount + 1);

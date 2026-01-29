@@ -28,6 +28,8 @@ class AdminAuth {
         this.lastHiddenTimestamp = null; // Timestamp of when tab was hidden (for extended absence detection)
         this.isRecovering = false; // Flag to suppress error displays during wake recovery
         this.visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
+        this.recoveryBarrier = null; // Promise that API requests await during wake recovery
+        this.recoveryBarrierResolver = null; // Resolver function for the recovery barrier
         this.API_BASE = this.getApiBase();
         this.BACKEND_URL = this.getBackendUrl();
 
@@ -213,8 +215,9 @@ class AdminAuth {
 
                         // CRITICAL: Wait for browser to process new cookies before making API calls
                         // This prevents race condition where API calls use old (expired) cookie
+                        // IMPROVED: Increased from 500ms to 1000ms for slower devices/connections
                         console.log('⏳ Waiting for cookie propagation...');
-                        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1000ms delay
                         console.log('✅ Cookie propagation complete');
 
                         // Notify WebSocket and other components that tokens have been refreshed
@@ -312,7 +315,14 @@ class AdminAuth {
             if (timeSinceLastRefresh > 5) {
                 this.refreshPending = true;
                 this.isRecovering = true; // Enter recovery mode - suppress error displays
-                console.log(`⏳ Tab visible after ${Math.floor(hiddenDuration / 1000 / 60)} minutes (extended: ${isExtendedAbsence}) - entering recovery mode`);
+
+                // Create recovery barrier BEFORE any refresh logic
+                // All API requests will await this barrier until recovery completes
+                this.recoveryBarrier = new Promise((resolve, reject) => {
+                    this.recoveryBarrierResolver = { resolve, reject };
+                });
+
+                console.log(`⏳ Tab visible after ${Math.floor(hiddenDuration / 1000 / 60)} minutes (extended: ${isExtendedAbsence}) - entering recovery mode with barrier`);
 
                 // Extended absence: Skip debounce and refresh immediately
                 // This prevents API calls from firing during the 1-second debounce gap
@@ -333,9 +343,12 @@ class AdminAuth {
     /**
      * Internal method to perform the actual visibility change refresh
      * Separated to allow both debounced and immediate refresh paths
+     * IMPROVED: Now resolves/rejects recovery barrier after verification
      * @private
      */
     async _performVisibilityRefresh() {
+        let refreshSucceeded = false;
+
         try {
             if (!document.hidden && this.isAuthenticated()) {
                 // Prevent concurrent refreshes from visibility changes
@@ -355,11 +368,52 @@ class AdminAuth {
                     await this.waitForNetworkReady(5000);
 
                     console.log(`🔄 Starting token refresh...`);
-                    await this.refreshToken(true); // Force refresh
-                    console.log('✅ Recovery mode complete');
+                    refreshSucceeded = await this.refreshToken(true); // Force refresh
+
+                    if (refreshSucceeded) {
+                        // Verify session is actually working after refresh
+                        console.log('🔍 Verifying session after refresh...');
+                        try {
+                            const verifyResponse = await fetch(`${this.API_BASE}/auth/me`, {
+                                method: 'GET',
+                                credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                            if (verifyResponse.ok) {
+                                console.log('✅ Recovery mode complete - session verified');
+                            } else {
+                                console.warn('⚠️ Session verification failed after refresh');
+                                refreshSucceeded = false;
+                            }
+                        } catch (verifyError) {
+                            console.warn('⚠️ Session verification error:', verifyError);
+                            refreshSucceeded = false;
+                        }
+                    }
+                } else {
+                    // No refresh needed - consider it successful
+                    refreshSucceeded = true;
                 }
+            } else {
+                // Not authenticated or tab hidden - no barrier to resolve
+                refreshSucceeded = true;
             }
         } finally {
+            // Resolve or reject the recovery barrier
+            if (this.recoveryBarrierResolver) {
+                if (refreshSucceeded) {
+                    console.log('✅ Resolving recovery barrier - API requests may proceed');
+                    this.recoveryBarrierResolver.resolve(true);
+                } else {
+                    console.log('❌ Rejecting recovery barrier - session invalid');
+                    this.recoveryBarrierResolver.reject(new Error('Session recovery failed'));
+                }
+                this.recoveryBarrierResolver = null;
+            }
+
+            // Clear the barrier reference
+            this.recoveryBarrier = null;
+
             // Always clear pending and recovery flags after refresh completes
             this.refreshPending = false;
             this.isRecovering = false;
@@ -589,6 +643,15 @@ class AdminAuth {
     }
 
     /**
+     * Get the recovery barrier promise if one exists
+     * API requests should await this barrier during wake recovery
+     * @returns {Promise|null} The recovery barrier promise or null
+     */
+    getRecoveryBarrier() {
+        return this.recoveryBarrier;
+    }
+
+    /**
      * Check if the page just woke up (became visible recently)
      * Used as a fallback when refreshPending is false due to race conditions
      * IMPROVED: Uses longer window (10 seconds) for extended absences (>5 min)
@@ -705,6 +768,8 @@ class AdminAuth {
         this.refreshPromise = null;
         this.refreshPending = false;
         this.isRecovering = false;
+        this.recoveryBarrier = null;
+        this.recoveryBarrierResolver = null;
 
         // Remove event listeners
         const loginForm = document.getElementById('loginForm');
