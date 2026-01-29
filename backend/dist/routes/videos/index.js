@@ -20,6 +20,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const multer_1 = __importDefault(require("multer"));
 const uuid_1 = require("uuid");
+const os_1 = __importDefault(require("os"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const auth_1 = require("../../middleware/auth");
 const VideoPipeline_1 = require("../../services/VideoPipeline");
 const VideoStorageService_1 = require("../../services/VideoStorageService");
@@ -44,7 +47,13 @@ const ALLOWED_MIME_TYPES = [
 // Multer Configuration
 // ========================================
 const upload = (0, multer_1.default)({
-    storage: multer_1.default.memoryStorage(),
+    storage: multer_1.default.diskStorage({
+        destination: os_1.default.tmpdir(),
+        filename: (req, file, cb) => {
+            const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            cb(null, `video-${uniqueSuffix}${path_1.default.extname(file.originalname)}`);
+        }
+    }),
     limits: {
         fileSize: MAX_FILE_SIZE
     },
@@ -210,7 +219,7 @@ router.post('/upload', auth_1.requireStagingAuth, upload.single('file'), async (
             userId: req.user?.id,
             requestId,
             file: {
-                buffer: req.file.buffer,
+                path: req.file.path,
                 mimetype: req.file.mimetype,
                 size: req.file.size,
                 originalname: req.file.originalname
@@ -256,6 +265,12 @@ router.post('/upload', auth_1.requireStagingAuth, upload.single('file'), async (
             error: error.message || 'Video upload failed',
             requestId
         });
+    }
+    finally {
+        // Clean up temp file from disk
+        if (req.file?.path) {
+            fs_1.default.unlink(req.file.path, () => { });
+        }
     }
 });
 // ========================================

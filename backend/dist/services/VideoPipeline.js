@@ -8,9 +8,13 @@
  * - Stage 1: File validation (size, duration, format, dimensions)
  * - Stage 2: Metadata extraction (FFprobe for duration, codec, dimensions)
  * - Stage 3: Upload raw video to blob storage
- * - Stage 4: Queue encoding job (Azure Media Services)
- * - Stage 5: Thumbnail generation (extract frame at 1s mark)
- * - Stage 6: Database persistence
+ * - Stage 4: Thumbnail generation (extract frame at 0.5s mark)
+ * - Stage 5: Database persistence (MUST happen before encoding)
+ * - Stage 6: Queue encoding job (record must exist for encoding to update)
+ *
+ * CRITICAL: Stages 5-6 order matters! The database record must exist
+ * before encoding runs, or the encoding service cannot update the record
+ * with mp4Url/hlsManifestUrl when encoding completes.
  *
  * Features:
  * - Structured logging with requestId tracing
@@ -23,7 +27,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.videoPipeline = exports.VideoPipeline = void 0;
 const child_process_1 = require("child_process");
-const stream_1 = require("stream");
 const uuid_1 = require("uuid");
 const prisma_js_1 = require("../lib/prisma.js");
 const logger_1 = require("./logger");
@@ -114,8 +117,8 @@ class VideoPipeline {
     // ========================================
     // Stage 2: Metadata Extraction (FFprobe)
     // ========================================
-    async extractMetadata(buffer, requestId) {
-        this.log(requestId, 'METADATA_EXTRACTION_START', { bufferSize: buffer.length });
+    async extractMetadata(filePath, requestId) {
+        this.log(requestId, 'METADATA_EXTRACTION_START', { filePath });
         return new Promise((resolve, reject) => {
             const ffprobe = (0, child_process_1.spawn)('ffprobe', [
                 '-v', 'quiet',
@@ -123,7 +126,7 @@ class VideoPipeline {
                 '-show_format',
                 '-show_streams',
                 '-select_streams', 'v:0',
-                '-i', 'pipe:0'
+                '-i', filePath
             ]);
             let stdout = '';
             let stderr = '';
@@ -195,17 +198,14 @@ class VideoPipeline {
                 this.log(requestId, 'METADATA_EXTRACTION_ERROR', { error: error.message });
                 reject(new Error(`FFprobe error: ${error.message}. Make sure ffmpeg is installed.`));
             });
-            // Write buffer to stdin
-            const readable = stream_1.Readable.from(buffer);
-            readable.pipe(ffprobe.stdin);
         });
     }
     // ========================================
     // Stage 3: Upload Raw Video
     // ========================================
-    async uploadRawVideo(buffer, videoId, mimeType, originalname, requestId) {
-        this.log(requestId, 'RAW_UPLOAD_START', { videoId, size: buffer.length });
-        const result = await VideoStorageService_1.videoStorageService.uploadRawVideo(buffer, videoId, mimeType, originalname);
+    async uploadRawVideo(filePath, videoId, mimeType, originalname, fileSize, requestId) {
+        this.log(requestId, 'RAW_UPLOAD_START', { videoId, filePath, size: fileSize });
+        const result = await VideoStorageService_1.videoStorageService.uploadRawVideo(filePath, videoId, mimeType, originalname);
         this.log(requestId, 'RAW_UPLOAD_COMPLETE', { videoId, blobName: result.blobName });
         return result;
     }
@@ -227,12 +227,23 @@ class VideoPipeline {
     // ========================================
     // Stage 5: Thumbnail Generation
     // ========================================
-    async generateThumbnail(buffer, videoId, requestId) {
-        this.log(requestId, 'THUMBNAIL_GENERATION_START', { videoId });
+    async generateThumbnail(filePath, videoId, requestId) {
+        this.log(requestId, 'THUMBNAIL_GENERATION_START', { videoId, filePath });
+        // Diagnostic: Check if FFmpeg is available
+        try {
+            const { execSync } = require('child_process');
+            const ffmpegPath = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
+            this.log(requestId, 'THUMBNAIL_FFMPEG_CHECK', { videoId, ffmpegPath, status: 'found' });
+        }
+        catch (ffmpegCheckError) {
+            logger_1.logger.error({ videoId, requestId, error: ffmpegCheckError }, 'FFmpeg not found on system PATH - thumbnail generation will fail');
+            this.log(requestId, 'THUMBNAIL_FFMPEG_CHECK', { videoId, status: 'not_found' });
+            return undefined;
+        }
         return new Promise((resolve) => {
             const ffmpeg = (0, child_process_1.spawn)('ffmpeg', [
-                '-i', 'pipe:0',
-                '-ss', '1', // Seek to 1 second
+                '-i', filePath,
+                '-ss', '0.5', // Seek to 0.5 seconds (earlier for short videos)
                 '-vframes', '1', // Extract 1 frame
                 '-f', 'image2pipe',
                 '-vcodec', 'mjpeg',
@@ -240,12 +251,21 @@ class VideoPipeline {
                 'pipe:1'
             ]);
             const chunks = [];
+            let stderrOutput = '';
             ffmpeg.stdout.on('data', (data) => {
                 chunks.push(data);
             });
+            ffmpeg.stderr.on('data', (data) => {
+                stderrOutput += data.toString();
+            });
             ffmpeg.on('close', async (code) => {
                 if (code !== 0 || chunks.length === 0) {
-                    this.log(requestId, 'THUMBNAIL_GENERATION_FAILED', { videoId, code });
+                    this.log(requestId, 'THUMBNAIL_GENERATION_FAILED', {
+                        videoId,
+                        code,
+                        chunksLength: chunks.length,
+                        stderr: stderrOutput.slice(-500) // Last 500 chars for diagnostics
+                    });
                     resolve(undefined);
                     return;
                 }
@@ -267,9 +287,6 @@ class VideoPipeline {
                 this.log(requestId, 'THUMBNAIL_GENERATION_ERROR', { videoId, error: error.message });
                 resolve(undefined);
             });
-            // Write buffer to stdin
-            const readable = stream_1.Readable.from(buffer);
-            readable.pipe(ffmpeg.stdin);
         });
     }
     // ========================================
@@ -326,7 +343,7 @@ class VideoPipeline {
                 throw new Error(validationResult.error);
             }
             // Stage 2: Extract metadata
-            const metadata = await this.extractMetadata(file.buffer, requestId);
+            const metadata = await this.extractMetadata(file.path, requestId);
             // Validate duration
             if (metadata.duration < MIN_DURATION) {
                 throw new Error(`Video too short. Minimum duration is ${MIN_DURATION} second.`);
@@ -341,29 +358,82 @@ class VideoPipeline {
             if (metadata.width > MAX_DIMENSION || metadata.height > MAX_DIMENSION) {
                 throw new Error(`Video resolution too high. Maximum dimension is ${MAX_DIMENSION}px.`);
             }
-            // Stage 3: Upload raw video
-            const uploadResult = await this.uploadRawVideo(file.buffer, videoId, file.mimetype, file.originalname, requestId);
-            // Stage 4: Queue encoding job (non-blocking)
-            // Don't await this - let it run in background
-            this.queueEncodingJob(videoId, uploadResult.url, requestId).catch((error) => {
-                logger_1.logger.error({ error, videoId }, 'Failed to queue encoding job');
-            });
-            // Stage 5: Generate thumbnail (non-blocking for fast response)
-            const thumbnailPromise = this.generateThumbnail(file.buffer, videoId, requestId);
-            // Wait for thumbnail (with timeout)
+            // Stage 3: Upload raw video (streams from disk, no buffer in memory)
+            const uploadResult = await this.uploadRawVideo(file.path, videoId, file.mimetype, file.originalname, file.size, requestId);
+            // Stage 4: Generate thumbnail (with timeout, reads from disk file)
+            const thumbnailPromise = this.generateThumbnail(file.path, videoId, requestId);
             let thumbnailUrl;
             try {
                 thumbnailUrl = await Promise.race([
                     thumbnailPromise,
-                    new Promise((resolve) => setTimeout(() => resolve(undefined), 10000))
+                    new Promise((resolve) => {
+                        setTimeout(() => {
+                            this.log(requestId, 'THUMBNAIL_GENERATION_TIMEOUT', { videoId });
+                            resolve(undefined);
+                        }, 30000);
+                    })
                 ]);
             }
             catch {
                 thumbnailUrl = undefined;
             }
-            // Stage 6: Persist to database
+            if (!thumbnailUrl) {
+                this.log(requestId, 'THUMBNAIL_GENERATION_RESOLVED_EMPTY', { videoId });
+            }
+            // Stage 5: Persist to database FIRST (before encoding)
+            // CRITICAL: Record must exist before encoding tries to update it
             await this.persistToDatabase(videoId, userId, uploadResult, metadata, file.size, file.mimetype, thumbnailUrl, { videoType, caption, postId }, requestId);
+            // Stage 6: Queue encoding job (record now exists!)
+            // In dev/staging, await encoding for immediate playback
+            // In production, run async for faster upload response
+            const isDev = process.env.NODE_ENV !== 'production';
+            if (isDev) {
+                try {
+                    this.log(requestId, 'ENCODING_JOB_STARTING_SYNC', { videoId });
+                    await this.queueEncodingJob(videoId, uploadResult.url, requestId);
+                    this.log(requestId, 'ENCODING_COMPLETED_SYNC', { videoId });
+                }
+                catch (error) {
+                    logger_1.logger.error({ error, videoId, requestId }, 'Encoding job failed in sync mode');
+                    // Continue - video can still be retried later
+                }
+            }
+            else {
+                // Production: async for faster response
+                this.queueEncodingJob(videoId, uploadResult.url, requestId).catch((error) => {
+                    logger_1.logger.error({ error, videoId }, 'Failed to queue encoding job');
+                });
+            }
             this.log(requestId, 'PIPELINE_COMPLETE', { videoId });
+            // In dev/staging where encoding is synchronous, fetch fresh data from DB
+            // This ensures mp4Url is included in the response after encoding completes
+            if (isDev) {
+                const freshVideo = await prisma_js_1.prisma.video.findUnique({
+                    where: { id: videoId },
+                    select: {
+                        encodingStatus: true,
+                        mp4Url: true,
+                        hlsManifestUrl: true
+                    }
+                });
+                return {
+                    videoId,
+                    originalUrl: uploadResult.url,
+                    originalBlobName: uploadResult.blobName,
+                    thumbnailUrl,
+                    requestId,
+                    duration: metadata.duration,
+                    width: metadata.width,
+                    height: metadata.height,
+                    aspectRatio: metadata.aspectRatio,
+                    originalSize: file.size,
+                    originalMimeType: file.mimetype,
+                    encodingStatus: freshVideo?.encodingStatus || 'PENDING',
+                    mp4Url: freshVideo?.mp4Url || undefined,
+                    hlsManifestUrl: freshVideo?.hlsManifestUrl || undefined
+                };
+            }
+            // Production: return immediately with PENDING status
             return {
                 videoId,
                 originalUrl: uploadResult.url,

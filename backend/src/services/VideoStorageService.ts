@@ -12,6 +12,7 @@
 
 import { BlobServiceClient, ContainerClient, BlockBlobClient, BlobSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential } from '@azure/storage-blob';
 import { v4 as uuidv4 } from 'uuid';
+import { createReadStream } from 'fs';
 import { logger } from './logger';
 
 // ========================================
@@ -119,10 +120,16 @@ export class VideoStorageService {
   }
 
   /**
-   * Upload raw video file (original upload)
+   * Upload raw video file from disk (streams to Azure, no buffer in memory)
+   *
+   * @param filePath - Path to the temp file on disk
+   * @param videoId - The video record ID
+   * @param mimeType - The MIME type of the video
+   * @param originalFilename - Original filename for content disposition
+   * @returns Upload result with blob name and URL
    */
   async uploadRawVideo(
-    buffer: Buffer,
+    filePath: string,
     videoId: string,
     mimeType: string,
     originalFilename?: string
@@ -134,7 +141,8 @@ export class VideoStorageService {
 
     const blockBlobClient = this.rawContainer!.getBlockBlobClient(blobName);
 
-    await blockBlobClient.uploadData(buffer, {
+    const stream = createReadStream(filePath);
+    await blockBlobClient.uploadStream(stream, undefined, undefined, {
       blobHTTPHeaders: {
         blobContentType: mimeType,
         blobContentDisposition: originalFilename
@@ -143,7 +151,7 @@ export class VideoStorageService {
       }
     });
 
-    logger.info({ videoId, blobName, size: buffer.length }, 'Raw video uploaded');
+    logger.info({ videoId, blobName, filePath }, 'Raw video uploaded from disk');
 
     return {
       blobName,

@@ -34,9 +34,15 @@ export declare class VideoStorageService {
      */
     initialize(): Promise<void>;
     /**
-     * Upload raw video file (original upload)
+     * Upload raw video file from disk (streams to Azure, no buffer in memory)
+     *
+     * @param filePath - Path to the temp file on disk
+     * @param videoId - The video record ID
+     * @param mimeType - The MIME type of the video
+     * @param originalFilename - Original filename for content disposition
+     * @returns Upload result with blob name and URL
      */
-    uploadRawVideo(buffer: Buffer, videoId: string, mimeType: string, originalFilename?: string): Promise<VideoUploadResult>;
+    uploadRawVideo(filePath: string, videoId: string, mimeType: string, originalFilename?: string): Promise<VideoUploadResult>;
     /**
      * Upload encoded video segment or manifest
      */

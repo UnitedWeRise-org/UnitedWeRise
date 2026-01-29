@@ -13,6 +13,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.videoStorageService = exports.VideoStorageService = void 0;
 const storage_blob_1 = require("@azure/storage-blob");
+const fs_1 = require("fs");
 const logger_1 = require("./logger");
 // ========================================
 // Constants
@@ -89,14 +90,21 @@ class VideoStorageService {
         }
     }
     /**
-     * Upload raw video file (original upload)
+     * Upload raw video file from disk (streams to Azure, no buffer in memory)
+     *
+     * @param filePath - Path to the temp file on disk
+     * @param videoId - The video record ID
+     * @param mimeType - The MIME type of the video
+     * @param originalFilename - Original filename for content disposition
+     * @returns Upload result with blob name and URL
      */
-    async uploadRawVideo(buffer, videoId, mimeType, originalFilename) {
+    async uploadRawVideo(filePath, videoId, mimeType, originalFilename) {
         await this.ensureInitialized();
         const extension = this.getExtensionFromMimeType(mimeType);
         const blobName = `${videoId}/original.${extension}`;
         const blockBlobClient = this.rawContainer.getBlockBlobClient(blobName);
-        await blockBlobClient.uploadData(buffer, {
+        const stream = (0, fs_1.createReadStream)(filePath);
+        await blockBlobClient.uploadStream(stream, undefined, undefined, {
             blobHTTPHeaders: {
                 blobContentType: mimeType,
                 blobContentDisposition: originalFilename
@@ -104,7 +112,7 @@ class VideoStorageService {
                     : 'attachment'
             }
         });
-        logger_1.logger.info({ videoId, blobName, size: buffer.length }, 'Raw video uploaded');
+        logger_1.logger.info({ videoId, blobName, filePath }, 'Raw video uploaded from disk');
         return {
             blobName,
             url: blockBlobClient.url,
@@ -218,6 +226,7 @@ class VideoStorageService {
      */
     async copyRawToEncoded(videoId, rawBlobName) {
         await this.ensureInitialized();
+        logger_1.logger.info({ videoId, rawBlobName }, 'Starting copy from raw to encoded container');
         // Generate SAS URL for source blob (raw container is private)
         const sourceSasUrl = this.generateRawBlobSasUrl(rawBlobName);
         // Destination in videos-encoded
@@ -233,7 +242,7 @@ class VideoStorageService {
             blobContentDisposition: 'inline'
         });
         const url = `https://${this.accountName}.blob.core.windows.net/${CONTAINER_ENCODED}/${destBlobName}`;
-        logger_1.logger.info({ videoId, destBlobName }, 'Video copied to encoded container');
+        logger_1.logger.info({ videoId, destBlobName, url }, 'Copy to encoded container complete');
         return {
             blobName: destBlobName,
             url,

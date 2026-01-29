@@ -25,7 +25,6 @@
  */
 
 import { spawn } from 'child_process';
-import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../lib/prisma.js';
 import { logger } from './logger';
@@ -37,7 +36,7 @@ import { videoEncodingService } from './VideoEncodingService';
 // ========================================
 
 export interface VideoFile {
-  buffer: Buffer;
+  path: string;
   mimetype: string;
   size: number;
   originalname?: string;
@@ -187,8 +186,8 @@ export class VideoPipeline {
   // Stage 2: Metadata Extraction (FFprobe)
   // ========================================
 
-  async extractMetadata(buffer: Buffer, requestId: string): Promise<VideoMetadata> {
-    this.log(requestId, 'METADATA_EXTRACTION_START', { bufferSize: buffer.length });
+  async extractMetadata(filePath: string, requestId: string): Promise<VideoMetadata> {
+    this.log(requestId, 'METADATA_EXTRACTION_START', { filePath });
 
     return new Promise((resolve, reject) => {
       const ffprobe = spawn('ffprobe', [
@@ -197,7 +196,7 @@ export class VideoPipeline {
         '-show_format',
         '-show_streams',
         '-select_streams', 'v:0',
-        '-i', 'pipe:0'
+        '-i', filePath
       ]);
 
       let stdout = '';
@@ -275,10 +274,6 @@ export class VideoPipeline {
         this.log(requestId, 'METADATA_EXTRACTION_ERROR', { error: error.message });
         reject(new Error(`FFprobe error: ${error.message}. Make sure ffmpeg is installed.`));
       });
-
-      // Write buffer to stdin
-      const readable = Readable.from(buffer);
-      readable.pipe(ffprobe.stdin);
     });
   }
 
@@ -287,16 +282,17 @@ export class VideoPipeline {
   // ========================================
 
   async uploadRawVideo(
-    buffer: Buffer,
+    filePath: string,
     videoId: string,
     mimeType: string,
     originalname: string | undefined,
+    fileSize: number,
     requestId: string
   ): Promise<VideoUploadResult> {
-    this.log(requestId, 'RAW_UPLOAD_START', { videoId, size: buffer.length });
+    this.log(requestId, 'RAW_UPLOAD_START', { videoId, filePath, size: fileSize });
 
     const result = await videoStorageService.uploadRawVideo(
-      buffer,
+      filePath,
       videoId,
       mimeType,
       originalname
@@ -331,11 +327,11 @@ export class VideoPipeline {
   // ========================================
 
   async generateThumbnail(
-    buffer: Buffer,
+    filePath: string,
     videoId: string,
     requestId: string
   ): Promise<string | undefined> {
-    this.log(requestId, 'THUMBNAIL_GENERATION_START', { videoId });
+    this.log(requestId, 'THUMBNAIL_GENERATION_START', { videoId, filePath });
 
     // Diagnostic: Check if FFmpeg is available
     try {
@@ -350,7 +346,7 @@ export class VideoPipeline {
 
     return new Promise((resolve) => {
       const ffmpeg = spawn('ffmpeg', [
-        '-i', 'pipe:0',
+        '-i', filePath,
         '-ss', '0.5', // Seek to 0.5 seconds (earlier for short videos)
         '-vframes', '1', // Extract 1 frame
         '-f', 'image2pipe',
@@ -407,10 +403,6 @@ export class VideoPipeline {
         this.log(requestId, 'THUMBNAIL_GENERATION_ERROR', { videoId, error: error.message });
         resolve(undefined);
       });
-
-      // Write buffer to stdin
-      const readable = Readable.from(buffer);
-      readable.pipe(ffmpeg.stdin);
     });
   }
 
@@ -499,7 +491,7 @@ export class VideoPipeline {
       }
 
       // Stage 2: Extract metadata
-      const metadata = await this.extractMetadata(file.buffer, requestId);
+      const metadata = await this.extractMetadata(file.path, requestId);
 
       // Validate duration
       if (metadata.duration < MIN_DURATION) {
@@ -517,25 +509,35 @@ export class VideoPipeline {
         throw new Error(`Video resolution too high. Maximum dimension is ${MAX_DIMENSION}px.`);
       }
 
-      // Stage 3: Upload raw video
+      // Stage 3: Upload raw video (streams from disk, no buffer in memory)
       const uploadResult = await this.uploadRawVideo(
-        file.buffer,
+        file.path,
         videoId,
         file.mimetype,
         file.originalname,
+        file.size,
         requestId
       );
 
-      // Stage 4: Generate thumbnail (with timeout)
-      const thumbnailPromise = this.generateThumbnail(file.buffer, videoId, requestId);
+      // Stage 4: Generate thumbnail (with timeout, reads from disk file)
+      const thumbnailPromise = this.generateThumbnail(file.path, videoId, requestId);
       let thumbnailUrl: string | undefined;
       try {
         thumbnailUrl = await Promise.race([
           thumbnailPromise,
-          new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 30000))
+          new Promise<undefined>((resolve) => {
+            setTimeout(() => {
+              this.log(requestId, 'THUMBNAIL_GENERATION_TIMEOUT', { videoId });
+              resolve(undefined);
+            }, 30000);
+          })
         ]);
       } catch {
         thumbnailUrl = undefined;
+      }
+
+      if (!thumbnailUrl) {
+        this.log(requestId, 'THUMBNAIL_GENERATION_RESOLVED_EMPTY', { videoId });
       }
 
       // Stage 5: Persist to database FIRST (before encoding)

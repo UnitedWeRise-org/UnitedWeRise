@@ -16,6 +16,9 @@
 import express, { Response } from 'express';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
+import os from 'os';
+import path from 'path';
+import fs from 'fs';
 import { requireAuth, requireStagingAuth, requireAdmin, AuthRequest } from '../../middleware/auth';
 import { videoPipeline } from '../../services/VideoPipeline';
 import { videoStorageService } from '../../services/VideoStorageService';
@@ -46,7 +49,13 @@ const ALLOWED_MIME_TYPES = [
 // ========================================
 
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: os.tmpdir(),
+    filename: (req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      cb(null, `video-${uniqueSuffix}${path.extname(file.originalname)}`);
+    }
+  }),
   limits: {
     fileSize: MAX_FILE_SIZE
   },
@@ -228,7 +237,7 @@ router.post(
         userId: req.user?.id!,
         requestId,
         file: {
-          buffer: req.file.buffer,
+          path: req.file.path,
           mimetype: req.file.mimetype,
           size: req.file.size,
           originalname: req.file.originalname
@@ -277,6 +286,11 @@ router.post(
         error: error.message || 'Video upload failed',
         requestId
       });
+    } finally {
+      // Clean up temp file from disk
+      if (req.file?.path) {
+        fs.unlink(req.file.path, () => {});
+      }
     }
   }
 );

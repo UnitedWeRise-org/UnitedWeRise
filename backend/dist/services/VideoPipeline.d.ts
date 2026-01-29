@@ -7,9 +7,13 @@
  * - Stage 1: File validation (size, duration, format, dimensions)
  * - Stage 2: Metadata extraction (FFprobe for duration, codec, dimensions)
  * - Stage 3: Upload raw video to blob storage
- * - Stage 4: Queue encoding job (Azure Media Services)
- * - Stage 5: Thumbnail generation (extract frame at 1s mark)
- * - Stage 6: Database persistence
+ * - Stage 4: Thumbnail generation (extract frame at 0.5s mark)
+ * - Stage 5: Database persistence (MUST happen before encoding)
+ * - Stage 6: Queue encoding job (record must exist for encoding to update)
+ *
+ * CRITICAL: Stages 5-6 order matters! The database record must exist
+ * before encoding runs, or the encoding service cannot update the record
+ * with mp4Url/hlsManifestUrl when encoding completes.
  *
  * Features:
  * - Structured logging with requestId tracing
@@ -21,7 +25,7 @@
  */
 import { VideoUploadResult } from './VideoStorageService';
 export interface VideoFile {
-    buffer: Buffer;
+    path: string;
     mimetype: string;
     size: number;
     originalname?: string;
@@ -55,7 +59,9 @@ export interface VideoProcessingResult {
     aspectRatio: string;
     originalSize: number;
     originalMimeType: string;
-    encodingStatus: 'PENDING';
+    encodingStatus: 'PENDING' | 'ENCODING' | 'READY' | 'FAILED';
+    mp4Url?: string;
+    hlsManifestUrl?: string;
 }
 interface ValidationResult {
     valid: boolean;
@@ -64,10 +70,10 @@ interface ValidationResult {
 export declare class VideoPipeline {
     private log;
     validateFile(file: VideoFile, requestId: string): Promise<ValidationResult>;
-    extractMetadata(buffer: Buffer, requestId: string): Promise<VideoMetadata>;
-    uploadRawVideo(buffer: Buffer, videoId: string, mimeType: string, originalname: string | undefined, requestId: string): Promise<VideoUploadResult>;
+    extractMetadata(filePath: string, requestId: string): Promise<VideoMetadata>;
+    uploadRawVideo(filePath: string, videoId: string, mimeType: string, originalname: string | undefined, fileSize: number, requestId: string): Promise<VideoUploadResult>;
     queueEncodingJob(videoId: string, inputUrl: string, requestId: string): Promise<string | null>;
-    generateThumbnail(buffer: Buffer, videoId: string, requestId: string): Promise<string | undefined>;
+    generateThumbnail(filePath: string, videoId: string, requestId: string): Promise<string | undefined>;
     persistToDatabase(videoId: string, userId: string, uploadResult: VideoUploadResult, metadata: VideoMetadata, originalSize: number, originalMimeType: string, thumbnailUrl: string | undefined, options: {
         videoType: string;
         caption?: string;
