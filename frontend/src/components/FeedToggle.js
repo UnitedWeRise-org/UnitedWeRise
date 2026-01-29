@@ -98,25 +98,21 @@ export class FeedToggle {
 
         const toggleHtml = `
             <div class="feed-controls-wrapper">
-                <!-- 4-Item Toggle (original style) - NOW ON TOP -->
+                <!-- 4-Item Toggle: Discover, Snippets, Following, Filters -->
                 <div class="feed-toggle-container">
                     <div class="feed-toggle">
                         <button class="feed-toggle-btn ${this.currentFeed === 'discover' ? 'active' : ''}" data-feed-type="discover">
                             <span class="feed-toggle-icon">🔥</span>
                             <span class="feed-toggle-label">Discover</span>
                         </button>
+                        <button class="feed-toggle-btn ${this.currentFeed === 'snippets' ? 'active' : ''}" data-feed-type="snippets">
+                            <span class="feed-toggle-icon">🎬</span>
+                            <span class="feed-toggle-label">Snippets</span>
+                        </button>
                         <button class="feed-toggle-btn ${this.currentFeed === 'following' ? 'active' : ''}" data-feed-type="following">
                             <span class="feed-toggle-icon">👥</span>
                             <span class="feed-toggle-label">Following</span>
                             <span class="unread-badge" style="display: none;"></span>
-                        </button>
-                        <button class="feed-toggle-btn ${this.currentFeed === 'saved' ? 'active' : ''}" data-feed-type="saved">
-                            <span class="feed-toggle-icon">🔖</span>
-                            <span class="feed-toggle-label">Saved</span>
-                        </button>
-                        <button class="feed-toggle-btn ${this.currentFeed === 'snippets' ? 'active' : ''}" data-feed-type="snippets">
-                            <span class="feed-toggle-icon">🎬</span>
-                            <span class="feed-toggle-label">Snippets</span>
                         </button>
                         <button class="feed-toggle-btn disabled" data-action="filters-coming-soon">
                             <span class="feed-toggle-icon">⚙️</span>

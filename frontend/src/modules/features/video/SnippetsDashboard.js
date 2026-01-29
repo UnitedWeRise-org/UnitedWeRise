@@ -698,6 +698,8 @@ export class SnippetsDashboard {
             filteredSnippets.forEach(snippet => {
                 const container = document.getElementById(`reelsPlayer-${snippet.id}`);
                 if (!container) return;
+                // Skip snippets that haven't finished encoding (no playable source)
+                if (!snippet.hlsManifestUrl && !snippet.mp4Url && !snippet.originalUrl) return;
                 const player = new VideoPlayer({
                     container,
                     hlsUrl: snippet.hlsManifestUrl,
@@ -705,7 +707,7 @@ export class SnippetsDashboard {
                     thumbnailUrl: snippet.thumbnailUrl,
                     aspectRatio: snippet.aspectRatio,
                     autoplay: false,
-                    muted: false,
+                    muted: true,
                     loop: true
                 });
                 players.set(snippet.id, player);
@@ -717,10 +719,12 @@ export class SnippetsDashboard {
                 startItem.scrollIntoView({ behavior: 'instant' });
             }
 
-            // Auto-play the first video
+            // Auto-play the first video (delay to let DOM settle after scrollIntoView)
             let currentlyPlaying = filteredSnippets[startIndex].id;
             const firstPlayer = players.get(currentlyPlaying);
-            if (firstPlayer) firstPlayer.play();
+            if (firstPlayer) {
+                requestAnimationFrame(() => firstPlayer.play());
+            }
 
             // IntersectionObserver for auto-play on scroll
             const scrollContainer = overlay.querySelector('.snippets-reels-container');

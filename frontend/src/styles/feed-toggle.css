@@ -87,7 +87,7 @@
     pointer-events: none;
 }
 
-/* Toggle Segmented Control - 4-button layout */
+/* Toggle Segmented Control - 4-button layout: Discover, Snippets, Following, Filters */
 .feed-toggle {
     display: flex;
     background: #f0ede5; /* Warm beige background */
