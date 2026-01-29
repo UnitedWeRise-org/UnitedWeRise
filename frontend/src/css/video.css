@@ -1440,6 +1440,16 @@
     margin: 0 auto;
 }
 
+/* Landscape videos need more width so they aren't a tiny box */
+.snippets-reels-video.reels-video--landscape {
+    max-width: 90vw;
+}
+
+/* Square videos get a middle-ground width */
+.snippets-reels-video.reels-video--square {
+    max-width: 600px;
+}
+
 .snippets-reels-overlay .video-player {
     border-radius: 0;
 }

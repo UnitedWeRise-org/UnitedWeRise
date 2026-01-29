@@ -681,12 +681,15 @@ export class SnippetsDashboard {
             overlay.innerHTML = `
                 <button class="snippets-reels-close">&times;</button>
                 <div class="snippets-reels-container">
-                    ${filteredSnippets.map((snippet, i) => `
+                    ${filteredSnippets.map((snippet, i) => {
+                        const reelsAspect = snippet.aspectRatio === 'HORIZONTAL_16_9' ? 'reels-video--landscape'
+                            : snippet.aspectRatio === 'SQUARE_1_1' ? 'reels-video--square' : '';
+                        return `
                         <div class="snippets-reels-item" data-index="${i}" data-video-id="${snippet.id}">
-                            <div class="snippets-reels-video" id="reelsPlayer-${snippet.id}"></div>
+                            <div class="snippets-reels-video ${reelsAspect}" id="reelsPlayer-${snippet.id}"></div>
                             ${snippet.caption ? `<div class="snippets-reels-caption"><p>${this.escapeHtml(snippet.caption)}</p></div>` : ''}
                         </div>
-                    `).join('')}
+                    `;}).join('')}
                 </div>
             `;
 
