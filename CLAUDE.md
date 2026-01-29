@@ -1,10 +1,6 @@
 # UnitedWeRise Development Reference
 **Version 4.0 - Phase-Based Protocol System**
 
-> **Protection System**: Sections marked with 🔒 are PROTECTED and must not be modified without explicit user approval. See Global CLAUDE.md for priority hierarchy.
-
-> **Development Protocol Phases**: All code changes follow the 5-phase system defined in Global CLAUDE.md (Audit → Plan → Execute → Test → Document). Each phase has a protocol with internal STOP criteria.
-
 ---
 
 ## 🔒 Environment-Branch Mapping (NEVER VIOLATE)
@@ -27,7 +23,7 @@
 
 **There are NO exceptions to this rule. ANY deviation means something is broken.**
 
-If backend health endpoint or any monitoring shows a mismatch (e.g., staging showing "main" branch), this indicates:
+If backend health endpoint shows a mismatch (e.g., staging showing "main" branch), this indicates:
 1. A bug in the health endpoint reporting
 2. An accidental deployment to wrong environment
 3. An emergency that must be corrected immediately
@@ -64,8 +60,6 @@ If on `main` for hotfixes or at user direction, stay on main. Otherwise prompt t
 
 **Required:** Backend (Swagger + JSDoc), Prisma (/// comments), Frontend (JSDoc).
 
-**Process:** READ implementation → FIND similar documented code → VERIFY match → CHECK consistency.
-
 **For templates and requirements**: See `.claude/protocols/document_protocol.md`
 
 ### DevLog Generation
@@ -77,30 +71,13 @@ If on `main` for hotfixes or at user direction, stay on main. Otherwise prompt t
 2. **Document phase**: Generate `docs/devlogs/YYYY-MM-DD-topic.md` from plan notes
 3. **Deploy phase**: Devlog committed with feature code
 
-**Content captures:**
-- User's stated goals and reasoning
-- Key technical decisions made
-- Outcome summary
-
-**Not captured:**
-- Routine bug fixes (unless architectural)
-- Minor refactors
-- Test-only changes
-
 ### User Settings Pattern Guidelines
-
-When adding user settings/preferences, choose the appropriate pattern:
 
 | Pattern | When to Use | Example |
 |---------|-------------|---------|
-| **Dedicated Boolean column** | Simple on/off toggles queried frequently in WHERE clauses | `photoTaggingEnabled`, `requireTagApproval` |
-| **JSON field** | Grouped settings, UI preferences, rarely queried directly | `notificationPreferences`, `uiPreferences` |
-| **Relation table** | Need metadata (timestamps, admin attribution), analytics, or many-to-many relationships | `MOTDDismissal` (tracks who/what/when) |
-
-**Guidelines:**
-- UI preferences (dismissed modals, collapsed panels, theme choices) → `uiPreferences` JSON field
-- Feature toggles users control → Dedicated Boolean if frequently queried, JSON if grouped
-- Admin-trackable dismissals needing audit trail → Relation table
+| **Dedicated Boolean column** | Simple on/off toggles queried frequently | `photoTaggingEnabled` |
+| **JSON field** | Grouped settings, UI preferences | `notificationPreferences` |
+| **Relation table** | Need metadata, analytics, many-to-many | `MOTDDismissal` |
 
 ---
 
@@ -136,44 +113,29 @@ GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleuserco
 Backend implements environment-aware auth: Production allows regular users, Staging/Dev requires admin-only.
 
 **Middleware patterns:**
-- `requireAuth` - Basic authentication (all environments allow authenticated users)
+- `requireAuth` - Basic authentication (all environments)
 - `requireStagingAuth` - Environment-aware (staging=admin-only, production=regular users)
 - `requireAuth + requireAdmin` - Always admin-only (all environments)
 
-**Usage:** Admin features use `requireStagingAuth`, security-critical use `requireAdmin`, user features use `requireAuth`.
-
-**For implementation details and testing**: See `.claude/protocols/auth_protocol.md`
+**For implementation details**: See `.claude/protocols/auth_protocol.md`
 
 ---
 
 ## 📚 Project Protocol Reference
-
-Phase protocols (audit, plan, execute, test, document) are in `~/.claude/protocols/` and trigger automatically for all code changes. Below are project-specific special protocols.
-
-**Protocol Loading:** Before executing any action governed by a protocol, READ the protocol file - even if read earlier. Stale context causes failures.
 
 ### Project-Specific Protocols:
 
 **Deployment Operations** (🔒 PROTECTED)
 - **Keywords**: deploy, push to production, merge to main, staging deployment
 - **Protocol**: `.claude/protocols/deployment_protocol.md`
-- **Use when**: Deploying to staging or production environments
 
 **Deployment Problems/Issues**
-- **Keywords**: deployment stuck, wrong SHA, changes not visible, health check fails
+- **Keywords**: deployment stuck, wrong SHA, changes not visible
 - **Protocol**: `.claude/protocols/deployment_troubleshooting_protocol.md`
-- **Use when**: Deployment completed but something is wrong
 
 **Authentication & Authorization**
-- **Keywords**: admin endpoint, auth middleware, `requireAuth`, `requireStagingAuth`, environment-aware auth
+- **Keywords**: admin endpoint, auth middleware, `requireAuth`, `requireStagingAuth`
 - **Protocol**: `.claude/protocols/auth_protocol.md`
-- **Use when**: Implementing admin features or auth-protected endpoints
-
----
-
-**Global protocols** (ES6, etc.): See `~/.claude/protocols/`
-
-**When uncertain if protocol applies**: Check it anyway. Reading "When to Use" section is lightweight.
 
 ---
 
@@ -182,26 +144,21 @@ Phase protocols (audit, plan, execute, test, document) are in `~/.claude/protoco
 **Never assume, always verify. Changes aren't done until tested.**
 
 ### Investigation Phase
-Before any code changes:
 - Read actual implementation, never guess/assume
-- **Integrations** (API, auth, webhooks): Read BOTH sides of interface
+- **Integrations**: Read BOTH sides of interface
 - **System features**: Read specs/docs before using
 - **Infrastructure**: Check limits/constraints before setting values
 
 ### Verification Phase
-After code changes:
 1. `git diff` - verify changes saved to files
 2. Deploy to staging
-3. Test EXACT symptom user reported (not just "it compiles")
+3. Test EXACT symptom user reported
 4. Only claim "fixed" when symptom is GONE
 
-**If symptom persists → wrong diagnosis, return to Investigation**
-
 ### Quick Reference - Common Gotchas
-- **API paths**: Check backend route registration in `backend/src/server.ts` before changing endpoint paths
-- **HttpOnly cookies**: Backend sets them, browser sends automatically. Never check `document.cookie` for auth tokens (security hides them from JS). Verify auth by calling `/auth/me`, not by checking cookies.
+- **API paths**: Check backend route registration in `backend/src/server.ts`
+- **HttpOnly cookies**: Backend sets them, browser sends automatically. Verify auth by calling `/auth/me`, not by checking cookies.
 - **Azure timeout**: Container Apps idle = 5 min (refresh intervals must be < 5 min)
-- **Auth verification**: Call `/auth/me` endpoint, don't check cookies directly
 
 ---
 
@@ -211,67 +168,57 @@ After code changes:
 
 ### Feature Implementation Triggers
 
-When user mentions these keywords, read specified documentation BEFORE implementing:
-
 **Quest, Badge, Streak, Gamification, Civic Engagement:**
 → REQUIRED READING:
-1. `docs/CIVIC_ENGAGEMENT.md` (sections 1-3: philosophy & design rationale)
-2. `docs/API_QUESTS_BADGES.md` (complete API endpoint documentation)
-3. `backend/src/routes/quests.ts` (current quest implementation)
-4. `backend/src/routes/badges.ts` (current badge implementation)
-5. `backend/prisma/schema.prisma` (lines 2504-2598: Quest/Badge models)
+1. `docs/CIVIC_ENGAGEMENT.md` (sections 1-3)
+2. `docs/API_QUESTS_BADGES.md`
+3. `backend/src/routes/quests.ts`
+4. `backend/src/routes/badges.ts`
+5. `backend/prisma/schema.prisma` (Quest/Badge models)
 
 **Photo, Gallery, Image Upload, Content Moderation:**
 → REQUIRED READING:
-1. `docs/API_SAVED_POSTS_GALLERY.md` (sections 2-3: photo system)
-2. `backend/src/routes/galleries.ts` (gallery endpoints)
-3. `backend/src/routes/photos/index.ts` (photo upload & moderation)
+1. `docs/API_SAVED_POSTS_GALLERY.md` (sections 2-3)
+2. `backend/src/routes/galleries.ts`
+3. `backend/src/routes/photos/index.ts`
 4. `backend/prisma/schema.prisma` (Photo model)
 
-**Saved Posts, Bookmarks, Save for Later:**
+**Saved Posts, Bookmarks:**
 → REQUIRED READING:
-1. `docs/API_SAVED_POSTS_GALLERY.md` (section 1: saved posts)
-2. `backend/src/routes/posts.ts` (lines 1958-2164: saved post endpoints)
+1. `docs/API_SAVED_POSTS_GALLERY.md` (section 1)
+2. `backend/src/routes/posts.ts` (saved post endpoints)
 3. `backend/prisma/schema.prisma` (SavedPost model)
 
 **Database Schema, Models, Relations, Migration:**
 → REQUIRED READING:
-1. `docs/DATABASE_SCHEMA.md` (find relevant model group)
-2. `backend/prisma/schema.prisma` (actual schema definition)
-3. Database migration safety protocol (this file, above)
+1. `docs/DATABASE_SCHEMA.md`
+2. `backend/prisma/schema.prisma`
+3. Database migration safety protocol (this file)
 
 **Feed, Posts, Comments, Reactions:**
 → REQUIRED READING:
-1. `docs/MASTER_DOCUMENTATION.md` (sections 11-13: Feed System)
-2. `backend/src/routes/posts.ts` (post endpoints - includes comment endpoints)
-3. `backend/prisma/schema.prisma` (Post, Comment, Reaction models)
+1. `docs/MASTER_DOCUMENTATION.md` (sections 11-13)
+2. `backend/src/routes/posts.ts`
+3. `backend/prisma/schema.prisma` (Post, Comment, Reaction)
 
 **API Endpoints, REST API, Backend Routes:**
 → REQUIRED READING:
-1. `docs/MASTER_DOCUMENTATION.md` (section 4: API Reference)
+1. `docs/MASTER_DOCUMENTATION.md` (section 4)
 2. Relevant route file in `backend/src/routes/`
-3. `backend/src/middleware/` (authentication, validation)
+3. `backend/src/middleware/`
 
-**Authentication, Login, JWT, OAuth, Google Sign-In:**
+**Authentication, Login, JWT, OAuth:**
 → REQUIRED READING:
-1. `docs/MASTER_DOCUMENTATION.md` (section 7: Authentication)
-2. `backend/src/routes/auth.ts` (auth endpoints)
-3. `backend/src/middleware/auth.ts` (auth logic)
-4. `frontend/src/handlers/auth-handlers.js` (frontend auth)
+1. `docs/MASTER_DOCUMENTATION.md` (section 7)
+2. `backend/src/routes/auth.ts`
+3. `backend/src/middleware/auth.ts`
+4. `frontend/src/handlers/auth-handlers.js`
 
 **Frontend Components, UI, JavaScript Modules:**
 → REQUIRED READING:
-1. `docs/MASTER_DOCUMENTATION.md` (section 8: Frontend Architecture)
-2. `frontend/src/js/main.js` (module load order)
+1. `docs/MASTER_DOCUMENTATION.md` (section 8)
+2. `frontend/src/js/main.js`
 3. Relevant component file in `frontend/src/js/components/`
-
-### Implementation Workflow
-
-1. **User mentions feature** → Identify trigger keywords above
-2. **Read documentation** → Follow REQUIRED READING list for that feature
-3. **Find existing patterns** → Search codebase for similar implementations
-4. **Implement feature** → Follow established patterns and architecture
-5. **Update documentation** → If adding new endpoints or changing behavior
 
 ---
 
@@ -281,13 +228,10 @@ When user mentions these keywords, read specified documentation BEFORE implement
 |---------|------|-------|--------|
 | Organizations | `.claude/plans/organizations-endorsements-plan.md` | 3 (Frontend) | COMPLETE (3a-3i) |
 
-**Protocol**: Read indexed plan before starting feature work.
-
 **Index Maintenance** (standing permission granted):
 - **Add entry**: When creating a new multi-phase feature plan
 - **Update status**: When completing a phase or sub-phase
 - **Remove entry**: When feature is 100% complete AND plan archived
-- Update immediately, don't wait for explicit instruction
 
 ---
 
@@ -330,17 +274,11 @@ See `.claude/guides/multi-agent-patterns.md` for detailed workflows.
 .claude/scratchpads/REVIEW-LOG.md
 ```
 
-**Use multi-agent for:**
-- Features spanning frontend + backend + database
-- Emergency response with parallel debugging
-- Performance optimization with benchmarking
-- Security-sensitive authentication changes
-
 ---
 
 ## Protected Documentation
 
-ALWAYS consult when conducting research (Never archive or mark obsolete):
+ALWAYS consult when conducting research:
 - MASTER_DOCUMENTATION.md
 - CHANGELOG.md
 - README.md
@@ -384,14 +322,12 @@ az postgres flexible-server restore \
 ## Architecture Context
 
 See `.claude/guides/architecture-notes.md` for:
-- Inline code elimination history (September 2025)
+- Inline code elimination history
 - Staging architecture rationale
 - API response structure quirks
-- Branch control rationale
 - JWT authentication architecture
 - Admin debug logging system
 - Database isolation strategy
-- Frontend build process
 
 ---
 
