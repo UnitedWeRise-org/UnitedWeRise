@@ -1,10 +1,41 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 27, 2026
+**Last Updated**: January 29, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-01-29] - Video Upload OOM Crash & Missing Thumbnails Fix
+
+### Fixed
+
+**Container OOM Crash on Upload (503)**
+- Root cause: `multer.memoryStorage()` loaded entire video into RAM; combined with synchronous FFmpeg encoding (introduced in `d18f475`), memory exceeded container limits
+- Fix: Switched to `multer.diskStorage()` — videos are written to temp files in `os.tmpdir()`, never held in memory as buffers
+- Upload now streams from disk to Azure Blob Storage via `createReadStream()` + `uploadStream()`
+
+**Missing Thumbnails (thumbnailUrl: null)**
+- Root cause: FFmpeg thumbnail generation used stdin pipe (`pipe:0`), which is not seekable — MP4/MOV files with moov atom at end could not be decoded
+- Fix: FFmpeg now reads from disk file path (`-i filePath`), enabling full seek access for reliable frame extraction
+- FFprobe metadata extraction also updated from stdin pipe to file path
+
+### Changed
+
+**VideoPipeline Architecture**
+- `VideoFile` interface: `buffer: Buffer` → `path: string`
+- `extractMetadata()`: stdin pipe → file path input
+- `generateThumbnail()`: stdin pipe → file path input
+- `uploadRawVideo()`: `uploadData(buffer)` → `uploadStream(createReadStream(filePath))`
+- Added temp file cleanup in `finally` block of upload handler
+- Added diagnostic logging when thumbnail generation resolves empty
+
+### Files Modified
+- `backend/src/routes/videos/index.ts`
+- `backend/src/services/VideoPipeline.ts`
+- `backend/src/services/VideoStorageService.ts`
 
 ---
 

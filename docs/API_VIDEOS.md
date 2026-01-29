@@ -12,10 +12,15 @@ The Video (Snippets) API enables short-form video content similar to TikTok Reel
 - **videos-thumbnails**: Public container for poster images
 
 ### Processing Pipeline
-1. **Upload** - Video validated and stored in raw container
-2. **Encoding** - FFmpeg creates HLS variants (720p/480p/360p) + MP4 fallback
-3. **Moderation** - Content safety check (thumbnail analysis)
-4. **Publishing** - Video made visible in feeds
+1. **Upload** - Video written to temp disk file via multer diskStorage, validated, then streamed to raw container
+2. **Metadata** - FFprobe extracts duration, dimensions, codec from disk file (seekable access)
+3. **Thumbnail** - FFmpeg extracts frame at 0.5s from disk file (seekable access for moov atom)
+4. **Database** - Video record persisted (must exist before encoding)
+5. **Encoding** - Copies raw video to encoded container (dev/staging: synchronous; production: async)
+6. **Moderation** - Content safety check (thumbnail analysis)
+7. **Publishing** - Video made visible in feeds
+
+> **Note:** Videos are stored on disk during processing, not in memory, to prevent container OOM crashes with large files. The temp file is cleaned up after the pipeline completes.
 
 ### Encoding Output Structure
 ```
