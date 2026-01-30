@@ -13,8 +13,13 @@
  * @module VideoPlayer
  */
 
-// HLS.js is loaded via CDN, check if available
-const HLS_AVAILABLE = typeof Hls !== 'undefined';
+/**
+ * Check if HLS.js is available at runtime
+ * @returns {boolean} Whether HLS.js global is defined
+ */
+function isHlsAvailable() {
+    return typeof Hls !== 'undefined';
+}
 
 /**
  * VideoPlayer class for HLS video playback
@@ -176,11 +181,10 @@ export class VideoPlayer {
      * Setup video source (HLS or MP4)
      */
     setupSource() {
-        if (this.hlsUrl && HLS_AVAILABLE && Hls.isSupported()) {
+        if (this.hlsUrl && isHlsAvailable() && Hls.isSupported()) {
             // Use HLS.js for adaptive streaming
             this.hls = new Hls({
-                startLevel: -1, // Auto quality
-                capLevelToPlayerSize: true
+                startLevel: -1 // Auto quality based on bandwidth
             });
 
             this.hls.loadSource(this.hlsUrl);
@@ -188,7 +192,22 @@ export class VideoPlayer {
 
             this.hls.on(Hls.Events.ERROR, (event, data) => {
                 if (data.fatal) {
-                    this.handleError('HLS error: ' + data.type);
+                    switch (data.type) {
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            // Attempt recovery for media errors
+                            this.hls.recoverMediaError();
+                            break;
+                        default:
+                            // Fallback to MP4 on other fatal errors
+                            this.hls.destroy();
+                            this.hls = null;
+                            if (this.mp4Url) {
+                                this.videoEl.src = this.mp4Url;
+                            } else {
+                                this.handleError('HLS error: ' + data.type);
+                            }
+                            break;
+                    }
                 }
             });
 

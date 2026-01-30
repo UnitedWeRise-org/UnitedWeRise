@@ -1806,8 +1806,7 @@ export class FeedToggle {
         if (hlsUrl && typeof Hls !== 'undefined' && Hls.isSupported()) {
             console.log('Using HLS.js for adaptive streaming:', hlsUrl);
             const hls = new Hls({
-                startLevel: -1, // Auto quality selection
-                capLevelToPlayerSize: true
+                startLevel: -1 // Auto quality based on bandwidth
             });
 
             hls.loadSource(hlsUrl);
