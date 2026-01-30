@@ -183,6 +183,7 @@ export class VideoPlayer {
     setupSource() {
         if (this.hlsUrl && isHlsAvailable() && Hls.isSupported()) {
             // Use HLS.js for adaptive streaming
+            console.log('[VideoPlayer] Using HLS.js:', this.hlsUrl);
             this.hls = new Hls({
                 startLevel: -1 // Auto quality based on bandwidth
             });
@@ -195,6 +196,7 @@ export class VideoPlayer {
                     switch (data.type) {
                         case Hls.ErrorTypes.MEDIA_ERROR:
                             // Attempt recovery for media errors
+                            console.log('[VideoPlayer] HLS media error, attempting recovery');
                             this.hls.recoverMediaError();
                             break;
                         default:
@@ -202,6 +204,7 @@ export class VideoPlayer {
                             this.hls.destroy();
                             this.hls = null;
                             if (this.mp4Url) {
+                                console.log('[VideoPlayer] HLS fatal error, falling back to MP4:', this.mp4Url);
                                 this.videoEl.src = this.mp4Url;
                             } else {
                                 this.handleError('HLS error: ' + data.type);
@@ -213,10 +216,12 @@ export class VideoPlayer {
 
         } else if (this.hlsUrl && this.videoEl.canPlayType('application/vnd.apple.mpegurl')) {
             // Safari native HLS support
+            console.log('[VideoPlayer] Using Safari native HLS:', this.hlsUrl);
             this.videoEl.src = this.hlsUrl;
 
         } else if (this.mp4Url) {
             // MP4 fallback
+            console.log('[VideoPlayer] Using MP4 fallback:', this.mp4Url);
             this.videoEl.src = this.mp4Url;
 
         } else {

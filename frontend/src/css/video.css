@@ -1437,24 +1437,31 @@
 }
 
 .snippets-reels-video {
-    width: 100%;
-    max-width: 480px;
+    height: 100%;
     max-height: 100%;
+    max-width: 100%;
     margin: 0 auto;
 }
 
-/* Landscape videos need more width so they aren't a tiny box */
+/* Landscape videos need width-driven sizing so they aren't too tall */
 .snippets-reels-video.reels-video--landscape {
+    height: auto;
+    width: 100%;
     max-width: 90vw;
 }
 
-/* Square videos get a middle-ground width */
+/* Square videos get width-driven sizing */
 .snippets-reels-video.reels-video--square {
+    height: auto;
+    width: 100%;
     max-width: 600px;
 }
 
 .snippets-reels-overlay .video-player {
     border-radius: 0;
+    width: auto;
+    height: 100%;
+    max-width: 100%;
 }
 
 .snippets-reels-caption {
@@ -1546,5 +1553,6 @@
 
     .snippets-reels-video {
         max-width: 100%;
+        height: 100%;
     }
 }
