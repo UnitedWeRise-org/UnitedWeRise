@@ -554,59 +554,19 @@ export class VideoPipeline {
         requestId
       );
 
-      // Stage 6: Queue encoding job (record now exists!)
-      // In dev/staging, await encoding for immediate playback
-      // In production, run async for faster upload response
-      const isDev = process.env.NODE_ENV !== 'production';
-      if (isDev) {
-        try {
-          this.log(requestId, 'ENCODING_JOB_STARTING_SYNC', { videoId });
-          await this.queueEncodingJob(videoId, uploadResult.url, requestId);
-          this.log(requestId, 'ENCODING_COMPLETED_SYNC', { videoId });
-        } catch (error) {
-          logger.error({ error, videoId, requestId }, 'Encoding job failed in sync mode');
-          // Continue - video can still be retried later
-        }
-      } else {
-        // Production: async for faster response
-        this.queueEncodingJob(videoId, uploadResult.url, requestId).catch((error) => {
-          logger.error({ error, videoId }, 'Failed to queue encoding job');
-        });
+      // Stage 6: Queue encoding job (always async via worker)
+      try {
+        this.log(requestId, 'ENCODING_JOB_QUEUING', { videoId });
+        await this.queueEncodingJob(videoId, uploadResult.url, requestId);
+        this.log(requestId, 'ENCODING_JOB_QUEUED', { videoId });
+      } catch (error) {
+        logger.error({ error, videoId, requestId }, 'Failed to queue encoding job');
+        // Continue - video record exists, can be retried
       }
 
       this.log(requestId, 'PIPELINE_COMPLETE', { videoId });
 
-      // In dev/staging where encoding is synchronous, fetch fresh data from DB
-      // This ensures mp4Url is included in the response after encoding completes
-      if (isDev) {
-        const freshVideo = await prisma.video.findUnique({
-          where: { id: videoId },
-          select: {
-            encodingStatus: true,
-            mp4Url: true,
-            hlsManifestUrl: true
-          }
-        });
-
-        return {
-          videoId,
-          originalUrl: uploadResult.url,
-          originalBlobName: uploadResult.blobName,
-          thumbnailUrl,
-          requestId,
-          duration: metadata.duration,
-          width: metadata.width,
-          height: metadata.height,
-          aspectRatio: metadata.aspectRatio,
-          originalSize: file.size,
-          originalMimeType: file.mimetype,
-          encodingStatus: (freshVideo?.encodingStatus as 'PENDING' | 'ENCODING' | 'READY' | 'FAILED') || 'PENDING',
-          mp4Url: freshVideo?.mp4Url || undefined,
-          hlsManifestUrl: freshVideo?.hlsManifestUrl || undefined
-        };
-      }
-
-      // Production: return immediately with PENDING status
+      // Always return with current status (encoding happens async via worker)
       return {
         videoId,
         originalUrl: uploadResult.url,

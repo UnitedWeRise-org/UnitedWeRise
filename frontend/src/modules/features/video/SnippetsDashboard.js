@@ -31,6 +31,8 @@ export class SnippetsDashboard {
         /** @type {string} Current sort value: 'newest', 'oldest' */
         this.currentSort = 'newest';
         this.loading = false;
+        /** @type {number|null} Polling timer for encoding status updates */
+        this.encodingPollTimer = null;
 
         // Listen for upload events from SnippetCreatorModal
         window.addEventListener('snippetUploaded', () => {
@@ -115,9 +117,15 @@ export class SnippetsDashboard {
                 case 'view-analytics':
                     this.viewAnalytics(videoId);
                     break;
-                case 'play':
+                case 'play': {
+                    const playTarget = this.findSnippetById(videoId);
+                    if (playTarget && playTarget.encodingStatus && playTarget.encodingStatus !== 'READY') {
+                        this.showToast('This video is still encoding. Please wait...');
+                        break;
+                    }
                     this.playSnippet(videoId);
                     break;
+                }
             }
         });
     }
@@ -143,6 +151,7 @@ export class SnippetsDashboard {
             const response = await apiCall('/videos/my-snippets', { method: 'GET' });
             this.allSnippets = response?.data?.videos || response?.videos || [];
             this.renderFilteredSnippets();
+            this.startEncodingPoll();
         } catch (error) {
             console.error('Failed to load snippets:', error);
             content.innerHTML = `
@@ -257,11 +266,18 @@ export class SnippetsDashboard {
         const thumbnailUrl = snippet.thumbnailUrl || VIDEO_PLACEHOLDER;
         const caption = snippet.caption || 'No caption';
         const duration = this.formatDuration(snippet.duration || 0);
+        const isEncoding = snippet.encodingStatus && snippet.encodingStatus !== 'READY';
+        const encodingBadge = isEncoding
+            ? `<div class="snippet-encoding-badge">
+                 <span class="encoding-spinner"></span> Encoding...
+               </div>`
+            : '';
 
         return `
             <div class="snippet-card" data-video-id="${snippet.id}">
                 <div class="snippet-card__thumb-container" data-snippet-action="play" data-video-id="${snippet.id}">
                     <img src="${thumbnailUrl}" alt="Snippet thumbnail" class="snippet-card__thumb" loading="lazy">
+                    ${encodingBadge}
                     <div class="snippet-card__play-overlay">
                         <span class="snippet-card__play-icon">▶</span>
                     </div>
@@ -672,6 +688,12 @@ export class SnippetsDashboard {
         const startIndex = filteredSnippets.findIndex(s => s.id === videoId);
         if (startIndex === -1) return;
 
+        const targetSnippet = filteredSnippets[startIndex];
+        if (!targetSnippet.hlsManifestUrl && !targetSnippet.mp4Url && !targetSnippet.originalUrl) {
+            this.showToast('This video is still encoding. Please wait...');
+            return;
+        }
+
         try {
             const { VideoPlayer } = await import('./VideoPlayer.js');
 
@@ -799,6 +821,73 @@ export class SnippetsDashboard {
             'SQUARE_1_1': 'video-player-modal--square_1_1'
         };
         return ratioMap[aspectRatio] || 'video-player-modal--vertical_9_16';
+    }
+
+    // ============ Encoding Poll & Toast ============
+
+    /**
+     * Start polling for encoding status updates if any snippets are pending/encoding.
+     * Automatically stops when no more pending videos remain.
+     */
+    startEncodingPoll() {
+        if (this.encodingPollTimer) return;
+
+        const hasPending = this.allSnippets.some(s =>
+            s.encodingStatus === 'PENDING' || s.encodingStatus === 'ENCODING'
+        );
+        if (!hasPending) return;
+
+        this.encodingPollTimer = setInterval(async () => {
+            try {
+                const response = await apiCall('/videos/my-snippets', { method: 'GET' });
+                const videos = response?.data?.videos || response?.videos || [];
+
+                const newlyReady = videos.filter(v =>
+                    v.encodingStatus === 'READY' &&
+                    this.allSnippets.find(s => s.id === v.id && s.encodingStatus !== 'READY')
+                );
+
+                if (newlyReady.length > 0) {
+                    this.allSnippets = videos;
+                    this.renderFilteredSnippets();
+                    this.showToast(`${newlyReady.length} video(s) ready to play!`);
+                }
+
+                const stillPending = videos.some(s =>
+                    s.encodingStatus === 'PENDING' || s.encodingStatus === 'ENCODING'
+                );
+                if (!stillPending) {
+                    this.stopEncodingPoll();
+                }
+            } catch {
+                // Silent fail — poll will retry
+            }
+        }, 10000);
+    }
+
+    /**
+     * Stop the encoding poll timer
+     */
+    stopEncodingPoll() {
+        if (this.encodingPollTimer) {
+            clearInterval(this.encodingPollTimer);
+            this.encodingPollTimer = null;
+        }
+    }
+
+    /**
+     * Show a brief toast notification
+     * @param {string} message - Message to display
+     */
+    showToast(message) {
+        const existing = document.querySelector('.snippets-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'snippets-toast';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
     }
 
     // ============ Utility Methods ============

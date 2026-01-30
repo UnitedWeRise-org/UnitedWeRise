@@ -1475,6 +1475,62 @@
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+/* ========================================
+   Encoding Status Badge
+   ======================================== */
+
+.snippet-encoding-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #ffd700;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 5;
+}
+
+.encoding-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-top-color: #ffd700;
+    border-radius: 50%;
+    animation: encodingSpin 1s linear infinite;
+}
+
+@keyframes encodingSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   Toast Notification
+   ======================================== */
+
+.snippets-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 10000;
+    animation: toastFadeIn 0.3s ease-out;
+}
+
+@keyframes toastFadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 @media (max-width: 768px) {
     .snippets-reels-overlay {
         top: 55px; /* Mobile top bar uses fixed px height */

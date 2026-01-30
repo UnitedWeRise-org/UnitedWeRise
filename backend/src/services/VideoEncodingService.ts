@@ -105,11 +105,8 @@ export class VideoEncodingService {
    */
   async submitEncodingJob(videoId: string, inputUrl: string): Promise<string | null> {
     await this.initialize();
+    logger.info({ videoId }, 'Encoding job received');
 
-    const isDevelopment = process.env.NODE_ENV !== 'production';
-    logger.info({ videoId, isDevelopment }, 'Encoding job received');
-
-    // Get the blob name for the video
     const video = await prisma.video.findUnique({
       where: { id: videoId },
       select: { originalBlobName: true }
@@ -120,23 +117,9 @@ export class VideoEncodingService {
       return null;
     }
 
-    if (this.queueEnabled) {
-      // Queue mode: Add to background queue
-      const jobId = videoEncodingQueue.addJob(videoId, video.originalBlobName);
-      logger.info({ videoId, jobId }, 'Video encoding job queued');
-      return jobId;
-    }
-
-    // Immediate mode: Process now (for development/staging)
-    if (isDevelopment) {
-      // Development mode: simulate encoding with copy
-      await this.simulateEncodingForDevelopment(videoId, inputUrl);
-      return `immediate-job-${videoId}`;
-    }
-
-    // Production without queue: add to queue anyway for worker to pick up
+    // Always add to queue — worker handles FFmpeg or fallback
     const jobId = videoEncodingQueue.addJob(videoId, video.originalBlobName);
-    logger.info({ videoId, jobId }, 'Video encoding job added to queue (worker will process)');
+    logger.info({ videoId, jobId }, 'Video encoding job queued');
     return jobId;
   }
 
