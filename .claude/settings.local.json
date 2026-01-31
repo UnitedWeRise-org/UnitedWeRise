@@ -125,7 +125,30 @@
       "Skill(security-audit)",
       "Bash(gh workflow view:*)",
       "Bash(gh run rerun:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git diff:*)",
+      "Bash(git init:*)",
+      "Bash(jq:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(PGPASSWORD='Y0urSecur3Passw0rd!' psql:*)",
+      "Bash(PGPASSWORD='Y0urSecur3Passw0rd!' /opt/homebrew/opt/postgresql@14/bin/psql:*)",
+      "Bash(PGPASSWORD='UWR-Secure2024!' /opt/homebrew/opt/postgresql@14/bin/psql \"host=unitedwerise-db-dev.postgres.database.azure.com port=5432 dbname=postgres user=uwradmin sslmode=require\" -c \"DELETE FROM \"\"_prisma_migrations\"\" WHERE migration_name = ''20260123_ensure_reaction_unique_constraint'';\")",
+      "Bash(DATABASE_URL=\"postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require\" npx prisma migrate resolve:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(tree:*)",
+      "Bash(xargs:*)",
+      "Bash(git revert:*)",
+      "Bash(chmod:*)",
+      "Bash(gh repo list:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git status:*)",
+      "Bash(dd:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(ffprobe:*)",
+      "Bash(xxd:*)",
+      "Bash(git -C /Users/jeffreysmacbookpro/UnitedWeRise status:*)",
+      "Bash(git -C /Users/jeffreysmacbookpro/UnitedWeRise log --oneline -5)",
+      "Bash(git -C /Users/jeffreysmacbookpro/UnitedWeRise push origin development)"
     ],
     "deny": [
       "Bash(npm run dev:*)"
@@ -137,5 +160,18 @@
     "deployment-tracker",
     "performance-monitor",
     "security-scanner"
-  ]
+  ],
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "(auth|login|jwt|oauth|requireAuth|requireStagingAuth)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'AUTH WORK: Read .claude/protocols/auth_protocol.md before modifying authentication'"
+          }
+        ]
+      }
+    ]
+  }
 }

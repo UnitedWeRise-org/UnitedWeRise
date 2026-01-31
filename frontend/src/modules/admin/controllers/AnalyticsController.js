@@ -74,6 +74,11 @@ class AnalyticsController {
             // Load initial data
             await this.loadData();
 
+            // Pre-load visitor analytics so data is ready when tab is clicked
+            this.loadVisitorAnalytics().catch(err => {
+                adminDebugError('AnalyticsController', 'Background visitor analytics load failed', err);
+            });
+
             this.isInitialized = true;
 
             await adminDebugLog('AnalyticsController', 'Controller initialized successfully', {
@@ -451,47 +456,75 @@ class AnalyticsController {
             let html = '<div class="engagement-metrics">';
 
             // Daily active users
-            if (engagementData.dailyActiveUsers) {
+            if (engagementData.dailyActiveUsers !== undefined) {
                 html += `
                     <div class="metric-card">
                         <h4>Daily Active Users</h4>
-                        <div class="metric-value">${engagementData.dailyActiveUsers.toLocaleString()}</div>
-                        <div class="metric-change ${engagementData.dauTrend >= 0 ? 'positive' : 'negative'}">
-                            ${engagementData.dauTrend >= 0 ? '+' : ''}${engagementData.dauTrend?.toFixed(1)}% vs. yesterday
-                        </div>
+                        <div class="metric-value">${Number(engagementData.dailyActiveUsers).toLocaleString()}</div>
                     </div>
                 `;
             }
 
-            // Session metrics
-            if (engagementData.sessionMetrics) {
+            // Posts created
+            if (engagementData.postsCreated !== undefined) {
                 html += `
                     <div class="metric-card">
-                        <h4>Avg. Session Duration</h4>
-                        <div class="metric-value">${this.formatDuration(engagementData.sessionMetrics.avgDuration)}</div>
-                        <div class="metric-subtext">Sessions per user: ${engagementData.sessionMetrics.sessionsPerUser?.toFixed(1)}</div>
+                        <h4>Posts Created</h4>
+                        <div class="metric-value">${Number(engagementData.postsCreated).toLocaleString()}</div>
                     </div>
                 `;
             }
 
-            // Feature adoption
-            if (engagementData.featureAdoption) {
+            // Comments created
+            if (engagementData.commentsCreated !== undefined) {
                 html += `
                     <div class="metric-card">
-                        <h4>Feature Adoption</h4>
-                        <div class="feature-list">
+                        <h4>Comments</h4>
+                        <div class="metric-value">${Number(engagementData.commentsCreated).toLocaleString()}</div>
+                    </div>
                 `;
+            }
 
-                for (const [feature, rate] of Object.entries(engagementData.featureAdoption)) {
-                    html += `
-                        <div class="feature-item">
-                            <span class="feature-name">${feature}</span>
-                            <span class="feature-rate">${(rate * 100).toFixed(1)}%</span>
-                        </div>
-                    `;
-                }
+            // Likes given
+            if (engagementData.likesGiven !== undefined) {
+                html += `
+                    <div class="metric-card">
+                        <h4>Likes Given</h4>
+                        <div class="metric-value">${Number(engagementData.likesGiven).toLocaleString()}</div>
+                    </div>
+                `;
+            }
 
-                html += '</div></div>';
+            // Messages sent
+            if (engagementData.messagesSent !== undefined) {
+                html += `
+                    <div class="metric-card">
+                        <h4>Messages Sent</h4>
+                        <div class="metric-value">${Number(engagementData.messagesSent).toLocaleString()}</div>
+                    </div>
+                `;
+            }
+
+            // Engagement rate
+            if (engagementData.engagementRate !== undefined) {
+                const rate = Number(engagementData.engagementRate);
+                html += `
+                    <div class="metric-card">
+                        <h4>Engagement Rate</h4>
+                        <div class="metric-value">${(rate * 100).toFixed(1)}%</div>
+                    </div>
+                `;
+            }
+
+            // Averages
+            if (engagementData.avgLikesPerPost !== undefined || engagementData.avgCommentsPerPost !== undefined) {
+                html += `
+                    <div class="metric-card">
+                        <h4>Averages per Post</h4>
+                        <div class="metric-subtext">Likes: ${Number(engagementData.avgLikesPerPost || 0).toFixed(1)}</div>
+                        <div class="metric-subtext">Comments: ${Number(engagementData.avgCommentsPerPost || 0).toFixed(1)}</div>
+                    </div>
+                `;
             }
 
             html += '</div>';
@@ -513,7 +546,78 @@ class AnalyticsController {
 
             let html = '<div class="content-metrics">';
 
-            // Top performing posts
+            // Content overview card
+            const hasData = contentData.totalPosts !== undefined ||
+                contentData.politicalPosts !== undefined ||
+                contentData.photosUploaded !== undefined ||
+                contentData.reportsFiled !== undefined;
+
+            if (hasData) {
+                html += `
+                    <div class="content-type-card">
+                        <h4>Content Overview</h4>
+                        <div class="type-performance-list">
+                `;
+
+                if (contentData.totalPosts !== undefined) {
+                    html += `
+                        <div class="type-item">
+                            <div class="type-name">Total Posts</div>
+                            <div class="type-metrics">
+                                <div class="type-count">${Number(contentData.totalPosts).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (contentData.politicalPosts !== undefined) {
+                    html += `
+                        <div class="type-item">
+                            <div class="type-name">Political Posts</div>
+                            <div class="type-metrics">
+                                <div class="type-count">${Number(contentData.politicalPosts).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (contentData.photosUploaded !== undefined) {
+                    html += `
+                        <div class="type-item">
+                            <div class="type-name">Photos Uploaded</div>
+                            <div class="type-metrics">
+                                <div class="type-count">${Number(contentData.photosUploaded).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (contentData.reportsFiled !== undefined) {
+                    html += `
+                        <div class="type-item">
+                            <div class="type-name">Reports Filed</div>
+                            <div class="type-metrics">
+                                <div class="type-count">${Number(contentData.reportsFiled).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (contentData.postsWithFeedback !== undefined) {
+                    html += `
+                        <div class="type-item">
+                            <div class="type-name">Posts with Feedback</div>
+                            <div class="type-metrics">
+                                <div class="type-count">${Number(contentData.postsWithFeedback).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += '</div></div>';
+            }
+
+            // Top performing posts (if backend ever provides this)
             if (contentData.topPosts) {
                 html += `
                     <div class="top-content-card">
@@ -528,56 +632,11 @@ class AnalyticsController {
                             <div class="post-content">
                                 <div class="post-text">${this.truncateText(post.content, 60)}</div>
                                 <div class="post-stats">
-                                    <span>❤️ ${post.likes}</span>
-                                    <span>💬 ${post.comments}</span>
-                                    <span>🔄 ${post.shares}</span>
+                                    <span>${post.likes} likes</span>
+                                    <span>${post.comments} comments</span>
                                 </div>
                             </div>
-                            <div class="post-engagement">${post.engagementRate?.toFixed(1)}%</div>
                         </div>
-                    `;
-                });
-
-                html += '</div></div>';
-            }
-
-            // Content type performance
-            if (contentData.typePerformance) {
-                html += `
-                    <div class="content-type-card">
-                        <h4>Content Type Performance</h4>
-                        <div class="type-performance-list">
-                `;
-
-                for (const [type, metrics] of Object.entries(contentData.typePerformance)) {
-                    html += `
-                        <div class="type-item">
-                            <div class="type-name">${type}</div>
-                            <div class="type-metrics">
-                                <div class="type-count">${metrics.count} posts</div>
-                                <div class="type-engagement">${metrics.avgEngagement?.toFixed(1)}% avg engagement</div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                html += '</div></div>';
-            }
-
-            // Trending hashtags
-            if (contentData.trendingHashtags) {
-                html += `
-                    <div class="trending-hashtags-card">
-                        <h4>Trending Hashtags</h4>
-                        <div class="hashtag-cloud">
-                `;
-
-                contentData.trendingHashtags.forEach(hashtag => {
-                    const size = Math.min(Math.max(hashtag.frequency / 100, 0.8), 2);
-                    html += `
-                        <span class="hashtag-item" style="font-size: ${size}em">
-                            #${hashtag.tag} (${hashtag.frequency})
-                        </span>
                     `;
                 });
 
@@ -601,9 +660,93 @@ class AnalyticsController {
             const container = document.getElementById('growthMetricsContainer');
             if (!container) return;
 
+            // Use civicMetrics and geographicDistribution from parent data if available
+            const civicMetrics = this.analyticsData?.civicMetrics || {};
+            const geographicDistribution = this.analyticsData?.geographicDistribution || [];
+
             let html = '<div class="growth-metrics">';
 
-            // User acquisition
+            // Civic engagement metrics
+            const hasCivic = civicMetrics.petitionsCreated !== undefined ||
+                civicMetrics.eventsCreated !== undefined;
+
+            if (hasCivic) {
+                html += `
+                    <div class="acquisition-card">
+                        <h4>Civic Engagement</h4>
+                        <div class="acquisition-sources">
+                `;
+
+                if (civicMetrics.petitionsCreated !== undefined) {
+                    html += `
+                        <div class="source-item">
+                            <div class="source-name">Petitions Created</div>
+                            <div class="source-metrics">
+                                <div class="source-users">${Number(civicMetrics.petitionsCreated).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (civicMetrics.petitionSignatures !== undefined) {
+                    html += `
+                        <div class="source-item">
+                            <div class="source-name">Petition Signatures</div>
+                            <div class="source-metrics">
+                                <div class="source-users">${Number(civicMetrics.petitionSignatures).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (civicMetrics.eventsCreated !== undefined) {
+                    html += `
+                        <div class="source-item">
+                            <div class="source-name">Events Created</div>
+                            <div class="source-metrics">
+                                <div class="source-users">${Number(civicMetrics.eventsCreated).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (civicMetrics.eventRSVPs !== undefined) {
+                    html += `
+                        <div class="source-item">
+                            <div class="source-name">Event RSVPs</div>
+                            <div class="source-metrics">
+                                <div class="source-users">${Number(civicMetrics.eventRSVPs).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += '</div></div>';
+            }
+
+            // Geographic distribution
+            if (geographicDistribution.length > 0) {
+                html += `
+                    <div class="acquisition-card">
+                        <h4>Geographic Distribution</h4>
+                        <div class="acquisition-sources">
+                `;
+
+                geographicDistribution.slice(0, 10).forEach(entry => {
+                    html += `
+                        <div class="source-item">
+                            <div class="source-name">${entry.state || entry.region || 'Unknown'}</div>
+                            <div class="source-metrics">
+                                <div class="source-users">${Number(entry.count || entry.users || 0).toLocaleString()} users</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+            }
+
+            // User acquisition (if backend provides in future)
             if (growthData.userAcquisition) {
                 html += `
                     <div class="acquisition-card">
@@ -618,71 +761,12 @@ class AnalyticsController {
                             <div class="source-metrics">
                                 <div class="source-users">${data.users} users</div>
                                 <div class="source-percentage">${data.percentage?.toFixed(1)}%</div>
-                                <div class="source-cost">${data.costPerAcquisition ? '$' + data.costPerAcquisition.toFixed(2) + ' CPA' : ''}</div>
                             </div>
                         </div>
                     `;
                 }
 
                 html += '</div></div>';
-            }
-
-            // Retention cohorts
-            if (growthData.retentionCohorts) {
-                html += `
-                    <div class="retention-card">
-                        <h4>User Retention Cohorts</h4>
-                        <div class="cohort-table">
-                            <div class="cohort-header">
-                                <div class="cohort-period">Period</div>
-                                <div class="cohort-week">Week 1</div>
-                                <div class="cohort-week">Week 2</div>
-                                <div class="cohort-week">Week 4</div>
-                                <div class="cohort-week">Week 8</div>
-                            </div>
-                `;
-
-                growthData.retentionCohorts.forEach(cohort => {
-                    html += `
-                        <div class="cohort-row">
-                            <div class="cohort-period">${cohort.period}</div>
-                            <div class="cohort-rate">${cohort.week1?.toFixed(1)}%</div>
-                            <div class="cohort-rate">${cohort.week2?.toFixed(1)}%</div>
-                            <div class="cohort-rate">${cohort.week4?.toFixed(1)}%</div>
-                            <div class="cohort-rate">${cohort.week8?.toFixed(1)}%</div>
-                        </div>
-                    `;
-                });
-
-                html += '</div></div>';
-            }
-
-            // Churn analysis
-            if (growthData.churnAnalysis) {
-                html += `
-                    <div class="churn-card">
-                        <h4>Churn Analysis</h4>
-                        <div class="churn-metrics">
-                            <div class="churn-rate">
-                                <span class="churn-label">Monthly Churn Rate</span>
-                                <span class="churn-value">${growthData.churnAnalysis.monthlyRate?.toFixed(1)}%</span>
-                            </div>
-                            <div class="churn-reasons">
-                                <h5>Top Churn Reasons:</h5>
-                `;
-
-                if (growthData.churnAnalysis.reasons) {
-                    growthData.churnAnalysis.reasons.forEach(reason => {
-                        html += `
-                            <div class="churn-reason">
-                                <span class="reason-text">${reason.reason}</span>
-                                <span class="reason-percentage">${reason.percentage?.toFixed(1)}%</span>
-                            </div>
-                        `;
-                    });
-                }
-
-                html += '</div></div></div>';
             }
 
             html += '</div>';

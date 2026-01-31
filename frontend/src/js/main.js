@@ -46,6 +46,9 @@ import '../js/deployment-status.js';  // Deployment status checker (admin-only)
 import '../js/legal-modal.js';  // Legal documents modal handler
 import '../js/map-dummy-data.js';  // Dummy map data for testing
 
+// Phase 3c: Page view tracking (lightweight beacon, no auth required)
+import { initPageTracker } from '../services/page-tracker.js';
+
 // Phase 4: WebSocket and real-time services
 import './websocket-client.js';
 
@@ -167,6 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize loading overlay failsafe
     initLoadingOverlayFailsafe();
+
+    // Initialize page view tracking
+    initPageTracker();
 
     // Wrap apiCall with performance optimization if available
     if (window.createOptimizedApiCall && window.apiCall) {

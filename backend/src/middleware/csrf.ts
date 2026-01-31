@@ -49,7 +49,8 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
     '/health',
-    '/api/health'
+    '/api/health',
+    '/api/track/pageview'
   ]);
 
   // Check if current path is exempted using exact match only

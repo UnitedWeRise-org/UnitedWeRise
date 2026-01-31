@@ -55,6 +55,7 @@ import endorsementsRoutes from './routes/endorsements';
 import districtsRoutes from './routes/districts';
 import devicesRoutes from './routes/devices';
 import videosRoutes from './routes/videos';
+import trackingRoutes from './routes/tracking';
 import mediaServicesWebhook from './routes/webhooks/mediaServices';
 import WebSocketService from './services/WebSocketService';
 import analyticsCleanupJob from './jobs/analyticsCleanup';
@@ -319,6 +320,7 @@ app.use('/api/endorsements', endorsementsRoutes);
 app.use('/api/districts', districtsRoutes);
 app.use('/api/devices', devicesRoutes);
 app.use('/api/videos', videosRoutes);
+app.use('/api/track', trackingRoutes);
 app.use('/webhooks/media-services', mediaServicesWebhook);
 app.use('/health', healthRoutes);
 

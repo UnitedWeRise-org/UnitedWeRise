@@ -47,6 +47,7 @@ const securityService_1 = require("../services/securityService");
 const metricsService_1 = require("../services/metricsService");
 const performanceMonitor_1 = require("../middleware/performanceMonitor");
 const visitorAnalytics_1 = __importDefault(require("../services/visitorAnalytics"));
+const analyticsCleanup_1 = __importDefault(require("../jobs/analyticsCleanup"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
@@ -4042,6 +4043,44 @@ router.get('/analytics/visitors/config', auth_1.requireStagingAuth, auth_1.requi
             adminId: req.user?.id
         }, 'Failed to retrieve analytics configuration');
         res.status(500).json({ error: 'Failed to retrieve analytics configuration' });
+    }
+});
+/**
+ * @swagger
+ * /api/admin/analytics/visitors/aggregate:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Manually trigger visitor analytics aggregation
+ *     description: >
+ *       Runs the daily aggregation job on demand. Aggregates PageView records
+ *       into DailyVisitStats, cleans up old data, and rotates the daily IP salt.
+ *       Useful for testing or when data needs to be aggregated immediately.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Aggregation completed
+ *       500:
+ *         description: Aggregation failed
+ */
+router.post('/analytics/visitors/aggregate', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
+    try {
+        logger_1.logger.info({
+            endpoint: '/api/admin/analytics/visitors/aggregate',
+            action: 'manual_aggregation_triggered',
+            adminId: req.user?.id
+        }, 'Admin triggered manual visitor analytics aggregation');
+        const result = await analyticsCleanup_1.default.runNow();
+        res.json(result);
+    }
+    catch (error) {
+        logger_1.logger.error({
+            error,
+            endpoint: '/api/admin/analytics/visitors/aggregate',
+            action: 'manual_aggregation_error',
+            adminId: req.user?.id
+        }, 'Failed to run manual aggregation');
+        res.status(500).json({ error: 'Failed to run aggregation' });
     }
 });
 /**

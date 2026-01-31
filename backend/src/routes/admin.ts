@@ -10,6 +10,7 @@ import { SecurityService } from '../services/securityService';
 import { metricsService } from '../services/metricsService';
 import { getPerformanceMetrics } from '../middleware/performanceMonitor';
 import visitorAnalytics from '../services/visitorAnalytics';
+import analyticsCleanupJob from '../jobs/analyticsCleanup';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -4441,6 +4442,45 @@ router.get('/analytics/visitors/config', requireStagingAuth, requireAdmin, async
       adminId: req.user?.id
     }, 'Failed to retrieve analytics configuration');
     res.status(500).json({ error: 'Failed to retrieve analytics configuration' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/analytics/visitors/aggregate:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Manually trigger visitor analytics aggregation
+ *     description: >
+ *       Runs the daily aggregation job on demand. Aggregates PageView records
+ *       into DailyVisitStats, cleans up old data, and rotates the daily IP salt.
+ *       Useful for testing or when data needs to be aggregated immediately.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Aggregation completed
+ *       500:
+ *         description: Aggregation failed
+ */
+router.post('/analytics/visitors/aggregate', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    logger.info({
+      endpoint: '/api/admin/analytics/visitors/aggregate',
+      action: 'manual_aggregation_triggered',
+      adminId: req.user?.id
+    }, 'Admin triggered manual visitor analytics aggregation');
+
+    const result = await analyticsCleanupJob.runNow();
+    res.json(result);
+  } catch (error) {
+    logger.error({
+      error,
+      endpoint: '/api/admin/analytics/visitors/aggregate',
+      action: 'manual_aggregation_error',
+      adminId: req.user?.id
+    }, 'Failed to run manual aggregation');
+    res.status(500).json({ error: 'Failed to run aggregation' });
   }
 });
 

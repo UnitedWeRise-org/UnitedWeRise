@@ -759,20 +759,28 @@ class AdminState {
                 coreMetrics: {
                     totalUsers: response.summary?.userGrowth?.totalUsers || 0,
                     activeUsers: response.summary?.userGrowth?.activeUsers24h || 0,
-                    newUsers: response.summary?.userGrowth?.newUsers || 0,
-                    verifiedUsers: response.summary?.userGrowth?.verifiedUsers || 0
+                    newRegistrations: response.summary?.userGrowth?.newUsers || 0,
+                    verifiedUsers: response.summary?.userGrowth?.verifiedUsers || 0,
+                    totalPosts: response.summary?.engagement?.postsCreated || 0,
+                    engagementRate: response.summary?.engagement?.engagementRate || 0,
+                    retentionRate: 0
                 },
                 userEngagement: {
+                    dailyActiveUsers: response.summary?.userGrowth?.activeUsers24h || 0,
                     postsCreated: response.summary?.engagement?.postsCreated || 0,
                     commentsCreated: response.summary?.engagement?.commentsCreated || 0,
                     likesGiven: response.summary?.engagement?.likesGiven || 0,
                     messagesSent: response.summary?.engagement?.messagesSent || 0,
+                    avgLikesPerPost: response.summary?.engagement?.avgLikesPerPost || 0,
+                    avgCommentsPerPost: response.summary?.engagement?.avgCommentsPerPost || 0,
                     engagementRate: response.summary?.engagement?.engagementRate || '0'
                 },
                 contentPerformance: {
                     politicalPosts: response.summary?.content?.politicalPosts || 0,
                     photosUploaded: response.summary?.content?.photosUploaded || 0,
-                    reportsFiled: response.summary?.content?.reportsFiled || 0
+                    reportsFiled: response.summary?.content?.reportsFiled || 0,
+                    postsWithFeedback: response.summary?.content?.postsWithFeedback || 0,
+                    totalPosts: response.summary?.engagement?.postsCreated || 0
                 },
                 civicMetrics: {
                     petitionsCreated: response.summary?.civicEngagement?.petitionsCreated || 0,
