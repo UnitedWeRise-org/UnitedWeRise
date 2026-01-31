@@ -1180,43 +1180,53 @@ router.get('/analytics', auth_1.requireStagingAuth, auth_1.requireAdmin, async (
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        // Run all analytics queries in parallel for better performance
+        // Helper to safely execute a query with a fallback on failure
+        async function safeQuery(queryFn, fallback, label) {
+            try {
+                return await queryFn();
+            }
+            catch (error) {
+                logger_1.logger.error({ error, query: label }, 'Analytics query failed, using fallback');
+                return fallback;
+            }
+        }
+        // Run all analytics queries in parallel with individual error isolation
         const [dailyStats, userGrowthStats, engagementStats, civicEngagementStats, contentStats, systemHealthStats, geographicStats, reputationStats] = await Promise.all([
             // Daily activity metrics
-            prisma_1.prisma.$queryRaw `
-        SELECT 
+            safeQuery(() => prisma_1.prisma.$queryRaw `
+        SELECT
           DATE_TRUNC('day', "createdAt")::date as date,
           COUNT(*) as count,
           'users' as type
         FROM "User"
         WHERE "createdAt" >= ${startDate}
         GROUP BY DATE_TRUNC('day', "createdAt")
-        
+
         UNION ALL
-        
-        SELECT 
+
+        SELECT
           DATE_TRUNC('day', "createdAt")::date as date,
           COUNT(*) as count,
           'posts' as type
         FROM "Post"
         WHERE "createdAt" >= ${startDate}
         GROUP BY DATE_TRUNC('day', "createdAt")
-        
+
         UNION ALL
-        
-        SELECT 
+
+        SELECT
           DATE_TRUNC('day', "createdAt")::date as date,
           COUNT(*) as count,
           'reports' as type
       FROM "Report"
       WHERE "createdAt" >= ${startDate}
       GROUP BY DATE_TRUNC('day', "createdAt")
-      
+
       ORDER BY date DESC
-    `,
+    `, [], 'dailyStats'),
             // User Growth & Demographics
-            prisma_1.prisma.$queryRaw `
-      SELECT 
+            safeQuery(() => prisma_1.prisma.$queryRaw `
+      SELECT
         COUNT(*) as total_users,
         COUNT(CASE WHEN "createdAt" >= ${startDate} THEN 1 END) as new_users,
         COUNT(CASE WHEN "lastSeenAt" >= ${oneDayAgo} THEN 1 END) as active_24h,
@@ -1226,43 +1236,43 @@ router.get('/analytics', auth_1.requireStagingAuth, auth_1.requireAdmin, async (
         COUNT(CASE WHEN "emailVerified" = true THEN 1 END) as verified_users,
         COUNT(CASE WHEN state IS NOT NULL THEN 1 END) as users_with_location
       FROM "User"
-    `,
+    `, [{}], 'userGrowthStats'),
             // Engagement Statistics
-            prisma_1.prisma.$queryRaw `
-      SELECT 
+            safeQuery(() => prisma_1.prisma.$queryRaw `
+      SELECT
         (SELECT COUNT(*) FROM "Post" WHERE "createdAt" >= ${startDate}) as posts_created,
         (SELECT COUNT(*) FROM "Comment" WHERE "createdAt" >= ${startDate}) as comments_created,
         (SELECT COUNT(*) FROM "Like" WHERE "createdAt" >= ${startDate}) as likes_given,
         (SELECT AVG("likesCount") FROM "Post" WHERE "createdAt" >= ${startDate}) as avg_likes_per_post,
         (SELECT AVG("commentsCount") FROM "Post" WHERE "createdAt" >= ${startDate}) as avg_comments_per_post,
         (SELECT COUNT(*) FROM "Message" WHERE "createdAt" >= ${startDate}) as messages_sent
-    `,
+    `, [{}], 'engagementStats'),
             // Civic Engagement Analytics - Using correct field names
-            prisma_1.prisma.$queryRaw `
-      SELECT 
+            safeQuery(() => prisma_1.prisma.$queryRaw `
+      SELECT
         (SELECT COUNT(*) FROM "Petition" WHERE "createdAt" >= ${startDate}) as petitions_created,
         (SELECT COUNT(*) FROM "PetitionSignature" WHERE "signedAt" >= ${startDate}) as petition_signatures,
         (SELECT COUNT(*) FROM "CivicEvent" WHERE "createdAt" >= ${startDate}) as events_created,
         (SELECT COUNT(*) FROM "EventRSVP" WHERE "rsvpedAt" >= ${startDate}) as event_rsvps,
         (SELECT COUNT(*) FROM "Election" WHERE date >= ${new Date()}) as upcoming_elections
-    `,
+    `, [{}], 'civicEngagementStats'),
             // Content Analytics
-            prisma_1.prisma.$queryRaw `
-      SELECT 
+            safeQuery(() => prisma_1.prisma.$queryRaw `
+      SELECT
         (SELECT COUNT(*) FROM "Post" WHERE "isPolitical" = true AND "createdAt" >= ${startDate}) as political_posts,
         (SELECT COUNT(*) FROM "Post" WHERE "containsFeedback" = true AND "createdAt" >= ${startDate}) as posts_with_feedback,
         (SELECT COUNT(*) FROM "Photo" WHERE "createdAt" >= ${startDate}) as photos_uploaded,
         (SELECT COUNT(*) FROM "Report" WHERE "createdAt" >= ${startDate}) as reports_filed
-    `,
+    `, [{}], 'contentStats'),
             // System Health Metrics
-            prisma_1.prisma.$queryRaw `
-      SELECT 
+            safeQuery(() => prisma_1.prisma.$queryRaw `
+      SELECT
         (SELECT COUNT(*) FROM "ReputationEvent" WHERE "createdAt" >= ${startDate}) as reputation_events,
         (SELECT AVG("reputationScore") FROM "User" WHERE "reputationScore" IS NOT NULL) as avg_reputation,
         (SELECT COUNT(*) FROM "User" WHERE "reputationScore" < 30) as low_reputation_users
-    `,
-            // Geographic Distribution  
-            prisma_1.prisma.user.groupBy({
+    `, [{}], 'systemHealthStats'),
+            // Geographic Distribution
+            safeQuery(() => prisma_1.prisma.user.groupBy({
                 by: ['state'],
                 where: {
                     state: { not: null },
@@ -1271,13 +1281,13 @@ router.get('/analytics', auth_1.requireStagingAuth, auth_1.requireAdmin, async (
                 _count: { state: true },
                 orderBy: { _count: { state: 'desc' } },
                 take: 10
-            }),
+            }), [], 'geographicStats'),
             // Reputation System Analytics - simplified to avoid TypeScript circular reference
-            prisma_1.prisma.reputationEvent.findMany({
+            safeQuery(() => prisma_1.prisma.reputationEvent.findMany({
                 where: { createdAt: { gte: startDate } },
                 select: { eventType: true, impact: true },
                 take: 100
-            })
+            }), [], 'reputationStats')
         ]);
         // Extract data from parallel queries with safe defaults
         // Note: Raw SQL COUNT returns BigInt, use Number() to convert
@@ -1299,7 +1309,7 @@ router.get('/analytics', auth_1.requireStagingAuth, auth_1.requireAdmin, async (
             return 0;
         };
         // Report breakdown by reason
-        const reportReasons = await prisma_1.prisma.report.groupBy({
+        const reportReasons = await safeQuery(() => prisma_1.prisma.report.groupBy({
             by: ['reason'],
             where: {
                 createdAt: { gte: startDate }
@@ -1312,9 +1322,9 @@ router.get('/analytics', auth_1.requireStagingAuth, auth_1.requireAdmin, async (
                     reason: 'desc'
                 }
             }
-        });
+        }), [], 'reportReasons');
         // Flag distribution
-        const flagDistribution = await prisma_1.prisma.contentFlag.groupBy({
+        const flagDistribution = await safeQuery(() => prisma_1.prisma.contentFlag.groupBy({
             by: ['flagType'],
             where: {
                 createdAt: { gte: startDate }
@@ -1325,7 +1335,7 @@ router.get('/analytics', auth_1.requireStagingAuth, auth_1.requireAdmin, async (
             _avg: {
                 confidence: true
             }
-        });
+        }), [], 'flagDistribution');
         // Calculate key metrics using toNum helper for BigInt safety
         const metrics = {
             // User Metrics
