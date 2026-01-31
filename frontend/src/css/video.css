@@ -1459,9 +1459,27 @@
 
 .snippets-reels-overlay .video-player {
     border-radius: 0;
-    width: auto;
     height: 100%;
     max-width: 100%;
+    aspect-ratio: unset;
+}
+
+.snippets-reels-overlay .video-player--vertical {
+    width: calc((100vh - 5.5vh) * 9 / 16);
+}
+
+.snippets-reels-overlay .video-player--portrait {
+    width: calc((100vh - 5.5vh) * 4 / 5);
+}
+
+.snippets-reels-overlay .video-player--square {
+    width: calc(100vh - 5.5vh);
+}
+
+.snippets-reels-overlay .video-player--horizontal {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
 }
 
 .snippets-reels-caption {
@@ -1554,5 +1572,17 @@
     .snippets-reels-video {
         max-width: 100%;
         height: 100%;
+    }
+
+    .snippets-reels-overlay .video-player--vertical {
+        width: calc((100vh - 55px) * 9 / 16);
+    }
+
+    .snippets-reels-overlay .video-player--portrait {
+        width: calc((100vh - 55px) * 4 / 5);
+    }
+
+    .snippets-reels-overlay .video-player--square {
+        width: calc(100vh - 55px);
     }
 }

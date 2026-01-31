@@ -343,7 +343,13 @@ export class VideoPlayer {
 
         try {
             await this.videoEl.play();
-            console.log('[VideoPlayer] Play succeeded');
+            console.log('[VideoPlayer] Play succeeded', {
+                videoWidth: this.videoEl.videoWidth,
+                videoHeight: this.videoEl.videoHeight,
+                offsetWidth: this.videoEl.offsetWidth,
+                offsetHeight: this.videoEl.offsetHeight,
+                readyState: this.videoEl.readyState
+            });
         } catch (error) {
             console.log('[VideoPlayer] Play failed:', error.message);
             // Auto-play blocked, show play button

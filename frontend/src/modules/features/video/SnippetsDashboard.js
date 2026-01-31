@@ -33,6 +33,8 @@ export class SnippetsDashboard {
         this.loading = false;
         /** @type {number|null} Polling timer for encoding status updates */
         this.encodingPollTimer = null;
+        /** @type {boolean} Guard to prevent duplicate reels overlays */
+        this.reelsOpen = false;
 
         // Listen for upload events from SnippetCreatorModal
         window.addEventListener('snippetUploaded', () => {
@@ -684,13 +686,20 @@ export class SnippetsDashboard {
      * @param {string} videoId - Video ID to start at
      */
     async playSnippet(videoId) {
+        if (this.reelsOpen) return;
+        this.reelsOpen = true;
+
         const filteredSnippets = this.getFilteredSnippets();
         const startIndex = filteredSnippets.findIndex(s => s.id === videoId);
-        if (startIndex === -1) return;
+        if (startIndex === -1) {
+            this.reelsOpen = false;
+            return;
+        }
 
         const targetSnippet = filteredSnippets[startIndex];
         if (!targetSnippet.hlsManifestUrl && !targetSnippet.mp4Url && !targetSnippet.originalUrl) {
             this.showToast('This video is still encoding. Please wait...');
+            this.reelsOpen = false;
             return;
         }
 
@@ -809,6 +818,7 @@ export class SnippetsDashboard {
                 overlay.remove();
                 document.body.style.overflow = '';
                 document.removeEventListener('keydown', handleEsc);
+                this.reelsOpen = false;
             };
 
             // Close button
@@ -820,6 +830,7 @@ export class SnippetsDashboard {
             };
             document.addEventListener('keydown', handleEsc);
         } catch (error) {
+            this.reelsOpen = false;
             console.error('Failed to open reels player:', error);
             // Fallback: open video URL directly
             const snippet = this.findSnippetById(videoId);
