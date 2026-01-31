@@ -727,7 +727,6 @@ export class SnippetsDashboard {
 
             document.body.appendChild(overlay);
             document.body.style.overflow = 'hidden';
-            console.log('[Reels] Overlay mounted');
 
             // Lazy-load VideoPlayers: only current + next 2 initially
             const players = new Map();
@@ -767,18 +766,6 @@ export class SnippetsDashboard {
             ensurePlayerLoaded(startIndex + 1);
             ensurePlayerLoaded(startIndex + 2);
 
-            // Diagnostic: log player dimensions after load
-            const playerContainer = document.getElementById(`reelsPlayer-${filteredSnippets[startIndex].id}`);
-            const videoPlayerEl = playerContainer?.querySelector('.video-player');
-            console.log('[Reels] After player load', {
-                wrapperW: playerContainer?.offsetWidth,
-                wrapperH: playerContainer?.offsetHeight,
-                playerW: videoPlayerEl?.offsetWidth,
-                playerH: videoPlayerEl?.offsetHeight,
-                wrapperClass: playerContainer?.className,
-                playerClass: videoPlayerEl?.className
-            });
-
             // Scroll to the clicked video
             const startItem = overlay.querySelector(`[data-index="${startIndex}"]`);
             if (startItem) {
@@ -794,14 +781,6 @@ export class SnippetsDashboard {
                 entries.forEach(entry => {
                     const vid = entry.target.dataset.videoId;
                     const visibleIndex = parseInt(entry.target.dataset.index);
-
-                    console.log('[Reels] Observer', {
-                        vid: vid.slice(-6),
-                        intersecting: entry.isIntersecting,
-                        ratio: entry.intersectionRatio.toFixed(2),
-                        currentlyPlaying: currentlyPlaying?.slice(-6) || 'null',
-                        willPlay: entry.isIntersecting && entry.intersectionRatio > 0.5 && vid !== currentlyPlaying
-                    });
 
                     if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
                         // Pre-load next 2 ahead

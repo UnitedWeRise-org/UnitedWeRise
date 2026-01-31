@@ -345,31 +345,7 @@ export class VideoPlayer {
         try {
             await this.videoEl.play();
             this.isPlaying = true;
-            console.log('[VideoPlayer] Play succeeded', {
-                videoWidth: this.videoEl.videoWidth,
-                videoHeight: this.videoEl.videoHeight,
-                offsetWidth: this.videoEl.offsetWidth,
-                offsetHeight: this.videoEl.offsetHeight,
-                readyState: this.videoEl.readyState
-            });
-
-            // Diagnostic: ResizeObserver to detect post-play shrink
-            if (!this._resizeObserverSetup) {
-                this._resizeObserverSetup = true;
-                const playerEl = this.container.querySelector('.video-player');
-                if (playerEl && typeof ResizeObserver !== 'undefined') {
-                    new ResizeObserver(entries => {
-                        for (const entry of entries) {
-                            console.log('[VideoPlayer] Resize detected', {
-                                width: Math.round(entry.contentRect.width),
-                                height: Math.round(entry.contentRect.height),
-                                videoW: this.videoEl?.videoWidth,
-                                videoH: this.videoEl?.videoHeight
-                            });
-                        }
-                    }).observe(playerEl);
-                }
-            }
+            console.log('[VideoPlayer] Play succeeded');
         } catch (error) {
             console.log('[VideoPlayer] Play failed:', error.message);
             // Auto-play blocked, show play button

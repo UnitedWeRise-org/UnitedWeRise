@@ -1441,6 +1441,9 @@
     max-height: 100%;
     max-width: 100%;
     margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Landscape videos need width-driven sizing so they aren't too tall */
@@ -1469,15 +1472,21 @@
 
 .snippets-reels-overlay .video-player--portrait {
     width: calc((100vh - 5.5vh) * 4 / 5);
+    height: auto;
+    aspect-ratio: 4 / 5;
 }
 
 .snippets-reels-overlay .video-player--square {
     width: calc(100vh - 5.5vh);
+    height: auto;
+    aspect-ratio: 1 / 1;
 }
 
 .snippets-reels-overlay .video-player--horizontal {
     width: calc((100vh - 5.5vh) * 16 / 9);
     max-width: 90vw;
+    height: auto;
+    aspect-ratio: 16 / 9;
 }
 
 .snippets-reels-caption {
