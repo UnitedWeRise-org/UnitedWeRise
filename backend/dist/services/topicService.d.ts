@@ -98,10 +98,10 @@ export declare class TopicService {
             createdAt: Date;
             updatedAt: Date;
             title: string;
+            commentCount: number;
             summary: string | null;
             participantCount: number;
             parentTopicId: string;
-            commentCount: number;
         }[];
     } & {
         id: string;
@@ -114,6 +114,7 @@ export declare class TopicService {
         title: string;
         description: string | null;
         category: string | null;
+        viewCount: number;
         evidenceQuality: number;
         argumentsFor: string[];
         argumentsAgainst: string[];
@@ -122,7 +123,6 @@ export declare class TopicService {
         controversyScore: number;
         postCount: number;
         participantCount: number;
-        viewCount: number;
         trendingScore: number;
         lastActivityAt: Date;
     })[]>;
@@ -334,10 +334,10 @@ export declare class TopicService {
             createdAt: Date;
             updatedAt: Date;
             title: string;
+            commentCount: number;
             summary: string | null;
             participantCount: number;
             parentTopicId: string;
-            commentCount: number;
         })[];
     } & {
         id: string;
@@ -350,6 +350,7 @@ export declare class TopicService {
         title: string;
         description: string | null;
         category: string | null;
+        viewCount: number;
         evidenceQuality: number;
         argumentsFor: string[];
         argumentsAgainst: string[];
@@ -358,7 +359,6 @@ export declare class TopicService {
         controversyScore: number;
         postCount: number;
         participantCount: number;
-        viewCount: number;
         trendingScore: number;
         lastActivityAt: Date;
     }>;

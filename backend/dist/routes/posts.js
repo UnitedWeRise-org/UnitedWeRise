@@ -1594,10 +1594,17 @@ router.post('/:postId/reaction', auth_1.requireAuth, async (req, res) => {
                 }
             }
             else {
-                // Create new reaction
+                // Create new reaction (upsert handles race conditions idempotently)
                 await prisma_1.prisma.$transaction([
-                    prisma_1.prisma.reaction.create({
-                        data: reactionData
+                    prisma_1.prisma.reaction.upsert({
+                        where: {
+                            userId_postId: {
+                                userId,
+                                postId
+                            }
+                        },
+                        update: reactionData,
+                        create: reactionData
                     }),
                     // Update post counts
                     prisma_1.prisma.post.update({
