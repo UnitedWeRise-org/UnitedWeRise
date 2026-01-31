@@ -718,13 +718,22 @@ export class SnippetsDashboard {
             document.body.appendChild(overlay);
             document.body.style.overflow = 'hidden';
 
-            // Initialize a VideoPlayer for each snippet
+            // Lazy-load VideoPlayers: only current + next 2 initially
             const players = new Map();
-            filteredSnippets.forEach(snippet => {
+
+            /**
+             * Create a VideoPlayer for a specific index if not already loaded
+             * @param {number} index - Index in filteredSnippets array
+             */
+            const ensurePlayerLoaded = (index) => {
+                if (index < 0 || index >= filteredSnippets.length) return;
+                const snippet = filteredSnippets[index];
+                if (players.has(snippet.id)) return;
+                if (!snippet.hlsManifestUrl && !snippet.mp4Url && !snippet.originalUrl) return;
+
                 const container = document.getElementById(`reelsPlayer-${snippet.id}`);
                 if (!container) return;
-                // Skip snippets that haven't finished encoding (no playable source)
-                if (!snippet.hlsManifestUrl && !snippet.mp4Url && !snippet.originalUrl) return;
+
                 const player = new VideoPlayer({
                     container,
                     hlsUrl: snippet.hlsManifestUrl,
@@ -736,7 +745,16 @@ export class SnippetsDashboard {
                     loop: true
                 });
                 players.set(snippet.id, player);
-            });
+
+                // Hide play overlay in reels mode (playback is auto-managed)
+                const playOverlay = container.querySelector('#playOverlay');
+                if (playOverlay) playOverlay.style.display = 'none';
+            };
+
+            // Load current + next 2
+            ensurePlayerLoaded(startIndex);
+            ensurePlayerLoaded(startIndex + 1);
+            ensurePlayerLoaded(startIndex + 2);
 
             // Scroll to the clicked video
             const startItem = overlay.querySelector(`[data-index="${startIndex}"]`);
@@ -744,24 +762,35 @@ export class SnippetsDashboard {
                 startItem.scrollIntoView({ behavior: 'instant' });
             }
 
-            // Auto-play the first video (delay to let DOM settle after scrollIntoView)
+            // Wait for manifest/canplay before playing the first video
             let currentlyPlaying = filteredSnippets[startIndex].id;
             const firstPlayer = players.get(currentlyPlaying);
             if (firstPlayer) {
-                requestAnimationFrame(() => firstPlayer.play());
+                firstPlayer.whenReady().then(() => firstPlayer.play());
             }
 
-            // IntersectionObserver for auto-play on scroll
+            // IntersectionObserver for auto-play on scroll + lazy pre-loading
             const scrollContainer = overlay.querySelector('.snippets-reels-container');
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     const vid = entry.target.dataset.videoId;
+                    const visibleIndex = parseInt(entry.target.dataset.index);
+
                     if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                        // Pre-load next 2 ahead
+                        ensurePlayerLoaded(visibleIndex + 1);
+                        ensurePlayerLoaded(visibleIndex + 2);
+
                         if (vid !== currentlyPlaying) {
                             const oldPlayer = players.get(currentlyPlaying);
                             if (oldPlayer) oldPlayer.pause();
+
+                            // Ensure this player is loaded, then wait for ready before playing
+                            ensurePlayerLoaded(visibleIndex);
                             const newPlayer = players.get(vid);
-                            if (newPlayer) newPlayer.play();
+                            if (newPlayer) {
+                                newPlayer.whenReady().then(() => newPlayer.play());
+                            }
                             currentlyPlaying = vid;
                         }
                     }

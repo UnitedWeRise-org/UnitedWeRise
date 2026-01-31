@@ -61,6 +61,13 @@ export class VideoPlayer {
         this.isPlaying = false;
         this.destroyed = false;
 
+        /** @type {boolean} Whether the video source is ready to play */
+        this.ready = false;
+        /** @private */
+        this._readyResolve = null;
+        /** @type {Promise<void>} Resolves when the video source is ready to play */
+        this.readyPromise = new Promise(resolve => { this._readyResolve = resolve; });
+
         // Bound event handlers (for removal on destroy)
         this.boundHandlePlay = null;
         this.boundHandlePause = null;
@@ -191,6 +198,12 @@ export class VideoPlayer {
             this.hls.loadSource(this.hlsUrl);
             this.hls.attachMedia(this.videoEl);
 
+            this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                console.log('[VideoPlayer] HLS manifest parsed, ready to play:', this.hlsUrl);
+                this.ready = true;
+                this._readyResolve();
+            });
+
             this.hls.on(Hls.Events.ERROR, (event, data) => {
                 if (data.fatal) {
                     switch (data.type) {
@@ -218,11 +231,25 @@ export class VideoPlayer {
             // Safari native HLS support
             console.log('[VideoPlayer] Using Safari native HLS:', this.hlsUrl);
             this.videoEl.src = this.hlsUrl;
+            this.videoEl.addEventListener('canplay', () => {
+                if (!this.ready) {
+                    console.log('[VideoPlayer] Video canplay, ready:', this.videoEl.src);
+                    this.ready = true;
+                    this._readyResolve();
+                }
+            }, { once: true });
 
         } else if (this.mp4Url) {
             // MP4 fallback
             console.log('[VideoPlayer] Using MP4 fallback:', this.mp4Url);
             this.videoEl.src = this.mp4Url;
+            this.videoEl.addEventListener('canplay', () => {
+                if (!this.ready) {
+                    console.log('[VideoPlayer] Video canplay, ready:', this.videoEl.src);
+                    this.ready = true;
+                    this._readyResolve();
+                }
+            }, { once: true });
 
         } else {
             this.handleError('No playable video source');
@@ -301,6 +328,14 @@ export class VideoPlayer {
     }
 
     /**
+     * Returns a promise that resolves when the video source is ready to play
+     * @returns {Promise<void>}
+     */
+    whenReady() {
+        return this.readyPromise;
+    }
+
+    /**
      * Play video
      */
     async play() {
@@ -308,7 +343,9 @@ export class VideoPlayer {
 
         try {
             await this.videoEl.play();
+            console.log('[VideoPlayer] Play succeeded');
         } catch (error) {
+            console.log('[VideoPlayer] Play failed:', error.message);
             // Auto-play blocked, show play button
             const overlay = this.container.querySelector('#playOverlay');
             if (overlay) {
