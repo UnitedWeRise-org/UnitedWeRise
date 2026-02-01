@@ -1472,24 +1472,16 @@
 
 .snippets-reels-overlay .video-player--portrait {
     width: calc((100vh - 5.5vh) * 4 / 5);
-    height: 0;
-    padding-bottom: 125%;
-    aspect-ratio: unset;
 }
 
 .snippets-reels-overlay .video-player--square {
     width: calc(100vh - 5.5vh);
-    height: 0;
-    padding-bottom: 100%;
-    aspect-ratio: unset;
 }
 
 .snippets-reels-overlay .video-player--horizontal {
     width: calc((100vh - 5.5vh) * 16 / 9);
     max-width: 90vw;
-    height: 0;
-    padding-bottom: 56.25%;
-    aspect-ratio: unset;
+    height: min(calc(100vh - 5.5vh), calc(90vw * 9 / 16));
 }
 
 .snippets-reels-caption {
@@ -1599,5 +1591,6 @@
     .snippets-reels-overlay .video-player--horizontal {
         width: calc((100vh - 55px) * 16 / 9);
         max-width: 100vw;
+        height: min(calc(100vh - 55px), calc(100vw * 9 / 16));
     }
 }
