@@ -1485,12 +1485,18 @@ router.get('/analytics', requireStagingAuth, requireAdmin, async (req: AuthReque
       }
     };
 
+    // Convert BigInt values from raw SQL COUNT(*) before JSON serialization
+    const sanitizedDailyStats = (dailyStats as any[]).map((row: any) => ({
+      ...row,
+      count: row.count !== undefined ? Number(row.count) : 0
+    }));
+
     res.json({
       success: true,
       data: {
         period: `${days} days`,
         summary: metrics,
-        dailyActivity: dailyStats,
+        dailyActivity: sanitizedDailyStats,
         geographicDistribution: geographicStats,
         reputationEventBreakdown: reputationStats,
         reportBreakdown: reportReasons,

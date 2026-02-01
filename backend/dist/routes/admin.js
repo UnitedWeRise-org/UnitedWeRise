@@ -1386,12 +1386,17 @@ router.get('/analytics', auth_1.requireStagingAuth, auth_1.requireAdmin, async (
                 lowReputationUsers: toNum(health.low_reputation_users)
             }
         };
+        // Convert BigInt values from raw SQL COUNT(*) before JSON serialization
+        const sanitizedDailyStats = dailyStats.map((row) => ({
+            ...row,
+            count: row.count !== undefined ? Number(row.count) : 0
+        }));
         res.json({
             success: true,
             data: {
                 period: `${days} days`,
                 summary: metrics,
-                dailyActivity: dailyStats,
+                dailyActivity: sanitizedDailyStats,
                 geographicDistribution: geographicStats,
                 reputationEventBreakdown: reputationStats,
                 reportBreakdown: reportReasons,
