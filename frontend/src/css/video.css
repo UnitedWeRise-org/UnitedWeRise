@@ -1446,11 +1446,6 @@
     justify-content: center;
 }
 
-/* Landscape videos need width-driven sizing so they aren't too tall */
-.snippets-reels-video.reels-video--landscape {
-    width: 100%;
-    max-width: 90vw;
-}
 
 /* Square videos get width-driven sizing */
 .snippets-reels-video.reels-video--square {
@@ -1480,6 +1475,8 @@
 
 .snippets-reels-overlay .video-player--horizontal {
     width: min(calc((100vh - 5.5vh) * 16 / 9), 90vw);
+    height: auto;
+    aspect-ratio: 16 / 9;
 }
 
 .snippets-reels-caption {
@@ -1588,5 +1585,7 @@
 
     .snippets-reels-overlay .video-player--horizontal {
         width: min(calc((100vh - 55px) * 16 / 9), 100vw);
+        height: auto;
+        aspect-ratio: 16 / 9;
     }
 }
