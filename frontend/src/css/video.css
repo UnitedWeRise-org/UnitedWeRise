@@ -1479,14 +1479,7 @@
 }
 
 .snippets-reels-overlay .video-player--horizontal {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     width: min(calc((100vh - 5.5vh) * 16 / 9), 90vw);
-    height: min(calc(90vw * 9 / 16), calc(100vh - 5.5vh));
-    max-width: none;
-    aspect-ratio: unset;
 }
 
 .snippets-reels-caption {
@@ -1594,13 +1587,6 @@
     }
 
     .snippets-reels-overlay .video-player--horizontal {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
         width: min(calc((100vh - 55px) * 16 / 9), 100vw);
-        height: min(calc(100vw * 9 / 16), calc(100vh - 55px));
-        max-width: none;
-        aspect-ratio: unset;
     }
 }
