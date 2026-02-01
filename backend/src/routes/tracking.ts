@@ -23,6 +23,14 @@ import { logger } from '../services/logger';
 const router = express.Router();
 
 /**
+ * Accept text/plain bodies for sendBeacon compatibility.
+ * sendBeacon with application/json triggers a CORS preflight that it cannot handle,
+ * so the frontend sends as text/plain. This middleware captures the raw text
+ * so the handler can parse it as JSON.
+ */
+router.use(express.text({ type: 'text/plain', limit: '1kb' }));
+
+/**
  * Rate limiter for tracking endpoint
  * Generous limit since every page load sends a beacon,
  * but prevents abuse from automated scripts
@@ -98,6 +106,15 @@ router.post(
             .trim()
     ],
     async (req: express.Request, res: express.Response) => {
+        // Parse text/plain bodies as JSON (sendBeacon compatibility)
+        if (typeof req.body === 'string') {
+            try {
+                req.body = JSON.parse(req.body);
+            } catch {
+                return res.status(204).send(); // Silently ignore malformed beacons
+            }
+        }
+
         // Validation
         const errors = validationResult(req);
         if (!errors.isEmpty()) {

@@ -37,7 +37,8 @@ function sendPageViewBeacon(pagePath) {
         userId: window.currentUser?.id || undefined
     };
 
-    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    // Use text/plain to avoid CORS preflight — sendBeacon cannot handle preflights
+    const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
 
     if (navigator.sendBeacon) {
         navigator.sendBeacon(trackingUrl, blob);
