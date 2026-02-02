@@ -1329,27 +1329,49 @@ class NavigationHandlers {
             // Import and use VideoPlayer
             const { VideoPlayer } = await import('../modules/features/video/VideoPlayer.js');
 
-            // Create fullscreen player modal
+            // Prevent duplicate modals
+            const existing = document.querySelector('.video-player-overlay');
+            if (existing) existing.remove();
+
+            // Map aspect ratio to modal width class
+            const aspectModalMap = {
+                'VERTICAL_9_16': 'video-player-modal--vertical_9_16',
+                'HORIZONTAL_16_9': 'video-player-modal--horizontal_16_9',
+                'SQUARE_1_1': 'video-player-modal--square_1_1',
+                'PORTRAIT_4_5': 'video-player-modal--square_1_1'
+            };
+            const modalAspectClass = aspectModalMap[video.aspectRatio] || 'video-player-modal--vertical_9_16';
+
+            // Build modal using CSS class structure matching VideoPlayer expectations
             const modal = document.createElement('div');
             modal.className = 'video-player-overlay';
-            modal.style.cssText = 'position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center;';
             modal.innerHTML = `
-                <button class="video-player-close" style="position: absolute; top: 1rem; right: 1rem; z-index: 1200; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 50%; width: 48px; height: 48px; cursor: pointer; font-size: 1.5rem;">×</button>
-                <div id="postVideoPlayerContainer" style="max-width: 500px; max-height: 90vh; width: 100%;"></div>
+                <button class="video-player-close">×</button>
+                <div class="video-player-modal ${modalAspectClass}">
+                    <div class="video-player-container" id="postVideoPlayerContainer"></div>
+                </div>
             `;
 
             document.body.appendChild(modal);
 
-            // Initialize player
+            // Initialize player — autoplay disabled, we call play() explicitly after ready
             const player = new VideoPlayer({
                 container: document.getElementById('postVideoPlayerContainer'),
                 hlsUrl: video.hlsManifestUrl,
                 mp4Url: video.mp4Url || video.originalUrl,
                 thumbnailUrl: video.thumbnailUrl,
                 aspectRatio: video.aspectRatio,
-                autoplay: true,
-                muted: false,
+                autoplay: false,
+                muted: true,
                 loop: true
+            });
+
+            // Wait for HLS manifest parse, then play and unmute
+            player.whenReady().then(() => {
+                player.play();
+                if (player.videoEl) {
+                    player.videoEl.muted = false;
+                }
             });
 
             // Close handlers

@@ -325,6 +325,7 @@ export class VideoPlayer {
         if (this.isPlaying) return;
 
         try {
+            await this.readyPromise;
             await this.videoEl.play();
             this.isPlaying = true;
             console.log('[VideoPlayer] Play succeeded');
