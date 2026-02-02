@@ -89,4 +89,17 @@ Also removed inline JS overrides (`aspectRatio: unset`, `height: 100%`) that wer
 - `frontend/src/css/video.css` — desktop + mobile horizontal rules
 - `frontend/src/modules/features/video/SnippetsDashboard.js` — removed inline style overrides
 
+**Result:** Partially worked — container briefly shows correct 16:9 size then reverts to smaller size when HLS.js attaches media. Percentage-based `100%` resolves differently during flex layout recalculation.
+
+---
+
+## Attempt #5 Revision: Viewport Units Fix (Current)
+
+**Root cause of revert:** `min(100%, ...)` depends on parent flex container height resolution. When HLS.js calls `attachMedia()` and manifest parses, browser recalculates layout, and percentage heights resolve differently in the flex chain.
+
+**Fix:** Replace `100%` with absolute viewport units (`100vw`, `calc(100vh - 5.5vh)`) that resolve to fixed pixel values independent of parent layout. Added `max-width: none` to override base rule's `max-width: 100%`.
+
+**Files changed:**
+- `frontend/src/css/video.css` — desktop (L1477-1480) + mobile (L1586-1589) horizontal rules
+
 **Result:** PENDING VERIFICATION

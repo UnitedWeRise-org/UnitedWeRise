@@ -1475,8 +1475,9 @@
 }
 
 .snippets-reels-overlay .video-player--horizontal {
-    width: min(100%, calc((100vh - 5.5vh) * 16 / 9));
-    height: min(100%, calc(100vw * 9 / 16));
+    width: min(100vw, calc((100vh - 5.5vh) * 16 / 9));
+    height: min(calc(100vh - 5.5vh), calc(100vw * 9 / 16));
+    max-width: none;
 }
 
 .snippets-reels-caption {
@@ -1584,7 +1585,8 @@
     }
 
     .snippets-reels-overlay .video-player--horizontal {
-        width: min(100%, calc((100vh - 55px) * 16 / 9));
-        height: min(100%, calc(100vw * 9 / 16));
+        width: min(100vw, calc((100vh - 55px) * 16 / 9));
+        height: min(calc(100vh - 55px), calc(100vw * 9 / 16));
+        max-width: none;
     }
 }
