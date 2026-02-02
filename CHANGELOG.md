@@ -8,6 +8,38 @@
 
 ---
 
+## [2026-02-02] - Video Encoding: Orientation Fix, Optimization & Cleanup
+
+### Fixed
+
+**Vertical Video Encoding (Orientation-Aware Presets)**
+- Root cause: FFmpeg encoding used fixed 16:9 width×height presets, forcing vertical (9:16) and portrait (4:5) videos into landscape dimensions — causing stretched or black-barred output
+- Fix: Replaced fixed-dimension `EncodingPreset` with orientation-agnostic `QualityLevel` system that defines max long-edge size and computes actual output dimensions from the source video's native aspect ratio
+- Vertical input now produces vertical output at correct resolution
+
+### Changed
+
+**Dropped 480p Middle Tier**
+- Removed 480p quality level from HLS encoding — only 720p and 360p are now generated
+- Reduces encoding time and storage usage with minimal quality impact (adaptive bitrate selects between two tiers)
+
+**Removed MP4 Fallback Encoding**
+- `generateMP4Fallback()` method and MP4 upload removed from `FFmpegEncoder`
+- Frontend `VideoPlayer` no longer falls back to MP4 on HLS fatal errors — reports error directly instead
+- Existing videos with MP4 URLs continue to work; new videos will have `mp4Url: null`
+- Database `mp4Url` column retained for backward compatibility
+
+**Diagnostic Code Cleanup**
+- Removed all `REELS-DIAG` diagnostic logging from `SnippetsDashboard.js` (container dimensions, ResizeObserver, video element state)
+- Removed HLS levels detail logging and `LEVEL_SWITCHED` event handler from `VideoPlayer.js`
+
+### Files Modified
+- `backend/src/services/FFmpegEncoder.ts`
+- `frontend/src/modules/features/video/SnippetsDashboard.js`
+- `frontend/src/modules/features/video/VideoPlayer.js`
+
+---
+
 ## [2026-01-29] - Video Upload OOM Crash & Missing Thumbnails Fix
 
 ### Fixed
