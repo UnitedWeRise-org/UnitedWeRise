@@ -102,4 +102,27 @@ Also removed inline JS overrides (`aspectRatio: unset`, `height: 100%`) that wer
 **Files changed:**
 - `frontend/src/css/video.css` — desktop (L1477-1480) + mobile (L1586-1589) horizontal rules
 
+**Result:** NO CHANGE — viewport units are a mathematical no-op since parent chain is already at viewport dimensions. Also, diagnostics logged `[object Object]` because `adminDebugLog` was called with 2 args instead of 3.
+
+---
+
+## Attempt #6: Aspect-Ratio Property + Fixed Diagnostics (Current)
+
+**Root cause analysis:** The dual `min()` approach calculates width and height independently. These two separate calculations can produce non-16:9 rectangles during transient layout states (flex recalculations, HLS.js media attachment). Additionally, all diagnostic logs were broken — calling `adminDebugLog(message, object)` instead of `adminDebugLog(component, message, object)`, causing data to display as `[object Object]`.
+
+**Fix (Part 1 — Diagnostics):** Fixed all 5 `adminDebugLog` calls in `SnippetsDashboard.js` to use correct 3-argument signature `(component, message, data)`. Added enriched data: `clientWidth/Height`, `computedWidth/Height/MaxWidth`, `parentWidth/Height/className`, and actual aspect ratio calculation in ResizeObserver.
+
+**Fix (Part 2 — CSS):** Replaced dual `min()` width+height with browser-enforced `aspect-ratio: 16 / 9`:
+- `width: min(100%, calc((100vh - 5.5vh) * 16 / 9))` — same width formula
+- `height: auto` — derived from width via aspect-ratio (not independently calculated)
+- `aspect-ratio: 16 / 9` — browser guarantees the ratio
+- `max-height: calc(100vh - 5.5vh)` — prevents overflow
+- `max-width: none` — overrides base rule
+
+**Why this differs from attempt #1:** Attempt #1 also used `aspect-ratio` but failed due to conflicting inline JS styles (`aspectRatio: unset`, `height: 100%`). Those inline overrides were removed in attempt #5, so the conflict no longer exists.
+
+**Files changed:**
+- `frontend/src/css/video.css` — desktop (L1477-1482) + mobile (L1587-1592) horizontal rules
+- `frontend/src/modules/features/video/SnippetsDashboard.js` — fixed 5 diagnostic log calls
+
 **Result:** PENDING VERIFICATION
