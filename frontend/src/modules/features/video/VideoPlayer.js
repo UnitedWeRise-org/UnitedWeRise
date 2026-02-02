@@ -3,7 +3,7 @@
  *
  * Features:
  * - HLS adaptive streaming support
- * - MP4 fallback for Safari/older browsers
+ * - Native HLS for Safari
  * - Aspect-ratio-aware container
  * - Play/pause, volume, fullscreen controls
  * - Thumbnail/poster display
@@ -185,7 +185,7 @@ export class VideoPlayer {
     }
 
     /**
-     * Setup video source (HLS or MP4)
+     * Setup video source (HLS)
      */
     setupSource() {
         if (this.hlsUrl && isHlsAvailable() && Hls.isSupported()) {
@@ -200,21 +200,8 @@ export class VideoPlayer {
 
             this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
                 console.log('[VideoPlayer] HLS manifest parsed, ready to play:', this.hlsUrl);
-                console.log('[VideoPlayer] HLS levels available:', this.hls.levels.map(l => ({
-                    width: l.width, height: l.height, bitrate: l.bitrate
-                })));
                 this.ready = true;
                 this._readyResolve();
-            });
-
-            this.hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
-                const level = this.hls.levels[data.level];
-                console.log('[VideoPlayer] HLS level switched:', {
-                    level: data.level,
-                    width: level?.width,
-                    height: level?.height,
-                    bitrate: level?.bitrate
-                });
             });
 
             this.hls.on(Hls.Events.ERROR, (event, data) => {
@@ -226,15 +213,9 @@ export class VideoPlayer {
                             this.hls.recoverMediaError();
                             break;
                         default:
-                            // Fallback to MP4 on other fatal errors
                             this.hls.destroy();
                             this.hls = null;
-                            if (this.mp4Url) {
-                                console.log('[VideoPlayer] HLS fatal error, falling back to MP4:', this.mp4Url);
-                                this.videoEl.src = this.mp4Url;
-                            } else {
-                                this.handleError('HLS error: ' + data.type);
-                            }
+                            this.handleError('HLS fatal error: ' + data.type);
                             break;
                     }
                 }
@@ -244,18 +225,6 @@ export class VideoPlayer {
             // Safari native HLS support
             console.log('[VideoPlayer] Using Safari native HLS:', this.hlsUrl);
             this.videoEl.src = this.hlsUrl;
-            this.videoEl.addEventListener('canplay', () => {
-                if (!this.ready) {
-                    console.log('[VideoPlayer] Video canplay, ready:', this.videoEl.src);
-                    this.ready = true;
-                    this._readyResolve();
-                }
-            }, { once: true });
-
-        } else if (this.mp4Url) {
-            // MP4 fallback
-            console.log('[VideoPlayer] Using MP4 fallback:', this.mp4Url);
-            this.videoEl.src = this.mp4Url;
             this.videoEl.addEventListener('canplay', () => {
                 if (!this.ready) {
                     console.log('[VideoPlayer] Video canplay, ready:', this.videoEl.src);
