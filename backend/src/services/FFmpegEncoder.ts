@@ -1,19 +1,16 @@
 /**
  * FFmpegEncoder Service
  *
- * Handles multi-resolution HLS encoding and MP4 fallback generation
- * using FFmpeg. Outputs are uploaded to Azure Blob Storage.
+ * Handles multi-resolution HLS encoding using FFmpeg.
+ * Outputs are uploaded to Azure Blob Storage.
  *
  * Output Structure:
  * videos-encoded/{videoId}/
  * ├── manifest.m3u8      # Master HLS playlist
  * ├── 720p/playlist.m3u8 # 720p variant
  * ├── 720p/seg_*.ts      # 720p segments
- * ├── 480p/playlist.m3u8 # 480p variant
- * ├── 480p/seg_*.ts      # 480p segments
  * ├── 360p/playlist.m3u8 # 360p variant
- * ├── 360p/seg_*.ts      # 360p segments
- * └── fallback.mp4       # MP4 fallback (720p)
+ * └── 360p/seg_*.ts      # 360p segments
  *
  * @module services/FFmpegEncoder
  */
@@ -68,7 +65,6 @@ export interface EncodingResult {
  */
 const QUALITY_LEVELS: QualityLevel[] = [
   { name: '720p', maxLongEdge: 1280, videoBitrate: '2500k', audioBitrate: '128k', bandwidth: 2628000 },
-  { name: '480p', maxLongEdge: 854,  videoBitrate: '1200k', audioBitrate: '96k',  bandwidth: 1296000 },
   { name: '360p', maxLongEdge: 640,  videoBitrate: '600k',  audioBitrate: '64k',  bandwidth: 664000 }
 ];
 
@@ -126,7 +122,7 @@ export class FFmpegEncoder {
   }
 
   /**
-   * Encode video to HLS with multiple resolutions and MP4 fallback.
+   * Encode video to HLS with multiple resolutions.
    * Queries the database for original dimensions to produce orientation-aware
    * output (vertical input → vertical output, horizontal → horizontal).
    *
@@ -177,14 +173,11 @@ export class FFmpegEncoder {
       // Generate HLS variants
       await this.generateHLS(videoId, inputUrl, workDir, levelDimensions);
 
-      // Generate MP4 fallback
-      await this.generateMP4Fallback(videoId, inputUrl, workDir, levelDimensions[0]);
-
       // Generate master manifest
       await this.generateMasterManifest(videoId, workDir, levelDimensions);
 
       // Upload all outputs to blob storage
-      const { hlsManifestUrl, mp4Url } = await this.uploadOutputs(videoId, workDir);
+      const { hlsManifestUrl } = await this.uploadOutputs(videoId, workDir);
 
       // Update database with URLs
       await prisma.video.update({
@@ -193,18 +186,17 @@ export class FFmpegEncoder {
           encodingStatus: 'READY',
           encodingCompletedAt: new Date(),
           hlsManifestUrl,
-          mp4Url,
+          mp4Url: null,
           moderationStatus: 'APPROVED', // Auto-approve for now
           audioStatus: 'PASS'
         }
       });
 
-      logger.info({ videoId, hlsManifestUrl, mp4Url }, 'FFmpeg encoding completed successfully');
+      logger.info({ videoId, hlsManifestUrl }, 'FFmpeg encoding completed successfully');
 
       return {
         success: true,
-        hlsManifestUrl,
-        mp4Url
+        hlsManifestUrl
       };
 
     } catch (error: any) {
@@ -283,39 +275,6 @@ export class FFmpegEncoder {
   }
 
   /**
-   * Generate MP4 fallback using the highest quality level dimensions.
-   *
-   * @param videoId - Video record ID for logging
-   * @param inputUrl - SAS URL to the raw video blob
-   * @param workDir - Local temp directory for FFmpeg output
-   * @param topLevel - Highest quality level with computed dimensions
-   */
-  private async generateMP4Fallback(
-    videoId: string,
-    inputUrl: string,
-    workDir: string,
-    topLevel: QualityLevel & { width: number; height: number }
-  ): Promise<void> {
-    const outputPath = path.join(workDir, 'fallback.mp4');
-
-    const args = [
-      '-i', inputUrl,
-      '-vf', `scale=${topLevel.width}:${topLevel.height}`,
-      '-c:v', 'libx264',
-      '-preset', 'fast',
-      '-crf', '23',
-      '-c:a', 'aac',
-      '-b:a', topLevel.audioBitrate,
-      '-movflags', '+faststart',
-      outputPath
-    ];
-
-    await this.runFFmpeg(args, 'MP4 fallback');
-
-    logger.info({ videoId, width: topLevel.width, height: topLevel.height }, 'MP4 fallback generated');
-  }
-
-  /**
    * Generate master HLS manifest with actual computed dimensions per level.
    *
    * @param videoId - Video record ID for logging
@@ -346,7 +305,6 @@ export class FFmpegEncoder {
    */
   private async uploadOutputs(videoId: string, workDir: string): Promise<{
     hlsManifestUrl: string;
-    mp4Url: string;
   }> {
     const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || 'uwrstorage2425';
     const baseUrl = `https://${accountName}.blob.core.windows.net/videos-encoded/${videoId}`;
@@ -372,13 +330,8 @@ export class FFmpegEncoder {
       logger.info({ videoId, level: level.name, fileCount: files.length }, 'HLS variant uploaded');
     }
 
-    // Upload MP4 fallback
-    const mp4Buffer = await fs.readFile(path.join(workDir, 'fallback.mp4'));
-    await videoStorageService.uploadEncodedFile(mp4Buffer, videoId, 'fallback.mp4', 'video/mp4');
-
     return {
-      hlsManifestUrl: `${baseUrl}/manifest.m3u8`,
-      mp4Url: `${baseUrl}/fallback.mp4`
+      hlsManifestUrl: `${baseUrl}/manifest.m3u8`
     };
   }
 

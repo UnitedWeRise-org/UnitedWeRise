@@ -2,19 +2,16 @@
 /**
  * FFmpegEncoder Service
  *
- * Handles multi-resolution HLS encoding and MP4 fallback generation
- * using FFmpeg. Outputs are uploaded to Azure Blob Storage.
+ * Handles multi-resolution HLS encoding using FFmpeg.
+ * Outputs are uploaded to Azure Blob Storage.
  *
  * Output Structure:
  * videos-encoded/{videoId}/
  * ├── manifest.m3u8      # Master HLS playlist
  * ├── 720p/playlist.m3u8 # 720p variant
  * ├── 720p/seg_*.ts      # 720p segments
- * ├── 480p/playlist.m3u8 # 480p variant
- * ├── 480p/seg_*.ts      # 480p segments
  * ├── 360p/playlist.m3u8 # 360p variant
- * ├── 360p/seg_*.ts      # 360p segments
- * └── fallback.mp4       # MP4 fallback (720p)
+ * └── 360p/seg_*.ts      # 360p segments
  *
  * @module services/FFmpegEncoder
  */
@@ -63,10 +60,14 @@ const prisma_js_1 = require("../lib/prisma.js");
 // ========================================
 // Constants
 // ========================================
-const ENCODING_PRESETS = [
-    { name: '720p', width: 1280, height: 720, videoBitrate: '2500k', audioBitrate: '128k', bandwidth: 2628000 },
-    { name: '480p', width: 854, height: 480, videoBitrate: '1200k', audioBitrate: '96k', bandwidth: 1296000 },
-    { name: '360p', width: 640, height: 360, videoBitrate: '600k', audioBitrate: '64k', bandwidth: 664000 }
+/**
+ * Quality levels defined by max long-edge rather than fixed W×H.
+ * The encoder computes actual output dimensions per-video to preserve
+ * the original aspect ratio (vertical, horizontal, square, etc.).
+ */
+const QUALITY_LEVELS = [
+    { name: '720p', maxLongEdge: 1280, videoBitrate: '2500k', audioBitrate: '128k', bandwidth: 2628000 },
+    { name: '360p', maxLongEdge: 640, videoBitrate: '600k', audioBitrate: '64k', bandwidth: 664000 }
 ];
 const HLS_SEGMENT_DURATION = 6; // seconds
 const FFMPEG_TIMEOUT = 10 * 60 * 1000; // 10 minutes
@@ -89,7 +90,32 @@ class FFmpegEncoder {
         });
     }
     /**
-     * Encode video to HLS with multiple resolutions and MP4 fallback
+     * Compute output dimensions for a quality level, preserving input aspect ratio.
+     * Scales the long edge down to maxLongEdge (or keeps original if smaller),
+     * and ensures both dimensions are even (h264 requirement).
+     *
+     * @param inputWidth - Original video width
+     * @param inputHeight - Original video height
+     * @param maxLongEdge - Maximum size for the longer dimension
+     * @returns Output width and height preserving original orientation
+     */
+    computeOutputDimensions(inputWidth, inputHeight, maxLongEdge) {
+        const longEdge = Math.max(inputWidth, inputHeight);
+        const shortEdge = Math.min(inputWidth, inputHeight);
+        const scale = Math.min(1, maxLongEdge / longEdge);
+        let outLong = Math.round(longEdge * scale);
+        let outShort = Math.round(shortEdge * scale);
+        // h264 requires even dimensions
+        outLong -= outLong % 2;
+        outShort -= outShort % 2;
+        return inputWidth >= inputHeight
+            ? { width: outLong, height: outShort } // landscape or square
+            : { width: outShort, height: outLong }; // portrait
+    }
+    /**
+     * Encode video to HLS with multiple resolutions.
+     * Queries the database for original dimensions to produce orientation-aware
+     * output (vertical input → vertical output, horizontal → horizontal).
      *
      * @param videoId - Video record ID
      * @param inputBlobName - Blob name in videos-raw container
@@ -102,6 +128,21 @@ class FFmpegEncoder {
             await fs_1.promises.mkdir(workDir, { recursive: true });
             // Get SAS URL for input video
             const inputUrl = VideoStorageService_1.videoStorageService.generateRawBlobSasUrl(inputBlobName, 30);
+            // Fetch original dimensions from DB (set by VideoPipeline before encoding)
+            const videoRecord = await prisma_js_1.prisma.video.findUnique({
+                where: { id: videoId },
+                select: { width: true, height: true }
+            });
+            if (!videoRecord?.width || !videoRecord?.height) {
+                throw new Error(`Video ${videoId} missing width/height in database`);
+            }
+            const inputWidth = videoRecord.width;
+            const inputHeight = videoRecord.height;
+            // Compute per-level output dimensions preserving original aspect ratio
+            const levelDimensions = QUALITY_LEVELS.map(level => ({
+                ...level,
+                ...this.computeOutputDimensions(inputWidth, inputHeight, level.maxLongEdge)
+            }));
             // Update status to ENCODING
             await prisma_js_1.prisma.video.update({
                 where: { id: videoId },
@@ -110,15 +151,13 @@ class FFmpegEncoder {
                     encodingStartedAt: new Date()
                 }
             });
-            logger_1.logger.info({ videoId, inputBlobName, workDir }, 'Starting FFmpeg encoding');
+            logger_1.logger.info({ videoId, inputBlobName, workDir, inputWidth, inputHeight }, 'Starting FFmpeg encoding');
             // Generate HLS variants
-            await this.generateHLS(videoId, inputUrl, workDir);
-            // Generate MP4 fallback
-            await this.generateMP4Fallback(videoId, inputUrl, workDir);
+            await this.generateHLS(videoId, inputUrl, workDir, levelDimensions);
             // Generate master manifest
-            await this.generateMasterManifest(videoId, workDir);
+            await this.generateMasterManifest(videoId, workDir, levelDimensions);
             // Upload all outputs to blob storage
-            const { hlsManifestUrl, mp4Url } = await this.uploadOutputs(videoId, workDir);
+            const { hlsManifestUrl } = await this.uploadOutputs(videoId, workDir);
             // Update database with URLs
             await prisma_js_1.prisma.video.update({
                 where: { id: videoId },
@@ -126,16 +165,15 @@ class FFmpegEncoder {
                     encodingStatus: 'READY',
                     encodingCompletedAt: new Date(),
                     hlsManifestUrl,
-                    mp4Url,
+                    mp4Url: null,
                     moderationStatus: 'APPROVED', // Auto-approve for now
                     audioStatus: 'PASS'
                 }
             });
-            logger_1.logger.info({ videoId, hlsManifestUrl, mp4Url }, 'FFmpeg encoding completed successfully');
+            logger_1.logger.info({ videoId, hlsManifestUrl }, 'FFmpeg encoding completed successfully');
             return {
                 success: true,
-                hlsManifestUrl,
-                mp4Url
+                hlsManifestUrl
             };
         }
         catch (error) {
@@ -165,64 +203,54 @@ class FFmpegEncoder {
         }
     }
     /**
-     * Generate HLS variants for all presets
+     * Generate HLS variants for all quality levels with orientation-aware dimensions.
+     *
+     * @param videoId - Video record ID for logging
+     * @param inputUrl - SAS URL to the raw video blob
+     * @param workDir - Local temp directory for FFmpeg output
+     * @param levels - Quality levels with computed output dimensions
      */
-    async generateHLS(videoId, inputUrl, workDir) {
-        const promises = ENCODING_PRESETS.map(async (preset) => {
-            const outputDir = path.join(workDir, preset.name);
+    async generateHLS(videoId, inputUrl, workDir, levels) {
+        const promises = levels.map(async (level) => {
+            const outputDir = path.join(workDir, level.name);
             await fs_1.promises.mkdir(outputDir, { recursive: true });
             const playlistPath = path.join(outputDir, 'playlist.m3u8');
             const segmentPattern = path.join(outputDir, 'seg_%03d.ts');
             const args = [
                 '-i', inputUrl,
-                '-vf', `scale=${preset.width}:${preset.height}:force_original_aspect_ratio=decrease,pad=${preset.width}:${preset.height}:(ow-iw)/2:(oh-ih)/2`,
+                '-vf', `scale=${level.width}:${level.height}`,
                 '-c:v', 'libx264',
                 '-preset', 'fast',
                 '-crf', '23',
-                '-b:v', preset.videoBitrate,
-                '-maxrate', preset.videoBitrate,
-                '-bufsize', `${parseInt(preset.videoBitrate) * 2}k`,
+                '-b:v', level.videoBitrate,
+                '-maxrate', level.videoBitrate,
+                '-bufsize', `${parseInt(level.videoBitrate) * 2}k`,
                 '-c:a', 'aac',
-                '-b:a', preset.audioBitrate,
+                '-b:a', level.audioBitrate,
                 '-hls_time', String(HLS_SEGMENT_DURATION),
                 '-hls_playlist_type', 'vod',
                 '-hls_segment_filename', segmentPattern,
                 '-f', 'hls',
                 playlistPath
             ];
-            await this.runFFmpeg(args, `HLS ${preset.name}`);
-            logger_1.logger.info({ videoId, preset: preset.name }, 'HLS variant generated');
+            await this.runFFmpeg(args, `HLS ${level.name}`);
+            logger_1.logger.info({ videoId, level: level.name, width: level.width, height: level.height }, 'HLS variant generated');
         });
         await Promise.all(promises);
     }
     /**
-     * Generate MP4 fallback (720p)
+     * Generate master HLS manifest with actual computed dimensions per level.
+     *
+     * @param videoId - Video record ID for logging
+     * @param workDir - Local temp directory containing variant playlists
+     * @param levels - Quality levels with computed output dimensions
      */
-    async generateMP4Fallback(videoId, inputUrl, workDir) {
-        const outputPath = path.join(workDir, 'fallback.mp4');
-        const args = [
-            '-i', inputUrl,
-            '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2',
-            '-c:v', 'libx264',
-            '-preset', 'fast',
-            '-crf', '23',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-movflags', '+faststart',
-            outputPath
-        ];
-        await this.runFFmpeg(args, 'MP4 fallback');
-        logger_1.logger.info({ videoId }, 'MP4 fallback generated');
-    }
-    /**
-     * Generate master HLS manifest
-     */
-    async generateMasterManifest(videoId, workDir) {
+    async generateMasterManifest(videoId, workDir, levels) {
         const manifestPath = path.join(workDir, 'manifest.m3u8');
         let content = '#EXTM3U\n#EXT-X-VERSION:3\n';
-        for (const preset of ENCODING_PRESETS) {
-            content += `#EXT-X-STREAM-INF:BANDWIDTH=${preset.bandwidth},RESOLUTION=${preset.width}x${preset.height}\n`;
-            content += `${preset.name}/playlist.m3u8\n`;
+        for (const level of levels) {
+            content += `#EXT-X-STREAM-INF:BANDWIDTH=${level.bandwidth},RESOLUTION=${level.width}x${level.height}\n`;
+            content += `${level.name}/playlist.m3u8\n`;
         }
         await fs_1.promises.writeFile(manifestPath, content, 'utf-8');
         logger_1.logger.info({ videoId }, 'Master manifest generated');
@@ -237,24 +265,20 @@ class FFmpegEncoder {
         const masterManifest = await fs_1.promises.readFile(path.join(workDir, 'manifest.m3u8'));
         await VideoStorageService_1.videoStorageService.uploadEncodedFile(masterManifest, videoId, 'manifest.m3u8', 'application/vnd.apple.mpegurl');
         // Upload HLS variants
-        for (const preset of ENCODING_PRESETS) {
-            const presetDir = path.join(workDir, preset.name);
-            const files = await fs_1.promises.readdir(presetDir);
+        for (const level of QUALITY_LEVELS) {
+            const levelDir = path.join(workDir, level.name);
+            const files = await fs_1.promises.readdir(levelDir);
             for (const file of files) {
-                const filePath = path.join(presetDir, file);
+                const filePath = path.join(levelDir, file);
                 const fileBuffer = await fs_1.promises.readFile(filePath);
                 const mimeType = file.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/MP2T';
-                const blobName = `${preset.name}/${file}`;
+                const blobName = `${level.name}/${file}`;
                 await VideoStorageService_1.videoStorageService.uploadEncodedFile(fileBuffer, videoId, blobName, mimeType);
             }
-            logger_1.logger.info({ videoId, preset: preset.name, fileCount: files.length }, 'HLS variant uploaded');
+            logger_1.logger.info({ videoId, level: level.name, fileCount: files.length }, 'HLS variant uploaded');
         }
-        // Upload MP4 fallback
-        const mp4Buffer = await fs_1.promises.readFile(path.join(workDir, 'fallback.mp4'));
-        await VideoStorageService_1.videoStorageService.uploadEncodedFile(mp4Buffer, videoId, 'fallback.mp4', 'video/mp4');
         return {
-            hlsManifestUrl: `${baseUrl}/manifest.m3u8`,
-            mp4Url: `${baseUrl}/fallback.mp4`
+            hlsManifestUrl: `${baseUrl}/manifest.m3u8`
         };
     }
     /**
