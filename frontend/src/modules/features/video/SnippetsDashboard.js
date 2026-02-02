@@ -760,12 +760,8 @@ export class SnippetsDashboard {
                 const playOverlay = container.querySelector('#playOverlay');
                 if (playOverlay) playOverlay.style.display = 'none';
 
-                // Force reels sizing via inline styles (prevents aspect-ratio flicker on horizontal videos)
                 const vpEl = container.querySelector('.video-player');
                 if (vpEl) {
-                    vpEl.style.aspectRatio = 'unset';
-                    vpEl.style.height = '100%';
-
                     // DIAGNOSTIC: Log height at each key moment
                     adminDebugLog('[REELS-DIAG] After VideoPlayer creation:', {
                         offsetHeight: vpEl.offsetHeight,
