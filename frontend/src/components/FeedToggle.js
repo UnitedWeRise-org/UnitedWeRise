@@ -1587,14 +1587,6 @@ export class FeedToggle {
             });
         }
 
-        // Attach click handlers for video cards
-        container.querySelectorAll('.video-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                const videoId = card.dataset.videoId;
-                this.openSnippetPlayer(videoId);
-            });
-        });
-
         // Preload first few videos for faster playback
         this.preloadVideos(videos.slice(0, 3));
     }

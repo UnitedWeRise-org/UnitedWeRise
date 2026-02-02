@@ -1343,8 +1343,13 @@ class NavigationHandlers {
             // Initialize player
             const player = new VideoPlayer({
                 container: document.getElementById('postVideoPlayerContainer'),
-                video: video,
-                autoplay: true
+                hlsUrl: video.hlsManifestUrl,
+                mp4Url: video.mp4Url || video.originalUrl,
+                thumbnailUrl: video.thumbnailUrl,
+                aspectRatio: video.aspectRatio,
+                autoplay: true,
+                muted: false,
+                loop: true
             });
 
             // Close handlers
