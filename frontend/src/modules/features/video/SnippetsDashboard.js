@@ -13,7 +13,7 @@
  */
 
 import { apiCall } from '../../../js/api-compatibility-shim.js';
-import { adminDebugLog } from '../../../js/adminDebugger.js';
+import { adminDebugLog } from '../../../../js/adminDebugger.js';
 
 /** Inline SVG placeholder for videos without thumbnails - prevents 404 errors */
 const VIDEO_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 16' fill='%231a1a1a'%3E%3Crect width='9' height='16'/%3E%3Cpath d='M3.5 5.5l3 2.5-3 2.5z' fill='white'/%3E%3C/svg%3E";
