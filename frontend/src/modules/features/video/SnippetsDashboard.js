@@ -13,6 +13,7 @@
  */
 
 import { apiCall } from '../../../js/api-compatibility-shim.js';
+import { adminDebugLog } from '../../../js/adminDebugger.js';
 
 /** Inline SVG placeholder for videos without thumbnails - prevents 404 errors */
 const VIDEO_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 16' fill='%231a1a1a'%3E%3Crect width='9' height='16'/%3E%3Cpath d='M3.5 5.5l3 2.5-3 2.5z' fill='white'/%3E%3C/svg%3E";
@@ -758,6 +759,22 @@ export class SnippetsDashboard {
                 // Hide play overlay in reels mode (playback is auto-managed)
                 const playOverlay = container.querySelector('#playOverlay');
                 if (playOverlay) playOverlay.style.display = 'none';
+
+                // Force reels sizing via inline styles (prevents aspect-ratio flicker on horizontal videos)
+                const vpEl = container.querySelector('.video-player');
+                if (vpEl) {
+                    vpEl.style.aspectRatio = 'unset';
+                    vpEl.style.height = '100%';
+
+                    // DIAGNOSTIC: Log height at each key moment
+                    adminDebugLog('[REELS-DIAG] After VideoPlayer creation:', {
+                        offsetHeight: vpEl.offsetHeight,
+                        offsetWidth: vpEl.offsetWidth,
+                        computedAspectRatio: getComputedStyle(vpEl).aspectRatio,
+                        computedHeight: getComputedStyle(vpEl).height,
+                        aspectClass: vpEl.className
+                    });
+                }
             };
 
             // Load current + next 2
@@ -769,6 +786,32 @@ export class SnippetsDashboard {
             const startItem = overlay.querySelector(`[data-index="${startIndex}"]`);
             if (startItem) {
                 startItem.scrollIntoView({ behavior: 'instant' });
+            }
+
+            // DIAGNOSTIC: Log height after scroll forces layout
+            const vpAfterScroll = overlay.querySelector(`#reelsPlayer-${targetSnippet.id} .video-player`);
+            if (vpAfterScroll) {
+                adminDebugLog('[REELS-DIAG] After scrollIntoView:', {
+                    offsetHeight: vpAfterScroll.offsetHeight,
+                    offsetWidth: vpAfterScroll.offsetWidth,
+                    computedAspectRatio: getComputedStyle(vpAfterScroll).aspectRatio
+                });
+            }
+
+            // DIAGNOSTIC: Watch for size changes on the video player element
+            const diagVp = overlay.querySelector(`#reelsPlayer-${targetSnippet.id} .video-player`);
+            if (diagVp) {
+                const ro = new ResizeObserver((entries) => {
+                    for (const entry of entries) {
+                        adminDebugLog('[REELS-DIAG] ResizeObserver fired:', {
+                            width: entry.contentRect.width,
+                            height: entry.contentRect.height,
+                            timestamp: performance.now()
+                        });
+                    }
+                });
+                ro.observe(diagVp);
+                players.set('__diagObserver', { destroy: () => ro.disconnect() });
             }
 
             // Let the IntersectionObserver handle ALL play triggers (including initial)
@@ -794,7 +837,21 @@ export class SnippetsDashboard {
                             ensurePlayerLoaded(visibleIndex);
                             const newPlayer = players.get(vid);
                             if (newPlayer) {
-                                newPlayer.whenReady().then(() => newPlayer.play());
+                                // DIAGNOSTIC: Log height before play
+                                const vpEl2 = overlay.querySelector(`#reelsPlayer-${vid} .video-player`);
+                                adminDebugLog('[REELS-DIAG] Before play (IO callback):', {
+                                    offsetHeight: vpEl2?.offsetHeight,
+                                    offsetWidth: vpEl2?.offsetWidth,
+                                    computedAspectRatio: vpEl2 ? getComputedStyle(vpEl2).aspectRatio : 'N/A'
+                                });
+
+                                newPlayer.whenReady().then(() => {
+                                    adminDebugLog('[REELS-DIAG] After whenReady, before play:', {
+                                        offsetHeight: vpEl2?.offsetHeight,
+                                        offsetWidth: vpEl2?.offsetWidth
+                                    });
+                                    newPlayer.play();
+                                });
                             }
                             currentlyPlaying = vid;
                         }
