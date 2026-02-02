@@ -1474,9 +1474,7 @@
 }
 
 .snippets-reels-overlay .video-player--horizontal {
-    width: min(calc((100vh - 5.5vh) * 16 / 9), 90vw);
-    height: auto;
-    aspect-ratio: 16 / 9;
+    width: 100%;
 }
 
 .snippets-reels-caption {
@@ -1584,8 +1582,6 @@
     }
 
     .snippets-reels-overlay .video-player--horizontal {
-        width: min(calc((100vh - 55px) * 16 / 9), 100vw);
-        height: auto;
-        aspect-ratio: 16 / 9;
+        width: 100%;
     }
 }
