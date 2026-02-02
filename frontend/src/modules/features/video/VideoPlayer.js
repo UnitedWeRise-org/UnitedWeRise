@@ -200,8 +200,21 @@ export class VideoPlayer {
 
             this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
                 console.log('[VideoPlayer] HLS manifest parsed, ready to play:', this.hlsUrl);
+                console.log('[VideoPlayer] HLS levels available:', this.hls.levels.map(l => ({
+                    width: l.width, height: l.height, bitrate: l.bitrate
+                })));
                 this.ready = true;
                 this._readyResolve();
+            });
+
+            this.hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                const level = this.hls.levels[data.level];
+                console.log('[VideoPlayer] HLS level switched:', {
+                    level: data.level,
+                    width: level?.width,
+                    height: level?.height,
+                    bitrate: level?.bitrate
+                });
             });
 
             this.hls.on(Hls.Events.ERROR, (event, data) => {

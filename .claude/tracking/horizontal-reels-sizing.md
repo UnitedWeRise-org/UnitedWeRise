@@ -125,4 +125,31 @@ Also removed inline JS overrides (`aspectRatio: unset`, `height: 100%`) that wer
 - `frontend/src/css/video.css` — desktop (L1477-1482) + mobile (L1587-1592) horizontal rules
 - `frontend/src/modules/features/video/SnippetsDashboard.js` — fixed 5 diagnostic log calls
 
+**Result:** Video still appears small. Container is correctly sized at 369×656 with class `video-player--vertical` (9:16). Both the test video (1080×1920) and container are 9:16, so `object-fit: contain` should fill perfectly — but something causes the video to "zoom out."
+
+---
+
+## Attempt #7: Video Element + HLS Level Diagnostics
+
+**Hypotheses:**
+1. **Rotation metadata mismatch** — Raw pixels are 1080×1920 but rotation flag makes browser display as 1920×1080 (horizontal). Backend classifies as vertical, but browser plays as horizontal → horizontal video in vertical container → `contain` shrinks massively.
+2. **HLS encoding changed dimensions** — Azure encoding produced renditions with different aspect ratios or baked-in black bars.
+
+**Diagnostics added:**
+- `<video>` element `videoWidth`/`videoHeight`, `offsetWidth`/`offsetHeight`, `computedObjectFit`, `readyState` at 3 existing diagnostic points
+- `loadedmetadata` one-time listener to capture intrinsic dimensions when browser resolves rotation metadata
+- HLS `MANIFEST_PARSED` level detail logging (width/height/bitrate of all levels)
+- HLS `LEVEL_SWITCHED` logging (which rendition was selected during playback)
+
+**Decision tree:**
+| `videoWidth`×`videoHeight` at loadedmetadata | Diagnosis | Next Step |
+|----------------------------------------------|-----------|-----------|
+| 1920×1080 (horizontal) | Rotation mismatch | Fix backend aspect ratio detection to use display dimensions |
+| 1080×1920 (vertical) but still small | object-fit or container CSS issue | Inspect `computedObjectFit` and container dimensions |
+| Unexpected dims (e.g., 640×640) | Azure encoding changed AR | Fix encoding pipeline |
+
+**Files changed:**
+- `frontend/src/modules/features/video/SnippetsDashboard.js` — video element diagnostics at 3 points + `loadedmetadata` listener
+- `frontend/src/modules/features/video/VideoPlayer.js` — HLS `MANIFEST_PARSED` level detail + `LEVEL_SWITCHED` listener
+
 **Result:** PENDING VERIFICATION

@@ -777,6 +777,34 @@ export class SnippetsDashboard {
                         parentHeight: vpEl.parentElement?.offsetHeight,
                         parentClassName: vpEl.parentElement?.className
                     });
+
+                    // DIAGNOSTIC: Log actual <video> element state
+                    const videoEl = vpEl.querySelector('video');
+                    if (videoEl) {
+                        adminDebugLog('REELS-DIAG', 'Video element state (after creation)', {
+                            videoWidth: videoEl.videoWidth,
+                            videoHeight: videoEl.videoHeight,
+                            offsetWidth: videoEl.offsetWidth,
+                            offsetHeight: videoEl.offsetHeight,
+                            computedObjectFit: getComputedStyle(videoEl).objectFit,
+                            computedWidth: getComputedStyle(videoEl).width,
+                            computedHeight: getComputedStyle(videoEl).height,
+                            computedPosition: getComputedStyle(videoEl).position,
+                            readyState: videoEl.readyState
+                        });
+
+                        // DIAGNOSTIC: Catch intrinsic dimensions when metadata loads
+                        videoEl.addEventListener('loadedmetadata', () => {
+                            adminDebugLog('REELS-DIAG', 'loadedmetadata - intrinsic dimensions', {
+                                videoWidth: videoEl.videoWidth,
+                                videoHeight: videoEl.videoHeight,
+                                containerWidth: vpEl.offsetWidth,
+                                containerHeight: vpEl.offsetHeight,
+                                containerClass: vpEl.className,
+                                computedObjectFit: getComputedStyle(videoEl).objectFit
+                            });
+                        }, { once: true });
+                    }
                 }
             };
 
@@ -852,6 +880,7 @@ export class SnippetsDashboard {
                             if (newPlayer) {
                                 // DIAGNOSTIC: Log height before play
                                 const vpEl2 = overlay.querySelector(`#reelsPlayer-${vid} .video-player`);
+                                const videoEl2 = vpEl2?.querySelector('video');
                                 adminDebugLog('REELS-DIAG', 'Before play (IO callback)', {
                                     offsetHeight: vpEl2?.offsetHeight,
                                     offsetWidth: vpEl2?.offsetWidth,
@@ -862,6 +891,19 @@ export class SnippetsDashboard {
                                     parentWidth: vpEl2?.parentElement?.offsetWidth,
                                     parentHeight: vpEl2?.parentElement?.offsetHeight
                                 });
+                                if (videoEl2) {
+                                    adminDebugLog('REELS-DIAG', 'Video element state (before play)', {
+                                        videoWidth: videoEl2.videoWidth,
+                                        videoHeight: videoEl2.videoHeight,
+                                        offsetWidth: videoEl2.offsetWidth,
+                                        offsetHeight: videoEl2.offsetHeight,
+                                        computedObjectFit: getComputedStyle(videoEl2).objectFit,
+                                        computedWidth: getComputedStyle(videoEl2).width,
+                                        computedHeight: getComputedStyle(videoEl2).height,
+                                        computedPosition: getComputedStyle(videoEl2).position,
+                                        readyState: videoEl2.readyState
+                                    });
+                                }
 
                                 newPlayer.whenReady().then(() => {
                                     adminDebugLog('REELS-DIAG', 'After whenReady, before play', {
@@ -871,6 +913,19 @@ export class SnippetsDashboard {
                                         computedHeight: vpEl2 ? getComputedStyle(vpEl2).height : 'N/A',
                                         computedAspectRatio: vpEl2 ? getComputedStyle(vpEl2).aspectRatio : 'N/A'
                                     });
+                                    if (videoEl2) {
+                                        adminDebugLog('REELS-DIAG', 'Video element state (after whenReady)', {
+                                            videoWidth: videoEl2.videoWidth,
+                                            videoHeight: videoEl2.videoHeight,
+                                            offsetWidth: videoEl2.offsetWidth,
+                                            offsetHeight: videoEl2.offsetHeight,
+                                            computedObjectFit: getComputedStyle(videoEl2).objectFit,
+                                            computedWidth: getComputedStyle(videoEl2).width,
+                                            computedHeight: getComputedStyle(videoEl2).height,
+                                            computedPosition: getComputedStyle(videoEl2).position,
+                                            readyState: videoEl2.readyState
+                                        });
+                                    }
                                     newPlayer.play();
                                 });
                             }
