@@ -1,10 +1,40 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: January 29, 2026
+**Last Updated**: February 2, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-02-02] - Snippet Feed Modal & Playback Fix
+
+### Fixed
+
+**Double Modal on Snippet Click**
+- Root cause: Two click handlers fired on the same click — FeedToggle's direct `openSnippetPlayer()` handler and navigation-handlers' delegated handler both opened separate modals
+- Fix: Removed dead `openSnippetPlayer()` method and its click handler from FeedToggle; all snippet playback now routes through the single navigation-handlers delegation
+
+**Video Plays Audio but No Visible Frames**
+- Root cause: `playPostVideo()` built the modal DOM with inline styles and a bare container div, bypassing the CSS class system (`.video-player-modal` → `.video-player-container`) that VideoPlayer requires for proper layout of its absolutely-positioned `<video>` element
+- Fix: Rebuilt modal DOM to use the established CSS class structure with aspect-ratio-specific modal width classes (`video-player-modal--vertical_9_16`, etc.)
+
+**Play Race Condition**
+- Root cause: `VideoPlayer.play()` called `videoEl.play()` without awaiting `readyPromise`, racing the HLS manifest parse when IntersectionObserver fired immediately on modal open
+- Fix: `play()` now awaits `readyPromise` before calling `videoEl.play()`, protecting all callers from the race condition
+
+### Changed
+
+**Dead Code Removal**
+- Removed unused `openSnippetPlayer()` and `setupVideoSource()` methods from FeedToggle.js
+- Removed unused `.snippet-modal-overlay` and `.snippet-modal-player` CSS blocks from video.css
+
+### Files Modified
+- `frontend/src/handlers/navigation-handlers.js`
+- `frontend/src/modules/features/video/VideoPlayer.js`
+- `frontend/src/components/FeedToggle.js`
+- `frontend/src/css/video.css`
 
 ---
 
