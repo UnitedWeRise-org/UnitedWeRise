@@ -63,6 +63,7 @@ const devices_1 = __importDefault(require("./routes/devices"));
 const videos_1 = __importDefault(require("./routes/videos"));
 const tracking_1 = __importDefault(require("./routes/tracking"));
 const mediaServices_1 = __importDefault(require("./routes/webhooks/mediaServices"));
+const coconut_1 = __importDefault(require("./routes/webhooks/coconut"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
 const analyticsCleanup_1 = __importDefault(require("./jobs/analyticsCleanup"));
 const scheduledVideoPublishJob_1 = __importDefault(require("./jobs/scheduledVideoPublishJob"));
@@ -293,6 +294,7 @@ app.use('/api/devices', devices_1.default);
 app.use('/api/videos', videos_1.default);
 app.use('/api/track', tracking_1.default);
 app.use('/webhooks/media-services', mediaServices_1.default);
+app.use('/webhooks/coconut', coconut_1.default);
 app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));

@@ -57,6 +57,7 @@ import devicesRoutes from './routes/devices';
 import videosRoutes from './routes/videos';
 import trackingRoutes from './routes/tracking';
 import mediaServicesWebhook from './routes/webhooks/mediaServices';
+import coconutWebhook from './routes/webhooks/coconut';
 import WebSocketService from './services/WebSocketService';
 import analyticsCleanupJob from './jobs/analyticsCleanup';
 import scheduledVideoPublishJob from './jobs/scheduledVideoPublishJob';
@@ -322,6 +323,7 @@ app.use('/api/devices', devicesRoutes);
 app.use('/api/videos', videosRoutes);
 app.use('/api/track', trackingRoutes);
 app.use('/webhooks/media-services', mediaServicesWebhook);
+app.use('/webhooks/coconut', coconutWebhook);
 app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically

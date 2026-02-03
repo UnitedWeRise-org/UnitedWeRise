@@ -170,12 +170,19 @@ class VideoEncodingWorker {
      * @param job - Encoding job from the queue
      */
     async processJob(job) {
+        const encodingService = process.env.VIDEO_ENCODING_SERVICE || 'ffmpeg';
         logger_1.logger.info({
             jobId: job.id,
             videoId: job.videoId,
             attempt: job.attempts,
-            twoPhase: TWO_PHASE_ENABLED
+            twoPhase: TWO_PHASE_ENABLED,
+            encodingService
         }, 'Processing encoding job');
+        // Dispatch to Coconut.co if configured
+        if (encodingService === 'coconut') {
+            await this.processCoconut(job);
+            return;
+        }
         const startTime = Date.now();
         // Check if FFmpeg is available
         const ffmpegAvailable = await FFmpegEncoder_1.ffmpegEncoder.isAvailable();
@@ -299,6 +306,45 @@ class VideoEncodingWorker {
             durationMs: duration,
             mp4Url: result.url
         }, 'Encoding completed with fallback copy');
+    }
+    /**
+     * Dispatch encoding to Coconut.co cloud service.
+     * Fire-and-forget: the Coconut webhook handles completion/failure.
+     * Supports Phase 2 retry detection for videos already at 720p.
+     */
+    async processCoconut(job) {
+        const { coconutEncodingService } = await Promise.resolve().then(() => __importStar(require('../services/CoconutEncodingService')));
+        const { prisma } = await Promise.resolve().then(() => __importStar(require('../lib/prisma.js')));
+        // Check if this is a Phase 2 retry (video already READY, 720p exists)
+        const videoState = await prisma.video.findUnique({
+            where: { id: job.videoId },
+            select: { encodingStatus: true, encodingTiersStatus: true }
+        });
+        if (videoState?.encodingStatus === 'READY' &&
+            (videoState.encodingTiersStatus === 'PARTIAL' || videoState.encodingTiersStatus === 'PARTIAL_FAILED')) {
+            logger_1.logger.info({ videoId: job.videoId }, 'Coconut Phase 2 retry — dispatching 360p job');
+            await prisma.video.update({
+                where: { id: job.videoId },
+                data: { encodingTiersStatus: 'PARTIAL' }
+            });
+            const result = await coconutEncodingService.createPhase2Job(job.videoId, job.inputBlobName);
+            logger_1.logger.info({ videoId: job.videoId, coconutJobId: result.jobId }, 'Coconut Phase 2 retry dispatched');
+            return;
+        }
+        // Phase 1: Set ENCODING status and dispatch to Coconut
+        await prisma.video.update({
+            where: { id: job.videoId },
+            data: {
+                encodingStatus: 'ENCODING',
+                encodingStartedAt: new Date()
+            }
+        });
+        const result = await coconutEncodingService.createPhase1Job(job.videoId, job.inputBlobName);
+        logger_1.logger.info({
+            jobId: job.id,
+            videoId: job.videoId,
+            coconutJobId: result.jobId
+        }, 'Coconut Phase 1 dispatched — webhook will handle completion');
     }
 }
 exports.VideoEncodingWorker = VideoEncodingWorker;

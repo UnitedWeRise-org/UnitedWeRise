@@ -50,6 +50,12 @@ export declare class VideoEncodingWorker {
      * Fallback copy mode when FFmpeg is not available (development/staging)
      */
     private processFallback;
+    /**
+     * Dispatch encoding to Coconut.co cloud service.
+     * Fire-and-forget: the Coconut webhook handles completion/failure.
+     * Supports Phase 2 retry detection for videos already at 720p.
+     */
+    private processCoconut;
 }
 export declare const videoEncodingWorker: VideoEncodingWorker;
 //# sourceMappingURL=videoEncodingWorker.d.ts.map
