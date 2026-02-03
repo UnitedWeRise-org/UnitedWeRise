@@ -16,7 +16,7 @@ const router = express_1.default.Router();
  *   get:
  *     tags: [Search]
  *     summary: Unified search endpoint (optimized)
- *     description: Searches across multiple content types (users, posts, officials, topics) in a single API call. Replaces 4 separate API calls with one batched operation for improved performance.
+ *     description: Searches across multiple content types (users, posts, officials, videos, topics) in a single API call. Replaces multiple separate API calls with one batched operation for improved performance.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -32,8 +32,8 @@ const router = express_1.default.Router();
  *         schema:
  *           type: string
  *           default: all
- *         description: Comma-separated list of content types to search (users,posts,officials,topics) or 'all'
- *         example: users,posts
+ *         description: Comma-separated list of content types to search (users,posts,officials,videos,topics) or 'all'
+ *         example: users,posts,videos
  *       - in: query
  *         name: limit
  *         schema:
@@ -172,6 +172,52 @@ const router = express_1.default.Router();
  *                           isExternallySourced:
  *                             type: boolean
  *                             nullable: true
+ *                     videos:
+ *                       type: array
+ *                       description: Matching video snippets (by caption or hashtag)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           caption:
+ *                             type: string
+ *                             nullable: true
+ *                           hashtags:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           thumbnailUrl:
+ *                             type: string
+ *                             nullable: true
+ *                           hlsManifestUrl:
+ *                             type: string
+ *                             nullable: true
+ *                           viewCount:
+ *                             type: integer
+ *                           likeCount:
+ *                             type: integer
+ *                           engagementScore:
+ *                             type: number
+ *                           publishedAt:
+ *                             type: string
+ *                             format: date-time
+ *                           user:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               username:
+ *                                 type: string
+ *                               firstName:
+ *                                 type: string
+ *                               lastName:
+ *                                 type: string
+ *                               avatar:
+ *                                 type: string
+ *                                 nullable: true
+ *                               verified:
+ *                                 type: boolean
  *                     topics:
  *                       type: array
  *                       description: Matching topics extracted from posts
@@ -503,6 +549,58 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
                     .slice(0, limitNum);
             }));
         }
+        // Search Videos (caption text search)
+        if (includeAll || searchTypes.includes('videos')) {
+            resultTypes.push('videos');
+            searchPromises.push(prisma_1.prisma.video.findMany({
+                where: {
+                    videoType: 'REEL',
+                    publishStatus: 'PUBLISHED',
+                    isActive: true,
+                    encodingStatus: 'READY',
+                    moderationStatus: 'APPROVED',
+                    deletedAt: null,
+                    OR: [
+                        {
+                            caption: {
+                                contains: searchTerm,
+                                mode: 'insensitive'
+                            }
+                        },
+                        {
+                            hashtags: { hasSome: [searchTerm] }
+                        }
+                    ]
+                },
+                select: {
+                    id: true,
+                    caption: true,
+                    hashtags: true,
+                    thumbnailUrl: true,
+                    hlsManifestUrl: true,
+                    viewCount: true,
+                    likeCount: true,
+                    commentCount: true,
+                    engagementScore: true,
+                    publishedAt: true,
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true
+                        }
+                    }
+                },
+                take: limitNum,
+                orderBy: [
+                    { engagementScore: 'desc' },
+                    { publishedAt: 'desc' }
+                ]
+            }));
+        }
         // Search Topics (simplified for now - topics are stored as JSON array)
         if (includeAll || searchTypes.includes('topics')) {
             resultTypes.push('topics');
@@ -547,6 +645,9 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
         }
         if (includeAll || searchTypes.includes('officials')) {
             response.data.officials = results[resultIndex++];
+        }
+        if (includeAll || searchTypes.includes('videos')) {
+            response.data.videos = results[resultIndex++];
         }
         if (includeAll || searchTypes.includes('topics')) {
             const topicPosts = results[resultIndex++];

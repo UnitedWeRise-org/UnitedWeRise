@@ -2,9 +2,12 @@
  * VideoEncodingWorker
  *
  * Background worker that processes video encoding jobs from the queue.
- * Uses FFmpegEncoder to transcode videos to HLS and MP4.
+ * Uses FFmpegEncoder with a two-phase pipeline:
+ * - Phase 1: Encode 720p → run moderation → video becomes watchable
+ * - Phase 2: Encode 360p → update manifest (non-fatal if fails)
  *
  * Features:
+ * - Two-phase encoding for faster time-to-playable
  * - Automatic job pickup from queue
  * - Retry on failure (up to 3 attempts)
  * - Graceful shutdown support
@@ -31,9 +34,22 @@ export declare class VideoEncodingWorker {
      */
     private processNextJob;
     /**
-     * Process a single encoding job
+     * Process a single encoding job using two-phase pipeline.
+     *
+     * Phase 1: Encode 720p → run content moderation → video becomes READY
+     * Phase 2: Encode 360p → update manifest (non-fatal)
+     *
+     * @param job - Encoding job from the queue
      */
     private processJob;
+    /**
+     * Legacy single-pass encoding (both tiers at once)
+     */
+    private processLegacy;
+    /**
+     * Fallback copy mode when FFmpeg is not available (development/staging)
+     */
+    private processFallback;
 }
 export declare const videoEncodingWorker: VideoEncodingWorker;
 //# sourceMappingURL=videoEncodingWorker.d.ts.map

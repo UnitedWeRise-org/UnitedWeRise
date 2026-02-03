@@ -2,12 +2,19 @@
  * Video Content Moderation Service
  *
  * Provides content moderation for user-uploaded videos using Azure Content Safety.
- * Handles both visual content analysis and audio policy checking.
+ * Handles visual content analysis (frame sampling), audio policy checking,
+ * and caption text moderation.
  *
  * Moderation Flow:
- * 1. Visual content analysis via Azure Content Safety
- * 2. Audio policy check (configurable: STRICT, WARN, PERMISSIVE)
- * 3. Combined moderation decision
+ * 1. Thumbnail quick-check via Azure Content Safety
+ * 2. Frame sampling: extract 6 evenly-spaced frames, analyze each
+ * 3. Audio policy check (transcription + text moderation)
+ * 4. Combined moderation decision
+ *
+ * Confidence Thresholds:
+ * - High (>0.9): Auto-reject immediately
+ * - Medium (0.5-0.9): Set PENDING for admin manual review
+ * - Low (<0.5): Auto-approve
  *
  * @module services/videoContentModerationService
  */
@@ -40,17 +47,19 @@ export declare class VideoContentModerationService {
     private endpoint;
     constructor();
     /**
-     * Moderate a video
+     * Moderate a video — runs thumbnail check, frame sampling, and audio policy.
      *
      * @param request - Video moderation request with video details
      * @returns Moderation result
      */
     moderateVideo(request: VideoModerationRequest): Promise<VideoModerationResult>;
     /**
-     * Analyze video content using Azure Content Safety
+     * Analyze video content by extracting and scanning evenly-spaced frames.
+     * Uses FFmpeg to extract frames, then sends each to Azure Content Safety.
      *
-     * Note: Azure Content Safety video analysis is async and may take time.
-     * For MVP, we use thumbnail analysis + periodic frame sampling.
+     * @param videoId - Video record ID
+     * @param videoUrl - URL to the video file (raw or encoded)
+     * @returns Visual moderation result with aggregated category scores
      */
     private analyzeVideoContent;
     /**
@@ -58,11 +67,11 @@ export declare class VideoContentModerationService {
      */
     private moderateThumbnail;
     /**
-     * Check audio policy
+     * Check audio policy by extracting audio, transcribing, and moderating text.
      *
-     * STRICT: Flag any music (not speech)
-     * WARN: Allow but warn user
-     * PERMISSIVE: Allow any audio
+     * @param videoId - Video record ID
+     * @param videoUrl - URL to the video file
+     * @returns Audio moderation result
      */
     private checkAudioPolicy;
     /**
@@ -87,6 +96,8 @@ export declare class VideoContentModerationService {
     private getRejectReason;
     /**
      * Queue a video for moderation (called after encoding completes)
+     *
+     * @param videoId - Video record ID to moderate
      */
     queueModeration(videoId: string): Promise<void>;
     /**

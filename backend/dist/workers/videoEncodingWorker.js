@@ -3,9 +3,12 @@
  * VideoEncodingWorker
  *
  * Background worker that processes video encoding jobs from the queue.
- * Uses FFmpegEncoder to transcode videos to HLS and MP4.
+ * Uses FFmpegEncoder with a two-phase pipeline:
+ * - Phase 1: Encode 720p → run moderation → video becomes watchable
+ * - Phase 2: Encode 360p → update manifest (non-fatal if fails)
  *
  * Features:
+ * - Two-phase encoding for faster time-to-playable
  * - Automatic job pickup from queue
  * - Retry on failure (up to 3 attempts)
  * - Graceful shutdown support
@@ -50,6 +53,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.videoEncodingWorker = exports.VideoEncodingWorker = void 0;
 const videoEncodingQueue_1 = require("../queues/videoEncodingQueue");
 const FFmpegEncoder_1 = require("../services/FFmpegEncoder");
+const videoContentModerationService_1 = require("../services/videoContentModerationService");
 const logger_1 = require("../services/logger");
 // ========================================
 // Constants
@@ -57,6 +61,8 @@ const logger_1 = require("../services/logger");
 const POLL_INTERVAL_MS = 5000; // Check for jobs every 5 seconds
 const STATS_LOG_INTERVAL_MS = 60000; // Log stats every minute
 const CLEANUP_INTERVAL_MS = 3600000; // Clean up old jobs every hour
+/** Enable two-phase encoding (720p first, then 360p) */
+const TWO_PHASE_ENABLED = process.env.VIDEO_ENCODING_TWO_PHASE !== 'false';
 // ========================================
 // VideoEncodingWorker Class
 // ========================================
@@ -80,7 +86,7 @@ class VideoEncodingWorker {
             logger_1.logger.error('FFmpeg not available - video encoding worker will use fallback mode');
         }
         this.running = true;
-        logger_1.logger.info('VideoEncodingWorker started');
+        logger_1.logger.info({ twoPhaseEnabled: TWO_PHASE_ENABLED }, 'VideoEncodingWorker started');
         // Listen for new jobs
         videoEncodingQueue_1.videoEncodingQueue.on('job:added', () => {
             this.processNextJob();
@@ -156,56 +162,143 @@ class VideoEncodingWorker {
         }
     }
     /**
-     * Process a single encoding job
+     * Process a single encoding job using two-phase pipeline.
+     *
+     * Phase 1: Encode 720p → run content moderation → video becomes READY
+     * Phase 2: Encode 360p → update manifest (non-fatal)
+     *
+     * @param job - Encoding job from the queue
      */
     async processJob(job) {
         logger_1.logger.info({
             jobId: job.id,
             videoId: job.videoId,
-            attempt: job.attempts
+            attempt: job.attempts,
+            twoPhase: TWO_PHASE_ENABLED
         }, 'Processing encoding job');
         const startTime = Date.now();
         // Check if FFmpeg is available
         const ffmpegAvailable = await FFmpegEncoder_1.ffmpegEncoder.isAvailable();
-        if (ffmpegAvailable) {
-            // Full FFmpeg encoding
-            const result = await FFmpegEncoder_1.ffmpegEncoder.encode(job.videoId, job.inputBlobName);
-            if (!result.success) {
-                throw new Error(result.error || 'Encoding failed');
+        if (!ffmpegAvailable) {
+            // Fallback: copy to public container (development mode)
+            await this.processFallback(job, startTime);
+            return;
+        }
+        if (!TWO_PHASE_ENABLED) {
+            // Legacy single-pass encoding
+            await this.processLegacy(job, startTime);
+            return;
+        }
+        // === Two-Phase Encoding Pipeline ===
+        // Check if this is a Phase 2 retry (video already READY, 720p exists)
+        const { prisma } = await Promise.resolve().then(() => __importStar(require('../lib/prisma.js')));
+        const videoState = await prisma.video.findUnique({
+            where: { id: job.videoId },
+            select: { encodingStatus: true, encodingTiersStatus: true }
+        });
+        if (videoState?.encodingStatus === 'READY' &&
+            (videoState.encodingTiersStatus === 'PARTIAL' || videoState.encodingTiersStatus === 'PARTIAL_FAILED')) {
+            // Skip Phase 1, go directly to Phase 2 (360p retry)
+            logger_1.logger.info({ videoId: job.videoId }, 'Phase 2 retry detected — skipping Phase 1');
+            const phase2Result = await FFmpegEncoder_1.ffmpegEncoder.encodePhase2(job.videoId, job.inputBlobName);
+            if (phase2Result.success) {
+                logger_1.logger.info({ videoId: job.videoId }, 'Phase 2 retry completed successfully');
             }
-            const duration = Date.now() - startTime;
+            else {
+                logger_1.logger.warn({ videoId: job.videoId, error: phase2Result.error }, 'Phase 2 retry failed');
+            }
+            return;
+        }
+        // Phase 1: Encode 720p (critical — failure here fails the job)
+        const phase1Result = await FFmpegEncoder_1.ffmpegEncoder.encodePhase1(job.videoId, job.inputBlobName);
+        if (!phase1Result.success) {
+            throw new Error(phase1Result.error || 'Phase 1 encoding failed');
+        }
+        const phase1Duration = Date.now() - startTime;
+        logger_1.logger.info({
+            jobId: job.id,
+            videoId: job.videoId,
+            phase1DurationMs: phase1Duration,
+            hlsManifestUrl: phase1Result.hlsManifestUrl
+        }, 'Phase 1 complete — running content moderation');
+        // Run content moderation between phases (video is READY but not yet moderation-approved)
+        try {
+            await videoContentModerationService_1.videoContentModerationService.queueModeration(job.videoId);
+        }
+        catch (error) {
+            logger_1.logger.error({ error, videoId: job.videoId }, 'Content moderation failed — video remains in current moderation state');
+        }
+        // Phase 2: Encode 360p (non-fatal — video already watchable at 720p)
+        const phase2Start = Date.now();
+        const phase2Result = await FFmpegEncoder_1.ffmpegEncoder.encodePhase2(job.videoId, job.inputBlobName);
+        const totalDuration = Date.now() - startTime;
+        if (phase2Result.success) {
             logger_1.logger.info({
                 jobId: job.id,
                 videoId: job.videoId,
-                durationMs: duration,
-                hlsManifestUrl: result.hlsManifestUrl,
-                mp4Url: result.mp4Url
-            }, 'Encoding completed with FFmpeg');
+                phase1DurationMs: phase1Duration,
+                phase2DurationMs: Date.now() - phase2Start,
+                totalDurationMs: totalDuration
+            }, 'Two-phase encoding completed successfully');
         }
         else {
-            // Fallback: copy to public container (development mode)
-            logger_1.logger.warn({ videoId: job.videoId }, 'FFmpeg not available, using fallback copy mode');
-            const { videoStorageService } = await Promise.resolve().then(() => __importStar(require('../services/VideoStorageService')));
-            const { prisma } = await Promise.resolve().then(() => __importStar(require('../lib/prisma.js')));
-            const result = await videoStorageService.copyRawToEncoded(job.videoId, job.inputBlobName);
-            await prisma.video.update({
-                where: { id: job.videoId },
-                data: {
-                    encodingStatus: 'READY',
-                    encodingCompletedAt: new Date(),
-                    mp4Url: result.url,
-                    moderationStatus: 'APPROVED',
-                    audioStatus: 'PASS'
-                }
-            });
-            const duration = Date.now() - startTime;
-            logger_1.logger.info({
+            logger_1.logger.warn({
                 jobId: job.id,
                 videoId: job.videoId,
-                durationMs: duration,
-                mp4Url: result.url
-            }, 'Encoding completed with fallback copy');
+                phase2Error: phase2Result.error,
+                totalDurationMs: totalDuration
+            }, 'Phase 2 (360p) failed — video remains watchable at 720p only');
         }
+    }
+    /**
+     * Legacy single-pass encoding (both tiers at once)
+     */
+    async processLegacy(job, startTime) {
+        const result = await FFmpegEncoder_1.ffmpegEncoder.encode(job.videoId, job.inputBlobName);
+        if (!result.success) {
+            throw new Error(result.error || 'Encoding failed');
+        }
+        // Run content moderation after encoding
+        try {
+            await videoContentModerationService_1.videoContentModerationService.queueModeration(job.videoId);
+        }
+        catch (error) {
+            logger_1.logger.error({ error, videoId: job.videoId }, 'Content moderation failed after legacy encoding');
+        }
+        const duration = Date.now() - startTime;
+        logger_1.logger.info({
+            jobId: job.id,
+            videoId: job.videoId,
+            durationMs: duration,
+            hlsManifestUrl: result.hlsManifestUrl
+        }, 'Encoding completed with FFmpeg (legacy single-pass)');
+    }
+    /**
+     * Fallback copy mode when FFmpeg is not available (development/staging)
+     */
+    async processFallback(job, startTime) {
+        logger_1.logger.warn({ videoId: job.videoId }, 'FFmpeg not available, using fallback copy mode');
+        const { videoStorageService } = await Promise.resolve().then(() => __importStar(require('../services/VideoStorageService')));
+        const { prisma } = await Promise.resolve().then(() => __importStar(require('../lib/prisma.js')));
+        const result = await videoStorageService.copyRawToEncoded(job.videoId, job.inputBlobName);
+        await prisma.video.update({
+            where: { id: job.videoId },
+            data: {
+                encodingStatus: 'READY',
+                encodingCompletedAt: new Date(),
+                mp4Url: result.url,
+                moderationStatus: 'APPROVED',
+                audioStatus: 'PASS',
+                encodingTiersStatus: 'ALL'
+            }
+        });
+        const duration = Date.now() - startTime;
+        logger_1.logger.info({
+            jobId: job.id,
+            videoId: job.videoId,
+            durationMs: duration,
+            mp4Url: result.url
+        }, 'Encoding completed with fallback copy');
     }
 }
 exports.VideoEncodingWorker = VideoEncodingWorker;

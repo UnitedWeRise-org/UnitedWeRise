@@ -325,6 +325,22 @@ Respond with JSON only:
                     // Would implement content hiding logic
                     logger_1.logger.info({ contentId, contentType, flags: severeFlags.length }, 'Auto-moderating post due to high-confidence violations');
                 }
+                else if (contentType === 'VIDEO') {
+                    // Reject video caption — prevent encoding from starting
+                    try {
+                        await prisma_1.prisma.video.update({
+                            where: { id: contentId },
+                            data: {
+                                moderationStatus: 'REJECTED',
+                                moderationReason: `Caption flagged: ${severeFlags.map(f => f.flagType).join(', ')}`
+                            }
+                        });
+                        logger_1.logger.info({ contentId, contentType, flags: severeFlags.length }, 'Auto-rejecting video due to caption moderation violations');
+                    }
+                    catch (error) {
+                        logger_1.logger.error({ error, contentId }, 'Failed to reject video after caption moderation');
+                    }
+                }
             }
         }
     }

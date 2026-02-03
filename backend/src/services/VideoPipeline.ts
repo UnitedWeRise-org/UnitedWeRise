@@ -30,6 +30,7 @@ import { prisma } from '../lib/prisma.js';
 import { logger } from './logger';
 import { videoStorageService, VideoUploadResult } from './VideoStorageService';
 import { videoEncodingService } from './VideoEncodingService';
+import { moderationService } from './moderationService';
 
 // ========================================
 // Type Definitions
@@ -553,6 +554,46 @@ export class VideoPipeline {
         { videoType, caption, postId },
         requestId
       );
+
+      // Stage 5b: Caption text moderation (before encoding to save resources)
+      if (caption && caption.trim().length > 0) {
+        try {
+          this.log(requestId, 'CAPTION_MODERATION_START', { videoId });
+          await moderationService.analyzeContent(caption, 'VIDEO', videoId);
+
+          // Check if caption moderation rejected the video
+          const moderationCheck = await prisma.video.findUnique({
+            where: { id: videoId },
+            select: { moderationStatus: true, moderationReason: true }
+          });
+
+          if (moderationCheck?.moderationStatus === 'REJECTED') {
+            this.log(requestId, 'CAPTION_MODERATION_REJECTED', {
+              videoId,
+              reason: moderationCheck.moderationReason
+            });
+            // Still return the video record — frontend shows rejection reason
+            return {
+              videoId,
+              originalUrl: uploadResult.url,
+              originalBlobName: uploadResult.blobName,
+              thumbnailUrl,
+              requestId,
+              duration: metadata.duration,
+              width: metadata.width,
+              height: metadata.height,
+              aspectRatio: metadata.aspectRatio,
+              originalSize: file.size,
+              originalMimeType: file.mimetype,
+              encodingStatus: 'PENDING'
+            };
+          }
+
+          this.log(requestId, 'CAPTION_MODERATION_PASSED', { videoId });
+        } catch (error) {
+          logger.error({ error, videoId, requestId }, 'Caption moderation failed — proceeding with encoding');
+        }
+      }
 
       // Stage 6: Queue encoding job (always async via worker)
       try {

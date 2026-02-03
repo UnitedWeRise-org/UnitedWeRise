@@ -40,7 +40,7 @@ declare class ModerationService {
      * );
      * // Creates flags in database, may auto-hide content
      */
-    analyzeContent(content: string, contentType: 'POST' | 'COMMENT' | 'MESSAGE', contentId: string): Promise<void>;
+    analyzeContent(content: string, contentType: 'POST' | 'COMMENT' | 'MESSAGE' | 'VIDEO', contentId: string): Promise<void>;
     private detectSpam;
     private detectToxicity;
     private detectHateSpeech;

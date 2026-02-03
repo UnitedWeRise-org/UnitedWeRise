@@ -56,7 +56,7 @@ class ModerationService {
    * );
    * // Creates flags in database, may auto-hide content
    */
-  async analyzeContent(content: string, contentType: 'POST' | 'COMMENT' | 'MESSAGE', contentId: string): Promise<void> {
+  async analyzeContent(content: string, contentType: 'POST' | 'COMMENT' | 'MESSAGE' | 'VIDEO', contentId: string): Promise<void> {
     const flags = [];
 
     // Spam detection
@@ -270,7 +270,7 @@ Respond with JSON only:
   }
 
   // Semantic duplicate content detection using Azure OpenAI embeddings
-  private async detectDuplicateContent(content: string, contentType: 'POST' | 'COMMENT' | 'MESSAGE'): Promise<boolean> {
+  private async detectDuplicateContent(content: string, contentType: 'POST' | 'COMMENT' | 'MESSAGE' | 'VIDEO'): Promise<boolean> {
     try {
       // Generate embedding for the new content
       const contentEmbedding = await azureOpenAI.generateEmbedding(content);
@@ -374,6 +374,20 @@ Respond with JSON only:
         if (contentType === 'POST') {
           // Would implement content hiding logic
           logger.info({ contentId, contentType, flags: severeFlags.length }, 'Auto-moderating post due to high-confidence violations');
+        } else if (contentType === 'VIDEO') {
+          // Reject video caption — prevent encoding from starting
+          try {
+            await prisma.video.update({
+              where: { id: contentId },
+              data: {
+                moderationStatus: 'REJECTED',
+                moderationReason: `Caption flagged: ${severeFlags.map(f => f.flagType).join(', ')}`
+              }
+            });
+            logger.info({ contentId, contentType, flags: severeFlags.length }, 'Auto-rejecting video due to caption moderation violations');
+          } catch (error) {
+            logger.error({ error, contentId }, 'Failed to reject video after caption moderation');
+          }
         }
       }
     }

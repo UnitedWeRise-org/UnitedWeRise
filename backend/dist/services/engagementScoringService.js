@@ -346,6 +346,44 @@ class EngagementScoringService {
         return posts.map(post => this.calculateScore(post.metrics, post.createdAt, post.authorReputation || 70));
     }
     /**
+     * Calculate engagement score for a video snippet.
+     * Uses simplified metrics (views, likes, comments, shares) with
+     * time decay and quality bias matching the post scoring algorithm.
+     *
+     * @param videoMetrics - Video engagement counters
+     * @param publishedAt - When the video was published
+     * @returns Engagement score (higher = more engaging)
+     */
+    static calculateVideoScore(videoMetrics, publishedAt) {
+        const weights = this.config.weights;
+        const modifiers = this.config.modifiers;
+        // Map video metrics to engagement weights
+        let score = (videoMetrics.viewCount * weights.views) +
+            (videoMetrics.likeCount * weights.likes) +
+            (videoMetrics.commentCount * weights.comments) +
+            (videoMetrics.shareCount * weights.shares);
+        // Apply time decay
+        if (modifiers.timeDecayEnabled) {
+            const ageInHours = (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60);
+            const decayMultiplier = Math.pow(modifiers.timeDecayFactor, ageInHours);
+            score *= decayMultiplier;
+        }
+        // Quality bias: ratio of deep engagement (comments+shares) to views
+        if (modifiers.qualityBias && videoMetrics.viewCount > 10) {
+            const deepEngagement = videoMetrics.commentCount + videoMetrics.shareCount;
+            const qualityRatio = deepEngagement / videoMetrics.viewCount;
+            score *= (1 + Math.min(qualityRatio, 0.5)); // Up to 50% bonus for high quality ratio
+        }
+        // New content boost (published within last 24 hours)
+        if (modifiers.newContentBoost) {
+            const ageInHours = (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60);
+            if (ageInHours < 24) {
+                score *= (1 + 0.2 * (1 - ageInHours / 24));
+            }
+        }
+        return Math.max(0, score);
+    }
+    /**
      * Calculate comment engagement metrics for a post
      */
     static calculateCommentEngagement(comments) {

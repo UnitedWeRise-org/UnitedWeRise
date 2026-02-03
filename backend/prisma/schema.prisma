@@ -3690,17 +3690,36 @@ model Video {
   /// Likes on this video
   likes    VideoLike[]
 
+  // === Encoding Tiers ===
+  /// Tracks which encoding quality tiers are complete
+  /// @description NONE = not started, PARTIAL = 720p ready, PARTIAL_FAILED = 360p failed, ALL = all tiers encoded
+  encodingTiersStatus String @default("NONE")
+
+  // === Audio Transcription ===
+  /// Speech-to-text transcription of audio track (for moderation + search + accessibility)
+  audioTranscription String? @db.Text
+
+  // === Engagement ===
+  /// Calculated engagement score for feed ranking (recalculated on interactions)
+  engagementScore Float @default(0)
+
+  // === Semantic Search ===
+  /// Caption text embedding vector for cosine similarity search/discovery
+  captionEmbedding Float[] @default([])
+
   // === Indexes ===
   @@index([userId]) /// Fast lookup of all videos by user
   @@index([postId]) /// Fast lookup of videos attached to post
   @@index([videoType]) /// Filter reels vs post attachments
   @@index([encodingStatus]) /// Encoding job monitoring
+  @@index([encodingTiersStatus]) /// Filter by encoding tier completion
   @@index([moderationStatus]) /// Admin moderation queue filtering
   @@index([publishStatus]) /// Draft/scheduled/published filtering
   @@index([scheduledPublishAt]) /// Cron job for scheduled publishing
   @@index([createdAt]) /// Chronological sorting
   @@index([publishedAt]) /// Feed sorting by publish time
   @@index([viewCount]) /// Trending/popular videos sorting
+  @@index([engagementScore]) /// Feed ranking by engagement
 }
 
 /// Video comment - user comments on video snippets

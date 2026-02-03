@@ -32,6 +32,7 @@ const prisma_js_1 = require("../lib/prisma.js");
 const logger_1 = require("./logger");
 const VideoStorageService_1 = require("./VideoStorageService");
 const VideoEncodingService_1 = require("./VideoEncodingService");
+const moderationService_1 = require("./moderationService");
 // ========================================
 // Constants
 // ========================================
@@ -383,6 +384,43 @@ class VideoPipeline {
             // Stage 5: Persist to database FIRST (before encoding)
             // CRITICAL: Record must exist before encoding tries to update it
             await this.persistToDatabase(videoId, userId, uploadResult, metadata, file.size, file.mimetype, thumbnailUrl, { videoType, caption, postId }, requestId);
+            // Stage 5b: Caption text moderation (before encoding to save resources)
+            if (caption && caption.trim().length > 0) {
+                try {
+                    this.log(requestId, 'CAPTION_MODERATION_START', { videoId });
+                    await moderationService_1.moderationService.analyzeContent(caption, 'VIDEO', videoId);
+                    // Check if caption moderation rejected the video
+                    const moderationCheck = await prisma_js_1.prisma.video.findUnique({
+                        where: { id: videoId },
+                        select: { moderationStatus: true, moderationReason: true }
+                    });
+                    if (moderationCheck?.moderationStatus === 'REJECTED') {
+                        this.log(requestId, 'CAPTION_MODERATION_REJECTED', {
+                            videoId,
+                            reason: moderationCheck.moderationReason
+                        });
+                        // Still return the video record — frontend shows rejection reason
+                        return {
+                            videoId,
+                            originalUrl: uploadResult.url,
+                            originalBlobName: uploadResult.blobName,
+                            thumbnailUrl,
+                            requestId,
+                            duration: metadata.duration,
+                            width: metadata.width,
+                            height: metadata.height,
+                            aspectRatio: metadata.aspectRatio,
+                            originalSize: file.size,
+                            originalMimeType: file.mimetype,
+                            encodingStatus: 'PENDING'
+                        };
+                    }
+                    this.log(requestId, 'CAPTION_MODERATION_PASSED', { videoId });
+                }
+                catch (error) {
+                    logger_1.logger.error({ error, videoId, requestId }, 'Caption moderation failed — proceeding with encoding');
+                }
+            }
             // Stage 6: Queue encoding job (always async via worker)
             try {
                 this.log(requestId, 'ENCODING_JOB_QUEUING', { videoId });

@@ -100,6 +100,21 @@ export declare class EngagementScoringService {
         algorithm: string;
     }>;
     /**
+     * Calculate engagement score for a video snippet.
+     * Uses simplified metrics (views, likes, comments, shares) with
+     * time decay and quality bias matching the post scoring algorithm.
+     *
+     * @param videoMetrics - Video engagement counters
+     * @param publishedAt - When the video was published
+     * @returns Engagement score (higher = more engaging)
+     */
+    static calculateVideoScore(videoMetrics: {
+        viewCount: number;
+        likeCount: number;
+        commentCount: number;
+        shareCount: number;
+    }, publishedAt: Date): number;
+    /**
      * Calculate comment engagement metrics for a post
      */
     static calculateCommentEngagement(comments: Array<{

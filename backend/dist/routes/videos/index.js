@@ -28,8 +28,46 @@ const VideoPipeline_1 = require("../../services/VideoPipeline");
 const VideoStorageService_1 = require("../../services/VideoStorageService");
 const VideoEncodingService_1 = require("../../services/VideoEncodingService");
 const videoEncodingQueue_1 = require("../../queues/videoEncodingQueue");
+const engagementScoringService_1 = require("../../services/engagementScoringService");
+const videoFeedService_1 = require("../../services/videoFeedService");
+const embeddingService_1 = require("../../services/embeddingService");
 const prisma_js_1 = require("../../lib/prisma.js");
 const logger_1 = require("../../services/logger");
+/**
+ * Recalculate and update the engagement score for a video.
+ * Called after like/unlike/view/comment/share interactions.
+ *
+ * @param videoId - Video record ID to update
+ */
+async function updateVideoEngagementScore(videoId) {
+    try {
+        const video = await prisma_js_1.prisma.video.findUnique({
+            where: { id: videoId },
+            select: {
+                viewCount: true,
+                likeCount: true,
+                commentCount: true,
+                shareCount: true,
+                publishedAt: true
+            }
+        });
+        if (!video || !video.publishedAt)
+            return;
+        const score = engagementScoringService_1.EngagementScoringService.calculateVideoScore({
+            viewCount: video.viewCount,
+            likeCount: video.likeCount,
+            commentCount: video.commentCount,
+            shareCount: video.shareCount
+        }, video.publishedAt);
+        await prisma_js_1.prisma.video.update({
+            where: { id: videoId },
+            data: { engagementScore: score }
+        });
+    }
+    catch (error) {
+        logger_1.logger.warn({ error, videoId }, 'Failed to update video engagement score');
+    }
+}
 const router = express_1.default.Router();
 // ========================================
 // Constants
@@ -320,41 +358,52 @@ router.post('/upload', auth_1.requireStagingAuth, upload.single('file'), async (
  */
 router.get('/feed', async (req, res) => {
     try {
-        const limit = Math.min(parseInt(req.query.limit) || 10, 50);
-        const cursor = req.query.cursor;
-        const videos = await prisma_js_1.prisma.video.findMany({
-            where: {
-                videoType: 'REEL',
-                publishStatus: 'PUBLISHED',
-                isActive: true,
-                encodingStatus: 'READY',
-                moderationStatus: 'APPROVED',
-                deletedAt: null
-            },
-            orderBy: [
-                { publishedAt: 'desc' },
-                { id: 'desc' }
-            ],
-            take: limit + 1, // Fetch one extra to check for more
-            ...(cursor ? {
-                cursor: { id: cursor },
-                skip: 1
-            } : {}),
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        username: true,
-                        displayName: true,
-                        avatar: true,
-                        verified: true
+        const limit = Math.min(parseInt(req.query.limit) || 15, 50);
+        const feedType = req.query.feedType || 'for-you';
+        const excludeIdsParam = req.query.excludeIds;
+        const excludeIds = excludeIdsParam ? excludeIdsParam.split(',') : [];
+        // Extract userId from auth token if available (feed works for both logged-in and anonymous)
+        const userId = req.user?.id;
+        // For 'following' feed, require authentication
+        if (feedType === 'following' && !userId) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required for following feed'
+            });
+        }
+        // Generate algorithmic feed
+        const feedResult = await videoFeedService_1.VideoFeedService.generateFeed({
+            userId,
+            feedType,
+            limit,
+            excludeIds
+        });
+        // Fetch full video data for the selected IDs (preserving algorithm order)
+        let feedVideos = [];
+        if (feedResult.videoIds.length > 0) {
+            const videosMap = new Map();
+            const videos = await prisma_js_1.prisma.video.findMany({
+                where: { id: { in: feedResult.videoIds } },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            displayName: true,
+                            avatar: true,
+                            verified: true
+                        }
                     }
                 }
+            });
+            for (const video of videos) {
+                videosMap.set(video.id, video);
             }
-        });
-        const hasMore = videos.length > limit;
-        const feedVideos = hasMore ? videos.slice(0, -1) : videos;
-        const nextCursor = hasMore ? feedVideos[feedVideos.length - 1]?.id : undefined;
+            // Preserve algorithm-determined order
+            feedVideos = feedResult.videoIds
+                .map(id => videosMap.get(id))
+                .filter(Boolean);
+        }
         res.json({
             success: true,
             videos: feedVideos.map(video => ({
@@ -373,7 +422,9 @@ router.get('/feed', async (req, res) => {
                 publishedAt: video.publishedAt,
                 user: video.user
             })),
-            nextCursor
+            feedType: feedResult.feedType,
+            algorithm: feedResult.algorithm,
+            candidateCount: feedResult.candidateCount
         });
     }
     catch (error) {
@@ -932,6 +983,8 @@ router.post('/:id/view', async (req, res) => {
                 viewCount: { increment: 1 }
             }
         });
+        // Recalculate engagement score (fire-and-forget)
+        updateVideoEngagementScore(id);
         res.json({ success: true });
     }
     catch (error) {
@@ -975,7 +1028,8 @@ router.patch('/:id/publish', auth_1.requireAuth, async (req, res) => {
                 userId: true,
                 encodingStatus: true,
                 moderationStatus: true,
-                publishStatus: true
+                publishStatus: true,
+                caption: true
             }
         });
         if (!video) {
@@ -1037,6 +1091,19 @@ router.patch('/:id/publish', auth_1.requireAuth, async (req, res) => {
                 publishedAt: true
             }
         });
+        // Generate caption embedding for semantic search (fire-and-forget)
+        if (video.caption) {
+            embeddingService_1.EmbeddingService.generateEmbedding(video.caption)
+                .then(embedding => {
+                if (embedding.length > 0 && !embedding.every(v => v === 0)) {
+                    return prisma_js_1.prisma.video.update({
+                        where: { id },
+                        data: { captionEmbedding: embedding }
+                    });
+                }
+            })
+                .catch(err => logger_1.logger.warn({ error: err, videoId: id }, 'Failed to generate caption embedding'));
+        }
         res.json({
             success: true,
             video: updatedVideo
@@ -1789,6 +1856,8 @@ router.post('/:id/like', auth_1.requireAuth, async (req, res) => {
             where: { id },
             data: { likeCount }
         });
+        // Recalculate engagement score (fire-and-forget)
+        updateVideoEngagementScore(id);
         res.json({
             success: true,
             liked: true,
@@ -1828,6 +1897,8 @@ router.post('/:id/unlike', auth_1.requireAuth, async (req, res) => {
             where: { id },
             data: { likeCount }
         });
+        // Recalculate engagement score (fire-and-forget)
+        updateVideoEngagementScore(id);
         res.json({
             success: true,
             liked: false,
@@ -2128,11 +2199,93 @@ router.post('/:id/share', async (req, res) => {
                 shareCount: { increment: 1 }
             }
         });
+        // Recalculate engagement score (fire-and-forget)
+        updateVideoEngagementScore(id);
         res.json({ success: true });
     }
     catch (error) {
         // Don't fail for share tracking errors
         res.json({ success: true });
+    }
+});
+/**
+ * @swagger
+ * /api/videos/{id}/retry-encoding:
+ *   post:
+ *     tags: [Video]
+ *     summary: Retry 360p encoding for a video stuck at 720p-only
+ *     description: >
+ *       Queues a Phase 2 (360p) encoding job for a video that has
+ *       encodingTiersStatus='PARTIAL_FAILED'. The video must be owned
+ *       by the requesting user and already be in READY state (720p available).
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Video ID
+ *     responses:
+ *       200:
+ *         description: 360p encoding job queued successfully
+ *       400:
+ *         description: Video not eligible for 360p retry
+ *       403:
+ *         description: Not authorized
+ *       404:
+ *         description: Video not found
+ */
+router.post('/:id/retry-encoding', auth_1.requireStagingAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const video = await prisma_js_1.prisma.video.findFirst({
+            where: { id, userId: req.user.id },
+            select: {
+                id: true,
+                encodingStatus: true,
+                encodingTiersStatus: true,
+                originalBlobName: true
+            }
+        });
+        if (!video) {
+            return res.status(404).json({
+                success: false,
+                error: 'Video not found'
+            });
+        }
+        if (video.encodingStatus !== 'READY') {
+            return res.status(400).json({
+                success: false,
+                error: 'Video must be in READY state to retry 360p encoding'
+            });
+        }
+        if (video.encodingTiersStatus !== 'PARTIAL_FAILED') {
+            return res.status(400).json({
+                success: false,
+                error: 'Video is not eligible for 360p retry (current status: ' + video.encodingTiersStatus + ')'
+            });
+        }
+        // Reset tier status to PARTIAL (attempting 360p again)
+        await prisma_js_1.prisma.video.update({
+            where: { id },
+            data: { encodingTiersStatus: 'PARTIAL' }
+        });
+        // Queue a Phase 2 encoding job (high priority)
+        videoEncodingQueue_1.videoEncodingQueue.addJob(id, video.originalBlobName, 5);
+        logger_1.logger.info({ videoId: id }, 'User-triggered 360p encoding retry queued');
+        res.json({
+            success: true,
+            message: '360p encoding retry has been queued'
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({ error }, 'Failed to queue 360p encoding retry');
+        res.status(500).json({
+            success: false,
+            error: 'Failed to queue encoding retry'
+        });
     }
 });
 exports.default = router;
