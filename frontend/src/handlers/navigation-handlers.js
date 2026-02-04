@@ -1247,8 +1247,10 @@ class NavigationHandlers {
                 const { SnippetsDashboard } = await import('../modules/features/video/SnippetsDashboard.js');
                 if (!this.snippetsDashboard) {
                     this.snippetsDashboard = new SnippetsDashboard(contentEl);
+                    await this.snippetsDashboard.init();
+                } else {
+                    await this.snippetsDashboard.loadSnippets();
                 }
-                await this.snippetsDashboard.init();
             } catch (error) {
                 console.error('Failed to load snippets dashboard:', error);
                 contentEl.innerHTML = `
@@ -1277,7 +1279,8 @@ class NavigationHandlers {
 
     /**
      * Open Snippet Creator Modal
-     * Shows modal for creating new video snippets
+     * Shows modal for creating new video snippets.
+     * Includes automatic retry with cache-busting for transient import failures.
      * @param {string} context - Context of creation: 'feed' (auto-publish) or 'dashboard' (draft)
      */
     async openSnippetCreator(context = 'dashboard') {
@@ -1288,11 +1291,27 @@ class NavigationHandlers {
             return;
         }
 
-        // Store context for upload behavior
+        // Prevent concurrent load attempts from rapid clicking
+        if (this._snippetCreatorLoading) {
+            return;
+        }
+
         this.snippetUploadContext = context;
+        this._snippetCreatorLoading = true;
 
         try {
-            const { SnippetCreatorModal } = await import('../modules/features/video/SnippetCreatorModal.js');
+            let SnippetCreatorModal;
+            try {
+                const mod = await import('../modules/features/video/SnippetCreatorModal.js');
+                SnippetCreatorModal = mod.SnippetCreatorModal;
+            } catch (firstError) {
+                // Browser caches failed module imports — use cache-busting param to force re-fetch
+                console.warn('Snippet creator load failed, retrying with cache bust...', firstError);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const mod = await import(`../modules/features/video/SnippetCreatorModal.js?t=${Date.now()}`);
+                SnippetCreatorModal = mod.SnippetCreatorModal;
+            }
+
             if (!this.snippetCreatorModal) {
                 this.snippetCreatorModal = new SnippetCreatorModal();
             }
@@ -1300,8 +1319,10 @@ class NavigationHandlers {
         } catch (error) {
             console.error('Failed to load snippet creator:', error);
             if (typeof window.showToast === 'function') {
-                window.showToast('Failed to load snippet creator');
+                window.showToast('Failed to load snippet creator. Please try again.');
             }
+        } finally {
+            this._snippetCreatorLoading = false;
         }
     }
 

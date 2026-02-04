@@ -250,22 +250,14 @@ export class SnippetCreatorModal {
                 window.showToast('Snippet created! You can find it in your Snippets dashboard.');
             }
 
-            // Close modal after brief delay
+            // Close modal after brief delay, then refresh dashboard
             setTimeout(() => {
                 this.close();
 
-                // Open snippets dashboard FIRST (so DOM exists for event handler)
+                // Open/refresh snippets dashboard (handles both init and data refresh)
                 if (typeof window.openSnippetsDashboard === 'function') {
                     window.openSnippetsDashboard();
                 }
-
-                // THEN dispatch event after small delay for DOM to render
-                // This ensures the dashboard's event listener can find its tab content element
-                setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('snippetUploaded', {
-                        detail: { video }
-                    }));
-                }, 100);
             }, 1500);
         }
     }
