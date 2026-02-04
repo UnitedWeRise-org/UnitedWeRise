@@ -1233,6 +1233,18 @@
             border-left-color: #17a2b8;
         }
 
+        .visitor-chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            position: relative;
+        }
+
+        .visitor-chart-container canvas {
+            max-height: 350px;
+            width: 100% !important;
+        }
+
         .visitor-chart-header {
             display: flex;
             justify-content: space-between;
