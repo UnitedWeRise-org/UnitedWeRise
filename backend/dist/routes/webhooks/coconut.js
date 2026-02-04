@@ -146,13 +146,6 @@ async function handlePhase1Completed(videoId, payload, inputBlobName) {
     }
     catch (error) {
         logger_1.logger.error({ error, videoId }, 'Content moderation failed after Coconut Phase 1');
-        // Auto-approve in non-production (same pattern as FFmpeg worker)
-        if (process.env.NODE_ENV !== 'production') {
-            await prisma_js_1.prisma.video.update({
-                where: { id: videoId },
-                data: { moderationStatus: 'APPROVED', audioStatus: 'PASS' }
-            });
-        }
     }
     // Kick off Phase 2 (720p + 360p) — non-fatal
     if (inputBlobName) {

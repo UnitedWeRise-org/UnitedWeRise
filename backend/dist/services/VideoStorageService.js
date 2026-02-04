@@ -290,6 +290,24 @@ class VideoStorageService {
             return false;
         }
     }
+    /**
+     * Check if a blob exists in the encoded videos container.
+     * Uses a lightweight HEAD request (no data transfer).
+     *
+     * @param blobPath - Path within videos-encoded container (e.g., "videoId/master.m3u8")
+     * @returns true if the blob exists
+     */
+    async encodedBlobExists(blobPath) {
+        try {
+            await this.ensureInitialized();
+            const blobClient = this.encodedContainer.getBlobClient(blobPath);
+            return await blobClient.exists();
+        }
+        catch (error) {
+            logger_1.logger.error({ error, blobPath }, 'Failed to check encoded blob existence');
+            return false;
+        }
+    }
     // ========================================
     // Private Helpers
     // ========================================

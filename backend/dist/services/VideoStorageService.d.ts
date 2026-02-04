@@ -91,6 +91,14 @@ export declare class VideoStorageService {
      * Check if storage service is available
      */
     isAvailable(): Promise<boolean>;
+    /**
+     * Check if a blob exists in the encoded videos container.
+     * Uses a lightweight HEAD request (no data transfer).
+     *
+     * @param blobPath - Path within videos-encoded container (e.g., "videoId/master.m3u8")
+     * @returns true if the blob exists
+     */
+    encodedBlobExists(blobPath: string): Promise<boolean>;
     private ensureInitialized;
     private getExtensionFromMimeType;
 }

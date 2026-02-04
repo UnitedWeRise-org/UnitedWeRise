@@ -113,12 +113,9 @@ class VideoContentModerationService {
         }
         catch (error) {
             logger_1.logger.error({ error, videoId: request.videoId }, 'Video moderation failed');
-            const isDevelopment = process.env.NODE_ENV !== 'production';
-            const fallbackResult = this.createFallbackResult(startTime, isDevelopment ? 'error_dev_pass' : 'error_production_reject');
-            if (!isDevelopment) {
-                fallbackResult.status = 'REJECTED';
-                fallbackResult.reason = 'Moderation service error';
-            }
+            const fallbackResult = this.createFallbackResult(startTime, 'error');
+            fallbackResult.status = 'REJECTED';
+            fallbackResult.reason = 'Moderation service error';
             return fallbackResult;
         }
     }
@@ -364,12 +361,11 @@ class VideoContentModerationService {
      * Create fallback result when service is unavailable
      */
     createFallbackResult(startTime, type) {
-        const isDevelopment = process.env.NODE_ENV !== 'production';
         return {
-            status: isDevelopment ? 'APPROVED' : 'PENDING',
-            reason: isDevelopment ? `Development auto-approve (${type})` : `Requires manual review (${type})`,
-            confidence: isDevelopment ? 1.0 : undefined,
-            audioStatus: isDevelopment ? 'PASS' : 'PENDING',
+            status: 'PENDING',
+            reason: `Requires manual review (${type})`,
+            confidence: undefined,
+            audioStatus: 'PENDING',
             audioMuted: false,
             processingTime: Date.now() - startTime
         };

@@ -1572,9 +1572,7 @@ router.post('/:id/reprocess', requireStagingAuth, requireAdmin, async (req: Auth
             encodingCompletedAt: new Date(),
             hlsManifestUrl,
             mp4Url: null,
-            encodingTiersStatus: 'PARTIAL',
-            moderationStatus: process.env.NODE_ENV !== 'production' ? 'APPROVED' : undefined,
-            audioStatus: process.env.NODE_ENV !== 'production' ? 'PASS' : undefined
+            encodingTiersStatus: 'PARTIAL'
           }
         });
 

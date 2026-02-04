@@ -67,6 +67,7 @@ const coconut_1 = __importDefault(require("./routes/webhooks/coconut"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
 const analyticsCleanup_1 = __importDefault(require("./jobs/analyticsCleanup"));
 const scheduledVideoPublishJob_1 = __importDefault(require("./jobs/scheduledVideoPublishJob"));
+const encodingWatchdogJob_1 = __importDefault(require("./jobs/encodingWatchdogJob"));
 const videoEncodingWorker_1 = require("./workers/videoEncodingWorker");
 const rateLimiting_1 = require("./middleware/rateLimiting");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -226,6 +227,10 @@ app.use(visitTracking_1.default);
 app.use((req, res, next) => {
     // Exempt GET and OPTIONS requests from CSRF protection
     if (req.method === 'GET' || req.method === 'OPTIONS') {
+        return next();
+    }
+    // Exempt webhook endpoints — these use path-based secret validation instead
+    if (req.path.startsWith('/webhooks/')) {
         return next();
     }
     // Apply CSRF verification to all other methods
@@ -426,6 +431,7 @@ const gracefulShutdown = async () => {
     // Stop cron jobs
     analyticsCleanup_1.default.stop();
     scheduledVideoPublishJob_1.default.stop();
+    encodingWatchdogJob_1.default.stop();
     // Stop video encoding worker
     videoEncodingWorker_1.videoEncodingWorker.stop().catch((error) => {
         logger_2.logger.error({ error }, 'Error stopping video encoding worker');
@@ -546,6 +552,7 @@ async function startServer() {
         // Start cron jobs
         analyticsCleanup_1.default.start();
         scheduledVideoPublishJob_1.default.start();
+        encodingWatchdogJob_1.default.start();
         // Start video encoding worker
         videoEncodingWorker_1.videoEncodingWorker.start().catch((error) => {
             logger_2.logger.error({ error }, 'Failed to start video encoding worker');

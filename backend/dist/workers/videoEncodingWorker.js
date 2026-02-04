@@ -294,8 +294,6 @@ class VideoEncodingWorker {
                 encodingStatus: 'READY',
                 encodingCompletedAt: new Date(),
                 mp4Url: result.url,
-                moderationStatus: 'APPROVED',
-                audioStatus: 'PASS',
                 encodingTiersStatus: 'ALL'
             }
         });

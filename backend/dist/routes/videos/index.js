@@ -31,6 +31,7 @@ const videoEncodingQueue_1 = require("../../queues/videoEncodingQueue");
 const engagementScoringService_1 = require("../../services/engagementScoringService");
 const videoFeedService_1 = require("../../services/videoFeedService");
 const embeddingService_1 = require("../../services/embeddingService");
+const CoconutEncodingService_1 = require("../../services/CoconutEncodingService");
 const prisma_js_1 = require("../../lib/prisma.js");
 const logger_1 = require("../../services/logger");
 /**
@@ -557,6 +558,9 @@ router.get('/scheduled', auth_1.requireAuth, async (req, res) => {
  *               properties:
  *                 success:
  *                   type: boolean
+ *                 encodingService:
+ *                   type: string
+ *                   description: Active encoding service (ffmpeg or coconut)
  *                 videos:
  *                   type: array
  *                   items:
@@ -581,6 +585,10 @@ router.get('/scheduled', auth_1.requireAuth, async (req, res) => {
  *                         enum: [DRAFT, SCHEDULED, PUBLISHED]
  *                       encodingStatus:
  *                         type: string
+ *                         enum: [PENDING, ENCODING, READY, FAILED]
+ *                       encodingTiersStatus:
+ *                         type: string
+ *                         enum: [NONE, PARTIAL, PARTIAL_FAILED, ALL]
  *                       moderationStatus:
  *                         type: string
  *                       createdAt:
@@ -617,6 +625,7 @@ router.get('/my-snippets', auth_1.requireAuth, async (req, res) => {
                 hashtags: true,
                 publishStatus: true,
                 encodingStatus: true,
+                encodingTiersStatus: true,
                 moderationStatus: true,
                 createdAt: true,
                 publishedAt: true,
@@ -628,8 +637,10 @@ router.get('/my-snippets', auth_1.requireAuth, async (req, res) => {
                 shareCount: true
             }
         });
+        const encodingService = process.env.VIDEO_ENCODING_SERVICE || 'ffmpeg';
         res.json({
             success: true,
+            encodingService,
             videos
         });
     }
@@ -1416,14 +1427,55 @@ router.post('/:id/reprocess', auth_1.requireStagingAuth, auth_1.requireAdmin, as
             adminUsername: req.user?.username,
             previousStatus: video.encodingStatus
         }, 'Admin initiated video reprocess');
-        // Run encoding simulation (copies from private to public container)
-        await VideoEncodingService_1.videoEncodingService.simulateEncodingForDevelopment(id, video.originalUrl || '');
+        const encodingService = process.env.VIDEO_ENCODING_SERVICE || 'ffmpeg';
+        if (encodingService === 'coconut') {
+            // Coconut path: check if encoded output already exists in blob storage
+            const manifestPath = `${id}/master.m3u8`;
+            const outputExists = await VideoStorageService_1.videoStorageService.encodedBlobExists(manifestPath);
+            if (outputExists) {
+                // Encoding succeeded but webhook was lost — recover DB state
+                const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || '';
+                const cdnEndpoint = process.env.AZURE_CDN_ENDPOINT;
+                const hlsManifestUrl = cdnEndpoint
+                    ? `${cdnEndpoint}/${id}/master.m3u8`
+                    : `https://${accountName}.blob.core.windows.net/videos-encoded/${id}/master.m3u8`;
+                await prisma_js_1.prisma.video.update({
+                    where: { id },
+                    data: {
+                        encodingStatus: 'READY',
+                        encodingCompletedAt: new Date(),
+                        hlsManifestUrl,
+                        mp4Url: null,
+                        encodingTiersStatus: 'PARTIAL'
+                    }
+                });
+                logger_1.logger.info({ videoId: id, hlsManifestUrl }, 'Recovered stuck Coconut-encoded video from blob storage');
+            }
+            else {
+                // No output exists — re-queue a new Coconut job
+                await prisma_js_1.prisma.video.update({
+                    where: { id },
+                    data: {
+                        encodingStatus: 'ENCODING',
+                        encodingStartedAt: new Date(),
+                        encodingTiersStatus: 'NONE'
+                    }
+                });
+                await CoconutEncodingService_1.coconutEncodingService.createPhase1Job(id, video.originalBlobName);
+                logger_1.logger.info({ videoId: id }, 'Re-queued Coconut encoding job via admin reprocess');
+            }
+        }
+        else {
+            // FFmpeg path: simulation (copies from private to public container)
+            await VideoEncodingService_1.videoEncodingService.simulateEncodingForDevelopment(id, video.originalUrl || '');
+        }
         // Fetch updated video state
         const updatedVideo = await prisma_js_1.prisma.video.findUnique({
             where: { id },
             select: {
                 id: true,
                 encodingStatus: true,
+                encodingTiersStatus: true,
                 moderationStatus: true,
                 mp4Url: true,
                 hlsManifestUrl: true,
