@@ -1630,8 +1630,40 @@ class AnalyticsController {
             });
 
             const visitors = data.map(d => d.uniqueVisitors);
+            const secondaryValues = granularity === 'hourly'
+                ? data.map(d => d.totalPageviews)
+                : data.map(d => d.signupsCount || 0);
 
-            // Build datasets based on granularity
+            // Compute auto-scale ceiling with 15% headroom and clean tick rounding
+            const primaryMax = Math.max(...visitors, 0);
+            const secondaryMax = Math.max(...secondaryValues, 0);
+
+            /**
+             * Calculate a clean Y-axis max: add 15% headroom then round up
+             * to a "nice" tick value (1, 2, 5, 10, 20, 50, 100, ...)
+             * @param {number} maxVal - Maximum data value
+             * @returns {number} Rounded ceiling for the axis
+             */
+            const calcAxisMax = (maxVal) => {
+                if (maxVal <= 0) return 10;
+                const withHeadroom = maxVal * 1.15;
+                const magnitude = Math.pow(10, Math.floor(Math.log10(withHeadroom)));
+                const normalized = withHeadroom / magnitude;
+                let niceNorm;
+                if (normalized <= 1) niceNorm = 1;
+                else if (normalized <= 2) niceNorm = 2;
+                else if (normalized <= 5) niceNorm = 5;
+                else niceNorm = 10;
+                return Math.max(niceNorm * magnitude, 1);
+            };
+
+            const yMax = calcAxisMax(primaryMax);
+            const y1Max = calcAxisMax(secondaryMax);
+
+            // Use dual axes when the secondary dataset scale differs significantly
+            const needsDualAxis = secondaryMax > 0 && (primaryMax / secondaryMax > 5 || secondaryMax / primaryMax > 5);
+
+            // Build datasets
             const datasets = [
                 {
                     label: 'Unique Visitors',
@@ -1639,30 +1671,59 @@ class AnalyticsController {
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.1)',
                     tension: 0.1,
-                    fill: true
+                    fill: true,
+                    yAxisID: 'y'
                 }
             ];
 
             if (granularity === 'hourly') {
-                // Hourly: show Total Pageviews as second dataset
                 datasets.push({
                     label: 'Total Pageviews',
-                    data: data.map(d => d.totalPageviews),
+                    data: secondaryValues,
                     borderColor: 'rgb(54, 162, 235)',
                     backgroundColor: 'rgba(54, 162, 235, 0.1)',
                     tension: 0.1,
-                    fill: true
+                    fill: true,
+                    yAxisID: needsDualAxis ? 'y1' : 'y'
                 });
             } else {
-                // Daily/Monthly: show Signups as second dataset
                 datasets.push({
                     label: 'Signups',
-                    data: data.map(d => d.signupsCount || 0),
+                    data: secondaryValues,
                     borderColor: 'rgb(255, 99, 132)',
                     backgroundColor: 'rgba(255, 99, 132, 0.1)',
                     tension: 0.1,
-                    fill: true
+                    fill: true,
+                    yAxisID: needsDualAxis ? 'y1' : 'y'
                 });
+            }
+
+            // Build scales config
+            const scales = {
+                y: {
+                    beginAtZero: true,
+                    position: 'left',
+                    suggestedMax: needsDualAxis ? yMax : calcAxisMax(Math.max(primaryMax, secondaryMax)),
+                    ticks: { precision: 0 },
+                    title: {
+                        display: needsDualAxis,
+                        text: 'Unique Visitors'
+                    }
+                }
+            };
+
+            if (needsDualAxis) {
+                scales.y1 = {
+                    beginAtZero: true,
+                    position: 'right',
+                    suggestedMax: y1Max,
+                    ticks: { precision: 0 },
+                    grid: { drawOnChartArea: false },
+                    title: {
+                        display: true,
+                        text: granularity === 'hourly' ? 'Total Pageviews' : 'Signups'
+                    }
+                };
             }
 
             this.visitorTrendChart = new Chart(ctx, {
@@ -1675,12 +1736,7 @@ class AnalyticsController {
                         title: { display: false },
                         legend: { position: 'top' }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { precision: 0 }
-                        }
-                    }
+                    scales
                 }
             });
 
