@@ -61,6 +61,7 @@ import coconutWebhook from './routes/webhooks/coconut';
 import WebSocketService from './services/WebSocketService';
 import analyticsCleanupJob from './jobs/analyticsCleanup';
 import scheduledVideoPublishJob from './jobs/scheduledVideoPublishJob';
+import encodingWatchdogJob from './jobs/encodingWatchdogJob';
 import { videoEncodingWorker } from './workers/videoEncodingWorker';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
@@ -474,6 +475,7 @@ const gracefulShutdown = async () => {
   // Stop cron jobs
   analyticsCleanupJob.stop();
   scheduledVideoPublishJob.stop();
+  encodingWatchdogJob.stop();
 
   // Stop video encoding worker
   videoEncodingWorker.stop().catch((error) => {
@@ -612,6 +614,7 @@ async function startServer() {
     // Start cron jobs
     analyticsCleanupJob.start();
     scheduledVideoPublishJob.start();
+    encodingWatchdogJob.start();
 
     // Start video encoding worker
     videoEncodingWorker.start().catch((error) => {
