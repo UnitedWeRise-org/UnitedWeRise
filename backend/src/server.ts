@@ -255,6 +255,11 @@ app.use((req, res, next) => {
     return next();
   }
 
+  // Exempt webhook endpoints — these use path-based secret validation instead
+  if (req.path.startsWith('/webhooks/')) {
+    return next();
+  }
+
   // Apply CSRF verification to all other methods
   return verifyCsrf(req, res, next);
 });
