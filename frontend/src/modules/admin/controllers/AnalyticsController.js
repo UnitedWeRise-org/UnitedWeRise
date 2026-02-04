@@ -20,6 +20,7 @@ class AnalyticsController {
         };
         this.refreshInterval = null;
         this.isRealTimeMode = false;
+        this.currentGranularity = 'daily';
 
         // Bind methods to preserve context
         this.init = this.init.bind(this);
@@ -38,6 +39,9 @@ class AnalyticsController {
         this.destroyChart = this.destroyChart.bind(this);
         this.loadVisitorAnalytics = this.loadVisitorAnalytics.bind(this);
         this.displayVisitorAnalytics = this.displayVisitorAnalytics.bind(this);
+        this.loadVisitorTrendData = this.loadVisitorTrendData.bind(this);
+        this.renderVisitorTrendChart = this.renderVisitorTrendChart.bind(this);
+        this.setupGranularityControls = this.setupGranularityControls.bind(this);
     }
 
     /**
@@ -1450,10 +1454,9 @@ class AnalyticsController {
                 this.displaySuspiciousActivity(data.suspicious.suspiciousIPs);
             }
 
-            // Create daily trend chart
-            if (data.daily && data.daily.daily) {
-                this.createVisitorTrendChart(data.daily.daily);
-            }
+            // Set up granularity controls and load trend chart via unified endpoint
+            this.setupGranularityControls();
+            this.loadVisitorTrendData();
 
             adminDebugLog('AnalyticsController', 'Visitor analytics displayed successfully');
 
@@ -1500,9 +1503,59 @@ class AnalyticsController {
     }
 
     /**
-     * Create visitor trend chart
+     * Set up granularity control button handlers
      */
-    createVisitorTrendChart(dailyData) {
+    setupGranularityControls() {
+        const controls = document.getElementById('granularityControls');
+        if (!controls) return;
+
+        const buttons = controls.querySelectorAll('.granularity-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const granularity = btn.dataset.granularity;
+                if (granularity === this.currentGranularity) return;
+
+                this.currentGranularity = granularity;
+
+                // Toggle active class
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Reload trend data with new granularity
+                this.loadVisitorTrendData();
+            });
+        });
+    }
+
+    /**
+     * Load visitor trend data from the unified trends endpoint
+     */
+    async loadVisitorTrendData() {
+        try {
+            const backendUrl = window.AdminAPI.BACKEND_URL;
+            const url = `${backendUrl}/api/admin/analytics/visitors/trends?granularity=${this.currentGranularity}`;
+
+            const response = await window.AdminAPI.get(url);
+
+            if (!response.ok && !response.data) {
+                throw new Error('Failed to load visitor trend data');
+            }
+
+            const trendData = response.data || response;
+            this.renderVisitorTrendChart(trendData);
+
+        } catch (error) {
+            adminDebugError('AnalyticsController', 'Error loading visitor trend data', error);
+        }
+    }
+
+    /**
+     * Render visitor trend chart based on granularity
+     * @param {Object} trendData - Response from /api/admin/analytics/visitors/trends
+     * @param {string} trendData.granularity - 'hourly' | 'daily' | 'monthly'
+     * @param {Array} trendData.data - Array of trend data points
+     */
+    renderVisitorTrendChart(trendData) {
         try {
             const canvas = document.getElementById('visitorTrendChart');
             if (!canvas) return;
@@ -1514,57 +1567,107 @@ class AnalyticsController {
                 this.visitorTrendChart.destroy();
             }
 
-            const labels = dailyData.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-            const visitors = dailyData.map(d => d.uniqueVisitors);
-            const signups = dailyData.map(d => d.signupsCount);
+            const granularity = trendData.granularity || this.currentGranularity;
+            const data = trendData.data || [];
+
+            // Update chart title
+            const titleEl = document.getElementById('visitorChartTitle');
+            const titles = {
+                hourly: 'Hourly Visitor Trends (Last 24 Hours)',
+                daily: 'Daily Visitor Trends (Last 30 Days)',
+                monthly: 'Monthly Visitor Trends (Last 12 Months)'
+            };
+            if (titleEl) {
+                titleEl.textContent = titles[granularity] || titles.daily;
+            }
+
+            // Handle empty data
+            if (data.length === 0) {
+                if (titleEl) {
+                    titleEl.textContent += ' — No data available';
+                }
+                return;
+            }
+
+            // Format labels based on granularity
+            const labels = data.map(d => {
+                const date = new Date(d.timestamp);
+                switch (granularity) {
+                    case 'hourly': {
+                        // Show date + hour if data spans multiple days
+                        const startDay = new Date(data[0].timestamp).toDateString();
+                        const endDay = new Date(data[data.length - 1].timestamp).toDateString();
+                        if (startDay !== endDay) {
+                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+                                ', ' + date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+                        }
+                        return date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+                    }
+                    case 'monthly':
+                        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                    case 'daily':
+                    default:
+                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                }
+            });
+
+            const visitors = data.map(d => d.uniqueVisitors);
+
+            // Build datasets based on granularity
+            const datasets = [
+                {
+                    label: 'Unique Visitors',
+                    data: visitors,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                }
+            ];
+
+            if (granularity === 'hourly') {
+                // Hourly: show Total Pageviews as second dataset
+                datasets.push({
+                    label: 'Total Pageviews',
+                    data: data.map(d => d.totalPageviews),
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                });
+            } else {
+                // Daily/Monthly: show Signups as second dataset
+                datasets.push({
+                    label: 'Signups',
+                    data: data.map(d => d.signupsCount || 0),
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                });
+            }
 
             this.visitorTrendChart = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Unique Visitors',
-                            data: visitors,
-                            borderColor: 'rgb(75, 192, 192)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                            tension: 0.1,
-                            fill: true
-                        },
-                        {
-                            label: 'Signups',
-                            data: signups,
-                            borderColor: 'rgb(255, 99, 132)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                            tension: 0.1,
-                            fill: true
-                        }
-                    ]
-                },
+                data: { labels, datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        title: {
-                            display: false
-                        },
-                        legend: {
-                            position: 'top'
-                        }
+                        title: { display: false },
+                        legend: { position: 'top' }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: {
-                                precision: 0
-                            }
+                            ticks: { precision: 0 }
                         }
                     }
                 }
             });
 
         } catch (error) {
-            adminDebugError('AnalyticsController', 'Error creating visitor trend chart', error);
+            adminDebugError('AnalyticsController', 'Error rendering visitor trend chart', error);
         }
     }
 

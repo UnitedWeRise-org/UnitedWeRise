@@ -1070,9 +1070,16 @@
                             </div>
                         </div>
 
-                        <!-- Daily Trend Chart -->
+                        <!-- Visitor Trend Chart -->
                         <div class="visitor-chart-container">
-                            <h4>Daily Visitor Trends (Last 30 Days)</h4>
+                            <div class="visitor-chart-header">
+                                <h4 id="visitorChartTitle">Daily Visitor Trends (Last 30 Days)</h4>
+                                <div class="granularity-controls" id="granularityControls">
+                                    <button class="granularity-btn" data-granularity="hourly">Hourly</button>
+                                    <button class="granularity-btn active" data-granularity="daily">Daily</button>
+                                    <button class="granularity-btn" data-granularity="monthly">Monthly</button>
+                                </div>
+                            </div>
                             <canvas id="visitorTrendChart"></canvas>
                         </div>
 

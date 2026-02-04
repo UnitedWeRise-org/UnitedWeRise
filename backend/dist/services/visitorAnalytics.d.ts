@@ -89,6 +89,37 @@ declare class VisitorAnalyticsService {
         conversionRate: number;
     }>;
     /**
+     * Get hourly visitor statistics from PageView records
+     * Limited to 30-day retention window (PageView records auto-delete after 30 days)
+     * @param startDate - Start date (inclusive)
+     * @param endDate - End date (inclusive)
+     * @returns Array of hourly stat buckets
+     */
+    getHourlyStats(startDate: Date, endDate: Date): Promise<Array<{
+        timestamp: string;
+        uniqueVisitors: number;
+        totalPageviews: number;
+        authenticatedVisits: number;
+        anonymousVisits: number;
+        botVisits: number;
+    }>>;
+    /**
+     * Get monthly visitor statistics aggregated from DailyVisitStats
+     * No retention limit — DailyVisitStats is permanent
+     * @param startDate - Start date (inclusive)
+     * @param endDate - End date (inclusive)
+     * @returns Array of monthly stat buckets
+     */
+    getMonthlyStats(startDate: Date, endDate: Date): Promise<Array<{
+        timestamp: string;
+        uniqueVisitors: number;
+        totalPageviews: number;
+        authenticatedVisits: number;
+        anonymousVisits: number;
+        botVisits: number;
+        signupsCount: number;
+    }>>;
+    /**
      * Get current analytics configuration
      * @returns AnalyticsConfig record
      */

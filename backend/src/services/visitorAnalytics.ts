@@ -263,6 +263,104 @@ class VisitorAnalyticsService {
   }
 
   /**
+   * Get hourly visitor statistics from PageView records
+   * Limited to 30-day retention window (PageView records auto-delete after 30 days)
+   * @param startDate - Start date (inclusive)
+   * @param endDate - End date (inclusive)
+   * @returns Array of hourly stat buckets
+   */
+  async getHourlyStats(startDate: Date, endDate: Date): Promise<Array<{
+    timestamp: string;
+    uniqueVisitors: number;
+    totalPageviews: number;
+    authenticatedVisits: number;
+    anonymousVisits: number;
+    botVisits: number;
+  }>> {
+    const results = await prisma.$queryRaw<Array<{
+      hour_bucket: Date;
+      unique_visitors: bigint;
+      total_pageviews: bigint;
+      authenticated_visits: bigint;
+      anonymous_visits: bigint;
+      bot_visits: bigint;
+    }>>`
+      SELECT
+        DATE_TRUNC('hour', "createdAt") AS hour_bucket,
+        COUNT(DISTINCT "ipHash") AS unique_visitors,
+        COUNT(*) AS total_pageviews,
+        COUNT(CASE WHEN "userId" IS NOT NULL THEN 1 END) AS authenticated_visits,
+        COUNT(CASE WHEN "userId" IS NULL THEN 1 END) AS anonymous_visits,
+        COUNT(CASE WHEN "isBot" = true THEN 1 END) AS bot_visits
+      FROM "PageView"
+      WHERE "createdAt" >= ${startDate}
+        AND "createdAt" <= ${endDate}
+      GROUP BY hour_bucket
+      ORDER BY hour_bucket ASC
+    `;
+
+    return results.map(r => ({
+      timestamp: r.hour_bucket.toISOString(),
+      uniqueVisitors: Number(r.unique_visitors),
+      totalPageviews: Number(r.total_pageviews),
+      authenticatedVisits: Number(r.authenticated_visits),
+      anonymousVisits: Number(r.anonymous_visits),
+      botVisits: Number(r.bot_visits),
+    }));
+  }
+
+  /**
+   * Get monthly visitor statistics aggregated from DailyVisitStats
+   * No retention limit — DailyVisitStats is permanent
+   * @param startDate - Start date (inclusive)
+   * @param endDate - End date (inclusive)
+   * @returns Array of monthly stat buckets
+   */
+  async getMonthlyStats(startDate: Date, endDate: Date): Promise<Array<{
+    timestamp: string;
+    uniqueVisitors: number;
+    totalPageviews: number;
+    authenticatedVisits: number;
+    anonymousVisits: number;
+    botVisits: number;
+    signupsCount: number;
+  }>> {
+    const results = await prisma.$queryRaw<Array<{
+      month_bucket: Date;
+      unique_visitors: bigint;
+      total_pageviews: bigint;
+      authenticated_visits: bigint;
+      anonymous_visits: bigint;
+      bot_visits: bigint;
+      signups_count: bigint;
+    }>>`
+      SELECT
+        DATE_TRUNC('month', "date") AS month_bucket,
+        SUM("uniqueVisitors") AS unique_visitors,
+        SUM("totalPageviews") AS total_pageviews,
+        SUM("authenticatedVisits") AS authenticated_visits,
+        SUM("anonymousVisits") AS anonymous_visits,
+        SUM("botVisits") AS bot_visits,
+        SUM("signupsCount") AS signups_count
+      FROM "DailyVisitStats"
+      WHERE "date" >= ${startDate}
+        AND "date" <= ${endDate}
+      GROUP BY month_bucket
+      ORDER BY month_bucket ASC
+    `;
+
+    return results.map(r => ({
+      timestamp: r.month_bucket.toISOString(),
+      uniqueVisitors: Number(r.unique_visitors),
+      totalPageviews: Number(r.total_pageviews),
+      authenticatedVisits: Number(r.authenticated_visits),
+      anonymousVisits: Number(r.anonymous_visits),
+      botVisits: Number(r.bot_visits),
+      signupsCount: Number(r.signups_count),
+    }));
+  }
+
+  /**
    * Get current analytics configuration
    * @returns AnalyticsConfig record
    */

@@ -3982,6 +3982,164 @@ router.get('/analytics/visitors/daily', auth_1.requireStagingAuth, auth_1.requir
 });
 /**
  * @swagger
+ * /api/admin/analytics/visitors/trends:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get visitor trend data with configurable granularity (admin only)
+ *     description: |
+ *       Returns visitor trend data at hourly, daily, or monthly granularity.
+ *       - Hourly: queries PageView table (limited to 30-day retention window)
+ *       - Daily: queries DailyVisitStats table (reuses existing getStats method)
+ *       - Monthly: aggregates DailyVisitStats by month (no retention limit)
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: granularity
+ *         schema:
+ *           type: string
+ *           enum: [hourly, daily, monthly]
+ *           default: daily
+ *         description: Time bucket granularity
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date (YYYY-MM-DD). Defaults vary by granularity.
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date (YYYY-MM-DD). Defaults to now.
+ *     responses:
+ *       200:
+ *         description: Visitor trend data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 granularity:
+ *                   type: string
+ *                 startDate:
+ *                   type: string
+ *                 endDate:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       timestamp:
+ *                         type: string
+ *                       uniqueVisitors:
+ *                         type: integer
+ *                       totalPageviews:
+ *                         type: integer
+ *                       authenticatedVisits:
+ *                         type: integer
+ *                       anonymousVisits:
+ *                         type: integer
+ *                       botVisits:
+ *                         type: integer
+ *                       signupsCount:
+ *                         type: integer
+ *       400:
+ *         description: Invalid granularity or date range
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics/visitors/trends', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
+    try {
+        const granularity = req.query.granularity || 'daily';
+        const validGranularities = ['hourly', 'daily', 'monthly'];
+        if (!validGranularities.includes(granularity)) {
+            return res.status(400).json({
+                error: `Invalid granularity "${granularity}". Must be one of: ${validGranularities.join(', ')}`
+            });
+        }
+        const now = new Date();
+        let defaultStartDate;
+        let endDate;
+        // Set defaults based on granularity
+        switch (granularity) {
+            case 'hourly':
+                defaultStartDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // last 24 hours
+                break;
+            case 'monthly':
+                defaultStartDate = new Date(now.getFullYear() - 1, now.getMonth(), 1); // last 12 months
+                break;
+            case 'daily':
+            default:
+                defaultStartDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // last 30 days
+                break;
+        }
+        const startDate = req.query.startDate
+            ? new Date(req.query.startDate)
+            : defaultStartDate;
+        endDate = req.query.endDate
+            ? new Date(req.query.endDate)
+            : now;
+        // Validate hourly requests aren't asking for data older than 30 days
+        if (granularity === 'hourly') {
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            if (startDate < thirtyDaysAgo) {
+                return res.status(400).json({
+                    error: 'Hourly data is only available for the last 30 days (PageView retention window)'
+                });
+            }
+        }
+        let data;
+        switch (granularity) {
+            case 'hourly':
+                data = await visitorAnalytics_1.default.getHourlyStats(startDate, endDate);
+                break;
+            case 'monthly':
+                data = await visitorAnalytics_1.default.getMonthlyStats(startDate, endDate);
+                break;
+            case 'daily':
+            default: {
+                const stats = await visitorAnalytics_1.default.getStats(startDate, endDate);
+                data = stats.daily.map(d => ({
+                    timestamp: d.date.toISOString(),
+                    uniqueVisitors: d.uniqueVisitors,
+                    totalPageviews: d.totalPageviews,
+                    authenticatedVisits: d.authenticatedVisits,
+                    anonymousVisits: d.anonymousVisits,
+                    botVisits: d.botVisits,
+                    signupsCount: d.signupsCount,
+                }));
+                break;
+            }
+        }
+        res.json({
+            granularity,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            data,
+        });
+    }
+    catch (error) {
+        logger_1.logger.error({
+            error,
+            endpoint: '/api/admin/analytics/visitors/trends',
+            action: 'visitor_analytics_trends_error',
+            adminId: req.user?.id,
+            granularity: req.query.granularity,
+            startDate: req.query.startDate,
+            endDate: req.query.endDate
+        }, 'Failed to retrieve visitor trend data');
+        res.status(500).json({ error: 'Failed to retrieve visitor trend data' });
+    }
+});
+/**
+ * @swagger
  * /api/admin/analytics/visitors/suspicious:
  *   get:
  *     tags: [Admin]
