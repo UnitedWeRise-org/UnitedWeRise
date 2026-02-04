@@ -1414,6 +1414,10 @@
     z-index: 5;
 }
 
+.snippet-encoding-badge--failed {
+    color: #ff4444;
+}
+
 .encoding-spinner {
     width: 12px;
     height: 12px;

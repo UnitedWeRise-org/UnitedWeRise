@@ -34,6 +34,8 @@ export class SnippetsDashboard {
         this.loading = false;
         /** @type {number|null} Polling timer for encoding status updates */
         this.encodingPollTimer = null;
+        /** @type {string} Current encoding service name from backend */
+        this.encodingService = 'ffmpeg';
         /** @type {boolean} Guard to prevent duplicate reels overlays */
         this.reelsOpen = false;
 
@@ -153,6 +155,7 @@ export class SnippetsDashboard {
         try {
             const response = await apiCall('/videos/my-snippets', { method: 'GET' });
             this.allSnippets = response?.data?.videos || response?.videos || [];
+            this.encodingService = response?.data?.encodingService || response?.encodingService || 'ffmpeg';
             this.renderFilteredSnippets();
             this.startEncodingPoll();
         } catch (error) {
@@ -262,6 +265,42 @@ export class SnippetsDashboard {
     }
 
     /**
+     * Get encoding status badge HTML for a snippet.
+     * Shows milestone-based status: queued, encoding (with service), or failed.
+     * @param {Object} snippet - Snippet data
+     * @returns {string} Badge HTML or empty string if ready
+     */
+    getEncodingBadge(snippet) {
+        const { encodingStatus, encodingTiersStatus } = snippet;
+        const service = this.encodingService || 'ffmpeg';
+
+        if (!encodingStatus || encodingStatus === 'READY') return '';
+
+        if (encodingStatus === 'FAILED') {
+            return `<div class="snippet-encoding-badge snippet-encoding-badge--failed">
+                      Encoding failed
+                    </div>`;
+        }
+
+        if (encodingStatus === 'PENDING') {
+            return `<div class="snippet-encoding-badge">
+                      <span class="encoding-spinner"></span> Queued for encoding...
+                    </div>`;
+        }
+
+        // ENCODING status — show phase info
+        if (encodingTiersStatus === 'PARTIAL') {
+            return `<div class="snippet-encoding-badge">
+                      <span class="encoding-spinner"></span> Encoding 360p via ${service}...
+                    </div>`;
+        }
+
+        return `<div class="snippet-encoding-badge">
+                  <span class="encoding-spinner"></span> Encoding 720p via ${service}...
+                </div>`;
+    }
+
+    /**
      * Render a single snippet card with status badge
      * @param {Object} snippet - Snippet data
      */
@@ -269,12 +308,7 @@ export class SnippetsDashboard {
         const thumbnailUrl = snippet.thumbnailUrl || VIDEO_PLACEHOLDER;
         const caption = snippet.caption || 'No caption';
         const duration = this.formatDuration(snippet.duration || 0);
-        const isEncoding = snippet.encodingStatus && snippet.encodingStatus !== 'READY';
-        const encodingBadge = isEncoding
-            ? `<div class="snippet-encoding-badge">
-                 <span class="encoding-spinner"></span> Encoding...
-               </div>`
-            : '';
+        const encodingBadge = this.getEncodingBadge(snippet);
 
         return `
             <div class="snippet-card" data-video-id="${snippet.id}">
@@ -882,16 +916,43 @@ export class SnippetsDashboard {
             try {
                 const response = await apiCall('/videos/my-snippets', { method: 'GET' });
                 const videos = response?.data?.videos || response?.videos || [];
+                const service = response?.data?.encodingService || response?.encodingService || 'ffmpeg';
+                this.encodingService = service;
 
-                const newlyReady = videos.filter(v =>
-                    v.encodingStatus === 'READY' &&
-                    this.allSnippets.find(s => s.id === v.id && s.encodingStatus !== 'READY')
-                );
+                let toastMessages = [];
 
-                if (newlyReady.length > 0) {
+                for (const video of videos) {
+                    const prev = this.allSnippets.find(s => s.id === video.id);
+                    if (!prev) continue;
+
+                    // Detect encoding started (PENDING → ENCODING)
+                    if (prev.encodingStatus === 'PENDING' && video.encodingStatus === 'ENCODING') {
+                        toastMessages.push(`Encoding started via ${service}`);
+                    }
+
+                    // Detect Phase 1 complete (tiers NONE → PARTIAL)
+                    if (prev.encodingTiersStatus === 'NONE' && video.encodingTiersStatus === 'PARTIAL') {
+                        toastMessages.push('720p ready — encoding 360p...');
+                    }
+
+                    // Detect fully ready
+                    if (prev.encodingStatus !== 'READY' && video.encodingStatus === 'READY') {
+                        toastMessages.push('Video ready to play!');
+                    }
+
+                    // Detect failure
+                    if (prev.encodingStatus !== 'FAILED' && video.encodingStatus === 'FAILED') {
+                        toastMessages.push('Video encoding failed');
+                    }
+                }
+
+                // Update state and re-render if any changes detected
+                if (toastMessages.length > 0) {
                     this.allSnippets = videos;
                     this.renderFilteredSnippets();
-                    this.showToast(`${newlyReady.length} video(s) ready to play!`);
+                    for (const msg of toastMessages) {
+                        this.showToast(msg);
+                    }
                 }
 
                 const stillPending = videos.some(s =>

@@ -602,6 +602,9 @@ router.get('/scheduled', requireAuth, async (req: AuthRequest, res: Response) =>
  *               properties:
  *                 success:
  *                   type: boolean
+ *                 encodingService:
+ *                   type: string
+ *                   description: Active encoding service (ffmpeg or coconut)
  *                 videos:
  *                   type: array
  *                   items:
@@ -626,6 +629,10 @@ router.get('/scheduled', requireAuth, async (req: AuthRequest, res: Response) =>
  *                         enum: [DRAFT, SCHEDULED, PUBLISHED]
  *                       encodingStatus:
  *                         type: string
+ *                         enum: [PENDING, ENCODING, READY, FAILED]
+ *                       encodingTiersStatus:
+ *                         type: string
+ *                         enum: [NONE, PARTIAL, PARTIAL_FAILED, ALL]
  *                       moderationStatus:
  *                         type: string
  *                       createdAt:
@@ -662,6 +669,7 @@ router.get('/my-snippets', requireAuth, async (req: AuthRequest, res: Response) 
         hashtags: true,
         publishStatus: true,
         encodingStatus: true,
+        encodingTiersStatus: true,
         moderationStatus: true,
         createdAt: true,
         publishedAt: true,
@@ -674,8 +682,11 @@ router.get('/my-snippets', requireAuth, async (req: AuthRequest, res: Response) 
       }
     });
 
+    const encodingService = process.env.VIDEO_ENCODING_SERVICE || 'ffmpeg';
+
     res.json({
       success: true,
+      encodingService,
       videos
     });
 
