@@ -296,6 +296,39 @@ class VisitorAnalyticsService {
         }));
     }
     /**
+     * Get weekly visitor statistics aggregated from DailyVisitStats
+     * Uses PostgreSQL DATE_TRUNC('week', ...) which truncates to Monday
+     * @param startDate - Start date (inclusive)
+     * @param endDate - End date (inclusive)
+     * @returns Array of weekly stat buckets
+     */
+    async getWeeklyStats(startDate, endDate) {
+        const results = await prisma_1.prisma.$queryRaw `
+      SELECT
+        DATE_TRUNC('week', "date") AS week_bucket,
+        SUM("uniqueVisitors") AS unique_visitors,
+        SUM("totalPageviews") AS total_pageviews,
+        SUM("authenticatedVisits") AS authenticated_visits,
+        SUM("anonymousVisits") AS anonymous_visits,
+        SUM("botVisits") AS bot_visits,
+        SUM("signupsCount") AS signups_count
+      FROM "DailyVisitStats"
+      WHERE "date" >= ${startDate}
+        AND "date" <= ${endDate}
+      GROUP BY week_bucket
+      ORDER BY week_bucket ASC
+    `;
+        return results.map(r => ({
+            timestamp: r.week_bucket.toISOString(),
+            uniqueVisitors: Number(r.unique_visitors),
+            totalPageviews: Number(r.total_pageviews),
+            authenticatedVisits: Number(r.authenticated_visits),
+            anonymousVisits: Number(r.anonymous_visits),
+            botVisits: Number(r.bot_visits),
+            signupsCount: Number(r.signups_count),
+        }));
+    }
+    /**
      * Get current analytics configuration
      * @returns AnalyticsConfig record
      */

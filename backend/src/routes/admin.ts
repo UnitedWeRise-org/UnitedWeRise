@@ -4388,9 +4388,10 @@ router.get('/analytics/visitors/daily', requireStagingAuth, requireAdmin, async 
  *     tags: [Admin]
  *     summary: Get visitor trend data with configurable granularity (admin only)
  *     description: |
- *       Returns visitor trend data at hourly, daily, or monthly granularity.
+ *       Returns visitor trend data at hourly, daily, weekly, or monthly granularity.
  *       - Hourly: queries PageView table (limited to 30-day retention window)
  *       - Daily: queries DailyVisitStats table (reuses existing getStats method)
+ *       - Weekly: aggregates DailyVisitStats by week (no retention limit)
  *       - Monthly: aggregates DailyVisitStats by month (no retention limit)
  *     security:
  *       - cookieAuth: []
@@ -4399,7 +4400,7 @@ router.get('/analytics/visitors/daily', requireStagingAuth, requireAdmin, async 
  *         name: granularity
  *         schema:
  *           type: string
- *           enum: [hourly, daily, monthly]
+ *           enum: [hourly, daily, weekly, monthly]
  *           default: daily
  *         description: Time bucket granularity
  *       - in: query
@@ -4459,7 +4460,7 @@ router.get('/analytics/visitors/daily', requireStagingAuth, requireAdmin, async 
 router.get('/analytics/visitors/trends', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const granularity = (req.query.granularity as string) || 'daily';
-    const validGranularities = ['hourly', 'daily', 'monthly'];
+    const validGranularities = ['hourly', 'daily', 'weekly', 'monthly'];
 
     if (!validGranularities.includes(granularity)) {
       return res.status(400).json({
@@ -4475,6 +4476,9 @@ router.get('/analytics/visitors/trends', requireStagingAuth, requireAdmin, async
     switch (granularity) {
       case 'hourly':
         defaultStartDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // last 24 hours
+        break;
+      case 'weekly':
+        defaultStartDate = new Date(now.getTime() - 84 * 24 * 60 * 60 * 1000); // last 12 weeks
         break;
       case 'monthly':
         defaultStartDate = new Date(now.getFullYear() - 1, now.getMonth(), 1); // last 12 months
@@ -4507,6 +4511,9 @@ router.get('/analytics/visitors/trends', requireStagingAuth, requireAdmin, async
     switch (granularity) {
       case 'hourly':
         data = await visitorAnalytics.getHourlyStats(startDate, endDate);
+        break;
+      case 'weekly':
+        data = await visitorAnalytics.getWeeklyStats(startDate, endDate);
         break;
       case 'monthly':
         data = await visitorAnalytics.getMonthlyStats(startDate, endDate);

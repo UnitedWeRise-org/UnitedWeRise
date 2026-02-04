@@ -120,6 +120,22 @@ declare class VisitorAnalyticsService {
         signupsCount: number;
     }>>;
     /**
+     * Get weekly visitor statistics aggregated from DailyVisitStats
+     * Uses PostgreSQL DATE_TRUNC('week', ...) which truncates to Monday
+     * @param startDate - Start date (inclusive)
+     * @param endDate - End date (inclusive)
+     * @returns Array of weekly stat buckets
+     */
+    getWeeklyStats(startDate: Date, endDate: Date): Promise<Array<{
+        timestamp: string;
+        uniqueVisitors: number;
+        totalPageviews: number;
+        authenticatedVisits: number;
+        anonymousVisits: number;
+        botVisits: number;
+        signupsCount: number;
+    }>>;
+    /**
      * Get current analytics configuration
      * @returns AnalyticsConfig record
      */

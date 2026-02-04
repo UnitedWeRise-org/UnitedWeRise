@@ -1389,9 +1389,9 @@ class AnalyticsController {
 
             const visitorData = {
                 overview: overviewResponse.data,
-                daily: dailyResponse.ok ? dailyResponse.data : null,
-                suspicious: suspiciousResponse.ok ? suspiciousResponse.data : null,
-                config: configResponse.ok ? configResponse.data : null
+                daily: dailyResponse.success ? dailyResponse.data : null,
+                suspicious: suspiciousResponse.success ? suspiciousResponse.data : null,
+                config: configResponse.success ? configResponse.data : null
             };
 
             this.displayVisitorAnalytics(visitorData);
@@ -1506,6 +1506,8 @@ class AnalyticsController {
      * Set up granularity control button handlers
      */
     setupGranularityControls() {
+        if (this._granularityControlsSetup) return;
+
         const controls = document.getElementById('granularityControls');
         if (!controls) return;
 
@@ -1525,6 +1527,8 @@ class AnalyticsController {
                 this.loadVisitorTrendData();
             });
         });
+
+        this._granularityControlsSetup = true;
     }
 
     /**
@@ -1537,12 +1541,17 @@ class AnalyticsController {
 
             const response = await window.AdminAPI.get(url);
 
-            if (!response.ok && !response.data) {
+            if (!response.success || !response.data) {
                 throw new Error('Failed to load visitor trend data');
             }
 
-            const trendData = response.data || response;
-            this.renderVisitorTrendChart(trendData);
+            // AdminAPI.get() unwraps json.data, so response.data is the raw array
+            // when the backend returns { granularity, startDate, endDate, data: [...] }.
+            // Reconstruct the expected { granularity, data } structure.
+            this.renderVisitorTrendChart({
+                granularity: this.currentGranularity,
+                data: Array.isArray(response.data) ? response.data : (response.data.data || [])
+            });
 
         } catch (error) {
             adminDebugError('AnalyticsController', 'Error loading visitor trend data', error);
@@ -1575,6 +1584,7 @@ class AnalyticsController {
             const titles = {
                 hourly: 'Hourly Visitor Trends (Last 24 Hours)',
                 daily: 'Daily Visitor Trends (Last 30 Days)',
+                weekly: 'Weekly Visitor Trends (Last 12 Weeks)',
                 monthly: 'Monthly Visitor Trends (Last 12 Months)'
             };
             if (titleEl) {
@@ -1602,6 +1612,14 @@ class AnalyticsController {
                                 ', ' + date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
                         }
                         return date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+                    }
+                    case 'weekly': {
+                        // Show week range: "Jan 6 – Jan 12"
+                        const weekEnd = new Date(date);
+                        weekEnd.setDate(weekEnd.getDate() + 6);
+                        const startLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        const endLabel = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return `${startLabel} – ${endLabel}`;
                     }
                     case 'monthly':
                         return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
