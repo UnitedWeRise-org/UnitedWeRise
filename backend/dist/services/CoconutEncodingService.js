@@ -106,8 +106,8 @@ class CoconutEncodingService {
                 container: 'videos-encoded',
                 path: `/${videoId}`,
                 credentials: {
-                    account_name: this.storageAccountName,
-                    account_key: this.storageAccountKey
+                    account: this.storageAccountName,
+                    access_key: this.storageAccountKey
                 }
             },
             outputs: {
@@ -122,7 +122,8 @@ class CoconutEncodingService {
                 type: 'http',
                 url: `${this.webhookBaseUrl}/webhooks/coconut/${this.webhookSecret}`,
                 events: true,
-                metadata: {
+                metadata: false,
+                params: {
                     video_id: videoId,
                     phase: options.phase,
                     input_blob_name: inputBlobName

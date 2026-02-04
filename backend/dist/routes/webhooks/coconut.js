@@ -59,11 +59,13 @@ router.post('/:secret', async (req, res) => {
             return res.status(403).json({ error: 'Forbidden' });
         }
         const payload = req.body;
-        const videoId = payload.metadata?.video_id;
-        const phase = payload.metadata?.phase;
+        // Custom params are sent as URL query strings by Coconut (not in POST body)
+        const videoId = req.query.video_id;
+        const phase = req.query.phase;
+        const inputBlobName = req.query.input_blob_name;
         logger_1.logger.info({
             event: payload.event,
-            coconutJobId: payload.id,
+            coconutJobId: payload.job_id,
             videoId,
             phase
         }, 'Coconut webhook received');
@@ -74,7 +76,7 @@ router.post('/:secret', async (req, res) => {
             logger_1.logger.warn({ event: payload.event }, 'Coconut webhook missing video_id in metadata');
             return;
         }
-        await processCoconutEvent(payload, videoId, phase || '1');
+        await processCoconutEvent(payload, videoId, phase || '1', inputBlobName);
     }
     catch (error) {
         logger_1.logger.error({ error }, 'Coconut webhook handler error');
@@ -90,11 +92,11 @@ router.post('/:secret', async (req, res) => {
 /**
  * Process a Coconut webhook event.
  */
-async function processCoconutEvent(payload, videoId, phase) {
+async function processCoconutEvent(payload, videoId, phase, inputBlobName) {
     switch (payload.event) {
         case 'job.completed':
             if (phase === '1') {
-                await handlePhase1Completed(videoId, payload);
+                await handlePhase1Completed(videoId, payload, inputBlobName);
             }
             else if (phase === '2') {
                 await handlePhase2Completed(videoId);
@@ -119,7 +121,7 @@ async function processCoconutEvent(payload, videoId, phase) {
  * - Trigger content moderation
  * - Kick off Phase 2 encoding
  */
-async function handlePhase1Completed(videoId, payload) {
+async function handlePhase1Completed(videoId, payload, inputBlobName) {
     const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || '';
     const cdnEndpoint = process.env.AZURE_CDN_ENDPOINT;
     // Build manifest URL (Coconut generates master.m3u8)
@@ -153,7 +155,6 @@ async function handlePhase1Completed(videoId, payload) {
         }
     }
     // Kick off Phase 2 (720p + 360p) — non-fatal
-    const inputBlobName = payload.metadata?.input_blob_name;
     if (inputBlobName) {
         try {
             const phase2Result = await CoconutEncodingService_1.coconutEncodingService.createPhase2Job(videoId, inputBlobName);

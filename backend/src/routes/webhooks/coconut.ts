@@ -27,22 +27,22 @@ const router = express.Router();
 // ========================================
 
 interface CoconutWebhookPayload {
-  /** Coconut job ID */
-  id: number;
+  /** Coconut job ID (string in v2 API) */
+  job_id: string;
   /** Event type: job.completed, job.failed, output.completed, output.failed, etc. */
   event: string;
-  /** Job status */
-  status?: string;
+  /** Whether FFprobe metadata is included (boolean, not custom data) */
+  metadata: boolean;
+  /** Job data envelope */
+  data?: {
+    type?: string;
+    status?: string;
+    progress?: string;
+    id?: string;
+    outputs?: Array<{ key: string; type: string; status: string; url?: string; }>;
+  };
   /** Error details (present on failure) */
   errors?: Record<string, any>;
-  /** Custom metadata passed when creating the job */
-  metadata?: {
-    video_id?: string;
-    phase?: string;
-    input_blob_name?: string;
-  };
-  /** Output URLs keyed by output format */
-  output_urls?: Record<string, string>;
 }
 
 // ========================================
@@ -82,12 +82,15 @@ router.post('/:secret', async (req: Request, res: Response) => {
     }
 
     const payload = req.body as CoconutWebhookPayload;
-    const videoId = payload.metadata?.video_id;
-    const phase = payload.metadata?.phase;
+
+    // Custom params are sent as URL query strings by Coconut (not in POST body)
+    const videoId = req.query.video_id as string | undefined;
+    const phase = req.query.phase as string | undefined;
+    const inputBlobName = req.query.input_blob_name as string | undefined;
 
     logger.info({
       event: payload.event,
-      coconutJobId: payload.id,
+      coconutJobId: payload.job_id,
       videoId,
       phase
     }, 'Coconut webhook received');
@@ -101,7 +104,7 @@ router.post('/:secret', async (req: Request, res: Response) => {
       return;
     }
 
-    await processCoconutEvent(payload, videoId, phase || '1');
+    await processCoconutEvent(payload, videoId, phase || '1', inputBlobName);
   } catch (error) {
     logger.error({ error }, 'Coconut webhook handler error');
     // Still return 200 if not already sent to prevent retries
@@ -121,12 +124,13 @@ router.post('/:secret', async (req: Request, res: Response) => {
 async function processCoconutEvent(
   payload: CoconutWebhookPayload,
   videoId: string,
-  phase: string
+  phase: string,
+  inputBlobName?: string
 ): Promise<void> {
   switch (payload.event) {
     case 'job.completed':
       if (phase === '1') {
-        await handlePhase1Completed(videoId, payload);
+        await handlePhase1Completed(videoId, payload, inputBlobName);
       } else if (phase === '2') {
         await handlePhase2Completed(videoId);
       }
@@ -157,7 +161,8 @@ async function processCoconutEvent(
  */
 async function handlePhase1Completed(
   videoId: string,
-  payload: CoconutWebhookPayload
+  payload: CoconutWebhookPayload,
+  inputBlobName?: string
 ): Promise<void> {
   const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || '';
   const cdnEndpoint = process.env.AZURE_CDN_ENDPOINT;
@@ -197,7 +202,6 @@ async function handlePhase1Completed(
   }
 
   // Kick off Phase 2 (720p + 360p) — non-fatal
-  const inputBlobName = payload.metadata?.input_blob_name;
   if (inputBlobName) {
     try {
       const phase2Result = await coconutEncodingService.createPhase2Job(videoId, inputBlobName);

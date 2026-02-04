@@ -43,7 +43,8 @@ interface CoconutJobPayload {
     type: string;
     url: string;
     events: boolean;
-    metadata: Record<string, string>;
+    metadata: boolean;
+    params: Record<string, string>;
   };
 }
 
@@ -178,7 +179,8 @@ export class CoconutEncodingService {
         type: 'http',
         url: `${this.webhookBaseUrl}/webhooks/coconut/${this.webhookSecret}`,
         events: true,
-        metadata: {
+        metadata: false,
+        params: {
           video_id: videoId,
           phase: options.phase,
           input_blob_name: inputBlobName
