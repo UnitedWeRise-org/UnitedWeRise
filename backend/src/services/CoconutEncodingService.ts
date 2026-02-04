@@ -27,8 +27,8 @@ interface CoconutJobPayload {
     container: string;
     path: string;
     credentials: {
-      account_name: string;
-      account_key: string;
+      account: string;
+      access_key: string;
     };
   };
   outputs: {
@@ -162,8 +162,8 @@ export class CoconutEncodingService {
         container: 'videos-encoded',
         path: `/${videoId}`,
         credentials: {
-          account_name: this.storageAccountName,
-          account_key: this.storageAccountKey
+          account: this.storageAccountName,
+          access_key: this.storageAccountKey
         }
       },
       outputs: {
