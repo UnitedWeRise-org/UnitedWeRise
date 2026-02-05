@@ -381,7 +381,7 @@ class NavigationHandlers {
                 {
                     const videoId = target.closest('[data-video-id]')?.dataset.videoId;
                     if (videoId) {
-                        this.playPostVideo(videoId);
+                        this.playSnippetReels(videoId);
                     }
                 }
                 break;
@@ -1423,6 +1423,57 @@ class NavigationHandlers {
             if (typeof window.showToast === 'function') {
                 window.showToast('Failed to load video');
             }
+        }
+    }
+
+    /**
+     * Play a snippet video in full reels mode with navigation
+     * Uses cached snippets from FeedToggle for seamless scrolling experience
+     * @param {string} videoId - Video ID to start at
+     */
+    async playSnippetReels(videoId) {
+        if (!videoId) {
+            console.error('playSnippetReels: No video ID provided');
+            return;
+        }
+
+        try {
+            // Get cached snippets from FeedToggle
+            const feedToggle = window.feedToggle;
+            let snippets = feedToggle?.caches?.snippets || [];
+
+            // Fallback: fetch if no cache
+            if (snippets.length === 0) {
+                const { apiCall } = await import('../js/api-compatibility-shim.js');
+                const response = await apiCall('/videos/feed?limit=15', { method: 'GET' });
+                snippets = response?.videos || response?.data?.videos || [];
+            }
+
+            // If still no snippets, fall back to single-video modal
+            if (snippets.length === 0) {
+                console.warn('playSnippetReels: No snippets available, falling back to single video');
+                return this.playPostVideo(videoId);
+            }
+
+            // Verify the requested video is in the snippets list
+            const targetExists = snippets.some(s => s.id === videoId);
+            if (!targetExists) {
+                // Video not in feed cache, fall back to single modal
+                console.warn('playSnippetReels: Video not in snippets cache, falling back to single video');
+                return this.playPostVideo(videoId);
+            }
+
+            const { SnippetReelsPlayer } = await import('../modules/features/video/SnippetReelsPlayer.js');
+            const player = new SnippetReelsPlayer({
+                snippets,
+                startVideoId: videoId
+            });
+            player.open();
+
+        } catch (error) {
+            console.error('playSnippetReels failed:', error);
+            // Fall back to single video modal
+            return this.playPostVideo(videoId);
         }
     }
 

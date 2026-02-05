@@ -1325,6 +1325,7 @@
     width: 100%;
     height: calc(100vh - 5.5vh);
     scroll-snap-align: start;
+    scroll-snap-stop: always;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1342,10 +1343,24 @@
 }
 
 
-/* Square videos get width-driven sizing */
+/* Wrapper aspect classes constrain width from the start (before VideoPlayer renders) */
+.snippets-reels-video.reels-video--vertical {
+    width: calc((100vh - 5.5vh) * 9 / 16);
+    max-width: 100%;
+}
+
+.snippets-reels-video.reels-video--portrait {
+    width: calc((100vh - 5.5vh) * 4 / 5);
+    max-width: 100%;
+}
+
 .snippets-reels-video.reels-video--square {
-    width: 100%;
+    width: calc(100vh - 5.5vh);
     max-width: 600px;
+}
+
+.snippets-reels-video.reels-video--horizontal {
+    width: min(100%, calc((100vh - 5.5vh) * 16 / 9));
 }
 
 .snippets-reels-overlay .video-player {
@@ -1472,6 +1487,25 @@
         height: 100%;
     }
 
+    /* Mobile wrapper aspect classes */
+    .snippets-reels-video.reels-video--vertical {
+        width: calc((100vh - 55px) * 9 / 16);
+    }
+
+    .snippets-reels-video.reels-video--portrait {
+        width: calc((100vh - 55px) * 4 / 5);
+    }
+
+    .snippets-reels-video.reels-video--square {
+        width: calc(100vh - 55px);
+        max-width: 100%;
+    }
+
+    .snippets-reels-video.reels-video--horizontal {
+        width: min(100%, calc((100vh - 55px) * 16 / 9));
+    }
+
+    /* Mobile VideoPlayer aspect classes */
     .snippets-reels-overlay .video-player--vertical {
         width: calc((100vh - 55px) * 9 / 16);
     }

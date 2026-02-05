@@ -740,130 +740,17 @@ export class SnippetsDashboard {
         }
 
         try {
-            const { VideoPlayer } = await import('./VideoPlayer.js');
-
-            // Create fullscreen reels overlay
-            const overlay = document.createElement('div');
-            overlay.className = 'snippets-reels-overlay';
-            overlay.innerHTML = `
-                <button class="snippets-reels-close">&times;</button>
-                <div class="snippets-reels-container">
-                    ${filteredSnippets.map((snippet, i) => {
-                        const reelsAspect = snippet.aspectRatio === 'SQUARE_1_1' ? 'reels-video--square' : '';
-                        return `
-                        <div class="snippets-reels-item" data-index="${i}" data-video-id="${snippet.id}">
-                            <div class="snippets-reels-video ${reelsAspect}" id="reelsPlayer-${snippet.id}"></div>
-                            ${snippet.caption ? `<div class="snippets-reels-caption"><p>${this.escapeHtml(snippet.caption)}</p></div>` : ''}
-                        </div>
-                    `;}).join('')}
-                </div>
-            `;
-
-            document.body.appendChild(overlay);
-            document.body.style.overflow = 'hidden';
-
-            // Lazy-load VideoPlayers: only current + next 2 initially
-            const players = new Map();
-
-            /**
-             * Create a VideoPlayer for a specific index if not already loaded
-             * @param {number} index - Index in filteredSnippets array
-             */
-            const ensurePlayerLoaded = (index) => {
-                if (index < 0 || index >= filteredSnippets.length) return;
-                const snippet = filteredSnippets[index];
-                if (players.has(snippet.id)) return;
-                if (!snippet.hlsManifestUrl && !snippet.mp4Url && !snippet.originalUrl) return;
-
-                const container = document.getElementById(`reelsPlayer-${snippet.id}`);
-                if (!container) return;
-
-                const player = new VideoPlayer({
-                    container,
-                    hlsUrl: snippet.hlsManifestUrl,
-                    mp4Url: snippet.mp4Url || snippet.originalUrl,
-                    thumbnailUrl: snippet.thumbnailUrl,
-                    aspectRatio: snippet.aspectRatio,
-                    autoplay: false,
-                    muted: true,
-                    loop: true
-                });
-                players.set(snippet.id, player);
-
-                // Hide play overlay in reels mode (playback is auto-managed)
-                const playOverlay = container.querySelector('#playOverlay');
-                if (playOverlay) playOverlay.style.display = 'none';
-
-            };
-
-            // Load current + next 2
-            ensurePlayerLoaded(startIndex);
-            ensurePlayerLoaded(startIndex + 1);
-            ensurePlayerLoaded(startIndex + 2);
-
-            // Scroll to the clicked video
-            const startItem = overlay.querySelector(`[data-index="${startIndex}"]`);
-            if (startItem) {
-                startItem.scrollIntoView({ behavior: 'instant' });
-            }
-
-            // Let the IntersectionObserver handle ALL play triggers (including initial)
-            let currentlyPlaying = null;
-
-            // IntersectionObserver for auto-play on scroll + lazy pre-loading
-            const scrollContainer = overlay.querySelector('.snippets-reels-container');
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    const vid = entry.target.dataset.videoId;
-                    const visibleIndex = parseInt(entry.target.dataset.index);
-
-                    if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-                        // Pre-load next 2 ahead
-                        ensurePlayerLoaded(visibleIndex + 1);
-                        ensurePlayerLoaded(visibleIndex + 2);
-
-                        if (vid !== currentlyPlaying) {
-                            const oldPlayer = players.get(currentlyPlaying);
-                            if (oldPlayer) oldPlayer.pause();
-
-                            // Ensure this player is loaded, then wait for ready before playing
-                            ensurePlayerLoaded(visibleIndex);
-                            const newPlayer = players.get(vid);
-                            if (newPlayer) {
-                                newPlayer.whenReady().then(() => {
-                                    newPlayer.play();
-                                });
-                            }
-                            currentlyPlaying = vid;
-                        }
-                    }
-                });
-            }, { root: scrollContainer, threshold: 0.5 });
-
-            overlay.querySelectorAll('.snippets-reels-item').forEach(item => {
-                observer.observe(item);
+            const { SnippetReelsPlayer } = await import('./SnippetReelsPlayer.js');
+            this.reelsPlayer = new SnippetReelsPlayer({
+                snippets: filteredSnippets,
+                startVideoId: videoId,
+                onClose: () => {
+                    this.startEncodingPoll();
+                    this.reelsOpen = false;
+                    this.reelsPlayer = null;
+                }
             });
-
-            // Cleanup function
-            const cleanup = () => {
-                observer.disconnect();
-                players.forEach(p => p.destroy());
-                players.clear();
-                overlay.remove();
-                document.body.style.overflow = '';
-                document.removeEventListener('keydown', handleEsc);
-                this.startEncodingPoll();
-                this.reelsOpen = false;
-            };
-
-            // Close button
-            overlay.querySelector('.snippets-reels-close').addEventListener('click', cleanup);
-
-            // Escape key
-            const handleEsc = (e) => {
-                if (e.key === 'Escape') cleanup();
-            };
-            document.addEventListener('keydown', handleEsc);
+            this.reelsPlayer.open();
         } catch (error) {
             this.reelsOpen = false;
             console.error('Failed to open reels player:', error);
