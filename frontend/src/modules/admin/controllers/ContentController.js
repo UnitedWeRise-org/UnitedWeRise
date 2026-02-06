@@ -737,6 +737,13 @@ class ContentController {
      * Show error message
      */
     showError(message) {
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('ContentController: Error suppressed (session ending):', message);
+            return;
+        }
+
         console.error('ContentController Error:', message);
 
         // Show error in the current active tab

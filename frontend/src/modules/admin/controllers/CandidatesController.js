@@ -2115,6 +2115,13 @@ class CandidatesController {
     }
 
     showError(message) {
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('CandidatesController: Error suppressed (session ending):', message);
+            return;
+        }
+
         const errorContainer = document.getElementById('candidatesError');
         if (errorContainer) {
             errorContainer.textContent = message;

@@ -409,6 +409,13 @@ class PaymentsController {
      * Show error message
      */
     showError(message) {
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('PaymentsController: Error suppressed (session ending):', message);
+            return;
+        }
+
         const errorEl = document.getElementById('paymentsError');
         if (errorEl) {
             errorEl.textContent = message;

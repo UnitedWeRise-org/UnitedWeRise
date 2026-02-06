@@ -254,6 +254,14 @@ class ReportsController {
                 console.error('Auto-refresh failed:', error);
             }
         }, 300000);
+
+        // Clear interval when session ends to prevent 401 cascades
+        window.addEventListener('adminSessionEnded', () => {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
+        }, { once: true });
     }
 
     /**
@@ -1339,9 +1347,10 @@ ${item.notes ? `Notes: ${item.notes}` : ''}
      * Suppresses errors during wake-from-sleep recovery to prevent transient error popups
      */
     showError(message) {
-        // Suppress errors during recovery mode (wake-from-sleep token refresh)
-        if (window.adminAuth?.isRecovering) {
-            console.warn('ReportsController: Error suppressed during recovery:', message);
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('ReportsController: Error suppressed (session ending):', message);
             return;
         }
 

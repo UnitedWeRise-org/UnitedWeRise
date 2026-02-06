@@ -651,6 +651,13 @@ class UsersController {
      * Show error message
      */
     showError(message) {
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('UsersController: Error suppressed (session ending):', message);
+            return;
+        }
+
         console.error('UsersController Error:', message);
 
         const container = document.getElementById('usersTable');

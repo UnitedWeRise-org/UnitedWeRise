@@ -1429,6 +1429,13 @@ class SystemController {
      * Show error message
      */
     showError(message) {
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('SystemController: Error suppressed (session ending):', message);
+            return;
+        }
+
         console.error('SystemController Error:', message);
 
         const consoleDiv = document.getElementById('systemConsole');

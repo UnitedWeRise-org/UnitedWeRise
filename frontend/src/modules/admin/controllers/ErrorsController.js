@@ -1567,6 +1567,13 @@ class ErrorsController {
      * Show error message
      */
     async showError(message) {
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('ErrorsController: Error suppressed (session ending):', message);
+            return;
+        }
+
         await adminDebugError('ErrorsController', 'Error message', { message });
 
         const consoleDiv = document.getElementById('errorsConsole');

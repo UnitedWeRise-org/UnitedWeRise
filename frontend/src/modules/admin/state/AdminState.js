@@ -63,15 +63,15 @@ class AdminState {
      * Suppresses errors during wake-from-sleep recovery to prevent transient error popups
      */
     showError(message) {
-        // Suppress errors during recovery mode (wake-from-sleep token refresh)
-        if (window.adminAuth?.isRecovering) {
-            console.warn('AdminState: Error suppressed during recovery:', message);
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('AdminState: Error suppressed (session ending):', message);
             return;
         }
 
         console.error('AdminState Error:', message);
 
-        // Try to show in error element, fallback to alert
         const errorElement = document.getElementById('adminError');
         if (errorElement) {
             errorElement.textContent = message;
@@ -79,8 +79,6 @@ class AdminState {
             setTimeout(() => {
                 errorElement.style.display = 'none';
             }, 5000);
-        } else {
-            alert(`Admin Error: ${message}`);
         }
     }
 
@@ -371,6 +369,9 @@ class AdminState {
      * Extracted from refreshAllData function
      */
     async refreshAllData() {
+        // Skip refresh if session has ended
+        if (!window.adminAuth?.isAuthenticated()) return;
+
         // Check token freshness before refresh (like AdminAuth auto-refresh does)
         if (window.adminAuth) {
             const timeSinceLastRefresh = (Date.now() - (window.adminAuth.lastTokenRefresh || 0)) / 1000 / 60;
@@ -445,6 +446,9 @@ class AdminState {
                     break;
                 case 'payments':
                     await this.loadPaymentsData({}, false);
+                    break;
+                case 'analytics':
+                    await this.loadAnalyticsData({}, false);
                     break;
                 default:
                     console.warn(`Unknown section: ${sectionId}`);

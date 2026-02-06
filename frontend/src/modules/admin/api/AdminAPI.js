@@ -170,6 +170,15 @@ class AdminAPI {
      * Core method extracted from adminApiCall in admin-dashboard.html
      */
     async call(url, options = {}, retryCount = 0) {
+        // Block API calls when session is ending — prevents cascading 401 errors
+        // and error popups during logout
+        if (this.isLoggingOut) {
+            return new Response(JSON.stringify({ error: 'Session expired' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         // Wait for any in-progress token refresh before making API call
         await this.waitForTokenRefresh();
 
@@ -1777,6 +1786,20 @@ class AdminAPI {
         return this.post(`${this.BACKEND_URL}/api/admin/organizations/${orgId}/reactivate`, {
             reason
         });
+    }
+
+    /**
+     * Check if errors should be suppressed because the session is ending.
+     * Used by all controller showError() methods to prevent error popups during logout.
+     * Covers: active logout, wake-from-sleep recovery, and already-expired sessions.
+     * @returns {boolean} True if errors should be suppressed
+     */
+    static shouldSuppressErrors() {
+        return !!(
+            window.AdminAPI?.isLoggingOut ||
+            window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())
+        );
     }
 }
 

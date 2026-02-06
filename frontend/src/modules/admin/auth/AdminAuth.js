@@ -620,6 +620,9 @@ class AdminAuth {
 
         // Redirect to login
         this.showLogin();
+
+        // Notify all components to stop background activity (auto-refresh intervals, etc.)
+        window.dispatchEvent(new CustomEvent('adminSessionEnded'));
     }
 
     /**

@@ -830,9 +830,10 @@ class DeploymentController {
      * Suppresses errors during wake-from-sleep recovery to prevent transient error popups
      */
     showError(message) {
-        // Suppress errors during recovery mode (wake-from-sleep token refresh)
-        if (window.adminAuth?.isRecovering) {
-            console.warn('DeploymentController: Error suppressed during recovery:', message);
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('DeploymentController: Error suppressed (session ending):', message);
             return;
         }
 

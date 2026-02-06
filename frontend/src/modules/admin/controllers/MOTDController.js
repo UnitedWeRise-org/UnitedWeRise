@@ -1631,6 +1631,13 @@ class MOTDController {
      * Show error message
      */
     showError(message) {
+        // Suppress errors when session is ending (logout, recovery, or expired)
+        if (window.AdminAPI?.isLoggingOut || window.adminAuth?.isRecovering ||
+            (window.adminAuth && !window.adminAuth.isAuthenticated())) {
+            console.warn('MOTDController: Error suppressed (session ending):', message);
+            return;
+        }
+
         console.error('MOTDController Error:', message);
 
         const container = document.getElementById('motdContainer');
