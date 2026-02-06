@@ -163,6 +163,7 @@ router.get('/conversations', auth_1.requireAuth, async (req, res) => {
             };
         });
         res.json({
+            success: true,
             conversations: formattedConversations,
             pagination: {
                 limit: limitNum,
@@ -326,6 +327,7 @@ router.post('/conversations', auth_1.requireAuth, async (req, res) => {
         });
         if (existingConversation && existingConversation.participants.length === 2) {
             return res.json({
+                success: true,
                 message: 'Conversation already exists',
                 conversation: {
                     id: existingConversation.id,
@@ -362,6 +364,7 @@ router.post('/conversations', auth_1.requireAuth, async (req, res) => {
             }
         });
         res.status(201).json({
+            success: true,
             message: 'Conversation created successfully',
             conversation: {
                 id: conversation.id,
@@ -533,6 +536,7 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
             data: { lastReadAt: new Date() }
         });
         res.json({
+            success: true,
             messages: messages.reverse(), // Return in chronological order
             pagination: {
                 limit: limitNum,
@@ -735,6 +739,7 @@ router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateL
             (0, notifications_1.createNotification)('MESSAGE_REQUEST', userId, recipientId, `${senderName} wants to message you`, undefined, undefined).catch(error => logger_1.logger.error({ error }, 'Failed to create message request notification'));
         }
         res.status(201).json({
+            success: true,
             message: messageStatus === 'PENDING' ? 'Message request sent - awaiting acceptance' : 'Message sent successfully',
             data: {
                 ...message,
@@ -831,6 +836,7 @@ router.get('/requests', auth_1.requireAuth, async (req, res) => {
             }
         }
         res.json({
+            success: true,
             requests: Array.from(requestsByConversation.values()),
             count: requestsByConversation.size
         });
@@ -905,6 +911,7 @@ router.put('/requests/:conversationId/accept', auth_1.requireAuth, async (req, r
         // Also mark future messages as DELIVERED by creating a "delivered" marker
         // This is handled in the send message logic - if any DELIVERED message exists, future are DELIVERED
         res.json({
+            success: true,
             message: 'Message request accepted',
             conversationId,
             acceptedCount: pendingMessages.length
@@ -984,6 +991,7 @@ router.put('/requests/:conversationId/decline', auth_1.requireAuth, async (req, 
             });
         }
         res.json({
+            success: true,
             message: 'Message request declined',
             conversationId,
             deletedCount: pendingMessages.length

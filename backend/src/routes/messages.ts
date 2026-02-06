@@ -167,6 +167,7 @@ router.get('/conversations', requireAuth, async (req: AuthRequest, res) => {
     });
 
     res.json({
+      success: true,
       conversations: formattedConversations,
       pagination: {
         limit: limitNum,
@@ -336,6 +337,7 @@ router.post('/conversations', requireAuth, async (req: AuthRequest, res) => {
 
     if (existingConversation && existingConversation.participants.length === 2) {
       return res.json({
+        success: true,
         message: 'Conversation already exists',
         conversation: {
           id: existingConversation.id,
@@ -374,6 +376,7 @@ router.post('/conversations', requireAuth, async (req: AuthRequest, res) => {
     });
 
     res.status(201).json({
+      success: true,
       message: 'Conversation created successfully',
       conversation: {
         id: conversation.id,
@@ -554,6 +557,7 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
     });
 
     res.json({
+      success: true,
       messages: messages.reverse(), // Return in chronological order
       pagination: {
         limit: limitNum,
@@ -777,6 +781,7 @@ router.post('/conversations/:conversationId/messages', requireAuth, messageLimit
     }
 
     res.status(201).json({
+      success: true,
       message: messageStatus === 'PENDING' ? 'Message request sent - awaiting acceptance' : 'Message sent successfully',
       data: {
         ...message,
@@ -875,6 +880,7 @@ router.get('/requests', requireAuth, async (req: AuthRequest, res) => {
     }
 
     res.json({
+      success: true,
       requests: Array.from(requestsByConversation.values()),
       count: requestsByConversation.size
     });
@@ -956,6 +962,7 @@ router.put('/requests/:conversationId/accept', requireAuth, async (req: AuthRequ
     // This is handled in the send message logic - if any DELIVERED message exists, future are DELIVERED
 
     res.json({
+      success: true,
       message: 'Message request accepted',
       conversationId,
       acceptedCount: pendingMessages.length
@@ -1043,6 +1050,7 @@ router.put('/requests/:conversationId/decline', requireAuth, async (req: AuthReq
     }
 
     res.json({
+      success: true,
       message: 'Message request declined',
       conversationId,
       deletedCount: pendingMessages.length
