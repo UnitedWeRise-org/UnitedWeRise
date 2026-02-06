@@ -261,6 +261,13 @@ app.use((req, res, next) => {
     return next();
   }
 
+  // Skip CSRF for mobile clients — they use Bearer token auth, not cookies
+  // CSRF is a browser-specific attack; mobile apps are not vulnerable
+  // SECURITY: X-Client-Type is NOT in CORS allowedHeaders, so browsers cannot send it
+  if (req.headers['x-client-type'] === 'mobile') {
+    return next();
+  }
+
   // Apply CSRF verification to all other methods
   return verifyCsrf(req, res, next);
 });
