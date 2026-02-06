@@ -263,13 +263,24 @@ router.post('/google', authLimiter, async (req, res) => {
       provider: 'google'
     }, 'OAuth login successful');
 
-    res.json({
+    // Check if this is a mobile client (needs tokens in response body)
+    const isMobileClient = req.get('X-Client-Type') === 'mobile' ||
+                           userAgent.includes('UnitedWeRise-iOS');
+
+    const responseData: any = {
       message: result.user.isNewUser ? 'Account created successfully' : 'Login successful',
       user: result.user,
       csrfToken,
       isNewUser: result.user.isNewUser
-      // Token is in httpOnly cookie only (not exposed to JavaScript)
-    });
+    };
+
+    // For mobile clients, include tokens in response body (they can't use httpOnly cookies)
+    if (isMobileClient) {
+      responseData.accessToken = result.token;
+      responseData.refreshToken = result.refreshToken;
+    }
+
+    res.json(responseData);
 
   } catch (error) {
     const errorId = await ErrorLoggingService.logError({
