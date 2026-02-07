@@ -150,9 +150,28 @@ class VideoPipeline {
                     if (!videoStream) {
                         throw new Error('No video stream found');
                     }
-                    const width = videoStream.width;
-                    const height = videoStream.height;
+                    let width = videoStream.width;
+                    let height = videoStream.height;
                     const duration = parseFloat(format?.duration || videoStream.duration || '0');
+                    // Detect rotation from metadata — phones record landscape with rotation tag
+                    let rotation = 0;
+                    // Method 1: tags.rotate (older MP4/MOV containers)
+                    if (videoStream.tags?.rotate) {
+                        rotation = parseInt(videoStream.tags.rotate, 10) || 0;
+                    }
+                    // Method 2: side_data_list Display Matrix (modern containers)
+                    if (!rotation && Array.isArray(videoStream.side_data_list)) {
+                        const displayMatrix = videoStream.side_data_list.find((sd) => sd.side_data_type === 'Display Matrix');
+                        if (displayMatrix?.rotation !== undefined) {
+                            rotation = displayMatrix.rotation;
+                        }
+                    }
+                    // Swap dimensions for 90/270 degree rotation (portrait videos)
+                    const absRotation = Math.abs(rotation) % 360;
+                    if (absRotation === 90 || absRotation === 270) {
+                        [width, height] = [height, width];
+                        this.log(requestId, 'ROTATION_DETECTED', { rotation, swapped: true, displayWidth: width, displayHeight: height });
+                    }
                     // Determine aspect ratio category
                     const ratio = width / height;
                     let aspectRatio = 'CUSTOM';
