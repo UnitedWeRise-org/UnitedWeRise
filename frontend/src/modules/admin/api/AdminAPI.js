@@ -435,8 +435,10 @@ class AdminAPI {
                         console.error('🔒 Token refresh failed - session invalid');
                         await adminDebugError('AdminAPI', 'Token refresh failed - logging out');
 
-                        // AdminAuth.refreshToken() already calls logout if 401 from refresh endpoint
-                        // Just return response so caller can handle gracefully
+                        // Ensure isLoggingOut is set to suppress cascading errors
+                        // triggerLogout() has idempotency guard — safe to call even if
+                        // AdminAuth.logout() already set the flag from _doRefresh()
+                        this.triggerLogout('Token refresh failed - session invalid');
                         return response;
                     }
                 } catch (refreshError) {

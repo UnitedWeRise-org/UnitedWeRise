@@ -414,9 +414,19 @@ class AdminAuth {
             // Clear the barrier reference
             this.recoveryBarrier = null;
 
-            // Always clear pending and recovery flags after refresh completes
+            // Always clear pending flag after refresh completes
             this.refreshPending = false;
-            this.isRecovering = false;
+
+            // Clear recovery flag: immediately on success, delayed on failure
+            // Delayed clear ensures isRecovering stays true during the error
+            // propagation window so showError() guards catch propagating errors
+            if (refreshSucceeded) {
+                this.isRecovering = false;
+            } else {
+                setTimeout(() => {
+                    this.isRecovering = false;
+                }, 2000);
+            }
         }
     }
 
@@ -607,6 +617,18 @@ class AdminAuth {
      * Logout functionality
      */
     logout() {
+        // Set isLoggingOut flag FIRST to suppress errors from concurrent API callers
+        // that are still processing 401 responses while logout is in progress
+        if (window.AdminAPI) {
+            window.AdminAPI.isLoggingOut = true;
+            // Reset after delay to allow re-login (matches triggerLogout behavior)
+            setTimeout(() => {
+                if (window.AdminAPI) {
+                    window.AdminAPI.isLoggingOut = false;
+                }
+            }, 2000);
+        }
+
         // Use unified logout function
         unifiedLogout('admin-dashboard');
 
