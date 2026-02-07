@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma';
 import { createNotification } from './notifications';
 import express from 'express';
 ;
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 import { validateProfileUpdate } from '../middleware/validation';
 import { FollowService } from '../services/relationshipService';
 import { ActivityTracker } from '../services/activityTracker';
@@ -289,7 +289,7 @@ router.put('/profile', requireAuth, validateProfileUpdate, async (req: AuthReque
  *       500:
  *         description: Internal server error
  */
-router.get('/:userId', async (req: AuthRequest, res) => {
+router.get('/:userId', optionalAuth, async (req: AuthRequest, res) => {
     try {
         const { userId } = req.params;
         const viewerId = req.user?.id; // Optional authentication
@@ -807,7 +807,7 @@ router.get('/search', requireAuth, async (req: AuthRequest, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:userId/complete', async (req: AuthRequest, res) => {
+router.get('/:userId/complete', optionalAuth, async (req: AuthRequest, res) => {
     try {
         const { userId } = req.params;
         const { limit: limitNum, offset: offsetNum } = safePaginationParams(

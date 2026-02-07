@@ -218,6 +218,54 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
   }
 };
 
+/**
+ * Optional authentication middleware.
+ * Populates req.user if a valid token is present, but does not reject
+ * unauthenticated requests. Use on routes that return extra data for
+ * authenticated users (e.g. relationship status) but still work publicly.
+ */
+export const optionalAuth = async (req: AuthRequest, _res: Response, next: NextFunction) => {
+  try {
+    let token = req.cookies?.[COOKIE_NAMES.AUTH_TOKEN];
+    if (!token) {
+      token = req.header('Authorization')?.replace('Bearer ', '');
+    }
+
+    if (!token) {
+      return next();
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return next();
+    }
+
+    // Check blacklist
+    const tokenId = crypto.createHash('sha256').update(token).digest('hex');
+    if (await sessionManager.isTokenBlacklisted(tokenId)) {
+      return next();
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, isSuperAdmin: true, lastSeenAt: true }
+    });
+
+    if (user) {
+      req.user = {
+        ...user,
+        totpVerified: decoded.totpVerified || false,
+        totpVerifiedAt: decoded.totpVerifiedAt || null
+      };
+    }
+
+    next();
+  } catch {
+    // Silently continue without auth on any error
+    next();
+  }
+};
+
 export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
   // Generate unique request ID for tracing
   const requestId = crypto.randomBytes(4).toString('hex');
