@@ -7,7 +7,22 @@ import { messageLimiter } from '../middleware/rateLimiting';
 import { logger } from '../services/logger';
 import { createNotification } from './notifications';
 import { FriendService } from '../services/relationshipService';
+import { pushNotificationService } from '../services/pushNotificationService';
 import { safePaginationParams } from '../utils/safeJson';
+
+// Lazy-loaded WebSocket service for online status checks
+let _webSocketService: any = null;
+const getWebSocketService = async () => {
+  if (!_webSocketService) {
+    try {
+      const serverModule = await import('../server');
+      _webSocketService = serverModule.webSocketService;
+    } catch (error) {
+      logger.warn({ error }, 'WebSocket service not available for push notification check');
+    }
+  }
+  return _webSocketService;
+};
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -778,6 +793,26 @@ router.post('/conversations/:conversationId/messages', requireAuth, messageLimit
         undefined,
         undefined
       ).catch(error => logger.error({ error }, 'Failed to create message request notification'));
+    }
+
+    // Send push notification if recipient is offline
+    if (recipientId) {
+      const wsService = await getWebSocketService();
+      const isOnline = wsService?.isUserOnline(recipientId) ?? false;
+
+      if (!isOnline) {
+        const senderName = message.sender.firstName && message.sender.lastName
+          ? `${message.sender.firstName} ${message.sender.lastName}`
+          : message.sender.username;
+
+        pushNotificationService.sendMessagePush(
+          recipientId,
+          senderName,
+          content.trim(),
+          conversationId,
+          'USER_USER'
+        ).catch(error => logger.error({ error }, 'Failed to send DM push notification'));
+      }
     }
 
     res.status(201).json({

@@ -8,6 +8,28 @@
 
 ---
 
+## [2026-02-07] - APNs Push Notifications for DMs
+
+### Added
+
+**Push Notification Service**
+- New `PushNotificationService` singleton in `backend/src/services/pushNotificationService.ts` for sending iOS push notifications via APNs HTTP/2
+- Token-based authentication with base64-encoded P8 key (Azure Container Apps compatible)
+- Automatic production/sandbox endpoint selection based on `NODE_ENV`
+- Concurrent delivery to multiple devices per user with automatic cleanup of invalid/expired tokens
+
+**DM Push Notifications**
+- WebSocket message handler (`WebSocketService.ts`) sends push when recipient is offline
+- REST message endpoint (`messages.ts`) sends push when recipient is offline
+- Admin-to-candidate messages (`admin.ts`) send push to candidate's registered devices
+- All push calls are fire-and-forget — failures never block message delivery
+
+### Changed
+- Added `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_KEY` to `.env.example`
+- Added `user.id` to candidate user select in admin message creation for push targeting
+
+---
+
 ## [2026-02-02] - Snippet Feed Modal & Playback Fix
 
 ### Fixed

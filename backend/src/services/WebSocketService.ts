@@ -9,6 +9,7 @@ import { sessionManager } from './sessionManager';
 import { verifyToken } from '../utils/auth';
 import { COOKIE_NAMES } from '../utils/cookies';
 import { logger } from './logger';
+import { pushNotificationService } from './pushNotificationService';
 
 export class WebSocketService {
   private io: Server;
@@ -306,6 +307,26 @@ export class WebSocketService {
       }
 
       logger.info({ type, senderId, recipientId }, 'Message sent');
+
+      // Send push notification if recipient is offline (skip admin room targets)
+      if (recipientId !== 'admin' && !this.isUserOnline(recipientId)) {
+        const sender = await prisma.user.findUnique({
+          where: { id: senderId },
+          select: { firstName: true, lastName: true, username: true }
+        });
+
+        const senderName = sender?.firstName && sender?.lastName
+          ? `${sender.firstName} ${sender.lastName}`
+          : sender?.username || 'Someone';
+
+        pushNotificationService.sendMessagePush(
+          recipientId,
+          senderName,
+          content.trim(),
+          message.conversationId || '',
+          type
+        ).catch(error => logger.error({ error }, 'Failed to send DM push notification'));
+      }
     } catch (error) {
       logger.error({ error }, 'Error handling send_message');
       socket.emit('message_error', { error: 'Failed to send message' });
@@ -489,6 +510,26 @@ export class WebSocketService {
       this.io.to(`user:${data.recipientId}`).emit('new_message', payload);
     } else if (data.type === MessageType.USER_USER) {
       this.io.to(`user:${data.recipientId}`).emit('new_message', payload);
+    }
+
+    // Send push notification if recipient is offline (skip admin room targets)
+    if (data.recipientId !== 'admin' && !this.isUserOnline(data.recipientId)) {
+      const sender = await prisma.user.findUnique({
+        where: { id: data.senderId },
+        select: { firstName: true, lastName: true, username: true }
+      });
+
+      const senderName = sender?.firstName && sender?.lastName
+        ? `${sender.firstName} ${sender.lastName}`
+        : sender?.username || 'Someone';
+
+      pushNotificationService.sendMessagePush(
+        data.recipientId,
+        senderName,
+        data.content,
+        message.conversationId || '',
+        data.type
+      ).catch(error => logger.error({ error }, 'Failed to send push notification'));
     }
 
     return message;

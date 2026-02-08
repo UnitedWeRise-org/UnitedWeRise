@@ -54,6 +54,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const speakeasy = __importStar(require("speakeasy"));
 const logger_1 = require("../services/logger");
 const auditService_1 = require("../services/auditService");
+const pushNotificationService_1 = require("../services/pushNotificationService");
 const safeJson_1 = require("../utils/safeJson");
 const organizationService_1 = require("../services/organizationService");
 const client_1 = require("@prisma/client");
@@ -3308,7 +3309,7 @@ router.post('/candidates/:candidateId/messages', auth_1.requireStagingAuth, auth
             },
             include: {
                 sender: { select: { id: true, firstName: true, lastName: true, email: true } },
-                candidate: { select: { name: true, user: { select: { email: true, firstName: true } } } }
+                candidate: { select: { name: true, user: { select: { id: true, email: true, firstName: true } } } }
             }
         });
         logger_1.logger.info({
@@ -3347,7 +3348,10 @@ router.post('/candidates/:candidateId/messages', auth_1.requireStagingAuth, auth
             }, 'Failed to send admin message email');
             // Don't fail the entire message send if email fails
         }
-        // TODO: Send push notification if implemented
+        // Send push notification to candidate
+        if (message.candidate.user) {
+            pushNotificationService_1.pushNotificationService.sendMessagePush(message.candidate.user.id, 'United We Rise Admin', content.trim(), `admin_${candidateId}`, 'ADMIN_CANDIDATE').catch(error => logger_1.logger.error({ error, candidateId }, 'Failed to send admin message push notification'));
+        }
         res.status(201).json({
             success: true,
             message: 'Message sent successfully',

@@ -17,6 +17,7 @@ import crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
 import { logger } from '../services/logger';
 import { AuditService, AUDIT_ACTIONS } from '../services/auditService';
+import { pushNotificationService } from '../services/pushNotificationService';
 import { safePaginationParams, PAGINATION_LIMITS } from '../utils/safeJson';
 import { organizationService } from '../services/organizationService';
 import { MembershipStatus } from '@prisma/client';
@@ -3626,7 +3627,7 @@ router.post('/candidates/:candidateId/messages', requireStagingAuth, requireAdmi
       },
       include: {
         sender: { select: { id: true, firstName: true, lastName: true, email: true } },
-        candidate: { select: { name: true, user: { select: { email: true, firstName: true } } } }
+        candidate: { select: { name: true, user: { select: { id: true, email: true, firstName: true } } } }
       }
     });
 
@@ -3677,7 +3678,16 @@ router.post('/candidates/:candidateId/messages', requireStagingAuth, requireAdmi
       // Don't fail the entire message send if email fails
     }
 
-    // TODO: Send push notification if implemented
+    // Send push notification to candidate
+    if (message.candidate.user) {
+      pushNotificationService.sendMessagePush(
+        message.candidate.user.id,
+        'United We Rise Admin',
+        content.trim(),
+        `admin_${candidateId}`,
+        'ADMIN_CANDIDATE'
+      ).catch(error => logger.error({ error, candidateId }, 'Failed to send admin message push notification'));
+    }
 
     res.status(201).json({
       success: true,

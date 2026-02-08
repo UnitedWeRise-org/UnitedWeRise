@@ -13,6 +13,7 @@ const sessionManager_1 = require("./sessionManager");
 const auth_1 = require("../utils/auth");
 const cookies_1 = require("../utils/cookies");
 const logger_1 = require("./logger");
+const pushNotificationService_1 = require("./pushNotificationService");
 class WebSocketService {
     io;
     userSockets = new Map();
@@ -275,6 +276,17 @@ class WebSocketService {
                 socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
             }
             logger_1.logger.info({ type, senderId, recipientId }, 'Message sent');
+            // Send push notification if recipient is offline (skip admin room targets)
+            if (recipientId !== 'admin' && !this.isUserOnline(recipientId)) {
+                const sender = await prisma_1.prisma.user.findUnique({
+                    where: { id: senderId },
+                    select: { firstName: true, lastName: true, username: true }
+                });
+                const senderName = sender?.firstName && sender?.lastName
+                    ? `${sender.firstName} ${sender.lastName}`
+                    : sender?.username || 'Someone';
+                pushNotificationService_1.pushNotificationService.sendMessagePush(recipientId, senderName, content.trim(), message.conversationId || '', type).catch(error => logger_1.logger.error({ error }, 'Failed to send DM push notification'));
+            }
         }
         catch (error) {
             logger_1.logger.error({ error }, 'Error handling send_message');
@@ -442,6 +454,17 @@ class WebSocketService {
         }
         else if (data.type === messaging_1.MessageType.USER_USER) {
             this.io.to(`user:${data.recipientId}`).emit('new_message', payload);
+        }
+        // Send push notification if recipient is offline (skip admin room targets)
+        if (data.recipientId !== 'admin' && !this.isUserOnline(data.recipientId)) {
+            const sender = await prisma_1.prisma.user.findUnique({
+                where: { id: data.senderId },
+                select: { firstName: true, lastName: true, username: true }
+            });
+            const senderName = sender?.firstName && sender?.lastName
+                ? `${sender.firstName} ${sender.lastName}`
+                : sender?.username || 'Someone';
+            pushNotificationService_1.pushNotificationService.sendMessagePush(data.recipientId, senderName, data.content, message.conversationId || '', data.type).catch(error => logger_1.logger.error({ error }, 'Failed to send push notification'));
         }
         return message;
     }

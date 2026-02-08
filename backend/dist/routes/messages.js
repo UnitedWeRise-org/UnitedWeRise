@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -12,7 +45,22 @@ const rateLimiting_1 = require("../middleware/rateLimiting");
 const logger_1 = require("../services/logger");
 const notifications_1 = require("./notifications");
 const relationshipService_1 = require("../services/relationshipService");
+const pushNotificationService_1 = require("../services/pushNotificationService");
 const safeJson_1 = require("../utils/safeJson");
+// Lazy-loaded WebSocket service for online status checks
+let _webSocketService = null;
+const getWebSocketService = async () => {
+    if (!_webSocketService) {
+        try {
+            const serverModule = await Promise.resolve().then(() => __importStar(require('../server')));
+            _webSocketService = serverModule.webSocketService;
+        }
+        catch (error) {
+            logger_1.logger.warn({ error }, 'WebSocket service not available for push notification check');
+        }
+    }
+    return _webSocketService;
+};
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -737,6 +785,17 @@ router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateL
                 ? `${message.sender.firstName} ${message.sender.lastName}`
                 : message.sender.username;
             (0, notifications_1.createNotification)('MESSAGE_REQUEST', userId, recipientId, `${senderName} wants to message you`, undefined, undefined).catch(error => logger_1.logger.error({ error }, 'Failed to create message request notification'));
+        }
+        // Send push notification if recipient is offline
+        if (recipientId) {
+            const wsService = await getWebSocketService();
+            const isOnline = wsService?.isUserOnline(recipientId) ?? false;
+            if (!isOnline) {
+                const senderName = message.sender.firstName && message.sender.lastName
+                    ? `${message.sender.firstName} ${message.sender.lastName}`
+                    : message.sender.username;
+                pushNotificationService_1.pushNotificationService.sendMessagePush(recipientId, senderName, content.trim(), conversationId, 'USER_USER').catch(error => logger_1.logger.error({ error }, 'Failed to send DM push notification'));
+            }
         }
         res.status(201).json({
             success: true,
