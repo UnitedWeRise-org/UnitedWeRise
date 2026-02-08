@@ -30,6 +30,13 @@ export declare class VideoEncodingWorker {
      */
     stop(): Promise<void>;
     /**
+     * Recover orphaned videos stuck in PENDING status after server restart.
+     * The in-memory queue is lost on restart, so videos that were queued but
+     * not yet processed remain in PENDING state with no active job.
+     * Only recovers videos created in the last 24 hours to avoid re-processing old records.
+     */
+    private recoverOrphanedVideos;
+    /**
      * Process next available job from queue
      */
     private processNextJob;

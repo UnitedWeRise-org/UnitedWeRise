@@ -82,6 +82,9 @@ export class VideoEncodingWorker {
       videoEncodingQueue.cleanup();
     }, CLEANUP_INTERVAL_MS);
 
+    // Recover orphaned PENDING videos from the database (lost on server restart)
+    await this.recoverOrphanedVideos();
+
     // Process any existing jobs
     this.processNextJob();
   }
@@ -118,6 +121,50 @@ export class VideoEncodingWorker {
     }
 
     logger.info('VideoEncodingWorker stopped');
+  }
+
+  /**
+   * Recover orphaned videos stuck in PENDING status after server restart.
+   * The in-memory queue is lost on restart, so videos that were queued but
+   * not yet processed remain in PENDING state with no active job.
+   * Only recovers videos created in the last 24 hours to avoid re-processing old records.
+   */
+  private async recoverOrphanedVideos(): Promise<void> {
+    try {
+      const { prisma } = await import('../lib/prisma.js');
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const orphanedVideos = await prisma.video.findMany({
+        where: {
+          encodingStatus: 'PENDING',
+          deletedAt: null,
+          createdAt: { gt: cutoff }
+        },
+        select: {
+          id: true,
+          originalBlobName: true
+        }
+      });
+
+      if (orphanedVideos.length === 0) {
+        logger.info('No orphaned PENDING videos found on startup');
+        return;
+      }
+
+      let requeued = 0;
+      for (const video of orphanedVideos) {
+        if (!video.originalBlobName) {
+          logger.warn({ videoId: video.id }, 'Orphaned video has no originalBlobName — skipping');
+          continue;
+        }
+        videoEncodingQueue.addJob(video.id, video.originalBlobName);
+        requeued++;
+      }
+
+      logger.warn({ found: orphanedVideos.length, requeued }, 'Re-queued orphaned PENDING videos on startup');
+    } catch (error) {
+      logger.error({ error }, 'Failed to recover orphaned videos on startup');
+    }
   }
 
   /**

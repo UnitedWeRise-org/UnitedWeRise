@@ -1592,8 +1592,20 @@ router.post('/:id/reprocess', requireStagingAuth, requireAdmin, async (req: Auth
         logger.info({ videoId: id }, 'Re-queued Coconut encoding job via admin reprocess');
       }
     } else {
-      // FFmpeg path: simulation (copies from private to public container)
-      await videoEncodingService.simulateEncodingForDevelopment(id, video.originalUrl || '');
+      // FFmpeg path: reset status and re-queue through real encoding pipeline
+      await prisma.video.update({
+        where: { id },
+        data: {
+          encodingStatus: 'PENDING',
+          encodingStartedAt: null,
+          encodingCompletedAt: null,
+          encodingError: null,
+          encodingTiersStatus: 'NONE'
+        }
+      });
+
+      videoEncodingQueue.addJob(id, video.originalBlobName, 5);
+      logger.info({ videoId: id }, 'Re-queued FFmpeg encoding job via admin reprocess');
     }
 
     // Fetch updated video state

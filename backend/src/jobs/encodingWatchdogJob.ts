@@ -3,13 +3,15 @@
  *
  * Detects and recovers stuck video encoding jobs.
  * Handles cases where Coconut.co webhooks were lost (network issues,
- * CSRF blocking, server restart during callback, etc.).
+ * CSRF blocking, server restart during callback, etc.) and orphaned
+ * PENDING videos whose in-memory queue jobs were lost on server restart.
  *
  * Schedule: Every 5 minutes
  *
  * Recovery logic:
- * - Stuck > 30 min with HLS output in blob storage: recover to READY (webhook was lost)
- * - Stuck > 60 min with no output: mark as FAILED (encoding timed out)
+ * - PENDING > 30 min: re-queue for encoding (queue job was lost on restart)
+ * - ENCODING > 30 min with HLS output in blob storage: recover to READY (webhook was lost)
+ * - ENCODING > 60 min with no output: mark as FAILED (encoding timed out)
  *
  * @module jobs/encodingWatchdogJob
  */
@@ -17,6 +19,7 @@
 import cron, { ScheduledTask } from 'node-cron';
 import { prisma } from '../lib/prisma.js';
 import { videoStorageService } from '../services/VideoStorageService';
+import { videoEncodingQueue } from '../queues/videoEncodingQueue';
 import { logger } from '../services/logger';
 
 const jobLogger = logger.child({ component: 'encoding-watchdog' });
@@ -65,12 +68,13 @@ class EncodingWatchdogJob {
   }
 
   /**
-   * Find and recover stuck encoding jobs.
+   * Find and recover stuck encoding jobs (both ENCODING and PENDING).
    */
   private async checkStuckEncodings(): Promise<void> {
     const stuckThreshold = new Date(Date.now() - STUCK_THRESHOLD_MS);
     const timeoutThreshold = new Date(Date.now() - TIMEOUT_THRESHOLD_MS);
 
+    // Check for stuck ENCODING videos (webhook lost or FFmpeg process died)
     const stuckVideos = await prisma.video.findMany({
       where: {
         encodingStatus: 'ENCODING',
@@ -84,16 +88,60 @@ class EncodingWatchdogJob {
       }
     });
 
-    if (stuckVideos.length === 0) return;
+    if (stuckVideos.length > 0) {
+      jobLogger.warn({ count: stuckVideos.length }, 'Found stuck ENCODING videos');
 
-    jobLogger.warn({ count: stuckVideos.length }, 'Found stuck encoding jobs');
-
-    for (const video of stuckVideos) {
-      try {
-        await this.recoverStuckVideo(video, timeoutThreshold);
-      } catch (error) {
-        jobLogger.error({ error, videoId: video.id }, 'Failed to recover stuck video');
+      for (const video of stuckVideos) {
+        try {
+          await this.recoverStuckVideo(video, timeoutThreshold);
+        } catch (error) {
+          jobLogger.error({ error, videoId: video.id }, 'Failed to recover stuck video');
+        }
       }
+    }
+
+    // Check for orphaned PENDING videos (queue job lost on server restart)
+    await this.requeueOrphanedPendingVideos(stuckThreshold);
+  }
+
+  /**
+   * Re-queue videos stuck in PENDING status for > 30 minutes.
+   * These are videos whose in-memory queue jobs were lost on server restart.
+   */
+  private async requeueOrphanedPendingVideos(stuckThreshold: Date): Promise<void> {
+    const orphanedVideos = await prisma.video.findMany({
+      where: {
+        encodingStatus: 'PENDING',
+        createdAt: { lt: stuckThreshold },
+        deletedAt: null
+      },
+      select: {
+        id: true,
+        originalBlobName: true,
+        createdAt: true
+      }
+    });
+
+    if (orphanedVideos.length === 0) return;
+
+    let requeued = 0;
+    for (const video of orphanedVideos) {
+      // Skip if already in the queue (avoid duplicates)
+      if (videoEncodingQueue.getJobByVideoId(video.id)) {
+        continue;
+      }
+
+      if (!video.originalBlobName) {
+        jobLogger.warn({ videoId: video.id }, 'Orphaned PENDING video has no originalBlobName — skipping');
+        continue;
+      }
+
+      videoEncodingQueue.addJob(video.id, video.originalBlobName);
+      requeued++;
+    }
+
+    if (requeued > 0) {
+      jobLogger.warn({ found: orphanedVideos.length, requeued }, 'Re-queued orphaned PENDING videos');
     }
   }
 
