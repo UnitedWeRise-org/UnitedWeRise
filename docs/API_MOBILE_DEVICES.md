@@ -1,8 +1,8 @@
 # Mobile Device API Reference
 
 **Status**: Production Ready
-**Last Updated**: 2026-01-22
-**Version**: 1.0.0
+**Last Updated**: 2026-02-07
+**Version**: 1.1.0
 
 ---
 
@@ -364,10 +364,75 @@ func logout() async throws {
 
 ---
 
+## Backend Push Notification Service
+
+**File**: `backend/src/services/pushNotificationService.ts`
+
+The `PushNotificationService` singleton handles sending push notifications to registered iOS devices via APNs HTTP/2 with token-based authentication (JWT/P8).
+
+### Architecture
+
+```
+Message Created → Check recipient online (WebSocket) → If offline → Query DeviceTokens → Send via APNs
+                                                                                        ↓
+                                                                          Invalid tokens auto-cleaned
+```
+
+### Integration Points
+
+Push notifications are sent from three message creation paths:
+
+| Path | File | Trigger |
+|------|------|---------|
+| WebSocket DM | `WebSocketService.ts` | `handleSendMessage()` and `sendMessage()` |
+| REST DM | `routes/messages.ts` | `POST /conversations/:id/messages` |
+| Admin message | `routes/admin.ts` | `POST /admin/candidates/:id/messages` |
+
+All calls are fire-and-forget — push failures never block message delivery.
+
+### APNs Payload Format
+
+```json
+{
+  "aps": {
+    "alert": { "title": "Sender Name", "body": "Message preview..." },
+    "badge": 1,
+    "sound": "default",
+    "mutable-content": 1,
+    "thread-id": "<conversationId>"
+  },
+  "conversationId": "<id>",
+  "messageType": "USER_USER",
+  "type": "NEW_MESSAGE"
+}
+```
+
+- `thread-id`: Groups notifications by conversation in iOS Notification Center
+- `mutable-content`: Enables Notification Service Extension for rich notifications
+- Custom keys (`conversationId`, `messageType`, `type`) enable deep linking
+
+### Environment Configuration
+
+| Variable | Description |
+|----------|-------------|
+| `APNS_KEY_ID` | Key ID from Apple Developer Portal (10 characters) |
+| `APNS_TEAM_ID` | Apple Developer Team ID (10 characters) |
+| `APNS_BUNDLE_ID` | iOS app bundle identifier |
+| `APNS_KEY` | Base64-encoded .p8 private key |
+
+**APNs endpoint selection**: Production (`NODE_ENV=production`) uses `api.push.apple.com`, all other environments use `api.sandbox.push.apple.com`.
+
+### Invalid Token Cleanup
+
+When APNs returns `BadDeviceToken`, `Unregistered`, or `DeviceTokenNotForTopic`, the service automatically deletes the invalid token from the database. This keeps the DeviceToken table clean without manual intervention.
+
+---
+
 ## Future Enhancements
 
-- [ ] APNs integration for actual notification delivery
+- [x] ~~APNs integration for actual notification delivery~~ (Implemented 2026-02-07)
 - [ ] FCM integration for Android support
 - [ ] Notification preferences per event type
 - [ ] Silent push for background data sync
 - [ ] Rich notifications with images and actions
+- [ ] Accurate badge count (unread conversation count)

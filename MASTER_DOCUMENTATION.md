@@ -4481,8 +4481,9 @@ socket.emit('send-message', {
 1. **Trigger Event** → User likes post/comment, follows user, sends message
 2. **Database Persistence** → `createNotification()` stores notification in database
 3. **WebSocket Emission** → Real-time notification sent to target user via WebSocket
-4. **Frontend Reception** → WebSocket client receives `new_notification` event
-5. **UI Updates** → Toast notification, badge count, dropdown refresh, smooth animations
+4. **Push Notification** → If recipient is offline, APNs push sent to registered iOS devices via `PushNotificationService` (`backend/src/services/pushNotificationService.ts`)
+5. **Frontend Reception** → WebSocket client receives `new_notification` event
+6. **UI Updates** → Toast notification, badge count, dropdown refresh, smooth animations
 
 ##### Backend Implementation
 
@@ -6026,9 +6027,11 @@ enum AppEnvironment {
 - Send/accept/decline friend requests
 
 **Push Notifications**
-- APNs token registration
-- Device token management
-- Deep linking from notifications
+- APNs token registration and device token management
+- APNs HTTP/2 delivery via `PushNotificationService` for offline DM recipients
+- Automatic invalid token cleanup (BadDeviceToken, Unregistered)
+- Deep linking from notifications (conversationId, messageType payload)
+- See `docs/API_MOBILE_DEVICES.md` for complete reference
 
 ### iPad Optimizations
 
@@ -6101,11 +6104,18 @@ class SocketIOManager {
 2. User grants permission → iOS provides APNs device token
 3. App sends token to POST /api/devices/register after authentication
 4. Backend stores token in DeviceToken table
-5. When event occurs (message, friend request, etc.):
-   - Backend queries user's device tokens
-   - Sends push via APNs
-6. User taps notification → DeepLinkHandler navigates to content
+5. When a DM is sent:
+   - WebSocketService checks if recipient is online via isUserOnline()
+   - If online: delivered in real-time via WebSocket (no push needed)
+   - If offline: PushNotificationService queries user's iOS device tokens
+   - Sends push via APNs HTTP/2 with token-based auth (JWT/P8)
+   - Invalid/expired tokens automatically cleaned from database
+6. User taps notification → DeepLinkHandler navigates to conversation
 7. On logout: DELETE /api/devices/:deviceToken
+
+Backend service: backend/src/services/pushNotificationService.ts
+APNs library: apns2 (HTTP/2, TypeScript native)
+Environment: Production → api.push.apple.com, Staging → api.sandbox.push.apple.com
 ```
 
 ### Development Workflow
@@ -14995,9 +15005,9 @@ enum UnifiedMessageType {
 
 **Files Implemented**:
 ```
-Backend: WebSocketService.ts, unifiedMessages.ts, messaging.ts types
+Backend: WebSocketService.ts, pushNotificationService.ts, unifiedMessages.ts, messaging.ts types
 Frontend: websocket-client.js, messaging.css, admin-dashboard.html, MyProfile.js
-Database: UnifiedMessage schema with migration scripts
+Database: UnifiedMessage schema with migration scripts, DeviceToken model
 ```
 
 ---
