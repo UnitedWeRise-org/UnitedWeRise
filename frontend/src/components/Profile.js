@@ -4077,79 +4077,26 @@ class Profile {
         try {
             let messageSent = false;
             
-            // Debug WebSocket availability
-            adminDebugLog('🔍 WebSocket Debug Info:');
-            adminDebugLog('  - window.unifiedMessaging exists:', !!window.unifiedMessaging);
-            adminDebugLog('  - isWebSocketConnected:', window.unifiedMessaging?.isWebSocketConnected?.());
-            adminDebugLog('  - isConnected:', window.unifiedMessaging?.isConnected);
-            
-            // Try WebSocket first if available and connected
-            if (window.unifiedMessaging && window.unifiedMessaging.isWebSocketConnected()) {
-                adminDebugLog('📤 Attempting to send candidate message via WebSocket');
-                try {
-                    const success = window.unifiedMessaging.sendMessage(
-                        'ADMIN_CANDIDATE',
-                        'admin', // recipient is admin
-                        content
-                    );
-                    
-                    if (success) {
-                        adminDebugLog('✅ WebSocket message sent successfully');
-                        messageSent = true;
-                        // Clear form
-                        contentInput.value = '';
-                        
-                        // Immediately add the message to display (don't wait for WebSocket confirmation)
-                        const currentUser = window.currentUser;
-                        this.addMessageToDisplay({
-                            id: Date.now().toString(),
-                            senderId: currentUser?.id,
-                            content: content,
-                            createdAt: new Date().toISOString(),
-                            isFromAdmin: false
-                        });
-                        
-                        this.showToast('Message sent successfully!');
-                    } else {
-                        adminDebugWarn('⚠️ WebSocket send returned false, falling back to REST API');
-                    }
-                } catch (wsError) {
-                    adminDebugError('❌ WebSocket send error:', wsError);
-                    adminDebugLog('🔄 Falling back to REST API due to WebSocket error');
-                }
-            } else {
-                adminDebugLog('🔌 WebSocket not available or not connected, using REST API');
-            }
-            
-            // Use REST API if WebSocket failed or unavailable
-            if (!messageSent) {
-                adminDebugLog('📤 Sending candidate message via REST API');
-                const response = await apiCall('/unified-messages/send', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        type: 'ADMIN_CANDIDATE',
-                        recipientId: 'admin',
-                        content
-                    })
-                });
+            // Send candidate message to admin via REST API
+            adminDebugLog('📤 Sending candidate message via REST API');
+            const response = await apiCall('/candidate/admin-messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
 
-                if (response.ok) {
-                    adminDebugLog('✅ REST API message sent successfully');
-                    // Clear form
-                    contentInput.value = '';
-                    
-                    // Reload messages to show the new one
-                    await this.loadCandidateMessages();
-                    
-                    this.showToast('Message sent successfully!');
-                    messageSent = true;
-                } else {
-                    throw new Error(response.data?.error || 'Failed to send message');
-                }
-            }
-            
-            if (!messageSent) {
-                throw new Error('Failed to send message via both WebSocket and REST API');
+            if (response.ok) {
+                adminDebugLog('✅ Message sent successfully');
+                messageSent = true;
+                // Clear form
+                contentInput.value = '';
+
+                // Reload messages to show the new one
+                await this.loadCandidateMessages();
+
+                this.showToast('Message sent successfully!');
+            } else {
+                throw new Error(response.data?.error || 'Failed to send message');
             }
         } catch (error) {
             adminDebugError('Error sending message:', error);

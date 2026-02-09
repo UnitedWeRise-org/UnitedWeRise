@@ -13,7 +13,6 @@ const sessionManager_1 = require("./sessionManager");
 const auth_1 = require("../utils/auth");
 const cookies_1 = require("../utils/cookies");
 const logger_1 = require("./logger");
-const pushNotificationService_1 = require("./pushNotificationService");
 class WebSocketService {
     io;
     userSockets = new Map();
@@ -67,13 +66,16 @@ class WebSocketService {
             if (socket.data.isAdmin) {
                 socket.join('admin:room');
             }
-            // Handle sending messages
-            socket.on('send_message', this.handleSendMessage.bind(this, socket));
             // Handle typing indicators
             socket.on('typing_start', this.handleTypingStart.bind(this, socket));
             socket.on('typing_stop', this.handleTypingStop.bind(this, socket));
             // Handle message read receipts
             socket.on('mark_read', this.handleMarkRead.bind(this, socket));
+            // Handle conversation room management
+            socket.on('join_conversation', this.handleJoinConversation.bind(this, socket));
+            socket.on('leave_conversation', this.handleLeaveConversation.bind(this, socket));
+            // Broadcast presence to other connected clients
+            socket.broadcast.emit('user_online', { userId });
             // Handle disconnection
             socket.on('disconnect', async () => {
                 logger_1.logger.info({ userId }, 'User disconnected');
@@ -90,6 +92,8 @@ class WebSocketService {
                                 lastSeenAt: new Date()
                             }
                         });
+                        // Broadcast offline status (only when last socket disconnects)
+                        socket.broadcast.emit('user_offline', { userId });
                     }
                 }
             });
@@ -208,265 +212,169 @@ class WebSocketService {
             next(new Error('Authentication error: Invalid token'));
         }
     }
-    async handleSendMessage(socket, data) {
-        try {
-            const senderId = socket.data.userId;
-            const { type, recipientId, content, conversationId } = data;
-            // Validate message content
-            if (!content.trim()) {
-                socket.emit('message_error', { error: 'Message content cannot be empty' });
+    /**
+     * Handle typing start event.
+     * Accepts two formats for backwards compatibility:
+     * - Web frontend: { recipientId, type } (legacy)
+     * - iOS app: { conversationId } (resolves recipient from ConversationParticipant)
+     */
+    async handleTypingStart(socket, data) {
+        const senderId = socket.data.userId;
+        let recipientId = data.recipientId;
+        let conversationId = data.conversationId;
+        const type = data.type;
+        // iOS format: resolve recipientId from conversationId
+        if (!recipientId && conversationId) {
+            try {
+                const otherParticipant = await prisma_1.prisma.conversationParticipant.findFirst({
+                    where: { conversationId, userId: { not: senderId } },
+                    select: { userId: true }
+                });
+                if (otherParticipant) {
+                    recipientId = otherParticipant.userId;
+                }
+            }
+            catch (error) {
+                logger_1.logger.error({ error, conversationId }, 'Error resolving typing recipient');
                 return;
             }
-            // Create unified message
-            const message = await this.createUnifiedMessage({
-                type,
-                senderId,
-                recipientId,
-                content: content.trim(),
-                conversationId
-            });
-            // Emit to sender for confirmation
-            socket.emit('message_sent', {
-                messageId: message.id,
-                type,
-                content: message.content,
-                recipientId,
-                conversationId: message.conversationId,
-                timestamp: message.createdAt
-            });
-            // Emit to recipient if online
-            const payload = {
-                type: 'NEW_MESSAGE',
-                messageType: type,
-                data: {
-                    id: message.id,
-                    senderId,
-                    senderUsername: socket.data.username,
-                    content: message.content,
-                    type,
-                    conversationId: message.conversationId,
-                    timestamp: message.createdAt
-                },
-                timestamp: new Date()
-            };
-            // Send to recipient
-            if (type === messaging_1.MessageType.ADMIN_CANDIDATE && recipientId !== 'admin') {
-                // Admin to candidate message
-                // Special case: If admin is messaging themselves (testing scenario), use io.to instead of broadcast
-                if (senderId === recipientId) {
-                    // Admin messaging their own candidate profile - include sender
-                    this.io.to(`user:${recipientId}`).emit('new_message', payload);
-                    logger_1.logger.debug({ senderId }, 'Admin self-message: messaging own candidate profile');
-                }
-                else {
-                    // Normal case: exclude sender to prevent duplicates
-                    socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
-                }
-            }
-            else if (type === messaging_1.MessageType.ADMIN_CANDIDATE && recipientId === 'admin') {
-                // Candidate to admin message - send to admin room (exclude sender)
-                socket.broadcast.to('admin:room').emit('new_message', payload);
-            }
-            else if (type === messaging_1.MessageType.USER_CANDIDATE) {
-                // User to candidate message - send to candidate (exclude sender)
-                socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
-            }
-            else if (type === messaging_1.MessageType.USER_USER) {
-                // User to user message - send to recipient (exclude sender)
-                socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
-            }
-            logger_1.logger.info({ type, senderId, recipientId }, 'Message sent');
-            // Send push notification if recipient is offline (skip admin room targets)
-            if (recipientId !== 'admin' && !this.isUserOnline(recipientId)) {
-                const sender = await prisma_1.prisma.user.findUnique({
-                    where: { id: senderId },
-                    select: { firstName: true, lastName: true, username: true }
+        }
+        if (!recipientId)
+            return;
+        // Superset payload: includes fields for both iOS and web clients
+        const payload = { senderId, senderUsername: socket.data.username, userId: senderId, conversationId };
+        if (type === messaging_1.MessageType.ADMIN_CANDIDATE && recipientId === 'admin') {
+            this.io.to('admin:room').emit('typing_start', payload);
+        }
+        else {
+            this.io.to(`user:${recipientId}`).emit('typing_start', payload);
+        }
+    }
+    /**
+     * Handle typing stop event.
+     * Accepts two formats for backwards compatibility:
+     * - Web frontend: { recipientId, type } (legacy)
+     * - iOS app: { conversationId } (resolves recipient from ConversationParticipant)
+     */
+    async handleTypingStop(socket, data) {
+        const senderId = socket.data.userId;
+        let recipientId = data.recipientId;
+        let conversationId = data.conversationId;
+        const type = data.type;
+        // iOS format: resolve recipientId from conversationId
+        if (!recipientId && conversationId) {
+            try {
+                const otherParticipant = await prisma_1.prisma.conversationParticipant.findFirst({
+                    where: { conversationId, userId: { not: senderId } },
+                    select: { userId: true }
                 });
-                const senderName = sender?.firstName && sender?.lastName
-                    ? `${sender.firstName} ${sender.lastName}`
-                    : sender?.username || 'Someone';
-                pushNotificationService_1.pushNotificationService.sendMessagePush(recipientId, senderName, content.trim(), message.conversationId || '', type).catch(error => logger_1.logger.error({ error }, 'Failed to send DM push notification'));
+                if (otherParticipant) {
+                    recipientId = otherParticipant.userId;
+                }
+            }
+            catch (error) {
+                logger_1.logger.error({ error, conversationId }, 'Error resolving typing recipient');
+                return;
             }
         }
-        catch (error) {
-            logger_1.logger.error({ error }, 'Error handling send_message');
-            socket.emit('message_error', { error: 'Failed to send message' });
-        }
-    }
-    handleTypingStart(socket, data) {
-        const { recipientId, type } = data;
-        const senderId = socket.data.userId;
+        if (!recipientId)
+            return;
+        // Superset payload: includes fields for both iOS and web clients
+        const payload = { senderId, senderUsername: socket.data.username, userId: senderId, conversationId };
         if (type === messaging_1.MessageType.ADMIN_CANDIDATE && recipientId === 'admin') {
-            this.io.to('admin:room').emit('typing_start', { senderId, senderUsername: socket.data.username });
+            this.io.to('admin:room').emit('typing_stop', payload);
         }
-        else if (type === messaging_1.MessageType.ADMIN_CANDIDATE && recipientId !== 'admin') {
-            this.io.to(`user:${recipientId}`).emit('typing_start', { senderId, senderUsername: socket.data.username });
-        }
-        else if (type === messaging_1.MessageType.USER_CANDIDATE) {
-            this.io.to(`user:${recipientId}`).emit('typing_start', { senderId, senderUsername: socket.data.username });
-        }
-        else if (type === messaging_1.MessageType.USER_USER) {
-            this.io.to(`user:${recipientId}`).emit('typing_start', { senderId, senderUsername: socket.data.username });
+        else {
+            this.io.to(`user:${recipientId}`).emit('typing_stop', payload);
         }
     }
-    handleTypingStop(socket, data) {
-        const { recipientId, type } = data;
-        const senderId = socket.data.userId;
-        if (type === messaging_1.MessageType.ADMIN_CANDIDATE && recipientId === 'admin') {
-            this.io.to('admin:room').emit('typing_stop', { senderId });
-        }
-        else if (type === messaging_1.MessageType.ADMIN_CANDIDATE && recipientId !== 'admin') {
-            this.io.to(`user:${recipientId}`).emit('typing_stop', { senderId });
-        }
-        else if (type === messaging_1.MessageType.USER_CANDIDATE) {
-            this.io.to(`user:${recipientId}`).emit('typing_stop', { senderId });
-        }
-        else if (type === messaging_1.MessageType.USER_USER) {
-            this.io.to(`user:${recipientId}`).emit('typing_stop', { senderId });
-        }
-    }
+    /**
+     * Handle mark_read event.
+     * Accepts two formats for backwards compatibility:
+     * - Web frontend: { messageIds: string[], conversationId? }
+     * - iOS app: { messageId: string } (singular — wrapped into array)
+     *
+     * Operates on the Message table (consolidated system).
+     * Broadcasts message_read event to other conversation participants.
+     */
     async handleMarkRead(socket, data) {
         try {
             const userId = socket.data.userId;
-            const { messageIds, conversationId } = data;
-            // Mark messages as read in database
-            await prisma_1.prisma.unifiedMessage.updateMany({
-                where: {
-                    id: { in: messageIds },
-                    recipientId: userId
-                },
-                data: {
-                    isRead: true,
-                    updatedAt: new Date()
-                }
-            });
-            // Update conversation metadata
-            if (conversationId) {
-                const unreadCount = await prisma_1.prisma.unifiedMessage.count({
-                    where: {
-                        conversationId,
-                        recipientId: userId,
-                        isRead: false
-                    }
+            // Accept both formats: singular messageId (iOS) or plural messageIds (web)
+            const messageIds = data.messageIds || (data.messageId ? [data.messageId] : []);
+            if (messageIds.length === 0)
+                return;
+            let conversationId = data.conversationId;
+            // If no conversationId provided, look it up from the first message
+            if (!conversationId && messageIds.length > 0) {
+                const firstMessage = await prisma_1.prisma.message.findUnique({
+                    where: { id: messageIds[0] },
+                    select: { conversationId: true }
                 });
-                await prisma_1.prisma.conversationMeta.update({
-                    where: { id: conversationId },
-                    data: { unreadCount }
+                conversationId = firstMessage?.conversationId;
+            }
+            // Update lastReadAt on the ConversationParticipant record
+            if (conversationId) {
+                await prisma_1.prisma.conversationParticipant.updateMany({
+                    where: { conversationId, userId },
+                    data: { lastReadAt: new Date() }
                 });
             }
+            // Acknowledge to sender
             socket.emit('messages_marked_read', { messageIds, conversationId });
+            // Broadcast message_read to other participants so they see read receipts
+            if (conversationId) {
+                const otherParticipants = await prisma_1.prisma.conversationParticipant.findMany({
+                    where: { conversationId, userId: { not: userId } },
+                    select: { userId: true }
+                });
+                for (const participant of otherParticipants) {
+                    for (const messageId of messageIds) {
+                        this.io.to(`user:${participant.userId}`).emit('message_read', {
+                            messageId,
+                            userId,
+                            conversationId
+                        });
+                    }
+                }
+            }
         }
         catch (error) {
             logger_1.logger.error({ error }, 'Error marking messages as read');
             socket.emit('mark_read_error', { error: 'Failed to mark messages as read' });
         }
     }
-    async createUnifiedMessage(data) {
-        const { type, senderId, recipientId, content, conversationId } = data;
-        // Generate conversation ID if not provided
-        let finalConversationId = conversationId;
-        if (!finalConversationId) {
-            if (type === messaging_1.MessageType.ADMIN_CANDIDATE) {
-                // For admin-candidate messages, always use candidate user ID
-                const candidateUserId = senderId === 'admin' ? recipientId : senderId;
-                finalConversationId = `admin_${candidateUserId}`;
-            }
-            else if (type === messaging_1.MessageType.USER_CANDIDATE) {
-                // For user-candidate messages, use candidate user ID with user prefix
-                finalConversationId = `candidate_${recipientId}_user_${senderId}`;
-            }
-            else if (type === messaging_1.MessageType.USER_USER) {
-                // For user-user messages, sort IDs for consistent conversation ID
-                const sortedIds = [senderId, recipientId].sort();
-                finalConversationId = `user_${sortedIds[0]}_${sortedIds[1]}`;
-            }
-        }
-        // Create the message
-        const message = await prisma_1.prisma.unifiedMessage.create({
-            data: {
-                type: type === messaging_1.MessageType.USER_USER ? 'USER_USER' :
-                    type === messaging_1.MessageType.USER_CANDIDATE ? 'USER_CANDIDATE' : 'ADMIN_CANDIDATE',
-                senderId,
-                recipientId,
-                content,
-                conversationId: finalConversationId,
-                isRead: false
-            }
-        });
-        // Update or create conversation metadata
-        await prisma_1.prisma.conversationMeta.upsert({
-            where: { id: finalConversationId },
-            update: {
-                lastMessageAt: message.createdAt,
-                unreadCount: {
-                    increment: 1
-                }
-            },
-            create: {
-                id: finalConversationId,
-                type: type === messaging_1.MessageType.USER_USER ? 'USER_USER' :
-                    type === messaging_1.MessageType.USER_CANDIDATE ? 'USER_CANDIDATE' : 'ADMIN_CANDIDATE',
-                participants: type === messaging_1.MessageType.ADMIN_CANDIDATE
-                    ? ['admin', senderId === 'admin' ? recipientId : senderId]
-                    : type === messaging_1.MessageType.USER_CANDIDATE
-                        ? [senderId, recipientId]
-                        : [senderId, recipientId],
-                lastMessageAt: message.createdAt,
-                unreadCount: 1
-            }
-        });
-        return {
-            id: message.id,
-            type: type,
-            senderId: message.senderId,
-            recipientId: message.recipientId,
-            content: message.content,
-            createdAt: message.createdAt,
-            updatedAt: message.updatedAt,
-            conversationId: message.conversationId,
-            isRead: message.isRead
-        };
-    }
-    // Public method to send server-initiated messages
-    async sendMessage(data) {
-        const message = await this.createUnifiedMessage(data);
-        const payload = {
-            type: 'NEW_MESSAGE',
-            messageType: data.type,
-            data: {
-                id: message.id,
-                senderId: data.senderId,
-                content: message.content,
-                type: data.type,
-                conversationId: message.conversationId,
-                timestamp: message.createdAt
-            },
-            timestamp: new Date()
-        };
-        if (data.type === messaging_1.MessageType.ADMIN_CANDIDATE && data.recipientId !== 'admin') {
-            this.io.to(`user:${data.recipientId}`).emit('new_message', payload);
-        }
-        else if (data.type === messaging_1.MessageType.ADMIN_CANDIDATE && data.recipientId === 'admin') {
-            this.io.to('admin:room').emit('new_message', payload);
-        }
-        else if (data.type === messaging_1.MessageType.USER_CANDIDATE) {
-            this.io.to(`user:${data.recipientId}`).emit('new_message', payload);
-        }
-        else if (data.type === messaging_1.MessageType.USER_USER) {
-            this.io.to(`user:${data.recipientId}`).emit('new_message', payload);
-        }
-        // Send push notification if recipient is offline (skip admin room targets)
-        if (data.recipientId !== 'admin' && !this.isUserOnline(data.recipientId)) {
-            const sender = await prisma_1.prisma.user.findUnique({
-                where: { id: data.senderId },
-                select: { firstName: true, lastName: true, username: true }
+    /**
+     * Handle join_conversation event.
+     * Joins the socket to a conversation-specific room for targeted delivery.
+     * Verifies user is a participant before allowing the join.
+     */
+    async handleJoinConversation(socket, data) {
+        const { conversationId } = data;
+        if (!conversationId)
+            return;
+        const userId = socket.data.userId;
+        try {
+            const participant = await prisma_1.prisma.conversationParticipant.findFirst({
+                where: { conversationId, userId }
             });
-            const senderName = sender?.firstName && sender?.lastName
-                ? `${sender.firstName} ${sender.lastName}`
-                : sender?.username || 'Someone';
-            pushNotificationService_1.pushNotificationService.sendMessagePush(data.recipientId, senderName, data.content, message.conversationId || '', data.type).catch(error => logger_1.logger.error({ error }, 'Failed to send push notification'));
+            if (participant) {
+                socket.join(`conversation:${conversationId}`);
+            }
         }
-        return message;
+        catch (error) {
+            logger_1.logger.error({ error, conversationId, userId }, 'Error joining conversation room');
+        }
+    }
+    /**
+     * Handle leave_conversation event.
+     * Removes the socket from a conversation-specific room.
+     */
+    handleLeaveConversation(socket, data) {
+        const { conversationId } = data;
+        if (!conversationId)
+            return;
+        socket.leave(`conversation:${conversationId}`);
     }
     // Check if user is online
     isUserOnline(userId) {
@@ -484,6 +392,15 @@ class WebSocketService {
         }
         catch (error) {
             logger_1.logger.error({ error }, 'Error emitting notification');
+        }
+    }
+    /// Emit a real-time message to a specific user via Socket.IO
+    emitMessage(userId, message) {
+        try {
+            this.io.to(`user:${userId}`).emit('new_message', message);
+        }
+        catch (error) {
+            logger_1.logger.error({ error }, 'Error emitting message');
         }
     }
 }

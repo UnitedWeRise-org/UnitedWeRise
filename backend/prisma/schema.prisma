@@ -314,6 +314,8 @@ model User {
   refreshTokens               RefreshToken[]            @relation("RefreshTokens")
   /// Device tokens for push notifications (CASCADE: deletes tokens when user deleted)
   deviceTokens                DeviceToken[]             @relation("DeviceTokens")
+  /// Public keys for end-to-end encrypted messaging (CASCADE: deletes keys when user deleted)
+  publicKeys                  PublicKey[]               @relation("UserPublicKeys")
 
   // RiseAI & Community Notes relationships
   /// Arguments authored by this user in RiseAI discourse
@@ -415,6 +417,29 @@ model DeviceToken {
 
   @@index([userId]) /// Fast lookup of all device tokens for a user
   @@index([platform]) /// Filter devices by platform for platform-specific notifications
+}
+
+/// Public key for end-to-end encrypted messaging.
+/// Each device uploads a Curve25519 public key; private keys never leave the device.
+model PublicKey {
+  /// Unique identifier for the public key record
+  id        String   @id @default(cuid())
+  /// User ID this public key belongs to (foreign key to User)
+  userId    String
+  /// Unique device identifier (stable UUID per app install)
+  deviceId  String
+  /// Base64-encoded Curve25519 public key
+  publicKey String
+  /// Key registration timestamp
+  createdAt DateTime @default(now())
+  /// Last update timestamp (refreshed on key rotation)
+  updatedAt DateTime @updatedAt
+
+  /// Relationship to User (CASCADE: deleting user deletes all their public keys)
+  user User @relation("UserPublicKeys", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId]) /// One key per device per user
+  @@index([userId]) /// Fast lookup of all public keys for a user
 }
 
 model UserActivity {
@@ -1093,11 +1118,15 @@ model Message {
   messageType    MessageType   @default(TEXT)
   imageUrl       String?
   /// Message status for DM request system (PENDING = awaiting approval, DELIVERED = normal)
-  status         MessageStatus @default(DELIVERED)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User          @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  status            MessageStatus @default(DELIVERED)
+  /// Whether the message content is end-to-end encrypted
+  isEncrypted       Boolean       @default(false)
+  /// ID of the sender's public key used for encryption (for key rotation support)
+  senderPublicKeyId String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  conversation      Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender            User          @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
   @@index([senderId])
@@ -2198,40 +2227,6 @@ model PaymentWebhook {
   @@index([processed])
 }
 
-model UnifiedMessage {
-  id             String             @id @default(cuid())
-  type           UnifiedMessageType
-  senderId       String
-  recipientId    String
-  content        String
-  conversationId String?
-  isRead         Boolean            @default(false)
-  metadata       Json?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-
-  @@index([type])
-  @@index([senderId])
-  @@index([recipientId])
-  @@index([conversationId])
-  @@index([createdAt])
-  @@index([type, senderId, recipientId])
-}
-
-model ConversationMeta {
-  id            String             @id @default(cuid())
-  type          UnifiedMessageType
-  participants  String[]
-  lastMessageAt DateTime
-  unreadCount   Int                @default(0)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-
-  @@index([type])
-  @@index([participants])
-  @@index([lastMessageAt])
-}
-
 model PolicyCategory {
   id           String           @id @default(cuid())
   name         String
@@ -3040,12 +3035,6 @@ enum RefundStatus {
   COMPLETED
   FAILED
   CANCELLED
-}
-
-enum UnifiedMessageType {
-  USER_USER
-  ADMIN_CANDIDATE
-  USER_CANDIDATE
 }
 
 enum PolicyStance {

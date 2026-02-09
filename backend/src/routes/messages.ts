@@ -593,7 +593,11 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
  *   post:
  *     tags: [Message]
  *     summary: Send a message via REST API (for testing)
- *     description: Sends a new message to a conversation via REST endpoint. Note - in production, messages are typically sent via WebSocket for real-time delivery. This endpoint is rate-limited.
+ *     description: |
+ *       Sends a new message to a conversation. This is the canonical message creation
+ *       endpoint used by all clients (iOS, web). Supports both plaintext and E2E encrypted
+ *       messages. For encrypted messages, set isEncrypted to true and pass the encrypted
+ *       blob as the content field. This endpoint is rate-limited.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -615,8 +619,15 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
  *               content:
  *                 type: string
  *                 minLength: 1
- *                 description: Message text content (will be trimmed)
+ *                 description: Message text content (plaintext or base64-encoded encrypted blob)
  *                 example: Hello, how are you?
+ *               isEncrypted:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Whether the content is E2E encrypted
+ *               senderPublicKeyId:
+ *                 type: string
+ *                 description: Sender's public key ID used for encryption (for key rotation)
  *     responses:
  *       201:
  *         description: Message sent successfully
@@ -636,7 +647,14 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
  *                       description: Message unique identifier
  *                     content:
  *                       type: string
- *                       description: Message text content
+ *                       description: Message text content (or encrypted blob if isEncrypted)
+ *                     isEncrypted:
+ *                       type: boolean
+ *                       description: Whether the content is E2E encrypted
+ *                     senderPublicKeyId:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Sender's public key ID used for encryption
  *                     senderId:
  *                       type: string
  *                       description: ID of user who sent the message
@@ -690,7 +708,7 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
 router.post('/conversations/:conversationId/messages', requireAuth, messageLimiter, validateMessage, async (req: AuthRequest, res) => {
   try {
     const { conversationId } = req.params;
-    const { content } = req.body;
+    const { content, isEncrypted, senderPublicKeyId } = req.body;
     const userId = req.user!.id;
 
     if (!content || content.trim().length === 0) {
@@ -754,7 +772,9 @@ router.post('/conversations/:conversationId/messages', requireAuth, messageLimit
         content: content.trim(),
         senderId: userId,
         conversationId,
-        status: messageStatus
+        status: messageStatus,
+        isEncrypted: isEncrypted === true,
+        ...(senderPublicKeyId && typeof senderPublicKeyId === 'string' && { senderPublicKeyId })
       },
       include: {
         sender: {
@@ -769,12 +789,12 @@ router.post('/conversations/:conversationId/messages', requireAuth, messageLimit
       }
     });
 
-    // Update conversation
+    // Update conversation (use generic placeholder for encrypted messages)
     await prisma.conversation.update({
       where: { id: conversationId },
       data: {
         lastMessageAt: new Date(),
-        lastMessageContent: content.trim(),
+        lastMessageContent: isEncrypted === true ? 'Encrypted message' : content.trim(),
         lastMessageSenderId: userId
       }
     });
@@ -816,13 +836,24 @@ router.post('/conversations/:conversationId/messages', requireAuth, messageLimit
           ? `${message.sender.firstName} ${message.sender.lastName}`
           : message.sender.username;
 
-        pushNotificationService.sendMessagePush(
-          recipientId,
-          senderName,
-          content.trim(),
-          conversationId,
-          'USER_USER'
-        ).catch(error => logger.error({ error }, 'Failed to send DM push notification'));
+        if (isEncrypted === true) {
+          pushNotificationService.sendEncryptedMessagePush(
+            recipientId,
+            senderName,
+            content.trim(),
+            conversationId,
+            senderPublicKeyId || null,
+            'USER_USER'
+          ).catch(error => logger.error({ error }, 'Failed to send encrypted DM push notification'));
+        } else {
+          pushNotificationService.sendMessagePush(
+            recipientId,
+            senderName,
+            content.trim(),
+            conversationId,
+            'USER_USER'
+          ).catch(error => logger.error({ error }, 'Failed to send DM push notification'));
+        }
       }
     }
 

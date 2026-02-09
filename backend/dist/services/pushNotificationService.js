@@ -188,6 +188,37 @@ class PushNotificationService {
         });
     }
     /**
+     * Send a push notification for an E2E encrypted DM
+     *
+     * For encrypted messages, the notification body shows a generic fallback text
+     * ("New message") since the server cannot read the content. The encrypted payload
+     * is included in the APNs data so the Notification Service Extension can decrypt
+     * and display the actual message content.
+     *
+     * @param recipientId - User ID of the message recipient
+     * @param senderName - Display name of the sender (shown as notification title)
+     * @param encryptedContent - Base64-encoded encrypted message blob
+     * @param conversationId - Conversation ID for thread grouping and deep linking
+     * @param senderPublicKeyId - Sender's public key ID for decryption key lookup
+     * @param messageType - Message type for deep link routing
+     * @returns True if push was delivered to at least one device
+     */
+    async sendEncryptedMessagePush(recipientId, senderName, encryptedContent, conversationId, senderPublicKeyId, messageType = 'USER_USER') {
+        return this.sendToUser(recipientId, {
+            title: senderName,
+            body: 'New message',
+            threadId: conversationId,
+            customData: {
+                conversationId,
+                messageType,
+                type: 'NEW_MESSAGE',
+                encrypted: true,
+                encryptedContent,
+                ...(senderPublicKeyId && { senderPublicKeyId }),
+            }
+        });
+    }
+    /**
      * Check if the push notification service is configured and ready to send
      *
      * @returns True if APNs client is initialized with valid credentials

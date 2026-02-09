@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireStagingAuth = exports.requireAdmin = exports.requireAuth = void 0;
+exports.requireStagingAuth = exports.requireAdmin = exports.optionalAuth = exports.requireAuth = void 0;
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../utils/auth");
 const crypto_1 = __importDefault(require("crypto"));
@@ -182,6 +182,49 @@ const requireAuth = async (req, res, next) => {
     }
 };
 exports.requireAuth = requireAuth;
+/**
+ * Optional authentication middleware.
+ * Populates req.user if a valid token is present, but does not reject
+ * unauthenticated requests. Use on routes that return extra data for
+ * authenticated users (e.g. relationship status) but still work publicly.
+ */
+const optionalAuth = async (req, _res, next) => {
+    try {
+        let token = req.cookies?.[cookies_1.COOKIE_NAMES.AUTH_TOKEN];
+        if (!token) {
+            token = req.header('Authorization')?.replace('Bearer ', '');
+        }
+        if (!token) {
+            return next();
+        }
+        const decoded = (0, auth_1.verifyToken)(token);
+        if (!decoded) {
+            return next();
+        }
+        // Check blacklist
+        const tokenId = crypto_1.default.createHash('sha256').update(token).digest('hex');
+        if (await sessionManager_1.sessionManager.isTokenBlacklisted(tokenId)) {
+            return next();
+        }
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: decoded.userId },
+            select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, isSuperAdmin: true, lastSeenAt: true }
+        });
+        if (user) {
+            req.user = {
+                ...user,
+                totpVerified: decoded.totpVerified || false,
+                totpVerifiedAt: decoded.totpVerifiedAt || null
+            };
+        }
+        next();
+    }
+    catch {
+        // Silently continue without auth on any error
+        next();
+    }
+};
+exports.optionalAuth = optionalAuth;
 const requireAdmin = async (req, res, next) => {
     // Generate unique request ID for tracing
     const requestId = crypto_1.default.randomBytes(4).toString('hex');

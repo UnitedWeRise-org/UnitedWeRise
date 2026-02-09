@@ -1,1 +1,1 @@
-{"version":3,"file":"oauth.d.ts","sourceRoot":"","sources":["../../src/routes/oauth.ts"],"names":[],"mappings":"AAYA,eAAO,MAAM,iBAAiB;;;;;;;;;CASpB,CAAC;AAEX,QAAA,MAAM,MAAM,4CAAmB,CAAC;AAolBhC,eAAe,MAAM,CAAC"}
+{"version":3,"file":"oauth.d.ts","sourceRoot":"","sources":["../../src/routes/oauth.ts"],"names":[],"mappings":"AAYA,eAAO,MAAM,iBAAiB;;;;;;;;;CASpB,CAAC;AAEX,QAAA,MAAM,MAAM,4CAAmB,CAAC;AA+lBhC,eAAe,MAAM,CAAC"}

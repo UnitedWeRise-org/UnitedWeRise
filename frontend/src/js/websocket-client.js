@@ -312,30 +312,6 @@ class UnifiedMessagingClient {
         }, delay);
     }
 
-    // Send a message
-    sendMessage(messageType, recipientId, content, conversationId = null) {
-        if (!this.isConnected || !this.socket) {
-            adminDebugError('WebSocket', 'WebSocket not connected, cannot send message');
-            return false;
-        }
-
-        if (!messageType || !recipientId || !content.trim()) {
-            adminDebugError('WebSocket', 'Invalid message parameters');
-            return false;
-        }
-
-        const messageData = {
-            type: messageType,
-            recipientId,
-            content: content.trim(),
-            conversationId
-        };
-
-        adminDebugSensitive('WebSocket', 'Sending message', messageData);
-        this.socket.emit('send_message', messageData);
-        return true;
-    }
-
     // Send typing indicator
     startTyping(messageType, recipientId) {
         if (!this.isConnected || !this.socket) return;
@@ -436,19 +412,6 @@ class UnifiedMessagingClient {
 // Create single global instance (avoid duplicate instantiation)
 const unifiedMessaging = new UnifiedMessagingClient();
 window.unifiedMessaging = unifiedMessaging;
-
-// Convenience functions for specific message types
-window.sendUserMessage = (recipientId, content, conversationId) => {
-    return window.unifiedMessaging.sendMessage('USER_USER', recipientId, content, conversationId);
-};
-
-window.sendAdminCandidateMessage = (recipientId, content, conversationId) => {
-    return window.unifiedMessaging.sendMessage('ADMIN_CANDIDATE', recipientId, content, conversationId);
-};
-
-window.sendUserCandidateMessage = (candidateId, content, conversationId) => {
-    return window.unifiedMessaging.sendMessage('USER_CANDIDATE', candidateId, content, conversationId);
-};
 
 // ES6 Module Exports
 export { UnifiedMessagingClient };

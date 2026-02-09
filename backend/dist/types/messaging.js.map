@@ -1,1 +1,1 @@
-{"version":3,"file":"messaging.js","sourceRoot":"","sources":["../../src/types/messaging.ts"],"names":[],"mappings":";AAAA,8DAA8D;;;AAE9D,IAAY,WAIX;AAJD,WAAY,WAAW;IACrB,sCAAuB,CAAA;IACvB,kDAAmC,CAAA;IACnC,gDAAiC,CAAA,CAAE,qCAAqC;AAC1E,CAAC,EAJW,WAAW,2BAAX,WAAW,QAItB"}
+{"version":3,"file":"messaging.js","sourceRoot":"","sources":["../../src/types/messaging.ts"],"names":[],"mappings":";AAAA,6DAA6D;;;AAE7D,IAAY,WAIX;AAJD,WAAY,WAAW;IACrB,sCAAuB,CAAA;IACvB,kDAAmC,CAAA;IACnC,gDAAiC,CAAA;AACnC,CAAC,EAJW,WAAW,2BAAX,WAAW,QAItB"}

@@ -287,7 +287,7 @@ router.put('/profile', auth_1.requireAuth, validation_1.validateProfileUpdate, a
  *       500:
  *         description: Internal server error
  */
-router.get('/:userId', async (req, res) => {
+router.get('/:userId', auth_1.optionalAuth, async (req, res) => {
     try {
         const { userId } = req.params;
         const viewerId = req.user?.id; // Optional authentication
@@ -775,7 +775,7 @@ router.get('/search', auth_1.requireAuth, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:userId/complete', async (req, res) => {
+router.get('/:userId/complete', auth_1.optionalAuth, async (req, res) => {
     try {
         const { userId } = req.params;
         const { limit: limitNum, offset: offsetNum } = (0, safeJson_1.safePaginationParams)(req.query.limit, req.query.offset);

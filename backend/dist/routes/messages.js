@@ -605,7 +605,11 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
  *   post:
  *     tags: [Message]
  *     summary: Send a message via REST API (for testing)
- *     description: Sends a new message to a conversation via REST endpoint. Note - in production, messages are typically sent via WebSocket for real-time delivery. This endpoint is rate-limited.
+ *     description: |
+ *       Sends a new message to a conversation. This is the canonical message creation
+ *       endpoint used by all clients (iOS, web). Supports both plaintext and E2E encrypted
+ *       messages. For encrypted messages, set isEncrypted to true and pass the encrypted
+ *       blob as the content field. This endpoint is rate-limited.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -627,8 +631,15 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
  *               content:
  *                 type: string
  *                 minLength: 1
- *                 description: Message text content (will be trimmed)
+ *                 description: Message text content (plaintext or base64-encoded encrypted blob)
  *                 example: Hello, how are you?
+ *               isEncrypted:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Whether the content is E2E encrypted
+ *               senderPublicKeyId:
+ *                 type: string
+ *                 description: Sender's public key ID used for encryption (for key rotation)
  *     responses:
  *       201:
  *         description: Message sent successfully
@@ -648,7 +659,14 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
  *                       description: Message unique identifier
  *                     content:
  *                       type: string
- *                       description: Message text content
+ *                       description: Message text content (or encrypted blob if isEncrypted)
+ *                     isEncrypted:
+ *                       type: boolean
+ *                       description: Whether the content is E2E encrypted
+ *                     senderPublicKeyId:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Sender's public key ID used for encryption
  *                     senderId:
  *                       type: string
  *                       description: ID of user who sent the message
@@ -702,7 +720,7 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
 router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateLimiting_1.messageLimiter, validation_1.validateMessage, async (req, res) => {
     try {
         const { conversationId } = req.params;
-        const { content } = req.body;
+        const { content, isEncrypted, senderPublicKeyId } = req.body;
         const userId = req.user.id;
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ error: 'Message content is required' });
@@ -756,7 +774,9 @@ router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateL
                 content: content.trim(),
                 senderId: userId,
                 conversationId,
-                status: messageStatus
+                status: messageStatus,
+                isEncrypted: isEncrypted === true,
+                ...(senderPublicKeyId && typeof senderPublicKeyId === 'string' && { senderPublicKeyId })
             },
             include: {
                 sender: {
@@ -770,12 +790,12 @@ router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateL
                 }
             }
         });
-        // Update conversation
+        // Update conversation (use generic placeholder for encrypted messages)
         await prisma_1.prisma.conversation.update({
             where: { id: conversationId },
             data: {
                 lastMessageAt: new Date(),
-                lastMessageContent: content.trim(),
+                lastMessageContent: isEncrypted === true ? 'Encrypted message' : content.trim(),
                 lastMessageSenderId: userId
             }
         });
@@ -786,15 +806,29 @@ router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateL
                 : message.sender.username;
             (0, notifications_1.createNotification)('MESSAGE_REQUEST', userId, recipientId, `${senderName} wants to message you`, undefined, undefined).catch(error => logger_1.logger.error({ error }, 'Failed to create message request notification'));
         }
+        // Load WebSocket service for real-time delivery and online status check
+        const wsService = recipientId ? await getWebSocketService() : null;
+        // Emit real-time message via Socket.IO to all participants
+        if (wsService) {
+            for (const participant of otherParticipants) {
+                wsService.emitMessage(participant.userId, message);
+            }
+            // Also emit to sender for multi-device sync
+            wsService.emitMessage(userId, message);
+        }
         // Send push notification if recipient is offline
         if (recipientId) {
-            const wsService = await getWebSocketService();
             const isOnline = wsService?.isUserOnline(recipientId) ?? false;
             if (!isOnline) {
                 const senderName = message.sender.firstName && message.sender.lastName
                     ? `${message.sender.firstName} ${message.sender.lastName}`
                     : message.sender.username;
-                pushNotificationService_1.pushNotificationService.sendMessagePush(recipientId, senderName, content.trim(), conversationId, 'USER_USER').catch(error => logger_1.logger.error({ error }, 'Failed to send DM push notification'));
+                if (isEncrypted === true) {
+                    pushNotificationService_1.pushNotificationService.sendEncryptedMessagePush(recipientId, senderName, content.trim(), conversationId, senderPublicKeyId || null, 'USER_USER').catch(error => logger_1.logger.error({ error }, 'Failed to send encrypted DM push notification'));
+                }
+                else {
+                    pushNotificationService_1.pushNotificationService.sendMessagePush(recipientId, senderName, content.trim(), conversationId, 'USER_USER').catch(error => logger_1.logger.error({ error }, 'Failed to send DM push notification'));
+                }
             }
         }
         res.status(201).json({

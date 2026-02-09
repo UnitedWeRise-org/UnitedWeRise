@@ -4610,12 +4610,21 @@ class CandidateSystemIntegration {
     // Load constituent conversations for candidate
     async loadConstituentConversations() {
         try {
-            const response = await apiCall('/unified-messages/candidate/user-messages', {
+            const response = await apiCall('/messages/conversations', {
                 credentials: 'include'
             });
 
             if (response.ok && response.data?.success) {
-                const { conversations, candidate } = response.data.data;
+                // Adapt new API shape to display format
+                const conversations = (response.data.conversations || []).map(conv => ({
+                    id: conv.id,
+                    lastMessageAt: conv.lastMessageAt,
+                    unreadCount: conv.unreadCount || 0,
+                    messages: [{
+                        sender: conv.participants?.[0] || {},
+                        content: conv.lastMessageContent || ''
+                    }]
+                }));
                 this.displayConversations(conversations);
                 this.updateUnreadCount(conversations);
             } else {
@@ -4804,34 +4813,51 @@ class CandidateSystemIntegration {
         }
     }
 
-    // Send reply to constituent
+    // Send reply to constituent via HTTP API
     async sendReply(conversationId, recipientId) {
         const replyContent = document.getElementById('replyContent');
         const isPublicReply = document.getElementById('publicReply');
-        
+
         if (!replyContent?.value.trim()) {
             alert('Please enter a reply message.');
             return;
         }
 
         try {
-            // Send via WebSocket for real-time delivery
-            const success = window.sendUserCandidateMessage(recipientId, replyContent.value.trim(), conversationId);
-            
-            if (success) {
-                // Clear the reply form
-                replyContent.value = '';
-                if (isPublicReply) isPublicReply.checked = false;
-                
-                // Refresh the conversation
-                setTimeout(() => {
-                    this.loadConstituentConversations();
-                }, 500);
-                
-                this.showToast('Reply sent successfully!');
-            } else {
-                throw new Error('Failed to send reply via WebSocket');
+            // Get or create a conversation with the recipient
+            const convResponse = await apiCall('/messages/conversations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ participantId: recipientId })
+            });
+
+            if (!convResponse.ok || !convResponse.data?.data?.id) {
+                throw new Error(convResponse.data?.error || 'Failed to get conversation');
             }
+
+            const newConversationId = convResponse.data.data.id;
+
+            // Send the message via HTTP
+            const msgResponse = await apiCall(`/messages/conversations/${newConversationId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: replyContent.value.trim() })
+            });
+
+            if (!msgResponse.ok) {
+                throw new Error(msgResponse.data?.error || 'Failed to send message');
+            }
+
+            // Clear the reply form
+            replyContent.value = '';
+            if (isPublicReply) isPublicReply.checked = false;
+
+            // Refresh the conversation
+            setTimeout(() => {
+                this.loadConstituentConversations();
+            }, 500);
+
+            this.showToast('Reply sent successfully!');
         } catch (error) {
             adminDebugError('Error sending reply:', error);
             this.showToast('Failed to send reply. Please try again.');
@@ -4866,22 +4892,16 @@ class CandidateSystemIntegration {
         if (isPublicReply) isPublicReply.checked = false;
     }
 
-    // Mark conversation as read
+    // Mark conversation as read via WebSocket
     async markConversationRead(conversationId) {
         try {
-            const response = await apiCall('/unified-messages/mark-read', {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ conversationId })
-            });
-
-            if (response.ok) {
+            if (window.unifiedMessaging?.isWebSocketConnected()) {
+                window.unifiedMessaging.markMessagesAsRead([], conversationId);
                 // Refresh conversations to update unread counts
                 this.loadConstituentConversations();
                 this.showToast('Conversation marked as read');
+            } else {
+                adminDebugWarn('WebSocket not connected, cannot mark as read');
             }
         } catch (error) {
             adminDebugError('Error marking conversation as read:', error);
