@@ -554,6 +554,14 @@ export class WebSocketService {
       logger.error({ error }, 'Error emitting notification');
     }
   }
-}
 
+  /// Emit a real-time message to a specific user via Socket.IO
+  public emitMessage(userId: string, message: any): void {
+    try {
+      this.io.to(`user:${userId}`).emit('new_message', message);
+    } catch (error) {
+      logger.error({ error }, 'Error emitting message');
+    }
+  }
+}
 export default WebSocketService;

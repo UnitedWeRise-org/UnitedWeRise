@@ -795,9 +795,20 @@ router.post('/conversations/:conversationId/messages', requireAuth, messageLimit
       ).catch(error => logger.error({ error }, 'Failed to create message request notification'));
     }
 
+    // Load WebSocket service for real-time delivery and online status check
+    const wsService = recipientId ? await getWebSocketService() : null;
+
+    // Emit real-time message via Socket.IO to all participants
+    if (wsService) {
+      for (const participant of otherParticipants) {
+        wsService.emitMessage(participant.userId, message);
+      }
+      // Also emit to sender for multi-device sync
+      wsService.emitMessage(userId, message);
+    }
+
     // Send push notification if recipient is offline
     if (recipientId) {
-      const wsService = await getWebSocketService();
       const isOnline = wsService?.isUserOnline(recipientId) ?? false;
 
       if (!isOnline) {
