@@ -8,6 +8,22 @@
 
 ---
 
+## [2026-03-06] - Fix mobile token refresh endpoint
+
+### Fixed
+
+**Token Refresh for Mobile Clients**
+- `/api/auth/refresh` now reads refresh token from request body for mobile clients (previously only read from httpOnly cookies, which iOS cannot access)
+- Response now includes `accessToken` and `refreshToken` in body for mobile clients (matching login/register/OAuth endpoint behavior)
+- Mobile detection uses same pattern as all other auth endpoints: `X-Client-Type: mobile` header or `UnitedWeRise-iOS` User-Agent
+- Without this fix, iOS users were forcibly logged out every 30 minutes when the access token expired
+
+### Changed
+- Updated Swagger documentation for `/api/auth/refresh` to document mobile request body and response fields
+- Enhanced diagnostic logging with `isMobileClient` and `hasBodyToken` fields
+
+---
+
 ## [2026-02-07] - APNs Push Notifications for DMs
 
 ### Added

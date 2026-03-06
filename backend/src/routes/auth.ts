@@ -1305,7 +1305,7 @@ router.post('/set-password', requireAuth, async (req: AuthRequest, res) => {
  *     tags: [Authentication]
  *     summary: Refresh access token using refresh token
  *     description: |
- *       Exchanges a valid refresh token (from cookie) for new access token and refresh token.
+ *       Exchanges a valid refresh token for new access token and refresh token.
  *       Implements token rotation: old refresh token is invalidated with 30-second grace period.
  *
  *       **Token Rotation Security**: Each refresh generates new tokens and invalidates old ones,
@@ -1315,9 +1315,21 @@ router.post('/set-password', requireAuth, async (req: AuthRequest, res) => {
  *       Users see seamless experience - no re-login required for up to 30 days (or 90 with Remember Me).
  *
  *       **TOTP Persistence**: TOTP verification status preserved across token refreshes.
+ *
+ *       **Mobile Clients**: Send refresh token in request body (mobile clients cannot use httpOnly cookies).
+ *       Detected via X-Client-Type: mobile header or UnitedWeRise-iOS User-Agent.
+ *       Mobile responses include accessToken and refreshToken in the response body.
  *     requestBody:
- *       description: No body required - refresh token sent via httpOnly cookie
+ *       description: Mobile clients send refresh token in body. Web clients use httpOnly cookie.
  *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: Refresh token (required for mobile clients)
  *     responses:
  *       200:
  *         description: Tokens refreshed successfully - new tokens sent as httpOnly cookies
@@ -1341,6 +1353,12 @@ router.post('/set-password', requireAuth, async (req: AuthRequest, res) => {
  *                 csrfToken:
  *                   type: string
  *                   description: CSRF token for subsequent authenticated requests
+ *                 accessToken:
+ *                   type: string
+ *                   description: New JWT access token (mobile clients only)
+ *                 refreshToken:
+ *                   type: string
+ *                   description: New refresh token (mobile clients only)
  *       401:
  *         description: Invalid, expired, or revoked refresh token - user must log in again
  *         content:
@@ -1365,14 +1383,23 @@ router.post('/refresh', async (req, res) => {
   const userAgent = req.get('User-Agent') || 'unknown';
 
   try {
-    // Get refreshToken from cookies (not authToken)
-    const refreshToken = req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
+    // Detect mobile clients (same pattern as login endpoint)
+    const isMobileClient = req.get('X-Client-Type') === 'mobile' ||
+                           req.get('User-Agent')?.includes('UnitedWeRise-iOS');
+
+    // For mobile clients, get refreshToken from request body (they can't use httpOnly cookies)
+    // For web clients, get from cookies as before
+    const refreshToken = isMobileClient
+      ? (req.body?.refreshToken || req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN])
+      : req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
 
     // DIAGNOSTIC: Log all cookie names received (not values for security)
     const allCookieNames = Object.keys(req.cookies || {});
     req.log.info({
       ipAddress,
-      hasCookie: !!refreshToken,
+      isMobileClient,
+      hasBodyToken: !!req.body?.refreshToken,
+      hasCookie: !!req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN],
       cookieLength: refreshToken?.length,
       userAgent,
       allCookieNames
@@ -1546,10 +1573,14 @@ router.post('/refresh', async (req, res) => {
       riskScore: 0
     });
 
-    res.json({
-      success: true,
-      csrfToken
-    });
+    // For mobile clients, include tokens in response body (they can't read httpOnly cookies)
+    const responseData: Record<string, unknown> = { success: true, csrfToken };
+    if (isMobileClient) {
+      responseData.accessToken = newAccessToken;
+      responseData.refreshToken = newRefreshToken;
+    }
+
+    res.json(responseData);
   } catch (error) {
     req.log.error({ error, ipAddress }, 'Token refresh error');
 
