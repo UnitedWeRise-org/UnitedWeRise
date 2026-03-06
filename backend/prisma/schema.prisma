@@ -172,6 +172,8 @@ model User {
   appeals                     Appeal[]                  @relation("UserAppeals")
   /// Candidate profile for this user (1:1, optional, only for verified candidates)
   candidateProfile            Candidate?
+  /// Candidate status changes performed by this user (as admin/moderator)
+  candidateStatusChanges      Candidate[]               @relation("CandidateStatusChanges")
   /// Admin-candidate messages marked as read by this user
   readAdminMessages           CandidateAdminMessage[]   @relation("ReadAdminMessages")
   /// Admin-candidate messages sent by this user (CASCADE: deletes messages if user deleted)
@@ -892,6 +894,8 @@ model Candidate {
   status                 CandidateStatus?                @default(ACTIVE)
   statusChangedAt        DateTime?
   statusChangedBy        String?
+  /// User who changed candidate status (admin/moderator)
+  statusChangedByUser    User?                           @relation("CandidateStatusChanges", fields: [statusChangedBy], references: [id], onDelete: SetNull)
   statusReason           String?
   suspendedUntil         DateTime?
   appealDeadline         DateTime?
@@ -935,6 +939,7 @@ model Candidate {
   @@index([party])
   @@index([userId])
   @@index([statusChangedAt])
+  @@index([statusChangedBy]) /// Fast lookup by moderator who changed status
   @@index([status])
 }
 
@@ -1130,6 +1135,7 @@ model Message {
 
   @@index([conversationId, createdAt])
   @@index([senderId])
+  @@index([senderPublicKeyId]) /// Fast lookup for key rotation queries
   @@index([status]) /// Index for efficient message request queries
 }
 
@@ -1190,7 +1196,7 @@ model Report {
   aiUrgencyLevel    String?
   aiAnalysisNotes   String?
   aiAssessedAt      DateTime?
-  moderator         User?             @relation("ModeratedReports", fields: [moderatorId], references: [id])
+  moderator         User?             @relation("ModeratedReports", fields: [moderatorId], references: [id], onDelete: SetNull)
   reporter          User              @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
 
   @@index([reporterId])
@@ -1211,7 +1217,7 @@ model ContentFlag {
   resolvedBy  String?
   resolvedAt  DateTime?
   createdAt   DateTime    @default(now())
-  resolver    User?       @relation("ResolvedFlags", fields: [resolvedBy], references: [id])
+  resolver    User?       @relation("ResolvedFlags", fields: [resolvedBy], references: [id], onDelete: SetNull)
 
   @@index([contentType, contentId])
   @@index([flagType, resolved])
@@ -3546,6 +3552,7 @@ model Photo {
   post Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([userId]) /// Fast lookup of all photos by user
+  @@index([userId, isActive]) /// Fast filtered gallery queries (active photos by user)
   @@index([postId]) /// Fast lookup of photos attached to post
   @@index([uploadedAt]) /// Chronological sorting of gallery
   @@index([moderationStatus]) /// Admin moderation queue filtering
