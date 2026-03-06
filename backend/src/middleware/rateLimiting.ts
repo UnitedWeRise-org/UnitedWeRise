@@ -1,14 +1,25 @@
 import rateLimit from 'express-rate-limit';
 import { logger } from '../services/logger';
 
-// Custom key generator for Azure Container Apps - strips port numbers from IPs
+/**
+ * Custom key generator for Azure Container Apps.
+ * Normalizes IPv4-mapped IPv6 addresses and strips port numbers
+ * to ensure consistent rate limiting across address formats.
+ * @param request - Express request object
+ * @returns Normalized IP address string for rate limit bucketing
+ */
 const azureKeyGenerator = (request: any) => {
   if (!request.ip) {
     logger.error({ socketRemoteAddress: request.socket?.remoteAddress }, 'Warning: request.ip is missing');
     return request.socket.remoteAddress || 'unknown';
   }
+  let ip = request.ip;
+  // Normalize IPv4-mapped IPv6 addresses (::ffff:x.x.x.x -> x.x.x.x)
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.slice(7);
+  }
   // Strip port number from IP for Azure Container Apps compatibility
-  return request.ip.replace(/:\d+[^:]*$/, '');
+  return ip.replace(/:\d+[^:]*$/, '');
 };
 
 // Strict rate limiting for authentication endpoints
