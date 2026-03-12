@@ -13,6 +13,7 @@ import { userState } from '../state/user.js';
 import { setUserLoggedIn } from './session.js';
 import { unifiedAuthManager } from './unified-manager.js';
 import { isDevelopment } from '../../../utils/environment.js';
+import { isCaptchaBlocked, generateFallbackProof, initCaptchaFallback } from '../../../services/captchaFallback.js';
 
 /**
  * Open authentication modal
@@ -70,12 +71,15 @@ export function switchToRegister() {
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const modalTitle = document.querySelector('#authModal h2');
-    
+
     if (loginForm) loginForm.style.display = 'none';
     if (registerForm) registerForm.style.display = 'block';
     if (modalTitle) modalTitle.textContent = 'Create Account';
-    
+
     clearAuthForm();
+
+    // Initialize captcha fallback (starts timing, injects honeypot, schedules detection)
+    initCaptchaFallback();
 }
 
 /**
@@ -296,10 +300,30 @@ export async function handleRegister() {
         console.log('hCaptcha not available or local development mode');
     }
 
-    // Check if we need captcha (skip for development environment)
+    // Three-path captcha validation:
+    // Path A: hCaptcha token available — proceed normally
+    // Path B: hCaptcha blocked by ad blocker — use fallback proof
+    // Path C: hCaptcha available but not completed — show error
+    let useFallback = false;
     if (!isDevelopment() && !hcaptchaToken) {
-        showAuthMessage('Please complete the captcha verification', 'error', 'register');
-        return;
+        if (isCaptchaBlocked()) {
+            // Path B: Captcha blocked — validate fallback checks client-side
+            const proof = generateFallbackProof();
+            if (!proof.honeypotClean) {
+                // Silently reject (likely bot — don't reveal honeypot)
+                showAuthMessage('Registration failed. Please try again.', 'error', 'register');
+                return;
+            }
+            if (proof.timingSeconds < 2) {
+                showAuthMessage('Please take your time filling out the form.', 'error', 'register');
+                return;
+            }
+            useFallback = true;
+        } else {
+            // Path C: hCaptcha is available but user didn't complete it
+            showAuthMessage('Please complete the captcha verification', 'error', 'register');
+            return;
+        }
     }
 
     try {
@@ -315,6 +339,19 @@ export async function handleRegister() {
         // Add optional fields
         if (lastName) requestBody.lastName = lastName;
         if (hcaptchaToken) requestBody.hcaptchaToken = hcaptchaToken;
+
+        // Path B: Add fallback proof and device fingerprint when captcha is bypassed
+        if (useFallback) {
+            requestBody.captchaBypass = 'adblocker';
+            requestBody.fallbackProof = generateFallbackProof();
+            if (window.deviceFingerprinting) {
+                try {
+                    requestBody.deviceFingerprint = await window.deviceFingerprinting.getFingerprintData();
+                } catch (fpError) {
+                    console.log('Device fingerprint collection failed:', fpError.message);
+                }
+            }
+        }
 
         const response = await apiClient.call('/auth/register', {
             method: 'POST',

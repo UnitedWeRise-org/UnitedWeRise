@@ -142,13 +142,25 @@ function addHCaptchaToRegistration() {
 // EXPORTS
 // ============================================================================
 
+/**
+ * Check if the hCaptcha widget has successfully rendered
+ * Used by captchaFallback.js to detect if hCaptcha was blocked by ad blockers
+ * @returns {boolean} True if the widget contains a rendered iframe
+ */
+function isCaptchaWidgetRendered() {
+    const widget = document.getElementById('hcaptcha-register');
+    if (!widget) return false;
+    return widget.querySelector('iframe') !== null;
+}
+
 // Export callback and helper functions
 export {
     onHCaptchaCallback,
     getHCaptchaToken,
     resetHCaptcha,
     isHCaptchaComplete,
-    addHCaptchaToRegistration
+    addHCaptchaToRegistration,
+    isCaptchaWidgetRendered
 };
 
 // ============================================================================

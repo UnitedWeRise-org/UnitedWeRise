@@ -443,3 +443,24 @@
 .remember-me-label span {
     color: #666;
 }
+
+/* ========================================
+   CAPTCHA FALLBACK WARNING
+======================================== */
+
+.captcha-blocked-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.85rem;
+    color: #856404;
+    line-height: 1.5;
+}
+
+.captcha-blocked-warning strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+}

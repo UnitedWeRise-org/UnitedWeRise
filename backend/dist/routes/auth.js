@@ -58,6 +58,37 @@ const speakeasy = __importStar(require("speakeasy"));
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
+ * Validates fallback proof when hCaptcha is bypassed due to ad blockers.
+ * Checks honeypot field, form timing, device fingerprint presence, and risk score.
+ * @param fallbackProof - Client-side fallback proof data
+ * @param deviceFingerprint - Device fingerprint data from the client
+ * @param req - Express request for logging
+ * @returns Object with valid boolean and optional error message
+ */
+function validateFallbackProof(fallbackProof, deviceFingerprint, req) {
+    // 1. Honeypot must be clean (bots auto-fill hidden fields)
+    if (!fallbackProof.honeypotClean) {
+        req.log.warn({ ip: req.ip }, 'Fallback registration rejected: honeypot triggered');
+        return { valid: false, error: 'Registration validation failed.' };
+    }
+    // 2. Timing must be reasonable (humans take >= 3 seconds to fill a form)
+    if (!fallbackProof.timingSeconds || fallbackProof.timingSeconds < 3) {
+        req.log.warn({ ip: req.ip, timing: fallbackProof.timingSeconds }, 'Fallback registration rejected: form submitted too quickly');
+        return { valid: false, error: 'Please take your time filling out the registration form.' };
+    }
+    // 3. Device fingerprint must be present for bypass registrations
+    if (!deviceFingerprint || !deviceFingerprint.fingerprint) {
+        return { valid: false, error: 'Device verification required. Please ensure JavaScript is fully enabled.' };
+    }
+    // 4. Risk score must be low (< 30 threshold)
+    const riskScore = deviceFingerprint.riskScore || 0;
+    if (riskScore >= 30) {
+        req.log.warn({ ip: req.ip, riskScore }, 'Fallback registration rejected: high risk score');
+        return { valid: false, error: 'Registration could not be completed. Please try disabling your ad blocker.' };
+    }
+    return { valid: true };
+}
+/**
  * @swagger
  * /api/auth/register:
  *   post:
@@ -74,7 +105,6 @@ const router = express_1.default.Router();
  *               - email
  *               - username
  *               - password
- *               - hcaptchaToken
  *             properties:
  *               email:
  *                 type: string
@@ -104,7 +134,24 @@ const router = express_1.default.Router();
  *                 description: Phone number in international format (optional)
  *               hcaptchaToken:
  *                 type: string
- *                 description: hCaptcha verification token
+ *                 description: hCaptcha verification token (optional if captchaBypass is provided)
+ *               captchaBypass:
+ *                 type: string
+ *                 enum: [adblocker]
+ *                 description: Reason for bypassing captcha (when ad blocker blocks hCaptcha)
+ *               fallbackProof:
+ *                 type: object
+ *                 description: Fallback bot-protection proof when captcha is bypassed
+ *                 properties:
+ *                   honeypotClean:
+ *                     type: boolean
+ *                     description: Whether the hidden honeypot field was left empty
+ *                   timingSeconds:
+ *                     type: number
+ *                     description: Seconds elapsed between form open and submission
+ *                   captchaBlockDetected:
+ *                     type: boolean
+ *                     description: Whether the client detected captcha was blocked
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -136,14 +183,42 @@ const router = express_1.default.Router();
 // Register
 router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegistration, async (req, res) => {
     try {
-        const { email, username, password, firstName, lastName, phoneNumber, hcaptchaToken, deviceFingerprint } = req.body;
-        // Verify captcha (skip for development environment)
+        const { email, username, password, firstName, lastName, phoneNumber, hcaptchaToken, deviceFingerprint, captchaBypass, fallbackProof } = req.body;
+        // Verify captcha with three-path logic:
+        // Path A: Normal hCaptcha verification
+        // Path B: Ad blocker bypass with fallback proof validation
+        // Path C: No captcha and no valid bypass — rejected
         if ((0, environment_1.requiresCaptcha)()) {
-            const captchaResult = await captchaService_1.captchaService.verifyCaptcha(hcaptchaToken, req.ip);
-            if (!captchaResult.success) {
+            if (hcaptchaToken) {
+                // Path A: Normal hCaptcha verification
+                const captchaResult = await captchaService_1.captchaService.verifyCaptcha(hcaptchaToken, req.ip);
+                if (!captchaResult.success) {
+                    return res.status(400).json({
+                        error: 'Captcha verification failed. Please try again.',
+                        captchaError: captchaResult.error
+                    });
+                }
+            }
+            else if (captchaBypass === 'adblocker' && fallbackProof) {
+                // Path B: Ad blocker detected — validate fallback proof
+                const fallbackResult = validateFallbackProof(fallbackProof, deviceFingerprint, req);
+                if (!fallbackResult.valid) {
+                    return res.status(400).json({
+                        error: fallbackResult.error,
+                        suggestion: 'Please disable your ad blocker and try again, or contact support.'
+                    });
+                }
+                req.log.info({
+                    email,
+                    ip: req.ip,
+                    riskScore: deviceFingerprint?.riskScore,
+                    timingSeconds: fallbackProof.timingSeconds
+                }, 'Registration via captcha bypass (ad blocker detected)');
+            }
+            else {
+                // Path C: No captcha and no valid bypass
                 return res.status(400).json({
-                    error: 'Captcha verification failed. Please try again.',
-                    captchaError: captchaResult.error
+                    error: 'Captcha verification is required. If your ad blocker is blocking the captcha, please disable it and try again.'
                 });
             }
         }
@@ -161,7 +236,8 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
                 components: deviceFingerprint.components,
                 userAgent: req.get('User-Agent'),
                 ip: req.ip,
-                timestamp: new Date()
+                timestamp: new Date(),
+                ...(captchaBypass && { captchaBypass: true, captchaBypassReason: captchaBypass })
             };
             // Log high-risk registrations for review
             if (riskScore > 30) {

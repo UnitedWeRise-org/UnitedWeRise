@@ -55,8 +55,17 @@ export const validateRegistration = [
     .matches(/^[\+]?[1-9]\d{1,14}$/)
     .withMessage('Phone number must be in international format'),
   body('hcaptchaToken')
-    .notEmpty()
-    .withMessage('Captcha verification is required'),
+    .optional({ nullable: true })
+    .isString()
+    .withMessage('Captcha token must be a string if provided'),
+  body('captchaBypass')
+    .optional()
+    .isIn(['adblocker'])
+    .withMessage('Invalid captcha bypass reason'),
+  body('fallbackProof')
+    .optional()
+    .isObject()
+    .withMessage('Fallback proof must be an object if provided'),
   handleValidationErrors
 ];
 
