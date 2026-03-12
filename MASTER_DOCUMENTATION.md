@@ -4427,7 +4427,7 @@ if (enableRequestLogging()) {
 - `getEnvironment()` → Returns 'development' or 'production'
 - `isDevelopment()` → Boolean check for development environment
 - `isProduction()` → Boolean check for production environment
-- `requiresCaptcha()` → Returns true for production (bypass in development)
+- `requiresCaptcha()` → Returns true for production (bypass in development). When captcha is required but blocked by ad blockers, the registration endpoint accepts a fallback proof (honeypot + timing + device fingerprint) instead. See `docs/SECURITY_NOTES.md` Section 3.
 - `requireSecureCookies()` → Returns true for production only
 - `enableRequestLogging()` → Returns true for development environments
 - `enableApiDocs()` → Returns true for development or when ENABLE_DOCS=true

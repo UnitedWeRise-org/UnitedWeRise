@@ -2,7 +2,7 @@
 
 This document records intentional security design decisions that may appear as findings in automated security scans but are safe by design.
 
-Last updated: 2026-01-06
+Last updated: 2026-03-12
 
 ---
 
@@ -124,7 +124,70 @@ This pattern is used by all major OAuth implementations:
 
 ---
 
-## 3. Other Intentional Security Decisions
+## 3. Registration Captcha Fallback (Ad Blocker Bypass)
+
+### Summary
+
+When ad blockers (especially Safari content blockers) prevent hCaptcha from loading, the registration endpoint accepts an alternative "fallback proof" instead of requiring a captcha token. This is an intentional trade-off to prevent silently blocking legitimate users from registering.
+
+### Why This Exists
+
+Safari content blockers and common ad blockers block `js.hcaptcha.com` and its assets. The hCaptcha widget may partially load (iframe renders) but internal scripts fail due to CSP violations from the content blocker. Users see a broken captcha with no way to proceed. Since we cannot control users' browser extensions, the fallback path ensures they can still register.
+
+### Three-Path Captcha Logic
+
+| Path | Condition | Protection Level |
+|------|-----------|-----------------|
+| **A** (default) | hCaptcha loads and user completes it | Full hCaptcha bot intelligence |
+| **B** (fallback) | hCaptcha blocked/broken | Honeypot + timing + device fingerprint + rate limiting |
+| **C** (reject) | No captcha and no valid bypass | Blocked with helpful error |
+
+### Fallback Validation Requirements (Path B)
+
+All four checks must pass for a captcha-bypass registration to succeed:
+
+1. **Honeypot field clean**: A hidden form field (injected dynamically, invisible to users) must be empty. Bots that auto-fill all fields will fail this check.
+2. **Form timing >= 3 seconds**: Time between form open and submission must be at least 3 seconds. Automated submissions that fire instantly will fail.
+3. **Device fingerprint present**: Browser characteristics (screen, canvas, WebGL, timezone, etc.) must be collected and submitted.
+4. **Risk score < 30**: The algorithmic risk score (not AI-based) must be below 30. Headless browsers, bot user agents, and suspicious environments score higher.
+
+### Existing Protections That Still Apply
+
+These protections apply to ALL registration paths (A, B, and C):
+
+- **Rate limiting**: 5 registration attempts per 15-minute window per IP (`authLimiter`)
+- **CSRF protection**: Double-submit cookie pattern
+- **Input validation**: Strict email, username, and password requirements
+- **Email normalization**: Prevents Gmail dot-variant mass registration
+- **Email verification**: Required for full account functionality
+
+### Monitoring
+
+All captcha-bypass registrations are:
+- Logged with structured data (`email`, `ip`, `riskScore`, `timingSeconds`)
+- Flagged in the user's `deviceFingerprint` JSON field with `captchaBypass: true`
+- Visible to admins via the user management dashboard
+
+### Risk Assessment
+
+A sophisticated attacker could bypass the honeypot and timing checks, but would still be constrained by:
+- 5-request rate limit per IP per 15 minutes
+- Device fingerprint risk scoring (headless browsers score >= 30)
+- Email verification requirement
+- Admin review of flagged accounts
+
+### Files Involved
+
+| File | Role |
+|------|------|
+| `frontend/src/services/captchaFallback.js` | Detection, honeypot, timing, warning banner |
+| `frontend/src/modules/core/auth/modal.js` | Three-path registration logic |
+| `backend/src/middleware/validation.ts` | Optional hcaptchaToken, captchaBypass/fallbackProof validation |
+| `backend/src/routes/auth.ts` | `validateFallbackProof()` server-side validation |
+
+---
+
+## 4. Other Intentional Security Decisions
 
 ### Admin Subdomain Isolation
 
@@ -153,4 +216,5 @@ The staging environment (`dev.unitedwerise.org` / `dev-api.unitedwerise.org`) re
 
 | Date | Change |
 |------|--------|
+| 2026-03-12 | Added Section 3: Registration captcha fallback for ad blocker bypass |
 | 2026-01-06 | Initial creation documenting SRI exceptions and OAuth Client ID exposure |

@@ -26,7 +26,7 @@
 ### Authentication Routes (`/api/auth`)
 
 #### POST /api/auth/register
-Register a new user account with comprehensive validation
+Register a new user account with comprehensive validation and ad blocker-resilient captcha
 ```javascript
 Request:
 {
@@ -35,7 +35,18 @@ Request:
   password: string,
   firstName?: string,
   lastName?: string,
-  hcaptchaToken: string
+  hcaptchaToken?: string,          // Optional if captchaBypass is provided
+  captchaBypass?: 'adblocker',     // Reason for bypassing captcha
+  fallbackProof?: {                // Required when captchaBypass is set
+    honeypotClean: boolean,        // Hidden field was left empty (true = likely human)
+    timingSeconds: number,         // Seconds elapsed between form open and submit
+    captchaBlockDetected: boolean  // Client detected captcha was blocked
+  },
+  deviceFingerprint?: {            // Sent with fallback registrations
+    fingerprint: string,           // SHA-256 hash of browser components
+    riskScore: number,             // Algorithmic risk score (0-100)
+    components: object             // Screen, timezone, canvas, WebGL, etc.
+  }
 }
 
 Response:
@@ -54,7 +65,11 @@ Response:
 ```
 - **Rate Limit**: 5 attempts per 15 minutes
 - **Validation**: Email format, username uniqueness, password strength
-- **Security**: hCaptcha verification required, email verification sent
+- **Security**: Three-path captcha verification:
+  - **Path A**: hCaptchaToken present → verified via hCaptcha API (default)
+  - **Path B**: captchaBypass + fallbackProof → validated server-side (honeypot clean, timing >= 3s, risk score < 30, fingerprint present)
+  - **Path C**: No token and no bypass → rejected with helpful error
+- **Fallback registrations**: Logged with `captchaBypass: true` flag for admin review
 
 #### POST /api/auth/login
 Authenticate user with httpOnly cookie session

@@ -1,10 +1,27 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: February 2, 2026
+**Last Updated**: March 12, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-03-12] - Ad blocker-resilient registration with captcha fallback
+
+### Added
+
+**Three-Path Captcha System for Registration**
+- **Path A** (default): Normal hCaptcha verification for users without ad blockers (no change)
+- **Path B** (fallback): When hCaptcha is blocked by ad blockers, registration uses alternative bot protection: honeypot field, form timing check (>= 3 seconds), device fingerprint risk scoring (< 30 threshold), plus existing rate limiting (5 per 15 min)
+- **Path C** (reject): No captcha and no valid bypass returns a helpful error message suggesting the user disable their ad blocker
+- Warning banner displayed in registration form when hCaptcha is detected as blocked, informing users they can still register
+- All captcha-bypass registrations are logged with `captchaBypass: true` flag in the device fingerprint data for admin review
+
+### Fixed
+- Users with Safari content blockers or ad blockers were silently blocked from registering with a generic "Please complete the captcha verification" error, even though they had no way to complete the captcha
+- Detection now handles partially-loaded hCaptcha (iframe exists but internal scripts blocked by CSP/content blocker) by testing `getResponse()` functionality
 
 ---
 
