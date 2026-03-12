@@ -284,6 +284,7 @@ export async function handleRegister() {
 
     // Get hCaptcha token
     let hcaptchaToken = null;
+    let captchaErrorOccurred = false;
     try {
         if (typeof hcaptcha !== 'undefined') {
             // Try to get widget ID first, then fall back to no parameters
@@ -298,16 +299,20 @@ export async function handleRegister() {
         }
     } catch (captchaError) {
         console.log('hCaptcha not available or local development mode');
+        captchaErrorOccurred = true;
     }
 
     // Three-path captcha validation:
     // Path A: hCaptcha token available — proceed normally
-    // Path B: hCaptcha blocked by ad blocker — use fallback proof
-    // Path C: hCaptcha available but not completed — show error
+    // Path B: hCaptcha blocked/broken (ad blocker, CSP, or getResponse error) — use fallback proof
+    // Path C: hCaptcha available and functional but user didn't complete it — show error
     let useFallback = false;
     if (!isDevelopment() && !hcaptchaToken) {
-        if (isCaptchaBlocked()) {
-            // Path B: Captcha blocked — validate fallback checks client-side
+        // Treat as blocked if: detection says blocked, OR getResponse() threw,
+        // OR hcaptcha global doesn't exist
+        const captchaNonfunctional = isCaptchaBlocked() || captchaErrorOccurred || typeof hcaptcha === 'undefined';
+        if (captchaNonfunctional) {
+            // Path B: Captcha broken/blocked — validate fallback checks client-side
             const proof = generateFallbackProof();
             if (!proof.honeypotClean) {
                 // Silently reject (likely bot — don't reveal honeypot)
@@ -320,7 +325,7 @@ export async function handleRegister() {
             }
             useFallback = true;
         } else {
-            // Path C: hCaptcha is available but user didn't complete it
+            // Path C: hCaptcha is available and functional but user didn't complete it
             showAuthMessage('Please complete the captcha verification', 'error', 'register');
             return;
         }

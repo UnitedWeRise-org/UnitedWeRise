@@ -30,17 +30,40 @@ let detectionComplete = false;
 // ============================================================================
 
 /**
- * Detect whether hCaptcha failed to load.
- * Checks for both the global hcaptcha object and a rendered iframe in the widget.
- * @returns {boolean} True if hCaptcha appears to be blocked
+ * Detect whether hCaptcha failed to load or is non-functional.
+ * Checks script presence, iframe render, AND functional getResponse() call.
+ * Content blockers can partially load hCaptcha (iframe exists) while blocking
+ * the scripts inside it, so iframe presence alone is not sufficient.
+ * @returns {boolean} True if hCaptcha appears to be blocked or non-functional
  */
 function detectCaptchaBlocked() {
     const hcaptchaScriptLoaded = typeof window.hcaptcha !== 'undefined';
     const widgetRendered = isCaptchaWidgetRendered();
 
-    captchaBlocked = !hcaptchaScriptLoaded || !widgetRendered;
-    detectionComplete = true;
+    // If script didn't load or widget didn't render, definitely blocked
+    if (!hcaptchaScriptLoaded || !widgetRendered) {
+        captchaBlocked = true;
+        detectionComplete = true;
+        return captchaBlocked;
+    }
 
+    // Script loaded and iframe exists, but test if getResponse() is functional
+    // Content blockers can block scripts inside the hCaptcha iframe,
+    // causing getResponse() to throw "No hCaptcha exists"
+    try {
+        if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
+            window.hcaptcha.getResponse();
+            // No error — hCaptcha is functional (returns empty string if not completed)
+            captchaBlocked = false;
+        } else {
+            captchaBlocked = true;
+        }
+    } catch {
+        // getResponse() threw — hCaptcha is loaded but non-functional
+        captchaBlocked = true;
+    }
+
+    detectionComplete = true;
     return captchaBlocked;
 }
 
