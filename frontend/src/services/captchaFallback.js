@@ -10,7 +10,7 @@
  */
 
 import { isCaptchaWidgetRendered } from '../integrations/hcaptcha-integration.js';
-import { adminDebugLog } from '../js/adminDebugger.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 
 // ============================================================================
 // STATE
