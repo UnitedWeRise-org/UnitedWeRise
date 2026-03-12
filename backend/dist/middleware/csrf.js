@@ -50,7 +50,8 @@ const verifyCsrf = (req, res, next) => {
         '/api/auth/reset-password',
         '/health',
         '/api/health',
-        '/api/track/pageview'
+        '/api/track/pageview',
+        '/api/verification/email/verify' // Token-based verification from standalone page (no CSRF cookie available)
     ]);
     // Check if current path is exempted using exact match only
     const isExempted = exemptedPathsExact.has(req.path);

@@ -9075,11 +9075,11 @@ if (!window.currentUser) return showLogin(); // Reliable auth check
 ---
 
 ## 🌟 ONBOARDING SYSTEM {#onboarding-system}
-**Last Updated**: October 14, 2025
-**Status**: ✅ Fully Operational with Event-Driven Architecture & Simplified 3-Step Flow
+**Last Updated**: March 12, 2026
+**Status**: ✅ Fully Operational — Verification-Gated, Undismissable Flow with Feed Seeding
 
 ### Overview
-Complete user onboarding system that introduces new users to platform features after account creation, with intelligent triggering, progress tracking, and soft verification enforcement. Simplified to 3 essential steps for better user retention.
+Complete user onboarding system with email verification gate, undismissable 3-step modal, expanded interest categories (55+ across 5 categories), and feed seeding via semantic embeddings. Onboarding is mandatory — the modal cannot be dismissed until all steps are complete. New users' interest selections generate embeddings that immediately personalize their feed through the probability-cloud algorithm's cold-start weights.
 
 ### System Architecture
 
@@ -9211,11 +9211,13 @@ async initialize() {
             "id": "interests",
             "title": "Choose Your Interests",
             "description": "Select the issues and topics you care about",
-            "required": false,
+            "required": true,
             "completed": boolean,
             "data": ["Healthcare", "Education", ...]
         }
-    ]
+    ],
+    "emailVerified": boolean,
+    "onboardingCompleted": boolean
 }
 ```
 
@@ -9261,78 +9263,99 @@ async initialize() {
 #### Skip Step Endpoint
 **Endpoint**: `POST /api/onboarding/skip-step`
 **Authentication**: Required (httpOnly cookies)
-**Request Body**:
+**Note**: All 3 onboarding steps are now required. This endpoint returns 400 for required steps.
+
+#### Suggested Follows Endpoint
+**Endpoint**: `GET /api/onboarding/suggested-follows`
+**Authentication**: Required (httpOnly cookies)
+**Purpose**: Returns up to 10 content creators whose posts match the user's interest embedding.
+**Response Format**:
 ```javascript
 {
-    "stepId": "interests" // Only non-required steps can be skipped
+    "suggestions": [
+        {
+            "id": "user_abc",
+            "username": "jane_doe",
+            "displayName": "Jane Doe",
+            "avatar": "https://...",
+            "bio": "Truncated bio (120 chars max)...",
+            "postCount": 42,
+            "topTags": ["Healthcare", "Education", "Local Events"]
+        }
+    ]
+}
+```
+**Algorithm**: Uses user's interest embedding → `EmbeddingService.findSimilarPosts()` → aggregates by author → ranks by similarity * frequency → excludes already-followed users.
+
+#### Interests Endpoint
+**Endpoint**: `GET /api/onboarding/interests`
+**Authentication**: None required
+**Response Format**:
+```javascript
+{
+    "categories": [
+        { "category": "Civic & Policy", "interests": ["Healthcare", "Education", ...] },
+        { "category": "Lifestyle & Culture", "interests": ["Sports", "Food & Cooking", ...] },
+        { "category": "Science & Technology", "interests": ["Technology", "AI", ...] },
+        { "category": "Entertainment & Media", "interests": ["Movies & Film", ...] },
+        { "category": "Local & Community", "interests": ["Local Events", ...] }
+    ],
+    "interests": ["Healthcare", "Education", ...] // Flat list (backwards compatible)
 }
 ```
 
-### Soft Verification Enforcement
+### Verification-Gated Access
 
-**Purpose**: Encourage email verification without blocking new user access
-**Grace Period**: 7 days from registration
-**Enforcement**: Account suspension (reversible upon verification)
+**Purpose**: Require email verification before platform interaction
+**Enforcement**: Immediate — unverified users get 403 on protected routes
+**Gate**: Inline in `requireAuth` middleware (no separate middleware, zero extra DB queries)
 
 #### Verification Workflow
 ```
 User Registration
         ↓
-7-Day Grace Period (Full Access)
+Onboarding Modal (Undismissable)
         ↓
-Daily Verification Reminder Banner
+Step 0: "Verify Your Email" screen
+  - Polls /api/verification/status every 5s
+  - "Resend verification email" button
+  - Auto-advances when verified
         ↓
-Day 7: Account Suspended if Unverified
+Step 1: Welcome → Step 2: Location → Step 3: Interests (all required)
         ↓
-User Verifies Email → Account Reactivated
+onboardingCompleted = true → Modal closes → Feed loads
 ```
 
-#### VerificationBanner Component
-**Location**: `frontend/src/components/VerificationBanner.js`
-**Purpose**: Persistent dismissible banner for unverified users
-
-**Features**:
-- Shows days remaining in grace period
-- "Verify Now" button links to verification flow
-- Auto-dismissible but reappears on page reload
-- Responsive design with warning styling
-
-**Banner Triggers**:
-- User is authenticated
-- Email not verified
-- Within 7-day grace period OR past grace period
-
-#### Verification Enforcement Middleware
-**Location**: `backend/src/middleware/verificationEnforcement.ts`
-**Applied to**: Protected routes requiring verified accounts
+#### Verification Enforcement (in requireAuth)
+**Location**: `backend/src/middleware/auth.ts`
 
 **Logic**:
 ```typescript
-if (!user.emailVerified) {
-    const daysSinceRegistration = calculateDays(user.createdAt);
+// Exempt paths that must work without verification
+const verificationExemptPrefixes = [
+    '/api/auth', '/api/verification', '/api/onboarding',
+    '/api/health', '/api/track', '/health'
+];
 
-    if (daysSinceRegistration > GRACE_PERIOD_DAYS) {
-        // Suspend account (reversible)
-        return 403 "Please verify email to continue";
-    } else {
-        // Show warning, allow access
-        response.locals.verificationWarning = {
-            daysRemaining: GRACE_PERIOD_DAYS - daysSinceRegistration
-        };
-    }
+if (!isExempt && !user.isAdmin && !user.emailVerified) {
+    return res.status(403).json({
+        error: 'Email verification required',
+        verificationRequired: true
+    });
+}
+
+if (!isExempt && !user.isAdmin && !user.onboardingCompleted) {
+    res.setHeader('X-Onboarding-Required', 'true');
 }
 ```
 
-**Configuration**:
-- `VERIFICATION_GRACE_PERIOD_DAYS`: 7 (configurable)
-- `UNVERIFIED_CAN_POST`: true (during grace period)
-- `UNVERIFIED_CAN_COMMENT`: true (during grace period)
+**Key design decision**: Verification fields (`emailVerified`, `onboardingCompleted`) are fetched in the same DB query that `requireAuth` already makes — no additional queries per request.
 
 ### Onboarding Steps
 
 #### Step 1: Welcome (Required)
 **Purpose**: Introduce platform features and community values
-**Can Skip**: Yes (marks as completed)
+**Can Skip**: No
 **Duration**: ~30 seconds
 
 **Content**:
@@ -9350,22 +9373,28 @@ if (!user.emailVerified) {
 - Full address (optional, for better accuracy)
 
 **Backend Integration**:
-- Validates location via Google Civic API
-- Previews top 3 representatives
+- Validates location via RepresentativeService (Geocodio + Google Civic + cache)
+- Previews top 5 representatives
 - Stores location in User model (zipCode, city, state)
 
-#### Step 3: Interests (Optional)
-**Purpose**: Personalize feed algorithm
-**Can Skip**: Yes
+#### Step 3: Interests (Required)
+**Purpose**: Personalize feed algorithm via semantic embeddings
+**Can Skip**: No (minimum 3 interests required)
 **Duration**: ~1 minute
 
-**Available Interests** (20 categories):
-Healthcare, Education, Economy & Jobs, Environment & Climate, Infrastructure, Social Security, Immigration, Criminal Justice, Technology & Privacy, Veterans Affairs, Housing, Transportation, Energy, Agriculture, Small Business, International Relations, Civil Rights, Public Safety, Taxes & Budget, Government Reform
+**Available Interests** (55+ across 5 categories):
+- **Civic & Policy** (20): Healthcare, Education, Economy & Jobs, Environment & Climate, Infrastructure, Social Security, Immigration, Criminal Justice, Technology & Privacy, Veterans Affairs, Housing, Transportation, Energy, Agriculture, Small Business, International Relations, Civil Rights, Public Safety, Taxes & Budget, Government Reform
+- **Lifestyle & Culture** (11): Sports, Food & Cooking, Music, Art & Design, Fashion, Travel, Fitness & Health, Pets & Animals, Gaming, Home & Garden, Parenting & Family
+- **Science & Technology** (9): Technology, Science, Space & Astronomy, Artificial Intelligence, Cybersecurity, Startups & Innovation, Electric Vehicles, Renewable Energy, Biotechnology
+- **Entertainment & Media** (8): Movies & Film, Television, Books & Literature, Podcasts, Photography, Comedy, Theater & Performing Arts, Anime & Manga
+- **Local & Community** (7): Local Events, Volunteering, Neighborhood News, Small Business Support, Community Organizing, Local Sports, City Planning
 
-**Algorithm Integration**:
-- Interests used as keywords for content weighting
-- Posts matching user interests ranked higher in feed
-- Trending topics filtered by interest alignment
+**Feed Seeding Integration**:
+- On completion, selected interests are joined and passed to `EmbeddingService.generateEmbedding()` to create a semantic vector
+- Vector stored on `user.embedding` for immediate use by feed algorithm
+- `UserInterestService` cold-start weights boost `explicitInterests` from 0.1 to 0.6 for new users (< 7 days or < 10 interactions)
+- `ProbabilityFeedService` cold-start weights shift from social (0.25) to similarity (0.40) + trending (0.25) for new users
+- As behavioral data accumulates (likes, posts, follows), weights gradually shift to defaults
 
 ### Event-Driven Architecture
 
@@ -9397,10 +9426,10 @@ Show Onboarding Flow (if applicable)
 
 ### Triggering Conditions
 
-#### New User Criteria
-- **User Age**: Account created < 7 days ago
-- **Onboarding Status**: Not completed (`progress.completed === false`)
+#### Onboarding Modal Criteria
+- **Onboarding Status**: Not completed (`onboardingCompleted === false`) — no age limit
 - **Authentication**: User must be authenticated with valid session
+- **Behavior**: Modal is undismissable — no close button, no Escape key, no backdrop click until all steps complete
 
 #### Safety Checks
 - **API Client**: Uses environment-aware `window.apiClient.call()` with automatic cookie authentication
@@ -9411,14 +9440,16 @@ Show Onboarding Flow (if applicable)
 ### Integration Points
 
 #### Files Modified for Onboarding System
-- **`frontend/src/components/OnboardingFlow.js`**: 3-step onboarding UI component
-- **`frontend/src/components/VerificationBanner.js`**: Email verification reminder banner
+- **`frontend/src/components/OnboardingFlow.js`**: Undismissable 3-step onboarding modal with verification gate, categorized interests, CSRF tokens
+- **`frontend/verify-email.html`**: Environment-aware API URL for standalone verification page
 - **`frontend/src/integrations/backend-integration.js`**: OnboardingTrigger class implementation
 - **`frontend/src/modules/core/auth/unified-manager.js`**: App initialization event dispatch
-- **`backend/src/services/onboardingService.ts`**: Simplified 3-step onboarding logic
-- **`backend/src/routes/onboarding.ts`**: Fixed /steps endpoint, enabled Google Civic API
-- **`backend/src/middleware/verificationEnforcement.ts`**: Soft verification enforcement middleware
-- **`backend/prisma/schema.prisma`**: Removed politicalExperience field from User model
+- **`backend/src/middleware/auth.ts`**: Inline verification enforcement (emailVerified + onboardingCompleted checks)
+- **`backend/src/middleware/csrf.ts`**: Email verification endpoint added to CSRF exemption list
+- **`backend/src/services/onboardingService.ts`**: Categorized interests (5 categories, 55+ topics), interest embedding generation
+- **`backend/src/services/userInterestService.ts`**: Cold-start signal weights for new users (explicit interests: 0.6)
+- **`backend/src/services/probabilityFeedService.ts`**: Cold-start feed weights (similarity: 0.40, trending: 0.25)
+- **`backend/src/routes/onboarding.ts`**: Enriched responses, suggested-follows endpoint
 
 #### Dependencies
 - **Unified Authentication System**: Requires `window.authUtils` and `window.unifiedAuthManager`

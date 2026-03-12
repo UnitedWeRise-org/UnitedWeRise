@@ -50,7 +50,11 @@ router.get('/steps', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
         const steps = await onboardingService_1.onboardingService.getOnboardingSteps(userId);
-        res.json({ steps });
+        res.json({
+            steps,
+            emailVerified: req.user.emailVerified ?? false,
+            onboardingCompleted: req.user.onboardingCompleted ?? false
+        });
     }
     catch (error) {
         logger_1.logger.error({ error, userId: req.user?.id }, 'Get onboarding steps error');
@@ -73,7 +77,10 @@ router.get('/progress', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
         const progress = await onboardingService_1.onboardingService.getOnboardingProgress(userId);
-        res.json(progress);
+        res.json({
+            ...progress,
+            emailVerified: req.user.emailVerified ?? false
+        });
     }
     catch (error) {
         logger_1.logger.error({ error, userId: req.user?.id }, 'Get onboarding progress error');
@@ -185,14 +192,38 @@ router.post('/skip-step', auth_1.requireAuth, async (req, res) => {
  *   get:
  *     tags: [Onboarding]
  *     summary: Get available interest categories
+ *     description: Returns interests grouped by category for onboarding UI.
+ *       Also returns a flat list for backwards compatibility.
  *     responses:
  *       200:
  *         description: Interest categories retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 categories:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       category:
+ *                         type: string
+ *                       interests:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                 interests:
+ *                   type: array
+ *                   description: Flat list of all interests (backwards compatible)
+ *                   items:
+ *                     type: string
  */
 router.get('/interests', async (req, res) => {
     try {
-        const interests = onboardingService_1.onboardingService.getPopularIssues();
-        res.json({ interests });
+        const categories = onboardingService_1.onboardingService.getCategorizedInterests();
+        const interests = categories.flatMap(cat => cat.interests);
+        res.json({ categories, interests });
     }
     catch (error) {
         logger_1.logger.error({ error }, 'Get interests error');

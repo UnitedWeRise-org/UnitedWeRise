@@ -11,6 +11,8 @@ export interface AuthRequest extends Request {
         isSuperAdmin?: boolean;
         totpVerified?: boolean;
         totpVerifiedAt?: number | null;
+        emailVerified?: boolean;
+        onboardingCompleted?: boolean;
     };
     sensitiveAction?: {
         description: string;

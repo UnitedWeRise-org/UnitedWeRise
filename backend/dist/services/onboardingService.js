@@ -63,7 +63,7 @@ class OnboardingService {
                 id: 'interests',
                 title: 'Choose Your Interests',
                 description: 'Select the issues and topics you care about most',
-                required: false,
+                required: true,
                 completed: profile.completedSteps.includes('interests'),
                 data: profile.profileData.interests || []
             }
@@ -175,30 +175,64 @@ class OnboardingService {
         const lowerQuery = query.toLowerCase();
         return FILTERED_POLITICAL_TERMS.some(term => lowerQuery.includes(term) || term.includes(lowerQuery));
     }
-    // Get popular issues for interest selection (non-partisan framing)
-    getPopularIssues() {
+    /**
+     * Get categorized interests for onboarding selection.
+     * Returns interests grouped by category for UI rendering.
+     * Includes civic/policy topics alongside general-purpose categories
+     * to reflect the platform's broad social media scope.
+     *
+     * @returns Array of { category, interests } objects
+     */
+    getCategorizedInterests() {
         return [
-            'Healthcare',
-            'Education',
-            'Economy & Jobs',
-            'Environment & Climate',
-            'Infrastructure',
-            'Social Security',
-            'Immigration',
-            'Criminal Justice',
-            'Technology & Privacy',
-            'Veterans Affairs',
-            'Housing',
-            'Transportation',
-            'Energy',
-            'Agriculture',
-            'Small Business',
-            'International Relations',
-            'Civil Rights',
-            'Public Safety',
-            'Taxes & Budget',
-            'Government Reform'
+            {
+                category: 'Civic & Policy',
+                interests: [
+                    'Healthcare', 'Education', 'Economy & Jobs', 'Environment & Climate',
+                    'Infrastructure', 'Social Security', 'Immigration', 'Criminal Justice',
+                    'Technology & Privacy', 'Veterans Affairs', 'Housing', 'Transportation',
+                    'Energy', 'Agriculture', 'Small Business', 'International Relations',
+                    'Civil Rights', 'Public Safety', 'Taxes & Budget', 'Government Reform'
+                ]
+            },
+            {
+                category: 'Lifestyle & Culture',
+                interests: [
+                    'Sports', 'Food & Cooking', 'Music', 'Art & Design', 'Fashion',
+                    'Travel', 'Fitness & Health', 'Pets & Animals', 'Gaming',
+                    'Home & Garden', 'Parenting & Family'
+                ]
+            },
+            {
+                category: 'Science & Technology',
+                interests: [
+                    'Technology', 'Science', 'Space & Astronomy', 'Artificial Intelligence',
+                    'Cybersecurity', 'Startups & Innovation', 'Electric Vehicles',
+                    'Renewable Energy', 'Biotechnology'
+                ]
+            },
+            {
+                category: 'Entertainment & Media',
+                interests: [
+                    'Movies & Film', 'Television', 'Books & Literature', 'Podcasts',
+                    'Photography', 'Comedy', 'Theater & Performing Arts', 'Anime & Manga'
+                ]
+            },
+            {
+                category: 'Local & Community',
+                interests: [
+                    'Local Events', 'Volunteering', 'Neighborhood News', 'Small Business Support',
+                    'Community Organizing', 'Local Sports', 'City Planning'
+                ]
+            }
         ];
+    }
+    /**
+     * Get flat list of all available interests (for backwards compatibility).
+     * @returns Array of interest strings
+     */
+    getPopularIssues() {
+        return this.getCategorizedInterests().flatMap(cat => cat.interests);
     }
     // Track onboarding analytics
     async trackOnboardingEvent(userId, event, stepId, metadata) {

@@ -65,13 +65,49 @@ const RELATIONSHIP_WEIGHTS = {
     follow: 1.0
 };
 
-// Signal weights for vector aggregation
-const SIGNAL_WEIGHTS = {
+// Default signal weights for vector aggregation (established users)
+const DEFAULT_SIGNAL_WEIGHTS = {
     likedPosts: 0.4,      // Strong positive signal
     ownPosts: 0.2,        // Self-similarity
     socialGraph: 0.3,     // Posts from connections
-    explicitInterests: 0.1 // Explicit preferences (lower weight until better implemented)
+    explicitInterests: 0.1 // Explicit preferences (lower for users with behavioral data)
 };
+
+// Cold-start signal weights for new users (< 7 days or < 10 interactions).
+// Heavily favors onboarding interests until behavioral data accumulates.
+const COLD_START_SIGNAL_WEIGHTS = {
+    likedPosts: 0.2,
+    ownPosts: 0.1,
+    socialGraph: 0.1,
+    explicitInterests: 0.6 // High weight for explicit interests from onboarding
+};
+
+/**
+ * Get dynamic signal weights based on user activity level.
+ * New users (< 7 days old or < 10 behavioral signals) get boosted
+ * explicit interest weight so their onboarding selections drive the feed.
+ * As behavioral data accumulates, weights shift toward defaults.
+ *
+ * @param createdAt - User account creation date
+ * @param interactionCount - Number of behavioral signals (likes + own posts)
+ * @returns Signal weights for vector aggregation
+ */
+function getSignalWeights(createdAt: Date, interactionCount: number): typeof DEFAULT_SIGNAL_WEIGHTS {
+    const daysSinceCreation = Math.floor(
+        (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    const isColdStart = daysSinceCreation < 7 || interactionCount < 10;
+
+    if (isColdStart) {
+        return COLD_START_SIGNAL_WEIGHTS;
+    }
+
+    return DEFAULT_SIGNAL_WEIGHTS;
+}
+
+// Keep backward-compatible reference
+const SIGNAL_WEIGHTS = DEFAULT_SIGNAL_WEIGHTS;
 
 export class UserInterestService {
     /**
@@ -133,14 +169,15 @@ export class UserInterestService {
                     orderBy: { createdAt: 'desc' },
                     take: 20
                 }),
-                // User profile with interests and location
+                // User profile with interests, location, and creation date
                 prisma.user.findUnique({
                     where: { id: userId },
                     select: {
                         interests: true,
                         embedding: true,
                         onboardingData: true,
-                        h3Index: true
+                        h3Index: true,
+                        createdAt: true
                     }
                 }),
                 // Muted users (table may not exist yet - Phase 3)
@@ -195,11 +232,17 @@ export class UserInterestService {
             // Get explicit interests
             const explicitInterests = user?.interests || [];
 
-            // Compute aggregate vector
+            // Compute aggregate vector with dynamic weights based on user age
+            const interactionCount = likedPostEmbeddings.length + ownPostEmbeddings.length;
+            const dynamicWeights = getSignalWeights(
+                user?.createdAt || new Date(),
+                interactionCount
+            );
             const aggregateVector = this.computeAggregateVector(
                 likedPostEmbeddings,
                 ownPostEmbeddings,
-                user?.embedding || []
+                user?.embedding || [],
+                dynamicWeights
             );
 
             const profile: UserInterestProfile = {
@@ -241,33 +284,42 @@ export class UserInterestService {
     }
 
     /**
-     * Compute aggregate interest vector from embeddings
-     * Uses weighted average of liked posts and own posts
+     * Compute aggregate interest vector from embeddings.
+     * Uses weighted average of liked posts, own posts, and user embedding.
+     * Weights are dynamic: cold-start users get higher explicit interest weight (0.6)
+     * while established users favor behavioral signals.
+     *
+     * @param likedEmbeddings - Embeddings from user's liked posts
+     * @param ownEmbeddings - Embeddings from user's own posts
+     * @param userEmbedding - User's profile embedding (from onboarding interest selection)
+     * @param weights - Signal weights for aggregation (defaults to DEFAULT_SIGNAL_WEIGHTS)
+     * @returns Normalized aggregate vector, or null if no embeddings available
      */
     private static computeAggregateVector(
         likedEmbeddings: number[][],
         ownEmbeddings: number[][],
-        userEmbedding: number[]
+        userEmbedding: number[],
+        weights: typeof DEFAULT_SIGNAL_WEIGHTS = DEFAULT_SIGNAL_WEIGHTS
     ): number[] | null {
         const allEmbeddings: { embedding: number[]; weight: number }[] = [];
 
         // Add liked post embeddings with weight
         for (const emb of likedEmbeddings) {
             if (emb.length > 0) {
-                allEmbeddings.push({ embedding: emb, weight: SIGNAL_WEIGHTS.likedPosts });
+                allEmbeddings.push({ embedding: emb, weight: weights.likedPosts });
             }
         }
 
         // Add own post embeddings with weight
         for (const emb of ownEmbeddings) {
             if (emb.length > 0) {
-                allEmbeddings.push({ embedding: emb, weight: SIGNAL_WEIGHTS.ownPosts });
+                allEmbeddings.push({ embedding: emb, weight: weights.ownPosts });
             }
         }
 
         // Add user embedding if exists
         if (userEmbedding && userEmbedding.length > 0) {
-            allEmbeddings.push({ embedding: userEmbedding, weight: SIGNAL_WEIGHTS.explicitInterests });
+            allEmbeddings.push({ embedding: userEmbedding, weight: weights.explicitInterests });
         }
 
         if (allEmbeddings.length === 0) {

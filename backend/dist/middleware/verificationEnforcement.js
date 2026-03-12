@@ -1,49 +1,68 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkVerificationStatus = checkVerificationStatus;
-const prisma_1 = require("../lib/prisma");
-const VERIFICATION_GRACE_PERIOD_DAYS = 7;
+const logger_1 = require("../services/logger");
+/**
+ * Paths exempt from verification enforcement.
+ * These must remain accessible to unverified/onboarding-incomplete users
+ * so they can complete verification and onboarding.
+ */
+const EXEMPT_PATH_PREFIXES = [
+    '/api/auth', // Login, logout, register, refresh, password reset
+    '/api/verification', // Email/phone verification endpoints
+    '/api/onboarding', // Onboarding steps and progress
+    '/api/health', // Health checks
+    '/api/track', // Analytics tracking
+    '/health' // Root health check
+];
+/**
+ * Verification and onboarding enforcement middleware.
+ *
+ * Reads emailVerified and onboardingCompleted from req.user (set by requireAuth).
+ * No additional DB query — piggybacks on requireAuth's existing user fetch.
+ *
+ * Enforcement:
+ * - Unverified email → 403 (hard block, must verify first)
+ * - Verified but onboarding incomplete → 200 with X-Onboarding-Required header
+ *
+ * Applied as route-level middleware after requireAuth. Exempt paths are
+ * skipped so users can complete the verification and onboarding flow.
+ *
+ * @param req - Express request with user from requireAuth middleware
+ * @param res - Express response
+ * @param next - Next middleware function
+ */
 async function checkVerificationStatus(req, res, next) {
+    // Skip for unauthenticated requests (requireAuth handles that)
     if (!req.user) {
         return next();
     }
-    const user = await prisma_1.prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: {
-            emailVerified: true,
-            createdAt: true,
-            isSuspended: true
-        }
-    });
-    if (!user) {
+    // Skip for exempt paths (auth, verification, onboarding, health)
+    const isExempt = EXEMPT_PATH_PREFIXES.some(prefix => req.path.startsWith(prefix));
+    if (isExempt) {
         return next();
     }
-    // Already verified - no action needed
-    if (user.emailVerified) {
+    // Skip for admin users (admins bypass verification gate)
+    if (req.user.isAdmin) {
         return next();
     }
-    const daysSinceRegistration = Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24));
-    // Suspend account if grace period expired
-    if (daysSinceRegistration > VERIFICATION_GRACE_PERIOD_DAYS && !user.isSuspended) {
-        await prisma_1.prisma.user.update({
-            where: { id: req.user.id },
-            data: {
-                isSuspended: true,
-                lockedUntil: null // Can unlock immediately upon verification
-            }
-        });
+    // Hard block: email not verified
+    if (!req.user.emailVerified) {
+        logger_1.logger.warn({
+            component: 'verificationEnforcement',
+            userId: req.user.id,
+            path: req.path
+        }, 'Unverified user attempted to access protected resource');
         return res.status(403).json({
-            error: 'Account suspended',
-            message: 'Your account has been suspended. Please verify your email address to continue.',
-            verificationRequired: true,
-            daysSinceRegistration
+            error: 'Email verification required',
+            message: 'Please verify your email address to continue.',
+            verificationRequired: true
         });
     }
-    // Within grace period - show warning but allow access
-    res.locals.verificationWarning = {
-        daysRemaining: VERIFICATION_GRACE_PERIOD_DAYS - daysSinceRegistration,
-        message: `Please verify your email within ${VERIFICATION_GRACE_PERIOD_DAYS - daysSinceRegistration} days to avoid account suspension.`
-    };
+    // Soft flag: onboarding not complete (allow request but signal frontend)
+    if (!req.user.onboardingCompleted) {
+        res.setHeader('X-Onboarding-Required', 'true');
+    }
     next();
 }
 //# sourceMappingURL=verificationEnforcement.js.map

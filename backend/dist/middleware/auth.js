@@ -79,7 +79,7 @@ const requireAuth = async (req, res, next) => {
         }
         const user = await prisma_1.prisma.user.findUnique({
             where: { id: decoded.userId },
-            select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, isSuperAdmin: true, lastSeenAt: true }
+            select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, isSuperAdmin: true, lastSeenAt: true, emailVerified: true, onboardingCompleted: true }
         });
         if (!user) {
             // Keep error logs unconditional (401 response)
@@ -174,6 +174,28 @@ const requireAuth = async (req, res, next) => {
                 isAdmin: req.user.isAdmin
             }, 'AUTH Middleware Complete: Passing to next()');
         }
+        // Verification enforcement: block unverified users from protected routes.
+        // Exempt paths (auth, verification, onboarding) are allowed through so users
+        // can complete the setup flow. Admins bypass this check.
+        // Uses req.user data already fetched above — no additional DB query.
+        const verificationExemptPrefixes = ['/api/auth', '/api/verification', '/api/onboarding', '/api/health', '/api/track', '/health'];
+        const isVerificationExempt = verificationExemptPrefixes.some(prefix => req.path.startsWith(prefix));
+        if (!isVerificationExempt && !req.user.isAdmin && !req.user.emailVerified) {
+            logger_1.logger.warn({
+                requestId,
+                userId: req.user.id,
+                path: req.path
+            }, 'AUTH 403: Unverified user blocked from protected resource');
+            return res.status(403).json({
+                error: 'Email verification required',
+                message: 'Please verify your email address to continue.',
+                verificationRequired: true
+            });
+        }
+        // Signal frontend if onboarding is incomplete (non-blocking)
+        if (!isVerificationExempt && !req.user.isAdmin && !req.user.onboardingCompleted) {
+            res.setHeader('X-Onboarding-Required', 'true');
+        }
         next();
     }
     catch (error) {
@@ -208,7 +230,7 @@ const optionalAuth = async (req, _res, next) => {
         }
         const user = await prisma_1.prisma.user.findUnique({
             where: { id: decoded.userId },
-            select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, isSuperAdmin: true, lastSeenAt: true }
+            select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, isSuperAdmin: true, lastSeenAt: true, emailVerified: true, onboardingCompleted: true }
         });
         if (user) {
             req.user = {

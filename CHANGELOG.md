@@ -8,6 +8,41 @@
 
 ---
 
+## [2026-03-12] - Verification-gated onboarding with feed seeding & topic integration
+
+### Added
+- Undismissable onboarding modal that gates all platform interaction until complete
+- Email verification prerequisite screen with automatic 5-second polling — detects when user verifies in another tab and auto-advances
+- "Resend verification email" button in onboarding flow
+- Backend verification enforcement in `requireAuth` — unverified users receive 403 on protected routes (exempt: auth, verification, onboarding, health)
+- `X-Onboarding-Required` response header signals frontend when onboarding is incomplete
+- `emailVerified` and `onboardingCompleted` fields added to `/api/onboarding/steps` and `/api/onboarding/progress` responses
+- Interest embeddings generated at onboarding completion via `EmbeddingService` — stored on user record for immediate feed personalization
+- Cold-start signal weights in `UserInterestService` — new users (< 7 days or < 10 interactions) get 0.6 weight on explicit interests vs 0.1 default, ensuring onboarding selections drive the feed
+- Cold-start feed weights in `ProbabilityFeedService` — new users get similarity (0.40) + trending (0.25) emphasis since social graph is empty
+- `GET /api/onboarding/suggested-follows` endpoint — uses interest embedding to find active content creators posting about matching topics, returns up to 10 suggestions with profile info and top tags
+- `TopicService.getInterestMatchedTopics()` — filters trending topics by cosine similarity to user's interest embedding, ranked by relevance * trending score
+- `TopicService.getInterestMatchedPostIds()` — returns post IDs from interest-matched trending topics for cold-start feed supplementation
+- Cold-start feed fallback in `ProbabilityFeedService` — when candidate pool is sparse (< half requested limit), supplements with posts from interest-matched trending topics via the Topic system
+
+### Changed
+- Onboarding modal can no longer be closed (no X button, no Escape key, no backdrop click) until all steps are complete
+- Removed "Skip for now" button — all onboarding steps are now required (including interests)
+- Expanded interest selection from 20 civic-policy topics to 55+ interests across 5 categories: Civic & Policy, Lifestyle & Culture, Science & Technology, Entertainment & Media, Local & Community
+- Interest selection UI now displays categorized sections with collapsible headers
+- Minimum 3 interests required to proceed (validated on frontend and enforced by required step on backend)
+- `/api/onboarding/interests` now returns `{ categories, interests }` (categorized + flat list for backwards compatibility)
+- Replaced 7-day grace period verification enforcement with immediate gate (no more delayed account suspensions)
+- Added CSRF token headers to all onboarding POST requests (previously missing, would have caused 403 errors)
+- `computeAggregateVector` in `UserInterestService` now accepts dynamic signal weights parameter instead of using hardcoded defaults
+
+### Fixed
+- Email verification links returned 403 "CSRF token missing" because `/api/verification/email/verify` was not in the CSRF exemption list — the standalone `verify-email.html` page has no way to obtain CSRF tokens, and the endpoint is already protected by its cryptographic verification token
+- `verify-email.html` had a hardcoded production API URL, so verification links on staging pointed to the wrong backend
+- Removed dead `css/style.css` reference from `verify-email.html` (file did not exist, caused 404)
+
+---
+
 ## [2026-03-12] - Ad blocker-resilient registration with captcha fallback
 
 ### Added

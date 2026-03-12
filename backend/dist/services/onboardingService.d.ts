@@ -50,6 +50,22 @@ export declare class OnboardingService {
     skipStep(userId: string, stepId: string): Promise<OnboardingProfile>;
     filterSearchTerms(searchQuery: string): string;
     isFilteredSearchTerm(query: string): boolean;
+    /**
+     * Get categorized interests for onboarding selection.
+     * Returns interests grouped by category for UI rendering.
+     * Includes civic/policy topics alongside general-purpose categories
+     * to reflect the platform's broad social media scope.
+     *
+     * @returns Array of { category, interests } objects
+     */
+    getCategorizedInterests(): {
+        category: string;
+        interests: string[];
+    }[];
+    /**
+     * Get flat list of all available interests (for backwards compatibility).
+     * @returns Array of interest strings
+     */
     getPopularIssues(): string[];
     trackOnboardingEvent(userId: string, event: string, stepId?: string, metadata?: any): Promise<void>;
     getOnboardingAnalytics(): Promise<{

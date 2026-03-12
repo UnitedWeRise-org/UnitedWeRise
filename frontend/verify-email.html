@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Verification - United We Rise</title>
-    <link rel="stylesheet" href="css/style.css">
     <style>
         .verification-container {
             display: flex;
@@ -138,7 +137,21 @@
     </div>
 
     <script>
-        const API_BASE = 'https://api.unitedwerise.org/api';
+        /**
+         * Environment-aware API base URL detection
+         * Mirrors logic from frontend/src/utils/environment.js for standalone page
+         */
+        function getApiBase() {
+            const hostname = window.location.hostname;
+            if (hostname === 'dev.unitedwerise.org' ||
+                hostname === 'dev-admin.unitedwerise.org' ||
+                hostname === 'localhost' ||
+                hostname === '127.0.0.1') {
+                return 'https://dev-api.unitedwerise.org/api';
+            }
+            return 'https://api.unitedwerise.org/api';
+        }
+        const API_BASE = getApiBase();
         
         // Get token from URL parameters
         function getTokenFromUrl() {

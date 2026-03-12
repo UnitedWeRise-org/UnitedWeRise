@@ -1,11 +1,11 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
-;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { onboardingService } from '../services/onboardingService';
 import { RepresentativeService } from '../services/representativeService';
 import { metricsService } from '../services/metricsService';
 import { logger } from '../services/logger';
+import { EmbeddingService } from '../services/embeddingService';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -49,7 +49,11 @@ router.get('/steps', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const steps = await onboardingService.getOnboardingSteps(userId);
-    res.json({ steps });
+    res.json({
+      steps,
+      emailVerified: req.user!.emailVerified ?? false,
+      onboardingCompleted: req.user!.onboardingCompleted ?? false
+    });
   } catch (error) {
     logger.error({ error, userId: req.user?.id }, 'Get onboarding steps error');
     res.status(500).json({ error: 'Failed to get onboarding steps' });
@@ -72,8 +76,11 @@ router.get('/progress', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const progress = await onboardingService.getOnboardingProgress(userId);
-    
-    res.json(progress);
+
+    res.json({
+      ...progress,
+      emailVerified: req.user!.emailVerified ?? false
+    });
   } catch (error) {
     logger.error({ error, userId: req.user?.id }, 'Get onboarding progress error');
     res.status(500).json({ error: 'Failed to get onboarding progress' });
@@ -199,14 +206,38 @@ router.post('/skip-step', requireAuth, async (req: AuthRequest, res) => {
  *   get:
  *     tags: [Onboarding]
  *     summary: Get available interest categories
+ *     description: Returns interests grouped by category for onboarding UI.
+ *       Also returns a flat list for backwards compatibility.
  *     responses:
  *       200:
  *         description: Interest categories retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 categories:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       category:
+ *                         type: string
+ *                       interests:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                 interests:
+ *                   type: array
+ *                   description: Flat list of all interests (backwards compatible)
+ *                   items:
+ *                     type: string
  */
 router.get('/interests', async (req, res) => {
   try {
-    const interests = onboardingService.getPopularIssues();
-    res.json({ interests });
+    const categories = onboardingService.getCategorizedInterests();
+    const interests = categories.flatMap(cat => cat.interests);
+    res.json({ categories, interests });
   } catch (error) {
     logger.error({ error }, 'Get interests error');
     res.status(500).json({ error: 'Failed to get interests' });
@@ -353,6 +384,168 @@ router.get('/analytics', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     logger.error({ error, userId: req.user?.id }, 'Get onboarding analytics error');
     res.status(500).json({ error: 'Failed to get analytics' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/onboarding/suggested-follows:
+ *   get:
+ *     tags: [Onboarding]
+ *     summary: Get suggested accounts to follow based on user interests
+ *     description: Uses the user's interest embedding to find active content creators
+ *       who post about matching topics. Returns up to 10 suggestions.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Suggested accounts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 suggestions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       username:
+ *                         type: string
+ *                       displayName:
+ *                         type: string
+ *                       avatar:
+ *                         type: string
+ *                       bio:
+ *                         type: string
+ *                       postCount:
+ *                         type: number
+ *                       topTags:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ */
+router.get('/suggested-follows', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+
+    // Get user's interest embedding
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { embedding: true, interests: true }
+    });
+
+    if (!user?.embedding || user.embedding.length === 0) {
+      return res.json({ suggestions: [] });
+    }
+
+    // Find posts similar to user's interest embedding
+    const similarPosts = await EmbeddingService.findSimilarPosts(
+      user.embedding,
+      50,  // Get more posts to aggregate by author
+      0.5  // Lower threshold for broader discovery
+    );
+
+    if (!similarPosts || similarPosts.length === 0) {
+      return res.json({ suggestions: [] });
+    }
+
+    // Aggregate by author — count how many similar posts each author has
+    const authorScores = new Map<string, { score: number; count: number }>();
+    for (const post of similarPosts) {
+      const authorId = post.authorId;
+      if (authorId === userId) continue; // Skip self
+      const existing = authorScores.get(authorId) || { score: 0, count: 0 };
+      existing.score += (post as any).similarity || 0.5;
+      existing.count += 1;
+      authorScores.set(authorId, existing);
+    }
+
+    // Sort by combined score (similarity * frequency)
+    const topAuthorIds = Array.from(authorScores.entries())
+      .sort((a, b) => (b[1].score * b[1].count) - (a[1].score * a[1].count))
+      .slice(0, 10)
+      .map(([id]) => id);
+
+    if (topAuthorIds.length === 0) {
+      return res.json({ suggestions: [] });
+    }
+
+    // Fetch author profiles with post counts and recent tags
+    const authors = await prisma.user.findMany({
+      where: {
+        id: { in: topAuthorIds },
+        isSuspended: false
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        bio: true,
+        _count: { select: { posts: true } }
+      }
+    });
+
+    // Get top tags for each author from recent posts
+    const authorTags = await Promise.all(
+      topAuthorIds.map(async (authorId) => {
+        const recentPosts = await prisma.post.findMany({
+          where: { authorId, deletedAt: null },
+          select: { tags: true },
+          orderBy: { createdAt: 'desc' },
+          take: 10
+        });
+        const tagCounts = new Map<string, number>();
+        for (const post of recentPosts) {
+          for (const tag of (post.tags || [])) {
+            tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+          }
+        }
+        return {
+          authorId,
+          topTags: Array.from(tagCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([tag]) => tag)
+        };
+      })
+    );
+
+    const tagsByAuthor = new Map(authorTags.map(t => [t.authorId, t.topTags]));
+
+    // Check which authors the user already follows
+    const existingFollows = await prisma.follow.findMany({
+      where: { followerId: userId, followingId: { in: topAuthorIds } },
+      select: { followingId: true }
+    });
+    const alreadyFollowing = new Set(existingFollows.map(f => f.followingId));
+
+    // Build response, excluding already-followed users
+    const suggestions = topAuthorIds
+      .filter(id => !alreadyFollowing.has(id))
+      .map(id => {
+        const author = authors.find(a => a.id === id);
+        if (!author) return null;
+        return {
+          id: author.id,
+          username: author.username,
+          displayName: [author.firstName, author.lastName].filter(Boolean).join(' ') || author.username,
+          avatar: author.avatar,
+          bio: author.bio ? author.bio.substring(0, 120) : null,
+          postCount: author._count.posts,
+          topTags: tagsByAuthor.get(id) || []
+        };
+      })
+      .filter(Boolean);
+
+    res.json({ suggestions });
+  } catch (error) {
+    logger.error({ error, userId: req.user?.id }, 'Suggested follows error');
+    res.json({ suggestions: [] }); // Graceful degradation
   }
 });
 

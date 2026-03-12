@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { metricsService } from './metricsService';
 import { logger } from './logger';
+import { EmbeddingService } from './embeddingService';
 
 // Using singleton prisma from lib/prisma.ts
 // Migration: Phase 3-4 Pino structured logging (2025-11-13)
@@ -108,7 +109,7 @@ export class OnboardingService {
         id: 'interests',
         title: 'Choose Your Interests',
         description: 'Select the issues and topics you care about most',
-        required: false,
+        required: true,
         completed: profile.completedSteps.includes('interests'),
         data: profile.profileData.interests || []
       }
@@ -177,6 +178,21 @@ export class OnboardingService {
         break;
       case 'interests':
         updateData.interests = stepData;
+        // Generate aggregate interest embedding for feed personalization.
+        // Combines all selected interests into a single text, generates a vector,
+        // and stores it on the user record for use by the probability feed algorithm.
+        try {
+          const interestText = Array.isArray(stepData) ? stepData.join(', ') : String(stepData);
+          const embedding = await EmbeddingService.generateEmbedding(interestText);
+          if (embedding && embedding.length > 0) {
+            updateData.embedding = embedding;
+            logger.info({ userId, interestCount: Array.isArray(stepData) ? stepData.length : 0 },
+              'Generated interest embedding for user');
+          }
+        } catch (error) {
+          // Non-blocking: feed will work without embedding, just less personalized
+          logger.error({ error, userId }, 'Failed to generate interest embedding (non-blocking)');
+        }
         break;
     }
 
@@ -255,30 +271,65 @@ export class OnboardingService {
     );
   }
 
-  // Get popular issues for interest selection (non-partisan framing)
-  getPopularIssues(): string[] {
+  /**
+   * Get categorized interests for onboarding selection.
+   * Returns interests grouped by category for UI rendering.
+   * Includes civic/policy topics alongside general-purpose categories
+   * to reflect the platform's broad social media scope.
+   *
+   * @returns Array of { category, interests } objects
+   */
+  getCategorizedInterests(): { category: string; interests: string[] }[] {
     return [
-      'Healthcare',
-      'Education',
-      'Economy & Jobs',
-      'Environment & Climate',
-      'Infrastructure',
-      'Social Security',
-      'Immigration',
-      'Criminal Justice',
-      'Technology & Privacy',
-      'Veterans Affairs',
-      'Housing',
-      'Transportation',
-      'Energy',
-      'Agriculture',
-      'Small Business',
-      'International Relations',
-      'Civil Rights',
-      'Public Safety',
-      'Taxes & Budget',
-      'Government Reform'
+      {
+        category: 'Civic & Policy',
+        interests: [
+          'Healthcare', 'Education', 'Economy & Jobs', 'Environment & Climate',
+          'Infrastructure', 'Social Security', 'Immigration', 'Criminal Justice',
+          'Technology & Privacy', 'Veterans Affairs', 'Housing', 'Transportation',
+          'Energy', 'Agriculture', 'Small Business', 'International Relations',
+          'Civil Rights', 'Public Safety', 'Taxes & Budget', 'Government Reform'
+        ]
+      },
+      {
+        category: 'Lifestyle & Culture',
+        interests: [
+          'Sports', 'Food & Cooking', 'Music', 'Art & Design', 'Fashion',
+          'Travel', 'Fitness & Health', 'Pets & Animals', 'Gaming',
+          'Home & Garden', 'Parenting & Family'
+        ]
+      },
+      {
+        category: 'Science & Technology',
+        interests: [
+          'Technology', 'Science', 'Space & Astronomy', 'Artificial Intelligence',
+          'Cybersecurity', 'Startups & Innovation', 'Electric Vehicles',
+          'Renewable Energy', 'Biotechnology'
+        ]
+      },
+      {
+        category: 'Entertainment & Media',
+        interests: [
+          'Movies & Film', 'Television', 'Books & Literature', 'Podcasts',
+          'Photography', 'Comedy', 'Theater & Performing Arts', 'Anime & Manga'
+        ]
+      },
+      {
+        category: 'Local & Community',
+        interests: [
+          'Local Events', 'Volunteering', 'Neighborhood News', 'Small Business Support',
+          'Community Organizing', 'Local Sports', 'City Planning'
+        ]
+      }
     ];
+  }
+
+  /**
+   * Get flat list of all available interests (for backwards compatibility).
+   * @returns Array of interest strings
+   */
+  getPopularIssues(): string[] {
+    return this.getCategorizedInterests().flatMap(cat => cat.interests);
   }
 
   // Track onboarding analytics
