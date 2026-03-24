@@ -27,6 +27,9 @@ pids/
 *.seed
 *.pid.lock
 
+# Build output (rebuilt during CI/CD)
+backend/dist/
+
 # Coverage directory used by tools like istanbul
 coverage/
 
