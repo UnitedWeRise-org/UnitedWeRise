@@ -209,6 +209,11 @@ export const validatePoliticalProfile = [
     .optional()
     .matches(/^\d{5}(-\d{4})?$/)
     .withMessage('ZIP code must be valid format'),
+  body('country')
+    .optional()
+    .isLength({ min: 2, max: 2 })
+    .matches(/^[A-Z]{2}$/)
+    .withMessage('Country must be ISO 3166-1 alpha-2 code'),
   body('campaignWebsite')
     .optional()
     .isURL()

@@ -87,7 +87,7 @@ class StripeService {
                     city: user.city || '',
                     state: user.state || '',
                     postal_code: user.zipCode || '',
-                    country: 'US'
+                    country: user.country || 'US'
                 } : null
             }
         });

@@ -1,3 +1,5 @@
+import { COUNTRIES, getCountryName } from '../data/countries.js';
+
 /**
  * @module components/OnboardingFlow
  * @description Verification-gated onboarding flow for United We Rise.
@@ -70,6 +72,13 @@ class OnboardingFlow {
             }
         });
 
+        // Country selector change handler
+        document.addEventListener('change', (e) => {
+            if (e.target.id === 'locationCountry') {
+                this.onCountryChange(e.target.value);
+            }
+        });
+
         // Block Escape key from closing the modal
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isVisible && !this.onboardingCompleted) {
@@ -81,8 +90,59 @@ class OnboardingFlow {
 
     async init() {
         this.createOnboardingModal();
+        this.populateCountryDropdown();
         this.addOnboardingStyles();
         await this.loadSteps();
+    }
+
+    /**
+     * Populate the country dropdown from the COUNTRIES data file.
+     * Adds a separator option after US.
+     */
+    populateCountryDropdown() {
+        const select = document.getElementById('locationCountry');
+        if (!select) return;
+
+        select.innerHTML = '';
+        COUNTRIES.forEach((c, i) => {
+            const option = document.createElement('option');
+            option.value = c.code;
+            option.textContent = c.name;
+            select.appendChild(option);
+            // Add separator after US (first entry)
+            if (i === 0) {
+                const sep = document.createElement('option');
+                sep.disabled = true;
+                sep.textContent = '──────────';
+                select.appendChild(sep);
+            }
+        });
+    }
+
+    /**
+     * Handle country selection change — toggle US vs international fields.
+     * @param {string} countryCode - ISO 3166-1 alpha-2 code
+     */
+    onCountryChange(countryCode) {
+        const isUS = countryCode === 'US';
+        const usFields = document.getElementById('usLocationFields');
+        const intlFields = document.getElementById('intlLocationFields');
+        const title = document.getElementById('locationStepTitle');
+        const subtitle = document.getElementById('locationStepSubtitle');
+        const btn = document.getElementById('validateLocationBtn');
+        const preview = document.getElementById('locationPreview');
+
+        if (usFields) usFields.style.display = isUS ? '' : 'none';
+        if (intlFields) intlFields.style.display = isUS ? 'none' : '';
+        if (title) title.textContent = isUS ? 'Find Your Representatives' : 'Set Your Location';
+        if (subtitle) subtitle.textContent = isUS
+            ? 'Add your location to connect with your elected officials'
+            : 'Add your city so we can personalize your experience';
+        if (btn) btn.textContent = isUS ? 'Find My Representatives' : 'Confirm Location';
+        if (preview) preview.style.display = 'none';
+
+        // Clear previous validation state
+        this.stepData.location = null;
     }
 
     createOnboardingModal() {
@@ -180,21 +240,38 @@ class OnboardingFlow {
                         <div id="step-location" class="onboarding-step" style="display: none;">
                             <div class="step-header">
                                 <div class="step-icon">📍</div>
-                                <h2>Find Your Representatives</h2>
-                                <p class="step-subtitle">Add your location to connect with your elected officials</p>
+                                <h2 id="locationStepTitle">Find Your Representatives</h2>
+                                <p class="step-subtitle" id="locationStepSubtitle">Add your location to connect with your elected officials</p>
                             </div>
 
                             <div class="location-form">
                                 <div class="form-group">
-                                    <label for="zipCode">ZIP Code *</label>
-                                    <input type="text" id="zipCode" class="form-input" placeholder="12345" maxlength="5" pattern="[0-9]{5}">
-                                    <small>We use your ZIP code to find your representatives</small>
+                                    <label for="locationCountry">Country *</label>
+                                    <select id="locationCountry" class="form-input">
+                                        <!-- Populated dynamically from countries.js -->
+                                    </select>
                                 </div>
 
-                                <div class="form-group">
-                                    <label for="fullAddress">Full Address (Optional)</label>
-                                    <input type="text" id="fullAddress" class="form-input" placeholder="123 Main St, City, State">
-                                    <small>More precise location helps us find all your representatives</small>
+                                <div id="usLocationFields">
+                                    <div class="form-group">
+                                        <label for="zipCode">ZIP Code *</label>
+                                        <input type="text" id="zipCode" class="form-input" placeholder="12345" maxlength="5" pattern="[0-9]{5}">
+                                        <small>We use your ZIP code to find your representatives</small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="fullAddress">Full Address (Optional)</label>
+                                        <input type="text" id="fullAddress" class="form-input" placeholder="123 Main St, City, State">
+                                        <small>More precise location helps us find all your representatives</small>
+                                    </div>
+                                </div>
+
+                                <div id="intlLocationFields" style="display: none;">
+                                    <div class="form-group">
+                                        <label for="intlCity">City *</label>
+                                        <input type="text" id="intlCity" class="form-input" placeholder="London" maxlength="100">
+                                        <small>Your city helps us personalize your experience</small>
+                                    </div>
                                 </div>
 
                                 <button data-onboarding-action="validateLocation" class="btn btn-primary" id="validateLocationBtn">
@@ -815,46 +892,94 @@ class OnboardingFlow {
     }
 
     async validateLocation() {
-        const zipCode = document.getElementById('zipCode').value;
-        const address = document.getElementById('fullAddress').value;
-
-        if (!zipCode) {
-            this.showMessage('Please enter your ZIP code', 'error');
-            return;
-        }
+        const country = document.getElementById('locationCountry')?.value || 'US';
+        const isUS = country === 'US';
 
         const btn = document.getElementById('validateLocationBtn');
-        btn.disabled = true;
-        btn.textContent = 'Finding representatives...';
 
-        try {
-            const response = await fetch(`${this.getApiBase()}/onboarding/location/validate`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': this.getCSRFToken()
-                },
-                body: JSON.stringify({ zipCode, address })
-            });
+        if (isUS) {
+            // US path: require ZIP code, optional full address
+            const zipCode = document.getElementById('zipCode').value;
+            const address = document.getElementById('fullAddress').value;
 
-            const data = await response.json();
-
-            if (response.ok) {
-                this.showLocationPreview(data.location);
-                this.stepData.location = {
-                    zipCode,
-                    address,
-                    representatives: data.location.representatives
-                };
-            } else {
-                this.showMessage(data.error || 'Invalid location', 'error');
+            if (!zipCode) {
+                this.showMessage('Please enter your ZIP code', 'error');
+                return;
             }
-        } catch (error) {
-            this.showMessage('Failed to validate location', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Find My Representatives';
+
+            btn.disabled = true;
+            btn.textContent = 'Finding representatives...';
+
+            try {
+                const response = await fetch(`${this.getApiBase()}/onboarding/location/validate`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ zipCode, address })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.showLocationPreview(data.location);
+                    this.stepData.location = {
+                        zipCode,
+                        address,
+                        representatives: data.location.representatives
+                    };
+                } else {
+                    this.showMessage(data.error || 'Invalid location', 'error');
+                }
+            } catch (error) {
+                this.showMessage('Failed to validate location', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Find My Representatives';
+            }
+        } else {
+            // International path: require city
+            const city = document.getElementById('intlCity')?.value?.trim();
+
+            if (!city) {
+                this.showMessage('Please enter your city', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Confirming location...';
+
+            try {
+                const response = await fetch(`${this.getApiBase()}/onboarding/location/validate`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ country, city })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.showLocationPreview(data.location);
+                    this.stepData.location = {
+                        country,
+                        city,
+                        isInternational: true
+                    };
+                } else {
+                    this.showMessage(data.error || 'Invalid location', 'error');
+                }
+            } catch (error) {
+                this.showMessage('Failed to validate location', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Confirm Location';
+            }
         }
     }
 
@@ -862,12 +987,21 @@ class OnboardingFlow {
         const preview = document.getElementById('locationPreview');
         const list = document.getElementById('representativesList');
 
-        list.innerHTML = location.representatives.slice(0, 3).map(rep =>
-            `<span class="representative-chip">${rep.name}</span>`
-        ).join('');
+        if (location.isInternational) {
+            const countryName = getCountryName(location.country);
+            list.innerHTML = `<span class="representative-chip">Location confirmed: ${location.city}, ${countryName}</span>`;
+            preview.querySelector('h4').textContent = 'Your Location';
+            preview.querySelector('.location-note').textContent = 'Civic features like representatives are available for US users.';
+        } else {
+            preview.querySelector('h4').textContent = 'Your Representatives Preview';
+            preview.querySelector('.location-note').textContent = "We'll show you all your representatives after you complete this step";
+            list.innerHTML = location.representatives.slice(0, 3).map(rep =>
+                `<span class="representative-chip">${rep.name}</span>`
+            ).join('');
 
-        if (location.representatives.length > 3) {
-            list.innerHTML += `<span class="representative-chip">+${location.representatives.length - 3} more</span>`;
+            if (location.representatives.length > 3) {
+                list.innerHTML += `<span class="representative-chip">+${location.representatives.length - 3} more</span>`;
+            }
         }
 
         preview.style.display = 'block';
@@ -1183,10 +1317,19 @@ class OnboardingFlow {
 
         switch (step.id) {
             case 'location': {
-                const zipCode = document.getElementById('zipCode').value;
-                if (!zipCode) {
-                    this.showMessage('Please enter your ZIP code', 'error');
-                    return false;
+                const country = document.getElementById('locationCountry')?.value || 'US';
+                if (country === 'US') {
+                    const zipCode = document.getElementById('zipCode').value;
+                    if (!zipCode) {
+                        this.showMessage('Please enter your ZIP code', 'error');
+                        return false;
+                    }
+                } else {
+                    const city = document.getElementById('intlCity')?.value?.trim();
+                    if (!city) {
+                        this.showMessage('Please enter your city', 'error');
+                        return false;
+                    }
                 }
                 if (!this.stepData.location) {
                     this.showMessage('Please validate your location first', 'error');

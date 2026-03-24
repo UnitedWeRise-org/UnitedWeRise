@@ -287,6 +287,12 @@ class OfficialsSystemIntegration {
                 return;
             }
 
+            // Civic features (representatives) are only available for US users
+            if (window.currentUser.country && window.currentUser.country !== 'US') {
+                this.showOfficialsError('Elected officials information is currently available for US-based users.');
+                return;
+            }
+
             // Call the existing loadUserContent function to get officials data
             if (typeof window.loadUserContent === 'function') {
                 await window.loadUserContent();

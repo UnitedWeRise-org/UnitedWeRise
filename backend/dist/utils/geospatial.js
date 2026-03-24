@@ -8,9 +8,19 @@ const logger_1 = require("../services/logger");
 // 8 = ~1km hexagons (neighborhood level)
 // 9 = ~174m hexagons (block level)
 const DEFAULT_H3_RESOLUTION = 7;
-// Convert address to coordinates (simplified - in production you'd use Google/Mapbox geocoding)
+/**
+ * Convert address to coordinates using lookup tables (simplified).
+ * Returns null for non-US addresses since lookup tables are US-only.
+ * In production, integrate with Google Maps, Mapbox, or similar service.
+ * @param address - Address components including optional country code
+ * @returns Coordinates or null if address cannot be geocoded
+ */
 const geocodeAddress = async (address) => {
     try {
+        // Non-US addresses cannot be geocoded with US-only lookup tables
+        if (address.country && address.country !== 'US') {
+            return null;
+        }
         // This is a simplified geocoding function
         // In production, you'd integrate with Google Maps, Mapbox, or similar service
         // For demo purposes, we'll use some sample coordinates for common areas

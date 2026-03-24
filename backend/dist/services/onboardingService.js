@@ -4,6 +4,7 @@ exports.onboardingService = exports.OnboardingService = void 0;
 const prisma_1 = require("../lib/prisma");
 const metricsService_1 = require("./metricsService");
 const logger_1 = require("./logger");
+const embeddingService_1 = require("./embeddingService");
 // Political terms to subtly filter from search (without showing errors)
 const FILTERED_POLITICAL_TERMS = [
     'republican', 'democrat', 'democratic', 'gop', 'liberal', 'conservative',
@@ -56,7 +57,7 @@ class OnboardingService {
                 title: 'Find Your Representatives',
                 description: 'Add your location to connect with your local and federal representatives',
                 required: true,
-                completed: profile.completedSteps.includes('location') || !!user?.zipCode,
+                completed: profile.completedSteps.includes('location'),
                 data: profile.profileData.location
             },
             {
@@ -108,18 +109,53 @@ class OnboardingService {
         });
         return profile;
     }
+    /**
+     * Persist step-specific data to the User record.
+     * Location step: US path saves ZIP/city/state, international path saves city + country (clears ZIP/state).
+     * Interests step: generates interest embedding for feed personalization.
+     * @param userId - The user's ID
+     * @param stepId - Onboarding step identifier ('location', 'interests', etc.)
+     * @param stepData - Step-specific payload from the frontend
+     */
     async updateUserFromStepData(userId, stepId, stepData) {
         const updateData = {};
         switch (stepId) {
             case 'location':
-                if (stepData.zipCode) {
-                    updateData.zipCode = stepData.zipCode;
-                    updateData.city = stepData.city;
-                    updateData.state = stepData.state;
+                updateData.country = stepData.country || 'US';
+                if (!stepData.country || stepData.country === 'US') {
+                    // US path: save ZIP, city, state
+                    if (stepData.zipCode) {
+                        updateData.zipCode = stepData.zipCode;
+                        updateData.city = stepData.city;
+                        updateData.state = stepData.state;
+                    }
+                }
+                else {
+                    // International path: save city only
+                    if (stepData.city) {
+                        updateData.city = stepData.city;
+                    }
+                    updateData.zipCode = null;
+                    updateData.state = null;
                 }
                 break;
             case 'interests':
                 updateData.interests = stepData;
+                // Generate aggregate interest embedding for feed personalization.
+                // Combines all selected interests into a single text, generates a vector,
+                // and stores it on the user record for use by the probability feed algorithm.
+                try {
+                    const interestText = Array.isArray(stepData) ? stepData.join(', ') : String(stepData);
+                    const embedding = await embeddingService_1.EmbeddingService.generateEmbedding(interestText);
+                    if (embedding && embedding.length > 0) {
+                        updateData.embedding = embedding;
+                        logger_1.logger.info({ userId, interestCount: Array.isArray(stepData) ? stepData.length : 0 }, 'Generated interest embedding for user');
+                    }
+                }
+                catch (error) {
+                    // Non-blocking: feed will work without embedding, just less personalized
+                    logger_1.logger.error({ error, userId }, 'Failed to generate interest embedding (non-blocking)');
+                }
                 break;
         }
         if (Object.keys(updateData).length > 0) {

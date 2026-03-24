@@ -160,6 +160,11 @@ export class CivicHandlers {
      * @param {string} state - User's state abbreviation
      */
     async loadElectedOfficials(zipCode, state) {
+        // Only load representatives for US users
+        if (window.currentUser?.country && window.currentUser.country !== 'US') {
+            console.log('🏛️ Skipping representative loading for non-US user');
+            return;
+        }
         console.log(`🏛️ Loading elected officials for ${zipCode}, ${state}...`);
 
         try {

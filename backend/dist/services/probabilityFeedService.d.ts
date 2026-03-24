@@ -7,6 +7,7 @@ interface FeedWeights {
 }
 export declare class ProbabilityFeedService {
     private static defaultWeights;
+    private static coldStartWeights;
     /**
      * Generate personalized feed using probability cloud sampling algorithm
      *
@@ -70,13 +71,14 @@ export declare class ProbabilityFeedService {
      * - User's own posts with embeddings (for self-similarity)
      *
      * @param userId - User ID to fetch profile for
-     * @returns Promise<Object> User profile with followedUserIds Set and interactionEmbeddings array
+     * @returns Promise<Object> User profile with followedUserIds Set, interactionEmbeddings array, and isColdStart flag
      * @throws {Error} When user lookup fails or database query errors
      *
      * @example
      * const profile = await this.getUserProfile('user_123');
      * console.log(profile.followedUserIds.size); // 42
      * console.log(profile.interactionEmbeddings.length); // 70 (max 50 likes + 20 posts)
+     * console.log(profile.isColdStart); // true for users < 7 days old or < 10 interactions
      */
     private static getUserProfile;
     /**
@@ -96,6 +98,11 @@ export declare class ProbabilityFeedService {
      * console.log(candidates[0].author.verified); // true
      */
     private static getCandidatePosts;
+    /**
+     * Fetch posts by IDs using the same include shape as getCandidatePosts.
+     * Used for supplementing cold-start feeds with trending topic posts.
+     */
+    private static getPostsByIds;
     /**
      * Score a single post across all dimensions
      *

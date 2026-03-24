@@ -46,6 +46,7 @@ export declare class RiseAIAgentService {
         city: string | null;
         state: string | null;
         zipCode: string | null;
+        country: string | null;
         h3Index: string | null;
         politicalProfileType: import(".prisma/client").$Enums.PoliticalProfileType;
         verificationStatus: import(".prisma/client").$Enums.VerificationStatus;

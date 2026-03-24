@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProbabilityFeedService = void 0;
 const prisma_1 = require("../lib/prisma");
 const engagementScoringService_1 = require("./engagementScoringService");
+const topicService_1 = require("./topicService");
 const logger_1 = require("./logger");
 class ProbabilityFeedService {
     // Default weights - can be overridden per user or via A/B testing
@@ -12,6 +13,16 @@ class ProbabilityFeedService {
         social: 0.25, // Posts from connections
         trending: 0.10, // Popular content
         reputation: 0.10 // Author reputation
+    };
+    // Cold-start weights for new users (< 7 days or < 10 interactions).
+    // Emphasizes trending + similarity (from onboarding interest vectors)
+    // since social graph is empty.
+    static coldStartWeights = {
+        recency: 0.25, // Still prefer fresh content
+        similarity: 0.40, // High: leverage onboarding interest embeddings
+        social: 0.05, // Low: no social graph yet
+        trending: 0.25, // High: popular content as discovery
+        reputation: 0.05 // Low: user has no author preferences yet
     };
     /**
      * Generate personalized feed using probability cloud sampling algorithm
@@ -43,12 +54,39 @@ class ProbabilityFeedService {
      * console.log(feed.stats.avgRecencyScore); // 0.72
      */
     static async generateFeed(userId, limit = 50, customWeights) {
-        const weights = { ...this.defaultWeights, ...customWeights };
         try {
             // Get user's interaction history for similarity matching
             const userProfile = await this.getUserProfile(userId);
+            // Use cold-start weights for new users unless custom weights are provided
+            const baseWeights = (!customWeights && userProfile.isColdStart)
+                ? this.coldStartWeights
+                : this.defaultWeights;
+            const weights = { ...baseWeights, ...customWeights };
             // Get candidate posts (last 30 days to balance freshness vs content pool)
-            const candidatePosts = await this.getCandidatePosts(userId);
+            let candidatePosts = await this.getCandidatePosts(userId);
+            // Cold-start fallback: supplement with posts from interest-matched trending topics
+            // when the candidate pool is sparse (< half the requested limit)
+            if (userProfile.isColdStart && candidatePosts.length < limit / 2 && userProfile.user?.embedding?.length) {
+                try {
+                    const topicPostIds = await topicService_1.TopicService.getInterestMatchedPostIds(userProfile.user.embedding, limit);
+                    if (topicPostIds.length > 0) {
+                        const existingIds = new Set(candidatePosts.map(p => p.id));
+                        const supplementIds = topicPostIds.filter(id => !existingIds.has(id));
+                        if (supplementIds.length > 0) {
+                            const supplementPosts = await this.getPostsByIds(supplementIds);
+                            candidatePosts = [...candidatePosts, ...supplementPosts];
+                            logger_1.logger.info({
+                                userId,
+                                originalCount: existingIds.size,
+                                supplementCount: supplementPosts.length
+                            }, 'ProbabilityFeedService: Supplemented cold-start feed with trending topic posts');
+                        }
+                    }
+                }
+                catch (error) {
+                    logger_1.logger.warn({ error, userId }, 'ProbabilityFeedService: Trending topic fallback failed (non-blocking)');
+                }
+            }
             if (candidatePosts.length === 0) {
                 return { posts: [], algorithm: 'fallback-empty' };
             }
@@ -58,7 +96,7 @@ class ProbabilityFeedService {
             const selectedPosts = this.probabilitySample(scoredPosts, limit);
             return {
                 posts: selectedPosts.map(sp => sp.post),
-                algorithm: 'probability-cloud',
+                algorithm: userProfile.isColdStart ? 'probability-cloud-coldstart' : 'probability-cloud',
                 weights: weights,
                 stats: {
                     candidateCount: candidatePosts.length,
@@ -85,13 +123,14 @@ class ProbabilityFeedService {
      * - User's own posts with embeddings (for self-similarity)
      *
      * @param userId - User ID to fetch profile for
-     * @returns Promise<Object> User profile with followedUserIds Set and interactionEmbeddings array
+     * @returns Promise<Object> User profile with followedUserIds Set, interactionEmbeddings array, and isColdStart flag
      * @throws {Error} When user lookup fails or database query errors
      *
      * @example
      * const profile = await this.getUserProfile('user_123');
      * console.log(profile.followedUserIds.size); // 42
      * console.log(profile.interactionEmbeddings.length); // 70 (max 50 likes + 20 posts)
+     * console.log(profile.isColdStart); // true for users < 7 days old or < 10 interactions
      */
     static async getUserProfile(userId) {
         const [user, followedUsers, likedPosts, userPosts] = await Promise.all([
@@ -100,7 +139,8 @@ class ProbabilityFeedService {
                 select: {
                     id: true,
                     embedding: true,
-                    interests: true // if we add this field later
+                    interests: true,
+                    createdAt: true
                 }
             }),
             prisma_1.prisma.follow.findMany({
@@ -120,13 +160,19 @@ class ProbabilityFeedService {
                 take: 20 // User's own posts for self-similarity
             })
         ]);
+        const interactionCount = likedPosts.length + userPosts.length;
+        const daysSinceCreation = user
+            ? Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+        const isColdStart = daysSinceCreation < 7 || interactionCount < 10;
         return {
             user,
             followedUserIds: new Set(followedUsers.map(f => f.followingId)),
             interactionEmbeddings: [
                 ...likedPosts.map(l => l.post.embedding).filter(e => e.length > 0),
                 ...userPosts.map(p => p.embedding).filter(e => e.length > 0)
-            ]
+            ],
+            isColdStart
         };
     }
     /**
@@ -203,6 +249,66 @@ class ProbabilityFeedService {
             },
             orderBy: { createdAt: 'desc' },
             take: 500 // Large pool to sample from
+        });
+    }
+    /**
+     * Fetch posts by IDs using the same include shape as getCandidatePosts.
+     * Used for supplementing cold-start feeds with trending topic posts.
+     */
+    static async getPostsByIds(postIds) {
+        if (postIds.length === 0)
+            return [];
+        return prisma_1.prisma.post.findMany({
+            where: {
+                id: { in: postIds },
+                deletedAt: null
+            },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        verified: true,
+                        userBadges: {
+                            where: { isDisplayed: true },
+                            take: 5,
+                            orderBy: { displayOrder: 'asc' },
+                            select: {
+                                badge: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        description: true,
+                                        imageUrl: true
+                                    }
+                                },
+                                earnedAt: true,
+                                displayOrder: true
+                            }
+                        }
+                    }
+                },
+                photos: true,
+                _count: {
+                    select: {
+                        likes: true,
+                        comments: true,
+                        shares: true,
+                        threadPosts: true
+                    }
+                },
+                comments: {
+                    select: {
+                        likesCount: true,
+                        dislikesCount: true,
+                        agreesCount: true,
+                        disagreesCount: true
+                    }
+                }
+            }
         });
     }
     /**

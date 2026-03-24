@@ -103,6 +103,86 @@ class TopicService {
         }
     }
     /**
+     * Get trending topics filtered by similarity to a user's interest embedding.
+     * Returns topics whose centroid embedding is semantically close to the user's interests,
+     * ranked by a combined score of relevance and trending momentum.
+     *
+     * @param userEmbedding - User's interest embedding vector
+     * @param limit - Maximum topics to return
+     * @param minSimilarity - Minimum cosine similarity threshold (default 0.3)
+     * @returns Trending topics sorted by relevance * trendingScore
+     */
+    static async getInterestMatchedTopics(userEmbedding, limit = 10, minSimilarity = 0.3) {
+        if (!userEmbedding || userEmbedding.length === 0) {
+            return this.getTrendingTopics(limit);
+        }
+        const topics = await prisma_1.prisma.topic.findMany({
+            where: {
+                isActive: true,
+                postCount: { gte: this.MIN_POSTS_PER_TOPIC },
+                embedding: { isEmpty: false }
+            },
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                category: true,
+                trendingScore: true,
+                postCount: true,
+                participantCount: true,
+                embedding: true,
+                lastActivityAt: true
+            }
+        });
+        // Score by similarity to user interests
+        const scored = topics
+            .map(topic => {
+            const similarity = this.cosineSimilarity(userEmbedding, topic.embedding);
+            return {
+                ...topic,
+                interestSimilarity: similarity,
+                combinedScore: similarity * (topic.trendingScore || 1)
+            };
+        })
+            .filter(t => t.interestSimilarity >= minSimilarity)
+            .sort((a, b) => b.combinedScore - a.combinedScore)
+            .slice(0, limit);
+        return scored;
+    }
+    /**
+     * Get post IDs from trending topics that match user interests.
+     * Used by ProbabilityFeedService as cold-start fallback content.
+     *
+     * @param userEmbedding - User's interest embedding vector
+     * @param limit - Maximum post IDs to return
+     * @returns Array of post IDs from interest-matched trending topics
+     */
+    static async getInterestMatchedPostIds(userEmbedding, limit = 50) {
+        const topics = await this.getInterestMatchedTopics(userEmbedding, 5, 0.25);
+        if (topics.length === 0)
+            return [];
+        const topicIds = topics.map(t => t.id);
+        const topicPosts = await prisma_1.prisma.topicPost.findMany({
+            where: { topicId: { in: topicIds } },
+            select: { postId: true, relevanceScore: true },
+            orderBy: { relevanceScore: 'desc' },
+            take: limit
+        });
+        return topicPosts.map(tp => tp.postId);
+    }
+    static cosineSimilarity(a, b) {
+        if (a.length !== b.length || a.length === 0)
+            return 0;
+        let dot = 0, normA = 0, normB = 0;
+        for (let i = 0; i < a.length; i++) {
+            dot += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+        const mag = Math.sqrt(normA) * Math.sqrt(normB);
+        return mag === 0 ? 0 : dot / mag;
+    }
+    /**
      * Get trending topics
      */
     static async getTrendingTopics(limit = 10) {

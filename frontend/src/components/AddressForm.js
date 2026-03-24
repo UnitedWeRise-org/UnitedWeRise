@@ -1,9 +1,12 @@
 /**
  * @module components/AddressForm
- * @description Standardized address form component with US states dropdown and validation
- * Provides reusable form for capturing user addresses with proper validation
+ * @description Standardized address form component with country-aware fields.
+ * US users see state dropdown + ZIP validation. International users see
+ * freeform region/province and relaxed postal code validation.
  * Migrated to ES6 modules: October 11, 2025 (Batch 5)
  */
+
+import { COUNTRIES } from '../data/countries.js';
 
 // US States data for dropdown
 const US_STATES = [
@@ -89,8 +92,18 @@ function createAddressForm(options = {}) {
         return null;
     }
 
+    const currentCountry = initialValues.country || 'US';
+    const isUS = currentCountry === 'US';
+
+    // Create country options HTML
+    const countryOptions = COUNTRIES.map((c, i) => {
+        let html = `<option value="${c.code}" ${currentCountry === c.code ? 'selected' : ''}>${c.name}</option>`;
+        if (i === 0) html += '<option disabled>──────────</option>';
+        return html;
+    }).join('');
+
     // Create state options HTML
-    const stateOptions = US_STATES.map(state => 
+    const stateOptions = US_STATES.map(state =>
         `<option value="${state.code}" ${initialValues.state === state.code ? 'selected' : ''}>
             ${state.code}
          </option>`
@@ -99,6 +112,17 @@ function createAddressForm(options = {}) {
     // Build form HTML
     const formHTML = `
         <div class="address-form">
+            <div class="form-group">
+                <label for="${containerId}_country">Country</label>
+                <select
+                    id="${containerId}_country"
+                    name="country"
+                    class="address-select"
+                >
+                    ${countryOptions}
+                </select>
+            </div>
+
             <div class="form-group">
                 <label for="${containerId}_streetAddress">
                     Street Address ${required ? '*' : ''}
@@ -127,15 +151,15 @@ function createAddressForm(options = {}) {
                     class="address-input"
                 >
             </div>
-            
+
             <div class="form-row">
                 <div class="form-group form-group-half">
                     <label for="${containerId}_city">
                         City ${required ? '*' : ''}
                     </label>
-                    <input 
-                        type="text" 
-                        id="${containerId}_city" 
+                    <input
+                        type="text"
+                        id="${containerId}_city"
                         name="city"
                         value="${initialValues.city || ''}"
                         placeholder="Springfield"
@@ -143,40 +167,55 @@ function createAddressForm(options = {}) {
                         class="address-input"
                     >
                 </div>
-                
-                <div class="form-group form-group-quarter">
+
+                <div class="form-group form-group-quarter" id="${containerId}_stateGroup" style="display: ${isUS ? '' : 'none'};">
                     <label for="${containerId}_state">
                         State ${required ? '*' : ''}
                     </label>
-                    <select 
-                        id="${containerId}_state" 
+                    <select
+                        id="${containerId}_state"
                         name="state"
-                        ${required ? 'required' : ''}
+                        ${required && isUS ? 'required' : ''}
                         class="address-select"
                     >
                         <option value="">Select State</option>
                         ${stateOptions}
                     </select>
                 </div>
-                
-                <div class="form-group form-group-quarter">
-                    <label for="${containerId}_zipCode">
-                        ZIP Code ${required ? '*' : ''}
+
+                <div class="form-group form-group-quarter" id="${containerId}_regionGroup" style="display: ${isUS ? 'none' : ''};">
+                    <label for="${containerId}_region">
+                        State/Province/Region
                     </label>
-                    <input 
-                        type="text" 
-                        id="${containerId}_zipCode" 
+                    <input
+                        type="text"
+                        id="${containerId}_region"
+                        name="region"
+                        value="${initialValues.region || ''}"
+                        placeholder="Province"
+                        class="address-input"
+                        maxlength="100"
+                    >
+                </div>
+
+                <div class="form-group form-group-quarter" id="${containerId}_zipGroup">
+                    <label for="${containerId}_zipCode">
+                        ${isUS ? 'ZIP Code' : 'Postal Code'} ${required ? '*' : ''}
+                    </label>
+                    <input
+                        type="text"
+                        id="${containerId}_zipCode"
                         name="zipCode"
                         value="${initialValues.zipCode || ''}"
-                        placeholder="62701"
-                        pattern="[0-9]{5}(-[0-9]{4})?"
-                        maxlength="10"
+                        placeholder="${isUS ? '62701' : 'Postal code'}"
+                        ${isUS ? 'pattern="[0-9]{5}(-[0-9]{4})?"' : ''}
+                        maxlength="${isUS ? '10' : '20'}"
                         ${required ? 'required' : ''}
                         class="address-input"
                     >
                 </div>
             </div>
-            
+
             <div class="address-validation-message" id="${containerId}_validation" style="display: none;"></div>
         </div>
     `;
@@ -265,6 +304,9 @@ function createAddressForm(options = {}) {
     // Insert form HTML
     container.innerHTML = formHTML;
 
+    // Track current country for conditional validation
+    let selectedCountry = currentCountry;
+
     // Add event listeners for validation and change detection
     const inputs = container.querySelectorAll('.address-input, .address-select');
     const validationDiv = container.querySelector(`#${containerId}_validation`);
@@ -274,11 +316,38 @@ function createAddressForm(options = {}) {
             validateField(input);
             onChange(getFormData());
         });
-        
+
         input.addEventListener('blur', () => {
             validateField(input);
         });
     });
+
+    // Country change handler — toggle US vs international fields
+    const countrySelect = container.querySelector(`#${containerId}_country`);
+    if (countrySelect) {
+        countrySelect.addEventListener('change', () => {
+            selectedCountry = countrySelect.value;
+            const nowUS = selectedCountry === 'US';
+            const stateGroup = container.querySelector(`#${containerId}_stateGroup`);
+            const regionGroup = container.querySelector(`#${containerId}_regionGroup`);
+            const zipLabel = container.querySelector(`#${containerId}_zipGroup label`);
+            const zipInput = container.querySelector(`#${containerId}_zipCode`);
+            const stateSelect = container.querySelector(`#${containerId}_state`);
+
+            if (stateGroup) stateGroup.style.display = nowUS ? '' : 'none';
+            if (regionGroup) regionGroup.style.display = nowUS ? 'none' : '';
+            if (zipLabel) zipLabel.textContent = (nowUS ? 'ZIP Code' : 'Postal Code') + (required ? ' *' : '');
+            if (zipInput) {
+                zipInput.placeholder = nowUS ? '62701' : 'Postal code';
+                zipInput.maxLength = nowUS ? 10 : 20;
+                zipInput.removeAttribute('pattern');
+                if (nowUS) zipInput.pattern = '[0-9]{5}(-[0-9]{4})?';
+            }
+            if (stateSelect) stateSelect.required = nowUS && required;
+
+            onChange(getFormData());
+        });
+    }
 
     // Validation functions
     function validateField(field) {
@@ -290,16 +359,26 @@ function createAddressForm(options = {}) {
         // Clear previous validation state
         field.classList.remove('invalid');
 
-        if (required && !value) {
+        // Skip validation for hidden fields
+        if (fieldName === 'state' && selectedCountry !== 'US') return true;
+        if (fieldName === 'region' && selectedCountry === 'US') return true;
+
+        if (required && !value && fieldName !== 'region' && fieldName !== 'streetAddress2') {
             isValid = false;
             message = `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
-        } else if (fieldName === 'zipCode' && value) {
+        } else if (fieldName === 'zipCode' && value && selectedCountry === 'US') {
             const zipPattern = /^[0-9]{5}(-[0-9]{4})?$/;
             if (!zipPattern.test(value)) {
                 isValid = false;
                 message = 'ZIP code must be in format 12345 or 12345-6789';
             }
-        } else if (fieldName === 'state' && value && !US_STATES.find(s => s.code === value)) {
+        } else if (fieldName === 'zipCode' && value && selectedCountry !== 'US') {
+            // International postal codes: alphanumeric, max 20 chars
+            if (!/^[a-zA-Z0-9\s-]{1,20}$/.test(value)) {
+                isValid = false;
+                message = 'Please enter a valid postal code';
+            }
+        } else if (fieldName === 'state' && value && selectedCountry === 'US' && !US_STATES.find(s => s.code === value)) {
             isValid = false;
             message = 'Please select a valid state';
         }
@@ -325,7 +404,7 @@ function createAddressForm(options = {}) {
     }
 
     function getFormData() {
-        const data = {};
+        const data = { country: selectedCountry };
         inputs.forEach(input => {
             data[input.name] = input.value.trim();
         });

@@ -122,8 +122,8 @@ router.post('/complete-step', requireAuth, async (req: AuthRequest, res) => {
     
     await onboardingService.trackOnboardingEvent(userId, 'step_completed', stepId, stepData);
     
-    // If location step completed, fetch and cache representatives
-    if (stepId === 'location' && stepData?.zipCode) {
+    // If US location step completed, fetch and cache representatives
+    if (stepId === 'location' && stepData?.zipCode && (!stepData.country || stepData.country === 'US')) {
       try {
         // Fetch representatives using RepresentativeService (with automatic caching)
         const address = stepData.address || stepData.zipCode;
@@ -250,6 +250,10 @@ router.get('/interests', async (req, res) => {
  *   post:
  *     tags: [Onboarding]
  *     summary: Validate location and get representative info
+ *     description: |
+ *       Two-path location validation:
+ *       - **US users** (country omitted or "US"): Requires zipCode or address, returns representative preview.
+ *       - **International users** (country != "US"): Requires city and ISO 3166-1 alpha-2 country code, returns confirmed location with empty representatives array.
  *     requestBody:
  *       required: true
  *       content:
@@ -259,13 +263,73 @@ router.get('/interests', async (req, res) => {
  *             properties:
  *               zipCode:
  *                 type: string
+ *                 description: US ZIP code (required for US path)
  *               address:
  *                 type: string
+ *                 description: Full US address (optional, improves rep lookup accuracy)
+ *               country:
+ *                 type: string
+ *                 description: ISO 3166-1 alpha-2 country code (e.g., "US", "GB"). Defaults to "US" if omitted.
+ *               city:
+ *                 type: string
+ *                 description: City name (required for international path)
+ *     responses:
+ *       200:
+ *         description: Location validated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 location:
+ *                   type: object
+ *                   properties:
+ *                     city:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     zipCode:
+ *                       type: string
+ *                     country:
+ *                       type: string
+ *                     representatives:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     totalRepresentatives:
+ *                       type: integer
+ *                     isInternational:
+ *                       type: boolean
+ *       400:
+ *         description: Validation error (missing fields or invalid country code)
  */
 router.post('/location/validate', async (req, res) => {
   try {
-    const { zipCode, address } = req.body;
+    const { zipCode, address, country, city } = req.body;
 
+    // International (non-US) users: validate city+country, skip representative lookup
+    if (country && country !== 'US') {
+      if (!city || (typeof city === 'string' && city.trim().length === 0)) {
+        return res.status(400).json({ error: 'City is required for international locations' });
+      }
+      if (!/^[A-Z]{2}$/.test(country)) {
+        return res.status(400).json({ error: 'Invalid country code' });
+      }
+      return res.json({
+        message: 'Location validated successfully',
+        location: {
+          city: typeof city === 'string' ? city.trim() : city,
+          country,
+          representatives: [],
+          totalRepresentatives: 0,
+          isInternational: true
+        }
+      });
+    }
+
+    // US flow: require ZIP code or address
     if (!zipCode && !address) {
       return res.status(400).json({ error: 'ZIP code or address is required' });
     }

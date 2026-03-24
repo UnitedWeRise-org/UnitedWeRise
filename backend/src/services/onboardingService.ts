@@ -102,7 +102,7 @@ export class OnboardingService {
         title: 'Find Your Representatives',
         description: 'Add your location to connect with your local and federal representatives',
         required: true,
-        completed: profile.completedSteps.includes('location') || !!user?.zipCode,
+        completed: profile.completedSteps.includes('location'),
         data: profile.profileData.location
       },
       {
@@ -165,15 +165,34 @@ export class OnboardingService {
     return profile;
   }
 
+  /**
+   * Persist step-specific data to the User record.
+   * Location step: US path saves ZIP/city/state, international path saves city + country (clears ZIP/state).
+   * Interests step: generates interest embedding for feed personalization.
+   * @param userId - The user's ID
+   * @param stepId - Onboarding step identifier ('location', 'interests', etc.)
+   * @param stepData - Step-specific payload from the frontend
+   */
   private async updateUserFromStepData(userId: string, stepId: string, stepData: any) {
     const updateData: any = {};
 
     switch (stepId) {
       case 'location':
-        if (stepData.zipCode) {
-          updateData.zipCode = stepData.zipCode;
-          updateData.city = stepData.city;
-          updateData.state = stepData.state;
+        updateData.country = stepData.country || 'US';
+        if (!stepData.country || stepData.country === 'US') {
+          // US path: save ZIP, city, state
+          if (stepData.zipCode) {
+            updateData.zipCode = stepData.zipCode;
+            updateData.city = stepData.city;
+            updateData.state = stepData.state;
+          }
+        } else {
+          // International path: save city only
+          if (stepData.city) {
+            updateData.city = stepData.city;
+          }
+          updateData.zipCode = null;
+          updateData.state = null;
         }
         break;
       case 'interests':

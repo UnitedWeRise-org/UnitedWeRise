@@ -28,6 +28,134 @@ export declare class TopicService {
      */
     static saveTopicsToDB(analysis: TopicAnalysis): Promise<number>;
     /**
+     * Get trending topics filtered by similarity to a user's interest embedding.
+     * Returns topics whose centroid embedding is semantically close to the user's interests,
+     * ranked by a combined score of relevance and trending momentum.
+     *
+     * @param userEmbedding - User's interest embedding vector
+     * @param limit - Maximum topics to return
+     * @param minSimilarity - Minimum cosine similarity threshold (default 0.3)
+     * @returns Trending topics sorted by relevance * trendingScore
+     */
+    static getInterestMatchedTopics(userEmbedding: number[], limit?: number, minSimilarity?: number): Promise<({
+        posts: ({
+            post: {
+                author: {
+                    id: string;
+                    username: string;
+                    firstName: string;
+                    lastName: string;
+                    avatar: string;
+                };
+            } & {
+                id: string;
+                embedding: number[];
+                createdAt: Date;
+                updatedAt: Date;
+                h3Index: string | null;
+                content: string;
+                organizationId: string | null;
+                isDeleted: boolean;
+                deletedAt: Date | null;
+                editCount: number;
+                lastEditedAt: Date | null;
+                originalContent: string | null;
+                likesCount: number;
+                dislikesCount: number;
+                agreesCount: number;
+                disagreesCount: number;
+                imageUrl: string | null;
+                extendedContent: string | null;
+                authorId: string;
+                isPolitical: boolean;
+                tags: string[];
+                commentsCount: number;
+                sharesCount: number;
+                viewsCount: number;
+                containsFeedback: boolean | null;
+                feedbackCategory: string | null;
+                feedbackConfidence: number | null;
+                feedbackPriority: string | null;
+                feedbackStatus: string | null;
+                feedbackSummary: string | null;
+                feedbackType: string | null;
+                authorReputation: number | null;
+                deletedReason: string | null;
+                searchable: boolean;
+                feedVisible: boolean;
+                audience: import(".prisma/client").$Enums.PostAudience;
+                editHistory: import("@prisma/client/runtime/client").JsonValue | null;
+                latitude: number | null;
+                longitude: number | null;
+                originalH3Index: string | null;
+                privacyDisplaced: boolean;
+                threadHeadId: string | null;
+                threadPosition: number;
+            };
+        } & {
+            id: string;
+            createdAt: Date;
+            postId: string;
+            topicId: string;
+            relevanceScore: number;
+        })[];
+        subTopics: {
+            id: string;
+            embedding: number[];
+            createdAt: Date;
+            updatedAt: Date;
+            title: string;
+            commentCount: number;
+            summary: string | null;
+            participantCount: number;
+            parentTopicId: string;
+        }[];
+    } & {
+        id: string;
+        embedding: number[];
+        createdAt: Date;
+        updatedAt: Date;
+        state: string | null;
+        district: string | null;
+        isActive: boolean;
+        title: string;
+        description: string | null;
+        category: string | null;
+        viewCount: number;
+        evidenceQuality: number;
+        argumentsFor: string[];
+        argumentsAgainst: string[];
+        neutralSummary: string | null;
+        complexityScore: number;
+        controversyScore: number;
+        postCount: number;
+        participantCount: number;
+        trendingScore: number;
+        lastActivityAt: Date;
+    })[] | {
+        interestSimilarity: number;
+        combinedScore: number;
+        id: string;
+        embedding: number[];
+        title: string;
+        description: string;
+        category: string;
+        postCount: number;
+        participantCount: number;
+        trendingScore: number;
+        lastActivityAt: Date;
+    }[]>;
+    /**
+     * Get post IDs from trending topics that match user interests.
+     * Used by ProbabilityFeedService as cold-start fallback content.
+     *
+     * @param userEmbedding - User's interest embedding vector
+     * @param limit - Maximum post IDs to return
+     * @returns Array of post IDs from interest-matched trending topics
+     */
+    static getInterestMatchedPostIds(userEmbedding: number[], limit?: number): Promise<string[]>;
+    private static cosineSimilarity;
+    /**
      * Get trending topics
      */
     static getTrendingTopics(limit?: number): Promise<({

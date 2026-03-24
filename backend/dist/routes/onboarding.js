@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-;
 const auth_1 = require("../middleware/auth");
 const onboardingService_1 = require("../services/onboardingService");
 const representativeService_1 = require("../services/representativeService");
 const logger_1 = require("../services/logger");
+const embeddingService_1 = require("../services/embeddingService");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -118,8 +119,8 @@ router.post('/complete-step', auth_1.requireAuth, async (req, res) => {
         }
         const profile = await onboardingService_1.onboardingService.completeStep(userId, stepId, stepData);
         await onboardingService_1.onboardingService.trackOnboardingEvent(userId, 'step_completed', stepId, stepData);
-        // If location step completed, fetch and cache representatives
-        if (stepId === 'location' && stepData?.zipCode) {
+        // If US location step completed, fetch and cache representatives
+        if (stepId === 'location' && stepData?.zipCode && (!stepData.country || stepData.country === 'US')) {
             try {
                 // Fetch representatives using RepresentativeService (with automatic caching)
                 const address = stepData.address || stepData.zipCode;
@@ -236,6 +237,10 @@ router.get('/interests', async (req, res) => {
  *   post:
  *     tags: [Onboarding]
  *     summary: Validate location and get representative info
+ *     description: |
+ *       Two-path location validation:
+ *       - **US users** (country omitted or "US"): Requires zipCode or address, returns representative preview.
+ *       - **International users** (country != "US"): Requires city and ISO 3166-1 alpha-2 country code, returns confirmed location with empty representatives array.
  *     requestBody:
  *       required: true
  *       content:
@@ -245,12 +250,71 @@ router.get('/interests', async (req, res) => {
  *             properties:
  *               zipCode:
  *                 type: string
+ *                 description: US ZIP code (required for US path)
  *               address:
  *                 type: string
+ *                 description: Full US address (optional, improves rep lookup accuracy)
+ *               country:
+ *                 type: string
+ *                 description: ISO 3166-1 alpha-2 country code (e.g., "US", "GB"). Defaults to "US" if omitted.
+ *               city:
+ *                 type: string
+ *                 description: City name (required for international path)
+ *     responses:
+ *       200:
+ *         description: Location validated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 location:
+ *                   type: object
+ *                   properties:
+ *                     city:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     zipCode:
+ *                       type: string
+ *                     country:
+ *                       type: string
+ *                     representatives:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     totalRepresentatives:
+ *                       type: integer
+ *                     isInternational:
+ *                       type: boolean
+ *       400:
+ *         description: Validation error (missing fields or invalid country code)
  */
 router.post('/location/validate', async (req, res) => {
     try {
-        const { zipCode, address } = req.body;
+        const { zipCode, address, country, city } = req.body;
+        // International (non-US) users: validate city+country, skip representative lookup
+        if (country && country !== 'US') {
+            if (!city || (typeof city === 'string' && city.trim().length === 0)) {
+                return res.status(400).json({ error: 'City is required for international locations' });
+            }
+            if (!/^[A-Z]{2}$/.test(country)) {
+                return res.status(400).json({ error: 'Invalid country code' });
+            }
+            return res.json({
+                message: 'Location validated successfully',
+                location: {
+                    city: typeof city === 'string' ? city.trim() : city,
+                    country,
+                    representatives: [],
+                    totalRepresentatives: 0,
+                    isInternational: true
+                }
+            });
+        }
+        // US flow: require ZIP code or address
         if (!zipCode && !address) {
             return res.status(400).json({ error: 'ZIP code or address is required' });
         }
@@ -355,6 +419,153 @@ router.get('/analytics', auth_1.requireAuth, async (req, res) => {
     catch (error) {
         logger_1.logger.error({ error, userId: req.user?.id }, 'Get onboarding analytics error');
         res.status(500).json({ error: 'Failed to get analytics' });
+    }
+});
+/**
+ * @swagger
+ * /api/onboarding/suggested-follows:
+ *   get:
+ *     tags: [Onboarding]
+ *     summary: Get suggested accounts to follow based on user interests
+ *     description: Uses the user's interest embedding to find active content creators
+ *       who post about matching topics. Returns up to 10 suggestions.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Suggested accounts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 suggestions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       username:
+ *                         type: string
+ *                       displayName:
+ *                         type: string
+ *                       avatar:
+ *                         type: string
+ *                       bio:
+ *                         type: string
+ *                       postCount:
+ *                         type: number
+ *                       topTags:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ */
+router.get('/suggested-follows', auth_1.requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        // Get user's interest embedding
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: userId },
+            select: { embedding: true, interests: true }
+        });
+        if (!user?.embedding || user.embedding.length === 0) {
+            return res.json({ suggestions: [] });
+        }
+        // Find posts similar to user's interest embedding
+        const similarPosts = await embeddingService_1.EmbeddingService.findSimilarPosts(user.embedding, 50, // Get more posts to aggregate by author
+        0.5 // Lower threshold for broader discovery
+        );
+        if (!similarPosts || similarPosts.length === 0) {
+            return res.json({ suggestions: [] });
+        }
+        // Aggregate by author — count how many similar posts each author has
+        const authorScores = new Map();
+        for (const post of similarPosts) {
+            const authorId = post.authorId;
+            if (authorId === userId)
+                continue; // Skip self
+            const existing = authorScores.get(authorId) || { score: 0, count: 0 };
+            existing.score += post.similarity || 0.5;
+            existing.count += 1;
+            authorScores.set(authorId, existing);
+        }
+        // Sort by combined score (similarity * frequency)
+        const topAuthorIds = Array.from(authorScores.entries())
+            .sort((a, b) => (b[1].score * b[1].count) - (a[1].score * a[1].count))
+            .slice(0, 10)
+            .map(([id]) => id);
+        if (topAuthorIds.length === 0) {
+            return res.json({ suggestions: [] });
+        }
+        // Fetch author profiles with post counts and recent tags
+        const authors = await prisma_1.prisma.user.findMany({
+            where: {
+                id: { in: topAuthorIds },
+                isSuspended: false
+            },
+            select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+                bio: true,
+                _count: { select: { posts: true } }
+            }
+        });
+        // Get top tags for each author from recent posts
+        const authorTags = await Promise.all(topAuthorIds.map(async (authorId) => {
+            const recentPosts = await prisma_1.prisma.post.findMany({
+                where: { authorId, deletedAt: null },
+                select: { tags: true },
+                orderBy: { createdAt: 'desc' },
+                take: 10
+            });
+            const tagCounts = new Map();
+            for (const post of recentPosts) {
+                for (const tag of (post.tags || [])) {
+                    tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+                }
+            }
+            return {
+                authorId,
+                topTags: Array.from(tagCounts.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5)
+                    .map(([tag]) => tag)
+            };
+        }));
+        const tagsByAuthor = new Map(authorTags.map(t => [t.authorId, t.topTags]));
+        // Check which authors the user already follows
+        const existingFollows = await prisma_1.prisma.follow.findMany({
+            where: { followerId: userId, followingId: { in: topAuthorIds } },
+            select: { followingId: true }
+        });
+        const alreadyFollowing = new Set(existingFollows.map(f => f.followingId));
+        // Build response, excluding already-followed users
+        const suggestions = topAuthorIds
+            .filter(id => !alreadyFollowing.has(id))
+            .map(id => {
+            const author = authors.find(a => a.id === id);
+            if (!author)
+                return null;
+            return {
+                id: author.id,
+                username: author.username,
+                displayName: [author.firstName, author.lastName].filter(Boolean).join(' ') || author.username,
+                avatar: author.avatar,
+                bio: author.bio ? author.bio.substring(0, 120) : null,
+                postCount: author._count.posts,
+                topTags: tagsByAuthor.get(id) || []
+            };
+        })
+            .filter(Boolean);
+        res.json({ suggestions });
+    }
+    catch (error) {
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Suggested follows error');
+        res.json({ suggestions: [] }); // Graceful degradation
     }
 });
 // Enhanced search endpoint with political term filtering

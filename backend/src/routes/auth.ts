@@ -751,6 +751,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
         isSuperAdmin: true,
         password: true, // Need to check if set (won't return actual password)
         uiPreferences: true, // UI preferences (dismissed modals, etc.)
+        country: true, // ISO 3166-1 alpha-2 country code
         oauthProviders: {
           select: {
             provider: true,
@@ -787,7 +788,9 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
         linkedAt: p.createdAt
       })),
       // UI preferences (dismissed modals, theme choices, etc.)
-      uiPreferences: fullUser.uiPreferences || {}
+      uiPreferences: fullUser.uiPreferences || {},
+      // Country code for conditional civic feature display
+      country: fullUser.country || 'US'
     };
 
     res.json({ success: true, data: userData });

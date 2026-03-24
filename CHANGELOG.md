@@ -8,6 +8,27 @@
 
 ---
 
+## [2026-03-23] - International user support with country-aware onboarding
+
+### Added
+- `country` column on User model (ISO 3166-1 alpha-2, defaults to "US") with Prisma migration
+- Country selector dropdown in onboarding location step — US users see ZIP + full address fields, international users see city-only field
+- International path in `/api/onboarding/location/validate` — validates city + country code, returns empty representatives array with `isInternational: true`
+- Country-aware `AddressForm` component — US users get state dropdown + ZIP validation, international users get freeform region/province + relaxed postal code
+- `frontend/src/data/countries.js` — 195 ISO 3166-1 countries with US listed first
+- Country guard in `officials-system-integration.js` — shows informational message for non-US users instead of attempting representative lookup
+- Country guard in `civic-handlers.js` `loadElectedOfficials()` — skips representative loading for non-US users
+
+### Changed
+- `stripeService.ts` uses `user.country || 'US'` for billing address instead of hardcoded `'US'`
+- `geospatial.ts` `geocodeAddress()` returns null for non-US addresses (US-only lookup tables)
+- `/auth/me` and `/users/profile` responses now include `country` field
+- `onboardingService.updateUserFromStepData()` — US path saves ZIP/city/state, international path saves city + country and clears ZIP/state
+- `validation.ts` `validatePoliticalProfile` includes country code validator
+- Onboarding complete-step only fetches representatives for US users (`country === 'US'`)
+
+---
+
 ## [2026-03-12] - Verification-gated onboarding with feed seeding & topic integration
 
 ### Added

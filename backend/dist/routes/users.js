@@ -128,6 +128,7 @@ router.get('/profile', auth_1.requireAuth, async (req, res) => {
                 city: true,
                 state: true,
                 zipCode: true,
+                country: true,
                 // Political profile fields
                 politicalProfileType: true,
                 verificationStatus: true,

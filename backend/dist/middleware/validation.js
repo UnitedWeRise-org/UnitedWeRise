@@ -199,6 +199,11 @@ exports.validatePoliticalProfile = [
         .optional()
         .matches(/^\d{5}(-\d{4})?$/)
         .withMessage('ZIP code must be valid format'),
+    (0, express_validator_1.body)('country')
+        .optional()
+        .isLength({ min: 2, max: 2 })
+        .matches(/^[A-Z]{2}$/)
+        .withMessage('Country must be ISO 3166-1 alpha-2 code'),
     (0, express_validator_1.body)('campaignWebsite')
         .optional()
         .isURL()

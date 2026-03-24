@@ -53,8 +53,16 @@ export declare class UserInterestService {
      */
     static buildProfile(userId: string): Promise<UserInterestProfile>;
     /**
-     * Compute aggregate interest vector from embeddings
-     * Uses weighted average of liked posts and own posts
+     * Compute aggregate interest vector from embeddings.
+     * Uses weighted average of liked posts, own posts, and user embedding.
+     * Weights are dynamic: cold-start users get higher explicit interest weight (0.6)
+     * while established users favor behavioral signals.
+     *
+     * @param likedEmbeddings - Embeddings from user's liked posts
+     * @param ownEmbeddings - Embeddings from user's own posts
+     * @param userEmbedding - User's profile embedding (from onboarding interest selection)
+     * @param weights - Signal weights for aggregation (defaults to DEFAULT_SIGNAL_WEIGHTS)
+     * @returns Normalized aggregate vector, or null if no embeddings available
      */
     private static computeAggregateVector;
     /**

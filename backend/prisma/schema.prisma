@@ -48,6 +48,8 @@ model User {
   state                   String?
   /// ZIP/postal code (used for electoral district lookup and geographic grouping)
   zipCode                 String?
+  /// ISO 3166-1 alpha-2 country code (e.g., "US", "GB", "CA"). Defaults to US for existing users.
+  country                 String?              @default("US")
   /// H3 geospatial index at configured resolution for location-based content discovery
   /// @description Used for feed proximity calculations and local content recommendations.
   /// Privacy displacement may offset from actual address to protect user location.
