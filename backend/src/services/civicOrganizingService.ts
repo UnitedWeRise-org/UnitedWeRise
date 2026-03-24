@@ -116,13 +116,11 @@ export class CivicOrganizingService {
   }
 
   async signPetition(userId: string, petitionId: string, ipAddress?: string): Promise<PetitionSignature> {
-    // Check if user already signed
-    const existingSignature = await prisma.petitionSignature.findUnique({
+    // Check if user already signed (application-level duplicate check)
+    const existingSignature = await prisma.petitionSignature.findFirst({
       where: {
-        petitionId_userId: {
-          petitionId,
-          userId
-        }
+        petitionId,
+        userId
       }
     });
 

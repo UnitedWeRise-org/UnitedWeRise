@@ -176,6 +176,26 @@ export const messageLimiter = rateLimit({
   keyGenerator: azureKeyGenerator
 });
 
+/**
+ * Rate limiter for petition signing endpoint
+ * Prevents abuse of anonymous signature submission
+ */
+export const petitionSigningLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: azureKeyGenerator,
+  handler: (req: any, res: any) => {
+    const retryAfter = Math.ceil(15 * 60); // 15 minutes in seconds
+    res.status(429).json({
+      error: 'Too many signature submissions. Please try again later.',
+      code: 'PETITION_SIGNING_RATE_LIMITED',
+      retryAfter
+    });
+  }
+});
+
 // Reasonable rate limiting for email/phone verification
 export const verificationLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes (much more reasonable than 15)

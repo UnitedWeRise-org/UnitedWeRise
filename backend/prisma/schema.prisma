@@ -937,6 +937,9 @@ model Candidate {
   /// Organization endorsements received by this candidate
   orgEndorsementsReceived    OrganizationEndorsement[] @relation("OrgEndorsementsReceived")
 
+  /// Ballot access petitions created by this candidate
+  petitions                  Petition[]                @relation("PetitionCandidate")
+
   @@index([officeId])
   @@index([party])
   @@index([userId])
@@ -2020,10 +2023,11 @@ model Petition {
   title             String
   description       String
   petitionType      PetitionType        @default(PETITION)
-  category          IssueCategory
-  geographicScope   GeographicScope
+  category          IssueCategory?
+  geographicScope   GeographicScope?
   targetOfficials   String[]            @default([])
-  signatureGoal     Int
+  /// Target number of signatures (optional for non-ballot petitions)
+  signatureGoal     Int?
   currentSignatures Int                 @default(0)
   status            PetitionStatus      @default(ACTIVE)
   location          Json?
@@ -2031,27 +2035,138 @@ model Petition {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   expiresAt         DateTime?
+
+  /// 8-char auto-generated alphanumeric code for shareable URLs
+  shortCode                String?              @unique
+  /// Optional custom slug alias for verified candidates (e.g., "smith-for-congress")
+  customSlug               String?              @unique
+  /// Petition category (ballot access, civic advocacy, community, policy)
+  petitionCategory         PetitionCategory?
+  /// Candidate this petition belongs to (nullable — only for ballot access petitions)
+  candidateId              String?
+  /// JSON configuration of which fields signers must fill out
+  requiredSignerFields     Json?                @default("[]")
+  /// State-specific perjury/attestation language displayed to signers
+  declarationLanguage      String?
+  /// Whether voter registration verification is enabled for this petition
+  voterVerificationEnabled Boolean              @default(false)
+  /// Party line (for ballot access petitions)
+  party                    String?
+  /// Election cycle year
+  electionYear             Int?
+  /// Filing deadline
+  filingDeadline           DateTime?
+  /// Digital circulator name
+  circulatorName           String?
+  /// Digital circulator attestation timestamp
+  circulatorAttestedAt     DateTime?
+  /// Privacy/consent language shown alongside attestation
+  privacyConsentText       String?
+
   creator           User                @relation("PetitionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  /// Candidate relationship (for ballot access petitions only)
+  candidate         Candidate?          @relation("PetitionCandidate", fields: [candidateId], references: [id], onDelete: SetNull)
   signatures        PetitionSignature[]
 
   @@index([category, geographicScope])
   @@index([status, createdAt])
   @@index([createdBy])
+  @@index([shortCode])
+  @@index([customSlug])
+  @@index([candidateId])
 }
 
+/// Individual signature on a petition (supports both authenticated and anonymous signers)
 model PetitionSignature {
   id         String   @id @default(cuid())
   petitionId String
-  userId     String
+  /// Nullable to support anonymous signing with optional post-sign account linking
+  userId     String?
   signedAt   DateTime @default(now())
   isVerified Boolean  @default(false)
   ipAddress  String?
-  petition   Petition @relation(fields: [petitionId], references: [id], onDelete: Cascade)
-  user       User     @relation("PetitionSignatures", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([petitionId, userId])
+  /// Signer's legal first name
+  signerFirstName       String?
+  /// Signer's legal last name
+  signerLastName        String?
+  /// Signer's street address
+  signerAddress         String?
+  /// Signer's city
+  signerCity            String?
+  /// Signer's state (2-letter code)
+  signerState           String?
+  /// Signer's ZIP code
+  signerZip             String?
+  /// Signer's county (required by some states)
+  signerCounty          String?
+  /// Signer's date of birth (required by some states)
+  signerDateOfBirth     DateTime?
+  /// Signer's email (for follow-up / account linking)
+  signerEmail           String?
+  /// Typed name confirmation (must match first+last name entered above)
+  signatureConfirmation String?
+  /// Timestamp when signer affirmed perjury/attestation declaration
+  attestedAt            DateTime?
+  /// Snapshot of the exact attestation language shown to this signer
+  attestationLanguageShown String?
+  /// Whether signer consented to privacy terms
+  privacyConsented      Boolean              @default(false)
+  /// Detailed verification status for voter file checks
+  signatureStatus       SignatureVerificationStatus @default(UNVERIFIED)
+  /// Voter file match result JSON (from TargetSmart or similar)
+  voterFileMatchResult  Json?
+  /// State voter ID from voter file match
+  voterFileId           String?
+  /// User agent string for audit/fraud detection
+  userAgent             String?
+  /// Device fingerprint hash for duplicate detection
+  deviceFingerprint     String?
+  /// Geolocation JSON if signer consented
+  geolocation           Json?
+  /// Whether hCaptcha was verified for this signature
+  captchaVerified       Boolean              @default(false)
+  /// Review note for flagged/rejected signatures
+  reviewNote            String?
+  /// ID of admin/creator who reviewed this signature
+  reviewedBy            String?
+  /// When this signature was reviewed
+  reviewedAt            DateTime?
+
+  petition   Petition @relation(fields: [petitionId], references: [id], onDelete: Cascade)
+  user       User?    @relation("PetitionSignatures", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([petitionId, userId])
   @@index([petitionId])
   @@index([userId])
+  @@index([signerLastName, signerFirstName])
+  @@index([signerEmail])
+  @@index([deviceFingerprint])
+  @@index([signatureStatus])
+}
+
+/// Append-only audit log for petition actions (legal compliance)
+/// @description Immutable record of all actions taken on petitions for accountability.
+model PetitionAuditLog {
+  id          String   @id @default(cuid())
+  /// ID of the petition this action relates to
+  petitionId  String
+  /// Action type: CREATED, ACTIVATED, SIGNATURE_ADDED, SIGNATURE_FLAGGED,
+  /// SIGNATURE_VERIFIED, SIGNATURE_REJECTED, EXPORTED, CLOSED, QR_GENERATED
+  action      String
+  /// Actor ID (user, system, or anonymous signer signature ID)
+  actorId     String?
+  /// Actor type: CREATOR, SIGNER, ADMIN, SYSTEM
+  actorType   String
+  /// IP address of actor
+  ipAddress   String?
+  /// Additional structured data about the action
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([petitionId, createdAt])
+  @@index([action])
+  @@index([actorId])
 }
 
 model CivicEvent {
@@ -2937,6 +3052,26 @@ enum PetitionStatus {
   EXPIRED
   CLOSED
   UNDER_REVIEW
+  DRAFT              /// Petition created but not yet published
+  SUBMITTED_TO_STATE /// Petition submitted to state election authority
+  ARCHIVED           /// Petition archived after submission
+}
+
+/// Category classification for petition purpose
+enum PetitionCategory {
+  BALLOT_ACCESS    /// Candidate seeking ballot access signatures
+  CIVIC_ADVOCACY   /// Community issue or policy advocacy
+  COMMUNITY        /// Local community petition
+  POLICY           /// Policy change petition
+}
+
+/// Verification status for individual petition signatures
+enum SignatureVerificationStatus {
+  UNVERIFIED        /// Signature recorded but not yet verified
+  VOTER_VERIFIED    /// Voter registration confirmed via voter file
+  FLAGGED_DUPLICATE /// Potential duplicate signature detected
+  REJECTED          /// Signature rejected during review
+  WITHDRAWN         /// Signer withdrew their signature
 }
 
 enum EventType {

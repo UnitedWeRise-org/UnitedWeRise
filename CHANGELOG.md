@@ -8,6 +8,36 @@
 
 ---
 
+## [2026-03-24] - Unified Digital Petition System
+
+### Added
+- Unified petition system supporting ballot access, civic advocacy, community, and policy petitions
+- Public petition signing flow via shareable QR codes and short links (`/sign/{code}`)
+- Typed-name signature confirmation with perjury/attestation declaration
+- Dynamic signer form fields configurable per petition by the creator
+- Voter registration verification interface (TargetSmart-ready, graceful failure when unavailable)
+- Custom URL slugs for verified candidates (e.g., `/sign/smith-for-congress`)
+- Auto-generated 8-character short codes for all petitions
+- Petition creator dashboard (`/petition-dashboard`) with signature management
+- QR code generation and download for petition sharing
+- Append-only `PetitionAuditLog` for legal compliance tracking
+- hCaptcha protection on public signing endpoint
+- Device fingerprint collection for duplicate detection
+- Rate limiting on signature submission (5 per 15 min per IP)
+- CSRF exemption for public signing endpoints (CAPTCHA-protected instead)
+- `PetitionCategory` enum (BALLOT_ACCESS, CIVIC_ADVOCACY, COMMUNITY, POLICY)
+- `SignatureVerificationStatus` enum (UNVERIFIED, VOTER_VERIFIED, FLAGGED_DUPLICATE, REJECTED, WITHDRAWN)
+- New petition statuses: DRAFT, SUBMITTED_TO_STATE, ARCHIVED
+
+### Changed
+- `Petition` model extended with shortCode, customSlug, declarationLanguage, voterVerificationEnabled, requiredSignerFields, candidateId, and additional ballot access fields
+- `PetitionSignature` model extended with signer identity fields, typed-name confirmation, attestation tracking, device metadata, and voter file integration fields
+- `PetitionSignature.userId` now nullable to support anonymous (non-account) signing
+- `Petition.signatureGoal`, `category`, and `geographicScope` now optional (not all petition types require them)
+- `civicOrganizingService.signPetition()` updated to use `findFirst` instead of `findUnique` (unique constraint replaced with application-level duplicate check)
+
+---
+
 ## [2026-03-23] - International user support with country-aware onboarding
 
 ### Added

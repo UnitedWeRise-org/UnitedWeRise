@@ -51,11 +51,18 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
     '/health',
     '/api/health',
     '/api/track/pageview',
-    '/api/verification/email/verify'  // Token-based verification from standalone page (no CSRF cookie available)
+    '/api/verification/email/verify',  // Token-based verification from standalone page (no CSRF cookie available)
   ]);
 
-  // Check if current path is exempted using exact match only
-  const isExempted = exemptedPathsExact.has(req.path);
+  // SECURITY: Prefix-based exemptions for paths with dynamic segments
+  // These endpoints accept unauthenticated POST requests where CSRF cookies are unavailable
+  const exemptedPathPrefixes = [
+    '/api/petitions/sign/'  // Public petition signing - CAPTCHA serves as anti-abuse mechanism instead of CSRF
+  ];
+
+  // Check if current path is exempted using exact match or prefix match
+  const isExempted = exemptedPathsExact.has(req.path) ||
+    exemptedPathPrefixes.some(prefix => req.path.startsWith(prefix));
   if (isExempted) {
     req.log.debug({ requestId, path: req.path }, 'CSRF Skip: Exempted path');
     return next();
