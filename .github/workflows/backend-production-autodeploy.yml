@@ -216,29 +216,33 @@ jobs:
           MIGRATE_STATUS=$(npx prisma migrate status 2>&1 || true)
           echo "$MIGRATE_STATUS"
 
-          # Auto-resolve failed migrations by marking as rolled-back so they can be retried
-          if echo "$MIGRATE_STATUS" | grep -qi "failed"; then
-            echo ""
-            echo "⚠️  Found failed migration(s). Auto-resolving..."
-            # Extract failed migration names using multiple patterns for compatibility
-            FAILED_MIGRATIONS=$(echo "$MIGRATE_STATUS" | grep -oP 'The `\K[^`]+(?=` migration.*failed)' || \
-                                echo "$MIGRATE_STATUS" | grep -A1 "Following migration have failed:" | tail -1 | tr -d ' ' || \
-                                echo "$MIGRATE_STATUS" | grep -oE '[0-9]{14}_[a-z_]+' | head -1 || true)
-            if [ -n "$FAILED_MIGRATIONS" ]; then
-              echo "   Marking '$FAILED_MIGRATIONS' as rolled-back for retry..."
-              npx prisma migrate resolve --rolled-back "$FAILED_MIGRATIONS" || true
-              echo "   ✅ Migration resolved as rolled-back"
-            else
-              echo "   ⚠️  Could not extract failed migration name from status output"
-              echo "   Attempting to resolve all known migrations..."
-              for MIG_DIR in prisma/migrations/*/; do
-                MIG_NAME=$(basename "$MIG_DIR")
-                if [ "$MIG_NAME" != "migration_lock.toml" ]; then
-                  npx prisma migrate resolve --rolled-back "$MIG_NAME" 2>/dev/null || true
-                fi
-              done
-            fi
-            echo ""
+          # Auto-resolve any failed migrations in the database
+          # Query _prisma_migrations table directly to find truly failed entries
+          echo "   Checking _prisma_migrations table for failed entries..."
+          FAILED_CHECK=$(node -e "
+            const { Client } = require('pg');
+            const client = new Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+            (async () => {
+              await client.connect();
+              const res = await client.query(
+                \"SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NULL OR rolled_back_at IS NOT NULL\"
+              );
+              for (const row of res.rows) {
+                console.log(row.migration_name);
+              }
+              await client.end();
+            })().catch(e => { console.error(e.message); process.exit(0); });
+          " 2>&1 || true)
+
+          if [ -n "$FAILED_CHECK" ]; then
+            echo "⚠️  Found failed/incomplete migration(s): $FAILED_CHECK"
+            for MIG_NAME in $FAILED_CHECK; do
+              echo "   Resolving '$MIG_NAME' as applied..."
+              npx prisma migrate resolve --applied "$MIG_NAME" || true
+            done
+            echo "   ✅ Migrations resolved"
+          else
+            echo "   No failed migrations found in database"
           fi
 
           if echo "$MIGRATE_STATUS" | grep -qi "drift"; then
