@@ -4,10 +4,10 @@ CREATE TYPE "PetitionCategory" AS ENUM ('BALLOT_ACCESS', 'CIVIC_ADVOCACY', 'COMM
 -- CreateEnum
 CREATE TYPE "SignatureVerificationStatus" AS ENUM ('UNVERIFIED', 'VOTER_VERIFIED', 'FLAGGED_DUPLICATE', 'REJECTED', 'WITHDRAWN');
 
--- AlterEnum (add new values to PetitionStatus)
-ALTER TYPE "PetitionStatus" ADD VALUE 'DRAFT';
-ALTER TYPE "PetitionStatus" ADD VALUE 'SUBMITTED_TO_STATE';
-ALTER TYPE "PetitionStatus" ADD VALUE 'ARCHIVED';
+-- AlterEnum (add new values to PetitionStatus - idempotent)
+ALTER TYPE "PetitionStatus" ADD VALUE IF NOT EXISTS 'DRAFT';
+ALTER TYPE "PetitionStatus" ADD VALUE IF NOT EXISTS 'SUBMITTED_TO_STATE';
+ALTER TYPE "PetitionStatus" ADD VALUE IF NOT EXISTS 'ARCHIVED';
 
 -- AlterTable: Petition - make existing fields nullable and add new fields
 ALTER TABLE "Petition" ALTER COLUMN "category" DROP NOT NULL;
