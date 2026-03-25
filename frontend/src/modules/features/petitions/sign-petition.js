@@ -439,8 +439,10 @@ async function handleSubmit() {
 
     // Validate attestation before submitting
     const fd = state.formData;
-    const expectedName = `${fd.signerFirstName} ${fd.signerLastName}`.trim().toLowerCase();
-    const typedName = (fd.signatureConfirmation || '').trim().toLowerCase();
+    // Normalize names: collapse whitespace, remove non-breaking spaces, trim, lowercase
+    const normalizeName = (s) => (s || '').replace(/[\u00A0\u200B\u200C\u200D\uFEFF]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    const expectedName = normalizeName(`${fd.signerFirstName} ${fd.signerLastName}`);
+    const typedName = normalizeName(fd.signatureConfirmation);
 
     if (!typedName || typedName !== expectedName) {
         state.errors.signatureConfirmation = 'Name must match your first and last name';
@@ -1215,8 +1217,9 @@ function renderReviewStep() {
     const declarationText = p.declarationLanguage ||
         'I hereby declare that the information I have provided is true and correct to the best of my knowledge. I understand that this electronic signature carries the same legal weight as a handwritten signature.';
 
-    const expectedName = `${fd.signerFirstName} ${fd.signerLastName}`.trim();
-    const typedName = (fd.signatureConfirmation || '').trim();
+    const normName = (s) => (s || '').replace(/[\u00A0\u200B\u200C\u200D\uFEFF]/g, ' ').replace(/\s+/g, ' ').trim();
+    const expectedName = normName(`${fd.signerFirstName} ${fd.signerLastName}`);
+    const typedName = normName(fd.signatureConfirmation);
     const namesMatch = typedName.toLowerCase() === expectedName.toLowerCase() && typedName.length > 0;
 
     return `

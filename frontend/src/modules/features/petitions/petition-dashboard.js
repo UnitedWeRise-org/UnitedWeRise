@@ -494,8 +494,9 @@ async function loadPetitionDetail(petitionId) {
         ]);
 
         if (sigResult.status === 'fulfilled') {
-            dashboardState.signatures = sigResult.value.signatures || sigResult.value.data || [];
-            dashboardState.signaturePagination.total = sigResult.value.total || sigResult.value.pagination?.total || 0;
+            const sigData = sigResult.value.data || sigResult.value;
+            dashboardState.signatures = sigData.signatures || (Array.isArray(sigData) ? sigData : []);
+            dashboardState.signaturePagination.total = sigData.total || sigData.pagination?.total || 0;
         }
 
         if (qrCode.status === 'fulfilled' && qrCode.value) {
@@ -1442,16 +1443,16 @@ function renderSignaturesSection() {
         `;
     } else {
         tableBodyHtml = sigs.map(sig => {
-            const verClass = VERIFICATION_CLASSES[sig.verificationStatus] || 'unverified';
-            const verLabel = VERIFICATION_LABELS[sig.verificationStatus] || sig.verificationStatus || 'Unverified';
-            const name = [sig.firstName, sig.lastName].filter(Boolean).join(' ') || 'Anonymous';
-            const location = [sig.city, sig.state].filter(Boolean).join(', ') || '-';
+            const verClass = VERIFICATION_CLASSES[sig.signatureStatus || sig.verificationStatus] || 'unverified';
+            const verLabel = VERIFICATION_LABELS[sig.signatureStatus || sig.verificationStatus] || sig.signatureStatus || 'Unverified';
+            const name = [sig.signerFirstName || sig.firstName, sig.signerLastName || sig.lastName].filter(Boolean).join(' ') || 'Anonymous';
+            const location = [sig.signerCity || sig.city, sig.signerState || sig.state].filter(Boolean).join(', ') || '-';
 
             return `
                 <tr>
                     <td>${escapeHtml(name)}</td>
                     <td>${escapeHtml(location)}</td>
-                    <td>${formatDate(sig.createdAt)}</td>
+                    <td>${formatDate(sig.signedAt || sig.createdAt)}</td>
                     <td>
                         <span class="petition-verification-badge ${verClass}">${verLabel}</span>
                     </td>

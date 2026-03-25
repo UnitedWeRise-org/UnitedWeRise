@@ -488,10 +488,12 @@ export class PetitionSigningService {
     }
 
     // Step 3: Validate signature confirmation matches name
-    const expectedName = `${signatureData.signerFirstName} ${signatureData.signerLastName}`;
+    // Normalize: collapse whitespace, remove non-breaking/zero-width spaces
+    const normalizeName = (s: string) =>
+      s.replace(/[\u00A0\u200B\u200C\u200D\uFEFF]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    const expectedName = normalizeName(`${signatureData.signerFirstName} ${signatureData.signerLastName}`);
     if (
-      signatureData.signatureConfirmation.trim().toLowerCase() !==
-      expectedName.trim().toLowerCase()
+      normalizeName(signatureData.signatureConfirmation) !== expectedName
     ) {
       throw new Error(
         'Signature confirmation does not match the name provided. Please type your full name exactly as entered above.'
