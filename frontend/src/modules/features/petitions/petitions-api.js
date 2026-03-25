@@ -6,16 +6,27 @@
  */
 
 import { API_CONFIG } from '../../../config/api.js';
+import { COOKIE_NAMES } from '../../../utils/cookies.js';
 
 const PETITIONS_BASE = 'petitions';
+const BILLING_BASE = 'verification-billing';
+
+/**
+ * Read a cookie value by name
+ * @param {string} name - Cookie name
+ * @returns {string} Cookie value or empty string
+ */
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : '';
+}
 
 /**
  * Extract CSRF token from cookies for authenticated requests
  * @returns {string} CSRF token value or empty string
  */
 function getCsrfToken() {
-    const match = document.cookie.match(/(?:^|;\s*)uwr_csrf=([^;]*)/);
-    return match ? decodeURIComponent(match[1]) : '';
+    return window.csrfToken || getCookie(COOKIE_NAMES.CSRF_TOKEN) || '';
 }
 
 /**
@@ -103,7 +114,7 @@ export async function submitSignature(code, signatureData) {
  * @throws {Error} If creation fails
  */
 export async function createPetition(data) {
-    const response = await fetch(API_CONFIG.url(PETITIONS_BASE), {
+    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/create`), {
         method: 'POST',
         credentials: 'include',
         headers: authHeaders(),
@@ -277,7 +288,7 @@ export async function verifyRegistration(data) {
  * @throws {Error} If request fails
  */
 export async function getVerificationBalance() {
-    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-balance`), {
+    const response = await fetch(API_CONFIG.url(`${BILLING_BASE}/balance`), {
         method: 'GET',
         credentials: 'include',
         headers: authHeaders()
@@ -297,7 +308,7 @@ export async function getVerificationBalance() {
  * @throws {Error} If request fails
  */
 export async function createVerificationCheckout(options = {}) {
-    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-checkout`), {
+    const response = await fetch(API_CONFIG.url(`${BILLING_BASE}/checkout`), {
         method: 'POST',
         credentials: 'include',
         headers: authHeaders(),
@@ -316,7 +327,7 @@ export async function createVerificationCheckout(options = {}) {
  * @throws {Error} If request fails
  */
 export async function getVerificationPurchases() {
-    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-purchases`), {
+    const response = await fetch(API_CONFIG.url(`${BILLING_BASE}/purchases`), {
         method: 'GET',
         credentials: 'include',
         headers: authHeaders()
@@ -334,7 +345,7 @@ export async function getVerificationPurchases() {
  * @throws {Error} If request fails
  */
 export async function enableAutoReplenish() {
-    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-auto-replenish`), {
+    const response = await fetch(API_CONFIG.url(`${BILLING_BASE}/auto-replenish/enable`), {
         method: 'POST',
         credentials: 'include',
         headers: authHeaders(),
@@ -353,11 +364,10 @@ export async function enableAutoReplenish() {
  * @throws {Error} If request fails
  */
 export async function disableAutoReplenish() {
-    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-auto-replenish`), {
+    const response = await fetch(API_CONFIG.url(`${BILLING_BASE}/auto-replenish/disable`), {
         method: 'POST',
         credentials: 'include',
-        headers: authHeaders(),
-        body: JSON.stringify({ enabled: false })
+        headers: authHeaders()
     });
     if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Failed to disable auto-replenish' }));

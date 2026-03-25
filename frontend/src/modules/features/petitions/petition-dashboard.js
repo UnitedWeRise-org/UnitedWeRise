@@ -381,7 +381,7 @@ async function getAuditLog(petitionId) {
  * @returns {Promise<Object>} Balance data
  */
 async function getVerificationBalance() {
-    const result = await apiRequest('/petitions/verification-balance');
+    const result = await apiRequest('/verification-billing/balance');
     return result;
 }
 
@@ -390,7 +390,7 @@ async function getVerificationBalance() {
  * @returns {Promise<Array>} Array of purchase objects
  */
 async function getVerificationPurchases() {
-    const result = await apiRequest('/petitions/verification-purchases');
+    const result = await apiRequest('/verification-billing/purchases');
     return result.purchases || result.data || [];
 }
 
@@ -400,7 +400,7 @@ async function getVerificationPurchases() {
  * @returns {Promise<Object>} Checkout session with url
  */
 async function createVerificationCheckout(options = {}) {
-    const result = await apiRequest('/petitions/verification-checkout', {
+    const result = await apiRequest('/verification-billing/checkout', {
         method: 'POST',
         body: JSON.stringify(options)
     });
