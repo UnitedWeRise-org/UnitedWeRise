@@ -4217,18 +4217,14 @@ class CandidateSystemIntegration {
             }
         }
             
-            const response = await fetch('https://api.unitedwerise.org/api/candidates/register', {
+            const response = await apiCall('/api/candidates/register', {
                 method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify(registrationData)
             });
-            
-            const result = await response.json();
-            
-            if (response.ok && result.success) {
+
+            const result = response.data || response;
+
+            if (response.ok && (result.success || result.id)) {
                 this.showMessage('Registration submitted successfully! You will receive confirmation via email.');
                 adminDebugLog('✅ Candidate registration successful:', result);
                 

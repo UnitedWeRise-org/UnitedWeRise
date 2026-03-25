@@ -29,7 +29,7 @@ function setupEventDelegation() {
                 showDefaultOrganizingView();
                 break;
             case 'savePetitionDraft':
-                savePetitionDraft();
+                showPetitionCreator();
                 break;
             case 'saveEventDraft':
                 saveEventDraft();
@@ -55,8 +55,9 @@ if (document.readyState === 'loading') {
 }
 
 /**
- * Show Petition Creator Form
- * Displays a form for creating a new petition
+ * Show Petition Creator
+ * Redirects to the petition dashboard where users can create and manage petitions
+ * with full feature support (QR codes, attestation, voter verification, etc.)
  */
 function showPetitionCreator() {
     if (!window.currentUser) {
@@ -64,204 +65,7 @@ function showPetitionCreator() {
         return;
     }
 
-    const organizingContent = document.getElementById('organizingContent');
-    if (!organizingContent) {
-        console.error('❌ Organizing content container not found');
-        return;
-    }
-
-    organizingContent.innerHTML = `
-        <div class="civic-form-container">
-            <div class="form-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #eee;">
-                <h3 style="margin: 0; color: #4b5c09;">📝 Create a Petition</h3>
-                <button data-civic-organizing-action="showDefaultOrganizingView" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
-            </div>
-
-            <form id="petitionForm" style="padding: 1.5rem; max-width: 800px; margin: 0 auto;">
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">
-                        Petition Title *
-                    </label>
-                    <input
-                        type="text"
-                        id="petitionTitle"
-                        required
-                        maxlength="150"
-                        placeholder="e.g., Improve Public Transportation in Our District"
-                        style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
-                    />
-                </div>
-
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">
-                        Description *
-                    </label>
-                    <textarea
-                        id="petitionDescription"
-                        required
-                        rows="8"
-                        maxlength="2000"
-                        placeholder="Explain what you want to change and why it matters..."
-                        style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; resize: vertical;"
-                    ></textarea>
-                    <small style="color: #666;">Max 2000 characters</small>
-                </div>
-
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">
-                        Target Audience
-                    </label>
-                    <input
-                        type="text"
-                        id="petitionTarget"
-                        maxlength="100"
-                        placeholder="e.g., City Council, State Legislature, Community Leaders"
-                        style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
-                    />
-                </div>
-
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">
-                        Signature Goal *
-                    </label>
-                    <input
-                        type="number"
-                        id="petitionGoal"
-                        required
-                        min="10"
-                        max="1000000"
-                        value="100"
-                        style="width: 150px; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
-                    />
-                    <small style="color: #666; margin-left: 0.5rem;">signatures</small>
-                </div>
-
-                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
-                    <button
-                        type="button"
-                        data-civic-organizing-action="savePetitionDraft"
-                        style="padding: 0.75rem 1.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;"
-                    >
-                        Save Draft
-                    </button>
-                    <button
-                        type="submit"
-                        style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;"
-                    >
-                        Publish Petition
-                    </button>
-                </div>
-            </form>
-        </div>
-    `;
-
-    // Attach form submit handler
-    const form = document.getElementById('petitionForm');
-    if (form) {
-        form.addEventListener('submit', handlePetitionSubmit);
-    }
-}
-
-/**
- * Handle petition form submission
- */
-async function handlePetitionSubmit(event) {
-    event.preventDefault();
-
-    const title = document.getElementById('petitionTitle').value.trim();
-    const description = document.getElementById('petitionDescription').value.trim();
-    const target = document.getElementById('petitionTarget').value.trim();
-    const goal = parseInt(document.getElementById('petitionGoal').value);
-
-    if (!title || !description || !goal) {
-        showToast('Please fill in all required fields');
-        return;
-    }
-
-    try {
-        // Show loading state
-        const submitBtn = event.target.querySelector('[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'Creating...';
-        submitBtn.disabled = true;
-
-        // Try to call backend endpoint
-        // Note: This endpoint may not exist yet - will gracefully handle 404
-        const response = await apiClient.post('/api/petitions/create', {
-            title,
-            description,
-            target,
-            goal
-        });
-
-        if (response.ok) {
-            showToast('Petition created successfully!');
-            showMyOrganizing(); // Show user's organizing activities
-        } else {
-            throw new Error('Failed to create petition');
-        }
-    } catch (error) {
-        console.error('Error creating petition:', error);
-
-        // Check if endpoint doesn't exist
-        if (error.message.includes('404')) {
-            console.log('📝 Petition API endpoint not yet implemented');
-            showToast('Petition feature coming soon! Your draft has been saved locally.');
-            // Save to localStorage as fallback
-            savePetitionToLocalStorage({ title, description, target, goal });
-            showMyOrganizing();
-        } else {
-            showToast('Failed to create petition. Please try again.');
-        }
-    } finally {
-        // Reset button
-        const submitBtn = event.target.querySelector('[type="submit"]');
-        if (submitBtn) {
-            submitBtn.textContent = 'Publish Petition';
-            submitBtn.disabled = false;
-        }
-    }
-}
-
-/**
- * Save petition draft to localStorage
- */
-function savePetitionDraft() {
-    const title = document.getElementById('petitionTitle').value.trim();
-    const description = document.getElementById('petitionDescription').value.trim();
-    const target = document.getElementById('petitionTarget').value.trim();
-    const goal = document.getElementById('petitionGoal').value;
-
-    if (!title && !description) {
-        showToast('Nothing to save');
-        return;
-    }
-
-    const draft = {
-        title,
-        description,
-        target,
-        goal,
-        savedAt: new Date().toISOString()
-    };
-
-    localStorage.setItem('petitionDraft', JSON.stringify(draft));
-    showToast('Draft saved!');
-}
-
-/**
- * Save petition to localStorage (fallback when API not available)
- */
-function savePetitionToLocalStorage(petitionData) {
-    const petitions = JSON.parse(localStorage.getItem('localPetitions') || '[]');
-    petitions.push({
-        ...petitionData,
-        id: Date.now(),
-        createdAt: new Date().toISOString(),
-        signatures: 0,
-        createdBy: window.currentUser?.id || 'unknown'
-    });
-    localStorage.setItem('localPetitions', JSON.stringify(petitions));
+    window.open('/petition-dashboard', '_blank');
 }
 
 /**
@@ -878,7 +682,6 @@ export {
     closeCivicOrganizing,
     showDefaultOrganizingView,
     showOrganizationsBrowser,
-    savePetitionDraft,
     saveEventDraft
 };
 
@@ -891,7 +694,6 @@ if (typeof window !== 'undefined') {
     window.closeCivicOrganizing = closeCivicOrganizing;
     window.showDefaultOrganizingView = showDefaultOrganizingView;
     window.showOrganizationsBrowser = showOrganizationsBrowser;
-    window.savePetitionDraft = savePetitionDraft;
     window.saveEventDraft = saveEventDraft;
     console.log('🌐 Civic organizing functions available globally');
 }
