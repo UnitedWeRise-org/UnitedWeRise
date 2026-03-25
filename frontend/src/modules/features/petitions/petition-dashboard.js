@@ -133,7 +133,10 @@ let dashboardState = {
     auditLog: [],
     auditLogOpen: false,
     error: null,
-    creating: false
+    creating: false,
+    verificationBalance: null,
+    verificationPurchases: [],
+    verificationBalanceLoading: false
 };
 
 // ==================== Utility Functions ====================
@@ -371,6 +374,52 @@ async function getAuditLog(petitionId) {
     return result.auditLog || result.entries || result.data || [];
 }
 
+// ==================== Verification Balance API ====================
+
+/**
+ * Get campaign verification balance
+ * @returns {Promise<Object>} Balance data
+ */
+async function getVerificationBalance() {
+    const result = await apiRequest('/petitions/verification-balance');
+    return result;
+}
+
+/**
+ * Get verification purchase history
+ * @returns {Promise<Array>} Array of purchase objects
+ */
+async function getVerificationPurchases() {
+    const result = await apiRequest('/petitions/verification-purchases');
+    return result.purchases || result.data || [];
+}
+
+/**
+ * Create Stripe Checkout for verification credits
+ * @param {Object} [options] - Checkout options
+ * @returns {Promise<Object>} Checkout session with url
+ */
+async function createVerificationCheckout(options = {}) {
+    const result = await apiRequest('/petitions/verification-checkout', {
+        method: 'POST',
+        body: JSON.stringify(options)
+    });
+    return result;
+}
+
+/**
+ * Toggle auto-replenish for verification credits
+ * @param {boolean} enabled - Whether to enable or disable
+ * @returns {Promise<Object>} Updated settings
+ */
+async function toggleAutoReplenish(enabled) {
+    const result = await apiRequest('/petitions/verification-auto-replenish', {
+        method: 'POST',
+        body: JSON.stringify({ enabled })
+    });
+    return result;
+}
+
 // ==================== Dashboard Init ====================
 
 /**
@@ -455,6 +504,11 @@ async function loadPetitionDetail(petitionId) {
 
         if (auditLog.status === 'fulfilled') {
             dashboardState.auditLog = auditLog.value;
+        }
+
+        // Load verification balance if petition has voter verification enabled
+        if (dashboardState.selectedPetition.voterVerificationEnabled && dashboardState.isCandidate) {
+            loadVerificationBalance(container);
         }
 
         dashboardState.loading = false;
@@ -557,6 +611,14 @@ function setupEventListeners(container) {
                 render(container);
                 break;
 
+            case 'purchase-verifications':
+                handlePurchaseVerifications();
+                break;
+
+            case 'load-verification-balance':
+                loadVerificationBalance(container);
+                break;
+
             case 'sig-prev-page':
                 if (dashboardState.signaturePagination.page > 1) {
                     dashboardState.signaturePagination.page--;
@@ -583,6 +645,9 @@ function setupEventListeners(container) {
             dashboardState.signatureFilters.status = e.target.value;
             dashboardState.signaturePagination.page = 1;
             reloadSignatures();
+        }
+        if (e.target.id === 'auto-replenish-toggle') {
+            handleToggleAutoReplenish(e.target.checked, container);
         }
     });
 
@@ -749,6 +814,70 @@ function handleCopyLink() {
         document.body.removeChild(input);
         showToast('Signing link copied to clipboard');
     });
+}
+
+// ==================== Verification Balance Handlers ====================
+
+/**
+ * Load verification balance and purchase history
+ * @param {HTMLElement} container - Dashboard container element
+ */
+async function loadVerificationBalance(container) {
+    dashboardState.verificationBalanceLoading = true;
+    render(container);
+
+    try {
+        const [balance, purchases] = await Promise.allSettled([
+            getVerificationBalance(),
+            getVerificationPurchases()
+        ]);
+
+        if (balance.status === 'fulfilled') {
+            dashboardState.verificationBalance = balance.value;
+        }
+        if (purchases.status === 'fulfilled') {
+            dashboardState.verificationPurchases = purchases.value;
+        }
+    } catch {
+        // Non-critical failure
+    }
+
+    dashboardState.verificationBalanceLoading = false;
+    render(container);
+}
+
+/**
+ * Handle purchasing more verification credits via Stripe Checkout
+ */
+async function handlePurchaseVerifications() {
+    try {
+        const result = await createVerificationCheckout();
+        if (result.url) {
+            window.location.href = result.url;
+        } else {
+            showToast('Failed to create checkout session');
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to create checkout session');
+    }
+}
+
+/**
+ * Handle toggling auto-replenish for verification credits
+ * @param {boolean} enabled - Whether to enable or disable
+ * @param {HTMLElement} container - Dashboard container element
+ */
+async function handleToggleAutoReplenish(enabled, container) {
+    try {
+        await toggleAutoReplenish(enabled);
+        if (dashboardState.verificationBalance) {
+            dashboardState.verificationBalance.autoReplenish = enabled;
+        }
+        showToast(enabled ? 'Auto-replenish enabled' : 'Auto-replenish disabled');
+    } catch (error) {
+        showToast(error.message || 'Failed to update auto-replenish');
+        render(container);
+    }
 }
 
 // ==================== Render ====================
@@ -1071,6 +1200,7 @@ function renderDetailView() {
         <div class="petition-detail">
             ${renderDetailHeader(p, statusClass, statusLabel, categoryLabel)}
             ${renderStatsRow(p)}
+            ${p.voterVerificationEnabled && dashboardState.isCandidate ? renderVerificationBalanceSection() : ''}
             ${p.status !== 'DRAFT' ? renderQRSection(p) : ''}
             ${renderSignaturesSection()}
             ${renderAuditLogSection()}
@@ -1152,6 +1282,110 @@ function renderStatsRow(p) {
             <div class="petition-stat-card">
                 <div class="petition-stat-value">${rejected.toLocaleString()}</div>
                 <div class="petition-stat-label">Rejected</div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render the verification balance section for petitions with voter verification
+ * @returns {string} HTML string
+ */
+function renderVerificationBalanceSection() {
+    const balance = dashboardState.verificationBalance;
+    const purchases = dashboardState.verificationPurchases;
+    const loading = dashboardState.verificationBalanceLoading;
+
+    if (loading) {
+        return `
+            <div class="petition-verification-balance-section">
+                <h3>Verification Balance</h3>
+                <p style="color: #9ca3af; text-align: center; padding: 16px;">Loading balance...</p>
+            </div>
+        `;
+    }
+
+    if (!balance) {
+        return `
+            <div class="petition-verification-balance-section">
+                <h3>Verification Balance</h3>
+                <p style="color: #9ca3af; text-align: center; padding: 16px;">Unable to load balance.</p>
+                <div style="text-align: center;">
+                    <button class="petition-btn petition-btn-secondary petition-btn-sm" data-action="load-verification-balance">
+                        Retry
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    const used = balance.used || 0;
+    const total = balance.total || 0;
+    const remaining = Math.max(0, total - used);
+    const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+    const autoReplenish = balance.autoReplenish || false;
+
+    let purchaseRowsHtml = '';
+    if (purchases.length > 0) {
+        purchaseRowsHtml = purchases.map(p => `
+            <tr>
+                <td>${formatDate(p.createdAt || p.date)}</td>
+                <td>${(p.amount || 1000).toLocaleString()}</td>
+                <td>$${((p.price || p.amountPaid || 10000) / 100).toFixed(2)}</td>
+                <td><span class="petition-verification-badge ${p.status === 'completed' || p.status === 'succeeded' ? 'voter-verified' : 'unverified'}">${escapeHtml(p.status || 'Completed')}</span></td>
+            </tr>
+        `).join('');
+    } else {
+        purchaseRowsHtml = `
+            <tr>
+                <td colspan="4" class="petition-table-empty">No purchases yet</td>
+            </tr>
+        `;
+    }
+
+    return `
+        <div class="petition-verification-balance-section">
+            <h3>Verification Balance</h3>
+
+            <div class="petition-verification-balance-bar-wrapper">
+                <div class="petition-verification-balance-stats">
+                    <span>${used.toLocaleString()} of ${total.toLocaleString()} verifications used</span>
+                    <span>${remaining.toLocaleString()} remaining</span>
+                </div>
+                <div class="petition-verification-balance-bar">
+                    <div class="petition-verification-balance-fill" style="width: ${pct}%"></div>
+                </div>
+            </div>
+
+            <div class="petition-verification-balance-actions">
+                <button class="petition-btn petition-btn-primary petition-btn-sm" data-action="purchase-verifications">
+                    Purchase More
+                </button>
+
+                <label class="petition-toggle" style="margin: 0;">
+                    <input type="checkbox" id="auto-replenish-toggle" data-action="toggle-auto-replenish" ${autoReplenish ? 'checked' : ''}>
+                    <span class="petition-toggle-switch"></span>
+                    <span class="petition-toggle-label">Auto-Replenish</span>
+                </label>
+            </div>
+
+            <div class="petition-verification-purchase-history">
+                <h4>Purchase History</h4>
+                <div class="petition-table-wrapper">
+                    <table class="petition-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Verifications</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${purchaseRowsHtml}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     `;

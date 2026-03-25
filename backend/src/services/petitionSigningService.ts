@@ -59,6 +59,18 @@ interface CreatePetitionInput {
   privacyConsentText?: string;
 }
 
+/** Cached voter verification result from the verify-registration endpoint */
+interface CachedVoterVerificationResult {
+  /** Whether the voter was matched */
+  matched: boolean;
+  /** Voter ID from voter file */
+  voterId: string | null;
+  /** Party enrollment from voter file */
+  partyEnrollment: string | null;
+  /** Registration status from voter file */
+  registrationStatus: string | null;
+}
+
 /** Input data for submitting a signature */
 interface SignatureSubmissionInput {
   /** Signer's legal first name */
@@ -95,6 +107,8 @@ interface SignatureSubmissionInput {
   geolocationConsented?: boolean;
   /** Authenticated user ID if signed in */
   userId?: string;
+  /** Cached voter verification result from verify-registration endpoint */
+  voterVerificationResult?: CachedVoterVerificationResult;
 }
 
 /** Device/request metadata for a signature submission */
@@ -519,7 +533,23 @@ export class PetitionSigningService {
     let voterFileMatchResult: Record<string, unknown> | null = null;
     let voterFileId: string | null = null;
 
-    if (petition.voterVerificationEnabled) {
+    // Use cached voter verification result if provided (from verify-registration endpoint)
+    if (signatureData.voterVerificationResult) {
+      const cached = signatureData.voterVerificationResult;
+      if (cached.matched) {
+        verificationStatus = 'VOTER_VERIFIED';
+        voterFileMatchResult = {
+          partyEnrollment: cached.partyEnrollment,
+          registrationStatus: cached.registrationStatus,
+        };
+        voterFileId = cached.voterId;
+        verificationMessage =
+          'Signature recorded and voter registration confirmed. Thank you!';
+      } else {
+        verificationMessage =
+          'Signature recorded. We were unable to confirm your voter registration, but your signature is still valid.';
+      }
+    } else if (petition.voterVerificationEnabled) {
       const canVerify =
         signatureData.signerState &&
         signatureData.signerFirstName &&

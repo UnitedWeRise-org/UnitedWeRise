@@ -2494,3 +2494,418 @@ select.sign-input {
         transition: none !important;
     }
 }
+
+/* ====================================================================
+   SIGNING FLOW: CAPTCHA STEP
+   ==================================================================== */
+
+.sign-captcha-step {
+    text-align: center;
+}
+
+.sign-captcha-step .sign-captcha-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+#sign-hcaptcha-widget {
+    display: flex;
+    justify-content: center;
+}
+
+.sign-captcha-verified {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    margin: 1.5rem 0;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    color: #15803d;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.sign-captcha-verified-icon {
+    font-size: 1.25rem;
+}
+
+/* ====================================================================
+   SIGNING FLOW: VOTER VERIFICATION STEP
+   ==================================================================== */
+
+.sign-voter-verify-step {
+    text-align: center;
+}
+
+.sign-verify-info-summary {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.sign-verify-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.375rem 0;
+    font-size: 0.9rem;
+}
+
+.sign-verify-info-row:not(:last-child) {
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.sign-verify-info-label {
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 80px;
+}
+
+.sign-verify-info-value {
+    color: #1f2937;
+    text-align: right;
+}
+
+/* Verification result display */
+.sign-verify-result {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    margin: 1rem 0 1.5rem;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+.sign-verify-result-icon {
+    font-size: 1.25rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sign-verify-result p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.sign-verify-result--matched {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #15803d;
+}
+
+.sign-verify-result--matched .sign-verify-result-icon {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.sign-verify-result--not-found {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+.sign-verify-result--not-found .sign-verify-result-icon {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.sign-verify-result--error {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    color: #6b7280;
+}
+
+.sign-verify-result--error .sign-verify-result-icon {
+    background: #f3f4f6;
+    color: #9ca3af;
+}
+
+/* ====================================================================
+   SIGNING FLOW: REVIEW STEP
+   ==================================================================== */
+
+.sign-review-summary {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+
+.sign-review-field {
+    display: flex;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.sign-review-field:not(:last-child) {
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.sign-review-field-label {
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 90px;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.sign-review-field-value {
+    flex: 1;
+    color: #1f2937;
+    word-break: break-word;
+}
+
+.sign-review-field-value em {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.sign-review-edit-btn {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    flex-shrink: 0;
+}
+
+.sign-review-field-lock {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    flex-shrink: 0;
+    cursor: help;
+}
+
+/* Locked field styling */
+.sign-review-field.locked {
+    background: #fafafa;
+}
+
+.sign-review-field.locked .sign-review-field-value {
+    color: #6b7280;
+}
+
+/* Inline edit mode */
+.sign-review-field--editing {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #fff;
+}
+
+.sign-review-edit-input {
+    font-size: 0.9rem;
+}
+
+.sign-review-edit-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.sign-btn--sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+    min-height: 32px;
+}
+
+/* Lock notice */
+.sign-review-lock-notice {
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-style: italic;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0.75rem;
+    background: #f3f4f6;
+    border-radius: 6px;
+}
+
+/* Verification status in review */
+.sign-review-verification {
+    padding: 0.625rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+}
+
+.sign-review-verification--matched {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.sign-review-verification--not-found {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.sign-review-verification--error {
+    background: #f9fafb;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+}
+
+/* ====================================================================
+   SIGNING FLOW: ATTESTATION REVEAL
+   ==================================================================== */
+
+.sign-attestation-reveal {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.sign-attestation-reveal--visible {
+    max-height: 500px;
+}
+
+.sign-signature-block {
+    padding-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.sign-signature-block .sign-field {
+    width: 100%;
+}
+
+.sign-signature-block .sign-btn--large {
+    margin-top: 0.5rem;
+}
+
+/* ====================================================================
+   SIGNING FLOW: SPAM NOTICE
+   ==================================================================== */
+
+.sign-spam-notice {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    text-align: center;
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    background: #f9fafb;
+    border-radius: 6px;
+    line-height: 1.4;
+}
+
+/* ====================================================================
+   DASHBOARD: VERIFICATION BALANCE SECTION
+   ==================================================================== */
+
+.petition-verification-balance-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+}
+
+.petition-verification-balance-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+}
+
+.petition-verification-balance-bar-wrapper {
+    margin-bottom: 16px;
+}
+
+.petition-verification-balance-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.petition-verification-balance-bar {
+    height: 10px;
+    background: #e5e7eb;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.petition-verification-balance-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #002868, #0047ab);
+    border-radius: 5px;
+    transition: width 0.3s ease;
+}
+
+.petition-verification-balance-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.petition-verification-purchase-history {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 16px;
+}
+
+.petition-verification-purchase-history h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 12px 0;
+}
+
+/* ====================================================================
+   SIGNING FLOW: MOBILE RESPONSIVE ADDITIONS
+   ==================================================================== */
+
+@media (max-width: 480px) {
+    .sign-verify-info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.125rem;
+    }
+
+    .sign-verify-info-value {
+        text-align: left;
+    }
+
+    .sign-review-field {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .sign-review-field-label {
+        min-width: auto;
+    }
+
+    .sign-verify-result {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .petition-verification-balance-actions {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

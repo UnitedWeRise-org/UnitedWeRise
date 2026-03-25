@@ -244,6 +244,129 @@ export async function getQRCode(id) {
 }
 
 /**
+ * Verify voter registration (requires CAPTCHA)
+ * @param {Object} data - Signer info + CAPTCHA token
+ * @param {string} data.petitionId - Petition UUID
+ * @param {string} data.firstName - Signer first name
+ * @param {string} data.lastName - Signer last name
+ * @param {string} [data.address] - Signer street address
+ * @param {string} [data.city] - Signer city
+ * @param {string} [data.state] - Signer state code
+ * @param {string} [data.zip] - Signer ZIP code
+ * @param {string} data.captchaToken - hCaptcha verification token
+ * @returns {Promise<Object>} Verification result with status, party, and state fields
+ * @throws {Error} If verification request fails
+ */
+export async function verifyRegistration(data) {
+    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verify-registration`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to verify registration' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
+ * Get campaign verification balance
+ * @returns {Promise<Object>} Balance data including used, total, and autoReplenish
+ * @throws {Error} If request fails
+ */
+export async function getVerificationBalance() {
+    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-balance`), {
+        method: 'GET',
+        credentials: 'include',
+        headers: authHeaders()
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to load balance' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
+ * Create Stripe Checkout for verification credits
+ * @param {Object} [options] - Checkout options
+ * @param {number} [options.quantity=1] - Number of 1,000-verification blocks
+ * @returns {Promise<Object>} Checkout session data with url field
+ * @throws {Error} If request fails
+ */
+export async function createVerificationCheckout(options = {}) {
+    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-checkout`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: authHeaders(),
+        body: JSON.stringify(options)
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to create checkout' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
+ * Get verification purchase history
+ * @returns {Promise<Object>} Purchase history with purchases array
+ * @throws {Error} If request fails
+ */
+export async function getVerificationPurchases() {
+    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-purchases`), {
+        method: 'GET',
+        credentials: 'include',
+        headers: authHeaders()
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to load purchases' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
+ * Enable auto-replenish for verification credits
+ * @returns {Promise<Object>} Updated settings
+ * @throws {Error} If request fails
+ */
+export async function enableAutoReplenish() {
+    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-auto-replenish`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: authHeaders(),
+        body: JSON.stringify({ enabled: true })
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to enable auto-replenish' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
+ * Disable auto-replenish for verification credits
+ * @returns {Promise<Object>} Updated settings
+ * @throws {Error} If request fails
+ */
+export async function disableAutoReplenish() {
+    const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/verification-auto-replenish`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: authHeaders(),
+        body: JSON.stringify({ enabled: false })
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to disable auto-replenish' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
  * Get audit log entries for a petition
  * @param {string} id - Petition UUID
  * @returns {Promise<{auditLog: Array}>} Audit log entries

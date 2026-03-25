@@ -9,8 +9,12 @@ import express from 'express';
 import { body, query, param, validationResult } from 'express-validator';
 import { petitionSigningService } from '../services/petitionSigningService';
 import { petitionAuditService } from '../services/petitionAuditService';
+import { voterVerificationService } from '../services/voterVerificationService';
+import { captchaService } from '../services/captchaService';
+import { verificationBillingService } from '../services/verificationBillingService';
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 import { petitionSigningLimiter } from '../middleware/rateLimiting';
+import { prisma } from '../lib/prisma';
 import { logger } from '../services/logger';
 import { safePaginationParams } from '../utils/safeJson';
 
@@ -264,6 +268,223 @@ router.post('/sign/:code',
 
       res.status(500).json({
         error: error.message || 'Failed to submit signature'
+      });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/petitions/verify-registration:
+ *   post:
+ *     tags: [Petition Signing]
+ *     summary: Verify voter registration for a petition signer
+ *     description: Checks voter registration status against state voter files before signing. Requires CAPTCHA. Consumes one verification credit from the campaign's balance. Rate limited.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - petitionId
+ *               - signerFirstName
+ *               - signerLastName
+ *               - signerAddress
+ *               - signerCity
+ *               - signerState
+ *               - signerZip
+ *               - captchaToken
+ *             properties:
+ *               petitionId:
+ *                 type: string
+ *                 description: Petition ID to verify against
+ *               signerFirstName:
+ *                 type: string
+ *                 description: Signer's first name
+ *               signerLastName:
+ *                 type: string
+ *                 description: Signer's last name
+ *               signerAddress:
+ *                 type: string
+ *                 description: Signer's street address
+ *               signerCity:
+ *                 type: string
+ *                 description: Signer's city
+ *               signerState:
+ *                 type: string
+ *                 description: Signer's two-letter state code
+ *               signerZip:
+ *                 type: string
+ *                 description: Signer's ZIP code
+ *               captchaToken:
+ *                 type: string
+ *                 description: CAPTCHA verification token
+ *     responses:
+ *       200:
+ *         description: Verification result returned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     verified:
+ *                       type: boolean
+ *                     result:
+ *                       type: object
+ *                       properties:
+ *                         matched:
+ *                           type: boolean
+ *                         voterId:
+ *                           type: string
+ *                           nullable: true
+ *                         partyEnrollment:
+ *                           type: string
+ *                           nullable: true
+ *                         registrationStatus:
+ *                           type: string
+ *                           nullable: true
+ *       400:
+ *         description: Validation error or verification unavailable
+ *       404:
+ *         description: Petition not found
+ *       429:
+ *         description: Rate limited
+ *       500:
+ *         description: Server error
+ */
+router.post('/verify-registration',
+  petitionSigningLimiter,
+  [
+    body('petitionId').isString().notEmpty().withMessage('Petition ID is required'),
+    body('signerFirstName').trim().isLength({ min: 1, max: 100 }).withMessage('First name is required'),
+    body('signerLastName').trim().isLength({ min: 1, max: 100 }).withMessage('Last name is required'),
+    body('signerAddress').trim().isLength({ min: 1 }).withMessage('Address is required'),
+    body('signerCity').trim().isLength({ min: 1 }).withMessage('City is required'),
+    body('signerState').trim().isLength({ min: 2, max: 2 }).withMessage('State must be a 2-letter code'),
+    body('signerZip').trim().isLength({ min: 5, max: 10 }).withMessage('ZIP code is required'),
+    body('captchaToken').notEmpty().withMessage('CAPTCHA token is required'),
+  ],
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ error: 'Validation failed', details: errors.array() });
+      }
+
+      const {
+        petitionId,
+        signerFirstName,
+        signerLastName,
+        signerAddress,
+        signerCity,
+        signerState,
+        signerZip,
+        captchaToken,
+      } = req.body;
+
+      // Verify CAPTCHA
+      const captchaResult = await captchaService.verifyCaptcha(
+        captchaToken,
+        req.ip || undefined
+      );
+
+      if (!captchaResult.success) {
+        return res.status(400).json({
+          error: captchaResult.error || 'CAPTCHA verification failed',
+        });
+      }
+
+      // Look up petition to get candidateId
+      const petition = await prisma.petition.findUnique({
+        where: { id: petitionId },
+        select: { id: true, candidateId: true, voterVerificationEnabled: true },
+      });
+
+      if (!petition) {
+        return res.status(404).json({ error: 'Petition not found' });
+      }
+
+      if (!petition.candidateId) {
+        return res.status(400).json({
+          error: 'Only candidate petitions support voter verification',
+        });
+      }
+
+      // Check verification balance
+      const hasCredits = await verificationBillingService.hasAvailableCredits(
+        petition.candidateId
+      );
+
+      if (!hasCredits) {
+        return res.json({
+          success: true,
+          data: {
+            verified: false,
+            error: 'verification_unavailable',
+            message: 'Voter verification is currently unavailable for this petition.',
+          },
+        });
+      }
+
+      // Call voter verification service
+      const result = await voterVerificationService.verify(
+        signerState,
+        signerFirstName,
+        signerLastName,
+        signerAddress,
+        signerCity,
+        signerZip
+      );
+
+      // If API error occurred, don't consume credit
+      if (result.errorMessage) {
+        return res.json({
+          success: true,
+          data: {
+            verified: false,
+            error: 'verification_error',
+            message: 'Unable to verify voter registration at this time. Please try again later.',
+          },
+        });
+      }
+
+      // Verification succeeded (match or no match) — consume credit
+      const consumed = await verificationBillingService.consumeCredit(petition.candidateId);
+      if (!consumed) {
+        logger.warn(
+          { petitionId, candidateId: petition.candidateId },
+          'Credit consumption failed after successful verification'
+        );
+      }
+
+      // Check if usage alert should be sent
+      await verificationBillingService.checkUsageAlert(petition.candidateId);
+
+      res.json({
+        success: true,
+        data: {
+          verified: true,
+          result: {
+            matched: result.matched,
+            voterId: result.voterId,
+            partyEnrollment: result.partyEnrollment,
+            registrationStatus: result.registrationStatus,
+          },
+        },
+      });
+    } catch (error: any) {
+      logger.error(
+        { error, petitionId: req.body?.petitionId },
+        'Voter registration verification error'
+      );
+      res.status(500).json({
+        error: 'Failed to verify voter registration',
       });
     }
   }

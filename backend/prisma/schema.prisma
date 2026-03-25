@@ -939,6 +939,8 @@ model Candidate {
 
   /// Ballot access petitions created by this candidate
   petitions                  Petition[]                @relation("PetitionCandidate")
+  /// Verification credit balance for voter registration lookups
+  verificationBalance        VerificationBalance?
 
   @@index([officeId])
   @@index([party])
@@ -5148,4 +5150,63 @@ model OrganizationVerificationRequest {
 
   @@index([status])
   @@index([organizationId])
+}
+
+/// Campaign verification balance for voter registration lookups
+/// @description Tracks purchased and consumed verification credits per campaign
+model VerificationBalance {
+  id                    String   @id @default(cuid())
+  /// Campaign (candidate) this balance belongs to
+  candidateId           String   @unique
+  /// Total verifications purchased across all payments
+  totalPurchased        Int      @default(0)
+  /// Total verifications consumed
+  totalConsumed         Int      @default(0)
+  /// Daily verification cap (0 = unlimited within purchased balance)
+  dailyCap              Int      @default(500)
+  /// Today's verification count (reset daily)
+  dailyConsumed         Int      @default(0)
+  /// Date of last daily reset
+  dailyResetDate        DateTime @default(now())
+  /// Whether auto-replenish is enabled
+  autoReplenish         Boolean  @default(false)
+  /// Stripe customer ID for auto-replenish charges
+  stripeCustomerId      String?
+  /// Stripe payment method ID for auto-replenish
+  stripePaymentMethodId String?
+  /// Email for usage notifications
+  notificationEmail     String?
+  /// Whether 80% usage notification was sent for current block
+  usageAlertSent        Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  candidate             Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  purchases             VerificationPurchase[]
+
+  @@index([candidateId])
+}
+
+/// Individual verification credit purchase record
+/// @description Audit trail of all credit purchases for billing reconciliation
+model VerificationPurchase {
+  id                    String   @id @default(cuid())
+  /// Balance this purchase credits
+  balanceId             String
+  /// Number of verifications purchased (typically 1000)
+  amount                Int
+  /// Price paid in cents (typically 10000 = $100)
+  priceCents            Int
+  /// Stripe Checkout Session ID
+  stripeSessionId       String?  @unique
+  /// Stripe Payment Intent ID
+  stripePaymentIntentId String?
+  /// Payment status: pending, completed, failed, refunded
+  status                String   @default("pending")
+  createdAt             DateTime @default(now())
+
+  balance               VerificationBalance @relation(fields: [balanceId], references: [id], onDelete: Cascade)
+
+  @@index([balanceId])
+  @@index([stripeSessionId])
 }

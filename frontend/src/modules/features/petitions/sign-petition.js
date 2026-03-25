@@ -1,13 +1,15 @@
 /**
  * @module features/petitions/sign-petition
  * @description Multi-step wizard for signing a petition via public link.
- * No account required. Uses hCaptcha for bot protection.
+ * No account required. Uses hCaptcha for bot protection and optional voter verification.
+ *
+ * Step order: Info -> Signer Info -> hCaptcha -> Voter Verify (conditional) -> Review & Sign -> Confirmation
  *
  * URL format: /sign/{code}
  * Where {code} is the petition short code or custom slug.
  */
 
-import { getPetitionForSigning, submitSignature } from './petitions-api.js';
+import { getPetitionForSigning, submitSignature, verifyRegistration } from './petitions-api.js';
 
 // ==================== Constants ====================
 
@@ -36,15 +38,20 @@ const US_STATES = [
 ];
 
 /** hCaptcha site key */
-const HCAPTCHA_SITE_KEY = '10000000-ffff-ffff-ffff-000000000001';
+const HCAPTCHA_SITE_KEY = '9c5af3a8-5066-446c-970e-1c18d9fe8d9e';
 
-/** Step definitions for the wizard */
+/**
+ * Step definitions for the wizard.
+ * The voter-verify step is conditional (only shown if petition has voterVerificationEnabled).
+ * @type {Array<{id: string, title: string, conditional?: boolean}>}
+ */
 const STEPS = [
     { id: 'info', title: 'Petition Info' },
-    { id: 'signer', title: 'Your Information' },
-    { id: 'attest', title: 'Attestation' },
-    { id: 'captcha', title: 'Verify & Submit' },
-    { id: 'confirmation', title: 'Confirmed' }
+    { id: 'signer-info', title: 'Your Information' },
+    { id: 'captcha', title: 'Verification' },
+    { id: 'voter-verify', title: 'Voter Registration', conditional: true },
+    { id: 'review', title: 'Review & Sign' },
+    { id: 'confirmation', title: 'Thank You' }
 ];
 
 // ==================== State ====================
@@ -75,6 +82,12 @@ const state = {
         geolocationConsented: false,
         deviceFingerprint: null
     },
+    captchaVerified: false,
+    voterVerificationResult: null,
+    voterVerificationDone: false,
+    verifiedFields: null,
+    verifyingRegistration: false,
+    editingField: null,
     errors: {},
     submitting: false,
     submitted: false,
@@ -85,6 +98,9 @@ const state = {
 
 /** @type {HTMLElement|null} */
 let appContainer = null;
+
+/** @type {number|null} hCaptcha widget ID for cleanup */
+let captchaWidgetId = null;
 
 // ==================== Utility Functions ====================
 
@@ -101,8 +117,7 @@ function escapeHtml(str) {
 }
 
 /**
- * Generate a lightweight device fingerprint from browser properties.
- * Uses only standard browser APIs -- no external libraries.
+ * Generate a lightweight device fingerprint from browser properties
  * @returns {string} Base-36 hash string
  */
 function generateDeviceFingerprint() {
@@ -172,6 +187,40 @@ function showToast(message, type = 'info') {
         toast.classList.remove('sign-toast--visible');
         setTimeout(() => toast.remove(), 300);
     }, 3500);
+}
+
+/**
+ * Get the visible (non-conditional-skipped) steps for the current petition
+ * @returns {Array<{id: string, title: string}>} Active steps
+ */
+function getActiveSteps() {
+    return STEPS.filter(step => {
+        if (step.conditional && step.id === 'voter-verify') {
+            return state.petition && state.petition.voterVerificationEnabled;
+        }
+        return true;
+    });
+}
+
+/**
+ * Get the STEPS index for the current active step index
+ * @param {number} activeIndex - Index within the active steps array
+ * @returns {number} Index within the full STEPS array
+ */
+function activeIndexToFullIndex(activeIndex) {
+    const activeSteps = getActiveSteps();
+    if (activeIndex < 0 || activeIndex >= activeSteps.length) return activeIndex;
+    const step = activeSteps[activeIndex];
+    return STEPS.findIndex(s => s.id === step.id);
+}
+
+/**
+ * Get the current step object from the active steps
+ * @returns {{id: string, title: string}} Current step
+ */
+function getCurrentStep() {
+    const activeSteps = getActiveSteps();
+    return activeSteps[state.currentStep] || activeSteps[0];
 }
 
 // ==================== Petition Loading ====================
@@ -266,58 +315,33 @@ function validateSignerFields() {
     return Object.keys(errors).length === 0;
 }
 
-/**
- * Validate the attestation step
- * @returns {boolean} True if attestation is complete
- */
-function validateAttestation() {
-    const errors = {};
-    const { formData, petition } = state;
-
-    const expectedName = `${formData.signerFirstName} ${formData.signerLastName}`.trim().toLowerCase();
-    const typedName = (formData.signatureConfirmation || '').trim().toLowerCase();
-
-    if (!typedName) {
-        errors.signatureConfirmation = 'Please type your full name to confirm';
-    } else if (typedName !== expectedName) {
-        errors.signatureConfirmation = 'Name must match your first and last name above';
-    }
-
-    if (!formData.attestedAt) {
-        errors.attestation = 'You must agree to the attestation statement';
-    }
-
-    if (petition.privacyConsentText && !formData.privacyConsented) {
-        errors.privacyConsent = 'You must consent to the privacy terms';
-    }
-
-    state.errors = errors;
-    return Object.keys(errors).length === 0;
-}
-
 // ==================== Step Navigation ====================
 
 /**
  * Advance to the next step, validating the current step first
  */
 function nextStep() {
-    const stepId = STEPS[state.currentStep].id;
+    const step = getCurrentStep();
+    const activeSteps = getActiveSteps();
 
-    if (stepId === 'signer' && !validateSignerFields()) {
+    if (step.id === 'signer-info' && !validateSignerFields()) {
         render();
         return;
     }
-    if (stepId === 'attest' && !validateAttestation()) {
-        render();
+
+    if (step.id === 'captcha' && !state.captchaVerified) {
         return;
     }
 
-    state.currentStep = Math.min(state.currentStep + 1, STEPS.length - 1);
-    state.errors = {};
-    render();
+    if (state.currentStep < activeSteps.length - 1) {
+        state.currentStep++;
+        state.errors = {};
+        render();
 
-    if (STEPS[state.currentStep].id === 'captcha') {
-        renderCaptcha();
+        const newStep = getCurrentStep();
+        if (newStep.id === 'captcha' && !state.captchaVerified) {
+            renderCaptcha();
+        }
     }
 }
 
@@ -325,9 +349,12 @@ function nextStep() {
  * Go back to the previous step
  */
 function previousStep() {
-    state.currentStep = Math.max(state.currentStep - 1, 0);
-    state.errors = {};
-    render();
+    if (state.currentStep > 0) {
+        state.currentStep--;
+        state.errors = {};
+        state.editingField = null;
+        render();
+    }
 }
 
 // ==================== Submission ====================
@@ -338,19 +365,35 @@ function previousStep() {
 async function handleSubmit() {
     if (state.submitting || !state.formData.captchaToken) return;
 
+    // Validate attestation before submitting
+    const fd = state.formData;
+    const expectedName = `${fd.signerFirstName} ${fd.signerLastName}`.trim().toLowerCase();
+    const typedName = (fd.signatureConfirmation || '').trim().toLowerCase();
+
+    if (!typedName || typedName !== expectedName) {
+        state.errors.signatureConfirmation = 'Name must match your first and last name';
+        render();
+        return;
+    }
+    if (!fd.attestedAt) {
+        state.errors.attestation = 'You must agree to the attestation statement';
+        render();
+        return;
+    }
+
     state.submitting = true;
     state.errors = {};
     render();
 
     try {
         const payload = {
-            signerFirstName: state.formData.signerFirstName.trim(),
-            signerLastName: state.formData.signerLastName.trim(),
-            signatureConfirmation: state.formData.signatureConfirmation.trim(),
-            attestedAt: state.formData.attestedAt,
-            privacyConsented: state.formData.privacyConsented,
-            captchaToken: state.formData.captchaToken,
-            deviceFingerprint: state.formData.deviceFingerprint
+            signerFirstName: fd.signerFirstName.trim(),
+            signerLastName: fd.signerLastName.trim(),
+            signatureConfirmation: fd.signatureConfirmation.trim(),
+            attestedAt: fd.attestedAt,
+            privacyConsented: fd.privacyConsented,
+            captchaToken: fd.captchaToken,
+            deviceFingerprint: fd.deviceFingerprint
         };
 
         const optionalFields = [
@@ -358,21 +401,27 @@ async function handleSubmit() {
             'signerCounty', 'signerDateOfBirth', 'signerEmail', 'signerPhone'
         ];
         for (const field of optionalFields) {
-            const value = state.formData[field];
+            const value = fd[field];
             if (value && (typeof value !== 'string' || value.trim())) {
                 payload[field] = typeof value === 'string' ? value.trim() : value;
             }
         }
 
-        if (state.formData.geolocationConsented && state.formData.geolocation) {
-            payload.geolocation = state.formData.geolocation;
+        if (fd.geolocationConsented && fd.geolocation) {
+            payload.geolocation = fd.geolocation;
             payload.geolocationConsented = true;
+        }
+
+        // Include voter verification result if verification was done
+        if (state.voterVerificationDone && state.voterVerificationResult) {
+            payload.voterVerificationResult = state.voterVerificationResult;
         }
 
         const result = await submitSignature(state.code, payload);
         state.result = result;
         state.submitted = true;
-        state.currentStep = STEPS.length - 1;
+        const activeSteps = getActiveSteps();
+        state.currentStep = activeSteps.length - 1;
         render();
     } catch (error) {
         state.submitting = false;
@@ -385,10 +434,8 @@ async function handleSubmit() {
             state.errors.submit = error.message || 'Failed to submit signature. Please try again.';
         }
         state.formData.captchaToken = null;
+        state.captchaVerified = false;
         render();
-        if (STEPS[state.currentStep].id === 'captcha') {
-            renderCaptcha();
-        }
     }
 }
 
@@ -398,7 +445,7 @@ async function handleSubmit() {
  * Render the hCaptcha widget into the captcha container
  */
 function renderCaptcha() {
-    const container = document.getElementById('hcaptcha-container');
+    const container = document.getElementById('sign-hcaptcha-widget');
     if (!container || !window.hcaptcha) {
         setTimeout(renderCaptcha, 500);
         return;
@@ -407,24 +454,81 @@ function renderCaptcha() {
     container.innerHTML = '';
 
     try {
-        window.hcaptcha.render(container, {
+        captchaWidgetId = window.hcaptcha.render(container, {
             sitekey: HCAPTCHA_SITE_KEY,
             callback: (token) => {
                 state.formData.captchaToken = token;
+                state.captchaVerified = true;
                 render();
             },
             'expired-callback': () => {
                 state.formData.captchaToken = null;
+                state.captchaVerified = false;
                 render();
             },
             'error-callback': () => {
                 state.formData.captchaToken = null;
+                state.captchaVerified = false;
                 showToast('CAPTCHA error. Please try again.', 'error');
             }
         });
     } catch (e) {
         container.innerHTML = '<p class="sign-captcha-error">CAPTCHA could not load. Please disable your ad blocker and reload.</p>';
     }
+}
+
+// ==================== Voter Verification ====================
+
+/**
+ * Handle voter registration verification API call
+ */
+async function handleVerifyRegistration() {
+    if (state.verifyingRegistration) return;
+
+    state.verifyingRegistration = true;
+    render();
+
+    try {
+        const fd = state.formData;
+        const result = await verifyRegistration({
+            petitionId: state.petition.id,
+            firstName: fd.signerFirstName.trim(),
+            lastName: fd.signerLastName.trim(),
+            address: fd.signerAddress.trim(),
+            city: fd.signerCity.trim(),
+            state: fd.signerState,
+            zip: fd.signerZip.trim(),
+            captchaToken: fd.captchaToken
+        });
+
+        state.voterVerificationResult = result;
+        state.voterVerificationDone = true;
+        state.verifiedFields = {
+            firstName: fd.signerFirstName.trim(),
+            lastName: fd.signerLastName.trim(),
+            address: fd.signerAddress.trim(),
+            city: fd.signerCity.trim(),
+            state: fd.signerState,
+            zip: fd.signerZip.trim()
+        };
+    } catch (error) {
+        state.voterVerificationResult = {
+            status: 'error',
+            message: 'Unable to check registration at this time. Your response will be saved.'
+        };
+        state.voterVerificationDone = true;
+        state.verifiedFields = {
+            firstName: state.formData.signerFirstName.trim(),
+            lastName: state.formData.signerLastName.trim(),
+            address: state.formData.signerAddress.trim(),
+            city: state.formData.signerCity.trim(),
+            state: state.formData.signerState,
+            zip: state.formData.signerZip.trim()
+        };
+    }
+
+    state.verifyingRegistration = false;
+    render();
 }
 
 // ==================== Geolocation ====================
@@ -479,7 +583,8 @@ function render() {
     }
 
     const stepContent = renderCurrentStep();
-    const showProgress = state.currentStep > 0 && state.currentStep < STEPS.length - 1;
+    const currentStepObj = getCurrentStep();
+    const showProgress = currentStepObj.id !== 'info' && currentStepObj.id !== 'confirmation';
 
     appContainer.innerHTML = `
         <div class="sign-page">
@@ -506,9 +611,12 @@ function render() {
  * @returns {string} Progress bar HTML
  */
 function renderProgressBar() {
-    const activeSteps = STEPS.slice(1, 4);
-    const adjustedCurrent = state.currentStep - 1;
-    const progress = ((adjustedCurrent + 1) / activeSteps.length) * 100;
+    const activeSteps = getActiveSteps();
+    // Exclude info and confirmation from progress display
+    const progressSteps = activeSteps.filter(s => s.id !== 'info' && s.id !== 'confirmation');
+    const currentStepObj = getCurrentStep();
+    const currentProgressIndex = progressSteps.findIndex(s => s.id === currentStepObj.id);
+    const progress = currentProgressIndex >= 0 ? ((currentProgressIndex + 1) / progressSteps.length) * 100 : 0;
 
     return `
         <div class="sign-progress">
@@ -516,9 +624,9 @@ function renderProgressBar() {
                 <div class="sign-progress-fill" style="width: ${progress}%"></div>
             </div>
             <div class="sign-progress-steps">
-                ${activeSteps.map((step, i) => `
-                    <span class="sign-progress-step ${i <= adjustedCurrent ? 'sign-progress-step--active' : ''} ${i < adjustedCurrent ? 'sign-progress-step--complete' : ''}">
-                        <span class="sign-progress-dot">${i < adjustedCurrent ? '&#10003;' : i + 1}</span>
+                ${progressSteps.map((step, i) => `
+                    <span class="sign-progress-step ${i <= currentProgressIndex ? 'sign-progress-step--active' : ''} ${i < currentProgressIndex ? 'sign-progress-step--complete' : ''}">
+                        <span class="sign-progress-dot">${i < currentProgressIndex ? '&#10003;' : i + 1}</span>
                         <span class="sign-progress-label">${escapeHtml(step.title)}</span>
                     </span>
                 `).join('')}
@@ -532,12 +640,13 @@ function renderProgressBar() {
  * @returns {string} Step HTML
  */
 function renderCurrentStep() {
-    const stepId = STEPS[state.currentStep].id;
-    switch (stepId) {
+    const step = getCurrentStep();
+    switch (step.id) {
         case 'info': return renderInfoStep();
-        case 'signer': return renderSignerStep();
-        case 'attest': return renderAttestationStep();
+        case 'signer-info': return renderSignerStep();
         case 'captcha': return renderCaptchaStep();
+        case 'voter-verify': return renderVoterVerifyStep();
+        case 'review': return renderReviewStep();
         case 'confirmation': return renderConfirmationStep();
         default: return '<p>Unknown step</p>';
     }
@@ -588,7 +697,7 @@ function renderInfoStep() {
                 <p class="sign-count"><strong>${formatNumber(count)}</strong> people have signed</p>
             ` : ''}
 
-            <button class="sign-btn sign-btn--primary sign-btn--large" data-action="start">
+            <button class="sign-btn sign-btn--primary sign-btn--large" data-sign-action="start">
                 Sign This Petition
             </button>
 
@@ -607,6 +716,7 @@ function renderSignerStep() {
     const required = state.petition.requiredSignerFields || [];
     const fd = state.formData;
     const errors = state.errors;
+    const hasVoterVerification = state.petition.voterVerificationEnabled;
 
     /**
      * Render a single form field
@@ -688,6 +798,11 @@ function renderSignerStep() {
         }
     }
 
+    let noticeHtml = '<p class="sign-spam-notice">To prevent spam, you\'ll be asked to solve a brief verification on the next page.</p>';
+    if (hasVoterVerification) {
+        noticeHtml = '<p class="sign-spam-notice">To prevent spam, you\'ll be asked to solve a brief verification on the next page. Your voter registration will be checked.</p>';
+    }
+
     return `
         <div class="sign-step sign-step--signer">
             <h2 class="sign-step-title">Your Information</h2>
@@ -697,34 +812,325 @@ function renderSignerStep() {
                 ${fieldConfigs.map(fc => renderField(fc.field, fc.label, fc.type, fc.required, fc.extra)).join('')}
             </form>
 
+            ${noticeHtml}
+
             <div class="sign-step-actions">
-                <button class="sign-btn sign-btn--secondary" data-action="back">Back</button>
-                <button class="sign-btn sign-btn--primary" data-action="next">Continue</button>
+                <button class="sign-btn sign-btn--secondary" data-sign-action="back">Back</button>
+                <button class="sign-btn sign-btn--primary" data-sign-action="next">Continue</button>
             </div>
         </div>
     `;
 }
 
 /**
- * Step 2: Attestation and signature confirmation
- * @returns {string} HTML for attestation step
+ * Step 2: hCaptcha verification
+ * @returns {string} HTML for captcha step
  */
-function renderAttestationStep() {
-    const p = state.petition;
+function renderCaptchaStep() {
+    const isVerified = state.captchaVerified;
+
+    return `
+        <div class="sign-step sign-step--captcha sign-captcha-step">
+            <h2 class="sign-step-title">Quick Verification</h2>
+            <p class="sign-step-subtitle">Please solve this to continue:</p>
+
+            ${isVerified ? `
+                <div class="sign-captcha-verified">
+                    <span class="sign-captcha-verified-icon">&#10003;</span>
+                    <span>Verified</span>
+                </div>
+            ` : `
+                <div class="sign-captcha-wrapper">
+                    <div id="sign-hcaptcha-widget"></div>
+                </div>
+            `}
+
+            <div class="sign-step-actions">
+                <button class="sign-btn sign-btn--secondary" data-sign-action="back">Back</button>
+                <button class="sign-btn sign-btn--primary" data-sign-action="next" ${!isVerified ? 'disabled' : ''}>Next</button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Step 3: Voter Registration Verification (conditional)
+ * @returns {string} HTML for voter verify step
+ */
+function renderVoterVerifyStep() {
     const fd = state.formData;
+    const stateName = US_STATES.find(s => s.code === fd.signerState)?.name || fd.signerState || 'N/A';
+    const isDone = state.voterVerificationDone;
+    const result = state.voterVerificationResult;
+    const isVerifying = state.verifyingRegistration;
+
+    let resultHtml = '';
+    if (isDone && result) {
+        if (result.status === 'matched' || result.matched) {
+            const party = result.party || 'Unknown';
+            const regState = result.state || stateName;
+            resultHtml = `
+                <div class="sign-verify-result sign-verify-result--matched">
+                    <span class="sign-verify-result-icon">&#10003;</span>
+                    <p>You are registered to vote as a <strong>${escapeHtml(party)}</strong> in <strong>${escapeHtml(regState)}</strong>.</p>
+                </div>
+            `;
+        } else if (result.status === 'not_found' || result.status === 'no_match') {
+            resultHtml = `
+                <div class="sign-verify-result sign-verify-result--not-found">
+                    <span class="sign-verify-result-icon">!</span>
+                    <p>Your voter registration was not found.</p>
+                </div>
+            `;
+        } else {
+            resultHtml = `
+                <div class="sign-verify-result sign-verify-result--error">
+                    <span class="sign-verify-result-icon">&#8212;</span>
+                    <p>Unable to check registration at this time. Your response will be saved.</p>
+                </div>
+            `;
+        }
+    }
+
+    return `
+        <div class="sign-step sign-step--voter-verify sign-voter-verify-step">
+            <h2 class="sign-step-title">Voter Registration</h2>
+            <p class="sign-step-subtitle">We'll check your voter registration using the information you provided.</p>
+
+            <div class="sign-verify-info-summary">
+                <div class="sign-verify-info-row">
+                    <span class="sign-verify-info-label">Name</span>
+                    <span class="sign-verify-info-value">${escapeHtml(fd.signerFirstName)} ${escapeHtml(fd.signerLastName)}</span>
+                </div>
+                ${fd.signerAddress ? `
+                    <div class="sign-verify-info-row">
+                        <span class="sign-verify-info-label">Address</span>
+                        <span class="sign-verify-info-value">${escapeHtml(fd.signerAddress)}</span>
+                    </div>
+                ` : ''}
+                ${fd.signerCity ? `
+                    <div class="sign-verify-info-row">
+                        <span class="sign-verify-info-label">City</span>
+                        <span class="sign-verify-info-value">${escapeHtml(fd.signerCity)}</span>
+                    </div>
+                ` : ''}
+                <div class="sign-verify-info-row">
+                    <span class="sign-verify-info-label">State</span>
+                    <span class="sign-verify-info-value">${escapeHtml(stateName)}</span>
+                </div>
+                ${fd.signerZip ? `
+                    <div class="sign-verify-info-row">
+                        <span class="sign-verify-info-label">ZIP</span>
+                        <span class="sign-verify-info-value">${escapeHtml(fd.signerZip)}</span>
+                    </div>
+                ` : ''}
+            </div>
+
+            ${resultHtml}
+
+            ${!isDone ? `
+                <button
+                    class="sign-btn sign-btn--primary sign-btn--large"
+                    data-sign-action="verify-registration"
+                    ${isVerifying ? 'disabled' : ''}
+                >
+                    ${isVerifying ? '<span class="sign-btn-spinner"></span> Checking...' : 'Verify My Registration'}
+                </button>
+            ` : ''}
+
+            <div class="sign-step-actions">
+                <button class="sign-btn sign-btn--secondary" data-sign-action="back">Back</button>
+                <button class="sign-btn sign-btn--primary" data-sign-action="next" ${!isDone ? 'disabled' : ''}>Next</button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Step 4: Review, Attestation & Submit (combined)
+ * @returns {string} HTML for review step
+ */
+function renderReviewStep() {
+    const fd = state.formData;
+    const p = state.petition;
     const errors = state.errors;
+    const hasVerification = state.voterVerificationDone;
+    const verifiedFields = state.verifiedFields;
+
+    /**
+     * Check if a field is locked due to voter verification
+     * @param {string} fieldKey - The signer field key
+     * @returns {boolean} True if the field is locked
+     */
+    function isFieldLocked(fieldKey) {
+        if (!hasVerification || !verifiedFields) return false;
+        const lockedKeys = ['signerFirstName', 'signerLastName', 'signerAddress', 'signerCity', 'signerState', 'signerZip'];
+        return lockedKeys.includes(fieldKey);
+    }
+
+    /**
+     * Get the display label for a field key
+     * @param {string} key - Field key
+     * @returns {string} Display label
+     */
+    function fieldLabel(key) {
+        const labels = {
+            signerFirstName: 'First Name',
+            signerLastName: 'Last Name',
+            signerAddress: 'Address',
+            signerCity: 'City',
+            signerState: 'State',
+            signerZip: 'ZIP Code',
+            signerCounty: 'County',
+            signerDateOfBirth: 'Date of Birth',
+            signerEmail: 'Email',
+            signerPhone: 'Phone'
+        };
+        return labels[key] || key;
+    }
+
+    /**
+     * Get the display value for a field
+     * @param {string} key - Field key
+     * @returns {string} Display value
+     */
+    function fieldValue(key) {
+        const val = fd[key];
+        if (!val) return '';
+        if (key === 'signerState') {
+            return US_STATES.find(s => s.code === val)?.name || val;
+        }
+        return val;
+    }
+
+    // Build review fields
+    const reviewFields = ['signerFirstName', 'signerLastName'];
+    const required = p.requiredSignerFields || [];
+    const allOptional = ['address', 'city', 'state', 'zip', 'county', 'dateOfBirth', 'email', 'phone'];
+    const fieldKeyMap = {
+        address: 'signerAddress',
+        city: 'signerCity',
+        state: 'signerState',
+        zip: 'signerZip',
+        county: 'signerCounty',
+        dateOfBirth: 'signerDateOfBirth',
+        email: 'signerEmail',
+        phone: 'signerPhone'
+    };
+
+    for (const key of allOptional) {
+        const stateKey = fieldKeyMap[key];
+        if (required.includes(key) || fd[stateKey]) {
+            reviewFields.push(stateKey);
+        }
+    }
+
+    const reviewFieldsHtml = reviewFields.map(key => {
+        const locked = isFieldLocked(key);
+        const value = fieldValue(key);
+        const editing = state.editingField === key;
+
+        if (editing && !locked) {
+            // Inline edit mode
+            const inputType = key === 'signerEmail' ? 'email' : key === 'signerDateOfBirth' ? 'date' : key === 'signerPhone' ? 'tel' : 'text';
+
+            if (key === 'signerState') {
+                return `
+                    <div class="sign-review-field sign-review-field--editing">
+                        <span class="sign-review-field-label">${escapeHtml(fieldLabel(key))}</span>
+                        <select class="sign-input sign-review-edit-input" data-edit-field="${key}">
+                            <option value="">Select state...</option>
+                            ${US_STATES.map(s => `<option value="${s.code}" ${fd[key] === s.code ? 'selected' : ''}>${s.name}</option>`).join('')}
+                        </select>
+                        <div class="sign-review-edit-actions">
+                            <button class="sign-btn sign-btn--primary sign-btn--sm" data-sign-action="save-edit" data-edit-key="${key}">Save</button>
+                            <button class="sign-btn sign-btn--secondary sign-btn--sm" data-sign-action="cancel-edit">Cancel</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="sign-review-field sign-review-field--editing">
+                    <span class="sign-review-field-label">${escapeHtml(fieldLabel(key))}</span>
+                    <input
+                        type="${inputType}"
+                        class="sign-input sign-review-edit-input"
+                        value="${escapeHtml(value)}"
+                        data-edit-field="${key}"
+                    />
+                    <div class="sign-review-edit-actions">
+                        <button class="sign-btn sign-btn--primary sign-btn--sm" data-sign-action="save-edit" data-edit-key="${key}">Save</button>
+                        <button class="sign-btn sign-btn--secondary sign-btn--sm" data-sign-action="cancel-edit">Cancel</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="sign-review-field ${locked ? 'locked' : ''}">
+                <span class="sign-review-field-label">${escapeHtml(fieldLabel(key))}</span>
+                <span class="sign-review-field-value">${escapeHtml(value) || '<em>Not provided</em>'}</span>
+                ${locked
+                    ? '<span class="sign-review-field-lock" title="Locked - verified against voter registration">&#128274;</span>'
+                    : `<button class="sign-btn sign-btn--link sign-review-edit-btn" data-sign-action="edit-field" data-edit-key="${key}">Edit</button>`
+                }
+            </div>
+        `;
+    }).join('');
+
+    // Voter verification result display
+    let verificationStatusHtml = '';
+    if (hasVerification && state.voterVerificationResult) {
+        const vr = state.voterVerificationResult;
+        if (vr.status === 'matched' || vr.matched) {
+            verificationStatusHtml = `
+                <div class="sign-review-verification sign-review-verification--matched">
+                    Voter Registration: Verified as ${escapeHtml(vr.party || 'registered')} in ${escapeHtml(vr.state || '')} &#10003;
+                </div>
+            `;
+        } else if (vr.status === 'not_found' || vr.status === 'no_match') {
+            verificationStatusHtml = `
+                <div class="sign-review-verification sign-review-verification--not-found">
+                    Voter Registration: Not found
+                </div>
+            `;
+        } else {
+            verificationStatusHtml = `
+                <div class="sign-review-verification sign-review-verification--error">
+                    Voter Registration: Check unavailable
+                </div>
+            `;
+        }
+    }
+
+    // Lock notice
+    let lockNoticeHtml = '';
+    if (hasVerification && verifiedFields) {
+        lockNoticeHtml = `
+            <p class="sign-review-lock-notice">These fields are locked because your voter registration has been verified against this information.</p>
+        `;
+    }
+
+    // Attestation section
+    const declarationText = p.declarationLanguage ||
+        'I hereby declare that the information I have provided is true and correct to the best of my knowledge. I understand that this electronic signature carries the same legal weight as a handwritten signature.';
 
     const expectedName = `${fd.signerFirstName} ${fd.signerLastName}`.trim();
     const typedName = (fd.signatureConfirmation || '').trim();
     const namesMatch = typedName.toLowerCase() === expectedName.toLowerCase() && typedName.length > 0;
 
-    const declarationText = p.declarationLanguage ||
-        'I hereby declare that the information I have provided is true and correct to the best of my knowledge. I understand that this electronic signature carries the same legal weight as a handwritten signature.';
-
     return `
-        <div class="sign-step sign-step--attest">
-            <h2 class="sign-step-title">Attestation & Signature</h2>
-            <p class="sign-step-subtitle">Please review and confirm your signature.</p>
+        <div class="sign-step sign-step--review">
+            <h2 class="sign-step-title">Review & Sign</h2>
+            <p class="sign-step-subtitle">Review your information and sign the petition.</p>
+
+            <div class="sign-review-summary">
+                ${reviewFieldsHtml}
+            </div>
+
+            ${lockNoticeHtml}
+            ${verificationStatusHtml}
 
             <div class="sign-declaration">
                 <p>${escapeHtml(declarationText)}</p>
@@ -737,7 +1143,8 @@ function renderAttestationStep() {
                         data-field="attestation"
                         ${fd.attestedAt ? 'checked' : ''}
                     />
-                    <span>I agree that this has the full binding force as though it were signed in the presence of the bearer under penalty of perjury.</span>
+                    <span>I agree that this has the full binding force as though it were signed in the presence of the bearer under penalty of perjury.
+                    <a href="/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a></span>
                 </label>
                 ${errors.attestation ? `<span class="sign-field-error">${escapeHtml(errors.attestation)}</span>` : ''}
             </div>
@@ -757,90 +1164,64 @@ function renderAttestationStep() {
                 </div>
             ` : ''}
 
-            <div class="sign-field ${errors.signatureConfirmation ? 'sign-field--error' : ''}">
-                <label for="signatureConfirmation">Type your full name to confirm: <strong>${escapeHtml(expectedName)}</strong></label>
-                <input
-                    type="text"
-                    id="signatureConfirmation"
-                    class="sign-input sign-input--signature"
-                    value="${escapeHtml(typedName)}"
-                    data-field="signatureConfirmation"
-                    placeholder="Type your full name exactly as shown"
-                    autocomplete="off"
-                />
-                <div class="sign-signature-feedback">
-                    ${typedName ? (namesMatch
-                        ? '<span class="sign-match sign-match--valid">Name matches</span>'
-                        : '<span class="sign-match sign-match--invalid">Name does not match</span>'
-                    ) : ''}
-                </div>
-                ${errors.signatureConfirmation ? `<span class="sign-field-error">${escapeHtml(errors.signatureConfirmation)}</span>` : ''}
-            </div>
+            <div class="sign-attestation-reveal ${fd.attestedAt ? 'sign-attestation-reveal--visible' : ''}">
+                <div class="sign-signature-block">
+                    <div class="sign-field ${errors.signatureConfirmation ? 'sign-field--error' : ''}">
+                        <label for="signatureConfirmation">Type your full name to sign: <strong>${escapeHtml(expectedName)}</strong></label>
+                        <input
+                            type="text"
+                            id="signatureConfirmation"
+                            class="sign-input sign-input--signature"
+                            value="${escapeHtml(typedName)}"
+                            data-field="signatureConfirmation"
+                            placeholder="Type your full name exactly as shown"
+                            autocomplete="off"
+                        />
+                        <div class="sign-signature-feedback">
+                            ${typedName ? (namesMatch
+                                ? '<span class="sign-match sign-match--valid">Name matches</span>'
+                                : '<span class="sign-match sign-match--invalid">Name does not match</span>'
+                            ) : ''}
+                        </div>
+                        ${errors.signatureConfirmation ? `<span class="sign-field-error">${escapeHtml(errors.signatureConfirmation)}</span>` : ''}
+                    </div>
 
-            ${navigator.geolocation && !fd.geolocationConsented ? `
-                <div class="sign-geolocation-opt">
-                    <button class="sign-btn sign-btn--link" data-action="geolocation">
-                        Share my location to help verify my signature (optional)
+                    ${navigator.geolocation && !fd.geolocationConsented ? `
+                        <div class="sign-geolocation-opt">
+                            <button class="sign-btn sign-btn--link" data-sign-action="geolocation">
+                                Share my location to help verify my signature (optional)
+                            </button>
+                        </div>
+                    ` : fd.geolocationConsented ? `
+                        <p class="sign-geolocation-status">Location sharing enabled</p>
+                    ` : ''}
+
+                    ${errors.submit ? `
+                        <div class="sign-error-banner">
+                            <p>${escapeHtml(errors.submit)}</p>
+                        </div>
+                    ` : ''}
+
+                    <button
+                        class="sign-btn sign-btn--primary sign-btn--large"
+                        data-sign-action="submit"
+                        ${!namesMatch || !fd.attestedAt || state.submitting ? 'disabled' : ''}
+                    >
+                        ${state.submitting ? '<span class="sign-btn-spinner"></span> Submitting...' : 'Sign and Submit'}
                     </button>
                 </div>
-            ` : fd.geolocationConsented ? `
-                <p class="sign-geolocation-status">Location sharing enabled</p>
-            ` : ''}
+            </div>
 
             <div class="sign-step-actions">
-                <button class="sign-btn sign-btn--secondary" data-action="back">Back</button>
-                <button class="sign-btn sign-btn--primary" data-action="next" ${!namesMatch || !fd.attestedAt ? 'disabled' : ''}>Continue</button>
+                <button class="sign-btn sign-btn--secondary" data-sign-action="back" ${state.submitting ? 'disabled' : ''}>Back</button>
+                <div></div>
             </div>
         </div>
     `;
 }
 
 /**
- * Step 3: CAPTCHA verification and submit
- * @returns {string} HTML for captcha step
- */
-function renderCaptchaStep() {
-    const fd = state.formData;
-    const errors = state.errors;
-    const p = state.petition;
-
-    return `
-        <div class="sign-step sign-step--captcha">
-            <h2 class="sign-step-title">Verify & Submit</h2>
-
-            <div class="sign-summary">
-                <h3>You are signing:</h3>
-                <p class="sign-summary-title">${escapeHtml(p.title)}</p>
-                <p class="sign-summary-signer">As: <strong>${escapeHtml(fd.signerFirstName)} ${escapeHtml(fd.signerLastName)}</strong></p>
-            </div>
-
-            <div class="sign-captcha-wrapper">
-                <p class="sign-captcha-label">Please complete the verification below:</p>
-                <div id="hcaptcha-container"></div>
-            </div>
-
-            ${errors.submit ? `
-                <div class="sign-error-banner">
-                    <p>${escapeHtml(errors.submit)}</p>
-                </div>
-            ` : ''}
-
-            <div class="sign-step-actions">
-                <button class="sign-btn sign-btn--secondary" data-action="back" ${state.submitting ? 'disabled' : ''}>Back</button>
-                <button
-                    class="sign-btn sign-btn--primary sign-btn--large"
-                    data-action="submit"
-                    ${!fd.captchaToken || state.submitting ? 'disabled' : ''}
-                >
-                    ${state.submitting ? '<span class="sign-btn-spinner"></span> Submitting...' : 'Submit Signature'}
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Step 4: Confirmation after successful submission
+ * Step 5: Confirmation after successful submission
  * @returns {string} HTML for confirmation step
  */
 function renderConfirmationStep() {
@@ -849,7 +1230,16 @@ function renderConfirmationStep() {
     const count = result.signatureCount || result.totalSignatures || p.signatureCount || 0;
 
     let verificationMessage = '';
-    if (result.voterVerification === 'verified') {
+    if (state.voterVerificationDone && state.voterVerificationResult) {
+        const vr = state.voterVerificationResult;
+        if (vr.status === 'matched' || vr.matched) {
+            verificationMessage = '<p class="sign-verification sign-verification--success">Your voter registration has been verified.</p>';
+        } else if (vr.status === 'not_found' || vr.status === 'no_match') {
+            verificationMessage = '<p class="sign-verification sign-verification--pending">Your voter registration was not found. Your signature has been recorded.</p>';
+        } else {
+            verificationMessage = '<p class="sign-verification sign-verification--pending">Unable to check registration at this time. Your response has been saved.</p>';
+        }
+    } else if (result.voterVerification === 'verified') {
         verificationMessage = '<p class="sign-verification sign-verification--success">Your voter registration has been verified.</p>';
     } else if (result.voterVerification === 'unavailable') {
         verificationMessage = '<p class="sign-verification sign-verification--pending">Unable to check registration at this time. Your response has been saved with a note to independently verify registration later.</p>';
@@ -878,7 +1268,7 @@ function renderConfirmationStep() {
             <div class="sign-share">
                 <p>Help this petition reach its goal:</p>
                 <div class="sign-share-actions">
-                    <button class="sign-btn sign-btn--secondary" data-action="copy-link" data-url="${escapeHtml(shareUrl)}">
+                    <button class="sign-btn sign-btn--secondary" data-sign-action="copy-link" data-url="${escapeHtml(shareUrl)}">
                         Copy Link
                     </button>
                 </div>
@@ -957,7 +1347,7 @@ function renderAlreadySigned() {
                         <div class="sign-share">
                             <p>Share this petition to help it reach its goal:</p>
                             <div class="sign-share-actions">
-                                <button class="sign-btn sign-btn--secondary" data-action="copy-link" data-url="${escapeHtml(window.location.href)}">
+                                <button class="sign-btn sign-btn--secondary" data-sign-action="copy-link" data-url="${escapeHtml(window.location.href)}">
                                     Copy Link
                                 </button>
                             </div>
@@ -977,13 +1367,14 @@ function renderAlreadySigned() {
 
 /**
  * Handle all click events via delegation on the app container
+ * Uses data-sign-action to avoid conflicts with navigation handler
  * @param {Event} e - Click event
  */
 function handleClick(e) {
-    const actionEl = e.target.closest('[data-action]');
+    const actionEl = e.target.closest('[data-sign-action]');
     if (!actionEl) return;
 
-    const action = actionEl.dataset.action;
+    const action = actionEl.dataset.signAction;
 
     switch (action) {
         case 'start':
@@ -998,8 +1389,35 @@ function handleClick(e) {
         case 'submit':
             handleSubmit();
             break;
+        case 'verify-registration':
+            handleVerifyRegistration();
+            break;
         case 'geolocation':
             requestGeolocation();
+            break;
+        case 'edit-field': {
+            const key = actionEl.dataset.editKey;
+            if (key) {
+                state.editingField = key;
+                render();
+            }
+            break;
+        }
+        case 'save-edit': {
+            const editKey = actionEl.dataset.editKey;
+            if (editKey) {
+                const input = appContainer.querySelector(`[data-edit-field="${editKey}"]`);
+                if (input) {
+                    state.formData[editKey] = input.value;
+                }
+                state.editingField = null;
+                render();
+            }
+            break;
+        }
+        case 'cancel-edit':
+            state.editingField = null;
+            render();
             break;
         case 'copy-link': {
             const url = actionEl.dataset.url || window.location.href;
@@ -1055,9 +1473,9 @@ function handleInput(e) {
                     feedbackEl.innerHTML = '';
                 }
 
-                const nextBtn = appContainer.querySelector('[data-action="next"]');
-                if (nextBtn) {
-                    nextBtn.disabled = !(typed === expected && state.formData.attestedAt);
+                const submitBtn = appContainer.querySelector('[data-sign-action="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = !(typed === expected && state.formData.attestedAt);
                 }
             }
         }

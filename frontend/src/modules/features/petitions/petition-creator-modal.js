@@ -6,7 +6,7 @@
  * @module features/petitions/petition-creator-modal
  */
 
-import { createPetition, publishPetition, getQRCode } from './petitions-api.js';
+import { createPetition, publishPetition, getQRCode, getVerificationBalance, createVerificationCheckout } from './petitions-api.js';
 import { showToast } from '../../../utils/toast.js';
 
 // ==================== Constants ====================
@@ -801,7 +801,11 @@ function attachListeners() {
                 if (idx > -1) fields.splice(idx, 1);
             }
         } else if (field === 'voterVerificationEnabled') {
-            modalState.formData.voterVerificationEnabled = e.target.checked;
+            if (e.target.checked) {
+                handleVoterVerificationToggle(e.target);
+            } else {
+                modalState.formData.voterVerificationEnabled = false;
+            }
         } else if (field === 'signatureGoal' || field === 'electionYear') {
             const val = e.target.value;
             modalState.formData[field] = val ? Number(val) : null;
@@ -921,6 +925,47 @@ function validateAttestationStep() {
 }
 
 // ==================== Actions ====================
+
+/**
+ * Handle voter verification toggle with payment gate.
+ * Checks if campaign has verification credits before enabling.
+ * @param {HTMLInputElement} toggleEl - The checkbox input element
+ */
+async function handleVoterVerificationToggle(toggleEl) {
+    try {
+        const balance = await getVerificationBalance();
+        const remaining = (balance.total || 0) - (balance.used || 0);
+
+        if (remaining > 0) {
+            modalState.formData.voterVerificationEnabled = true;
+        } else {
+            // No balance -- show payment prompt, keep toggle off
+            toggleEl.checked = false;
+            modalState.formData.voterVerificationEnabled = false;
+
+            const proceed = confirm(
+                'Voter verification requires purchasing verification credits.\n\n' +
+                '$100 for 1,000 verifications.\n\n' +
+                'Would you like to purchase now?'
+            );
+
+            if (proceed) {
+                try {
+                    const checkout = await createVerificationCheckout();
+                    if (checkout.url) {
+                        window.location.href = checkout.url;
+                        return;
+                    }
+                } catch (checkoutError) {
+                    showToast(checkoutError.message || 'Failed to create checkout session.');
+                }
+            }
+        }
+    } catch {
+        // If balance check fails, allow toggle as a fallback
+        modalState.formData.voterVerificationEnabled = true;
+    }
+}
 
 /**
  * Handle petition creation submission

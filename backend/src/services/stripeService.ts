@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { PaymentType, PaymentStatus, FeeType, DonationType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logger } from './logger';
+import { verificationBillingService } from './verificationBillingService';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -516,6 +517,23 @@ export class StripeService {
    * Handle successful checkout
    */
   private static async handleCheckoutComplete(session: Stripe.Checkout.Session) {
+    // Handle verification credit purchases
+    const metadata = session.metadata;
+    if (metadata?.type === 'verification_credits') {
+      const candidateId = metadata.candidateId;
+      const amount = parseInt(metadata.amount || '1000');
+      const priceCents = session.amount_total || 10000;
+
+      if (!candidateId) {
+        logger.error({ sessionId: session.id }, 'Verification credit checkout missing candidateId');
+        return;
+      }
+
+      await verificationBillingService.creditPurchase(candidateId, amount, session.id, priceCents);
+      logger.info({ candidateId, amount, sessionId: session.id }, 'Verification credits purchased via webhook');
+      return;
+    }
+
     const paymentId = session.metadata?.paymentId;
     if (!paymentId) return;
 
