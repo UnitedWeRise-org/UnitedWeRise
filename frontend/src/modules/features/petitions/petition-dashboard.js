@@ -309,8 +309,8 @@ async function getMyPetitions() {
  * @returns {Promise<Object>} Petition details
  */
 async function getPetitionDetails(petitionId) {
-    const result = await apiRequest(`/petitions/${petitionId}`);
-    return result.petition || result;
+    const result = await apiRequest(`/petitions/${petitionId}/details`);
+    return result.data || result.petition || result;
 }
 
 /**
@@ -361,7 +361,7 @@ async function getPetitionSignatures(petitionId, params = {}) {
  */
 async function getQRCode(petitionId) {
     const result = await apiRequest(`/petitions/${petitionId}/qr-code`);
-    return result.qrCodeUrl || result.dataUrl || result;
+    return result.data || result.qrCodeUrl || result.dataUrl || result;
 }
 
 /**
@@ -989,7 +989,7 @@ function renderPetitionCard(petition) {
     const statusLabel = STATUS_LABELS[petition.status] || petition.status;
     const categoryLabel = CATEGORY_OPTIONS.find(c => c.value === petition.category)?.label;
 
-    const signatureCount = petition._count?.signatures ?? petition.signatureCount ?? 0;
+    const signatureCount = petition.currentSignatures ?? petition._count?.signatures ?? petition.signatureCount ?? 0;
     const goal = petition.signatureGoal;
 
     let progressHtml = '';
