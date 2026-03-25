@@ -465,9 +465,23 @@ export class PetitionSigningService {
     }
 
     // Step 2: Validate required signer fields
+    // Map petition field names (firstName, address) to submission field names (signerFirstName, signerAddress)
+    const fieldNameMap: Record<string, string> = {
+      firstName: 'signerFirstName',
+      lastName: 'signerLastName',
+      address: 'signerAddress',
+      city: 'signerCity',
+      state: 'signerState',
+      zip: 'signerZip',
+      county: 'signerCounty',
+      dateOfBirth: 'signerDateOfBirth',
+      email: 'signerEmail',
+      phone: 'signerPhone',
+    };
     const requiredFields = (petition.requiredSignerFields as string[] | null) || [];
     for (const field of requiredFields) {
-      const value = (signatureData as unknown as Record<string, unknown>)[field];
+      const submissionField = fieldNameMap[field] || field;
+      const value = (signatureData as unknown as Record<string, unknown>)[submissionField];
       if (!value || (typeof value === 'string' && value.trim().length === 0)) {
         throw new Error(`Required field missing: ${field}`);
       }

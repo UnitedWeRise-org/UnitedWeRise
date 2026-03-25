@@ -159,6 +159,42 @@ function isValidZip(zip) {
 }
 
 /**
+ * Standardize a street address for better voter file matching.
+ * Normalizes common abbreviations and formatting inconsistencies.
+ * @param {string} address - Raw street address
+ * @returns {string} Standardized address
+ */
+function standardizeAddress(address) {
+    if (!address) return address;
+    let s = address.trim();
+    // Normalize common street type abbreviations
+    const replacements = [
+        [/\bstreet\b/gi, 'St'], [/\bstr\b/gi, 'St'],
+        [/\bavenue\b/gi, 'Ave'], [/\bavn\b/gi, 'Ave'],
+        [/\bboulevard\b/gi, 'Blvd'], [/\bblv\b/gi, 'Blvd'],
+        [/\bdrive\b/gi, 'Dr'], [/\bdrv\b/gi, 'Dr'],
+        [/\blane\b/gi, 'Ln'], [/\broad\b/gi, 'Rd'],
+        [/\bcourt\b/gi, 'Ct'], [/\bcircle\b/gi, 'Cir'],
+        [/\bplace\b/gi, 'Pl'], [/\bterrace\b/gi, 'Ter'],
+        [/\bparkway\b/gi, 'Pkwy'], [/\bhighway\b/gi, 'Hwy'],
+        [/\bapartment\b/gi, 'Apt'], [/\bsuite\b/gi, 'Ste'],
+        [/\bunit\b/gi, 'Unit'], [/\bfloor\b/gi, 'Fl'],
+        [/\bnorth\b/gi, 'N'], [/\bsouth\b/gi, 'S'],
+        [/\beast\b/gi, 'E'], [/\bwest\b/gi, 'W'],
+        [/\bnortheast\b/gi, 'NE'], [/\bnorthwest\b/gi, 'NW'],
+        [/\bsoutheast\b/gi, 'SE'], [/\bsouthwest\b/gi, 'SW'],
+    ];
+    for (const [pattern, replacement] of replacements) {
+        s = s.replace(pattern, replacement);
+    }
+    // Remove extra spaces
+    s = s.replace(/\s+/g, ' ').trim();
+    // Capitalize first letter of each word
+    s = s.replace(/\b\w/g, c => c.toUpperCase());
+    return s;
+}
+
+/**
  * Format a number with commas for display
  * @param {number} num - Number to format
  * @returns {string} Formatted number string
@@ -306,6 +342,22 @@ function validateSignerFields() {
         }
     }
 
+    // If voter verification is enabled, address fields are required for the API lookup
+    if (petition.voterVerificationEnabled) {
+        if (!formData.signerAddress.trim() && !errors.signerAddress) {
+            errors.signerAddress = 'Address is required for voter registration verification';
+        }
+        if (!formData.signerCity.trim() && !errors.signerCity) {
+            errors.signerCity = 'City is required for voter registration verification';
+        }
+        if (!formData.signerState && !errors.signerState) {
+            errors.signerState = 'State is required for voter registration verification';
+        }
+        if (!formData.signerZip.trim() && !errors.signerZip) {
+            errors.signerZip = 'ZIP code is required for voter registration verification';
+        }
+    }
+
     // Validate optional fields if provided
     if (formData.signerEmail.trim() && !required.includes('email') && !isValidEmail(formData.signerEmail.trim())) {
         errors.signerEmail = 'Enter a valid email address';
@@ -382,6 +434,11 @@ async function handleSubmit() {
         state.errors.attestation = 'You must agree to the attestation statement';
         render();
         return;
+    }
+
+    // Standardize address before submission for better voter file matching
+    if (fd.signerAddress) {
+        fd.signerAddress = standardizeAddress(fd.signerAddress);
     }
 
     state.submitting = true;
