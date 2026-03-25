@@ -139,6 +139,7 @@
                         <div class="category-links">
                             <button class="nav-link" data-section="motd">MOTD</button>
                             <button class="nav-link" data-section="civic-engagement">Civic Engagement</button>
+                            <button class="nav-link" data-section="petitions">Petitions</button>
                         </div>
                     </div>
 
@@ -2300,6 +2301,34 @@ Auto-refresh enabled every 60 seconds
             <div id="orgPagination" class="pagination-controls" style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem;"></div>
         </div>
 
+        <!-- Petitions Section -->
+        <div id="petitions" class="dashboard-section">
+            <h2>Petitions Management</h2>
+            <div class="section-controls" style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                <select id="petitionStatusFilter" class="admin-select" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="all">All Statuses</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="CLOSED">Closed</option>
+                    <option value="ARCHIVED">Archived</option>
+                    <option value="SUBMITTED_TO_STATE">Submitted</option>
+                </select>
+                <select id="petitionCategoryFilter" class="admin-select" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="all">All Categories</option>
+                    <option value="BALLOT_ACCESS">Ballot Access</option>
+                    <option value="CIVIC_ADVOCACY">Civic Advocacy</option>
+                    <option value="COMMUNITY">Community</option>
+                    <option value="POLICY">Policy</option>
+                </select>
+                <input type="text" id="petitionsSearch" placeholder="Search petitions..." class="admin-search" style="flex: 1; min-width: 200px; padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;">
+                <button id="refreshPetitionsBtn" class="btn-refresh" title="Refresh" style="padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">🔄 Refresh</button>
+            </div>
+            <div id="petitionsContent">
+                <p style="text-align: center; color: #666; padding: 2rem;">Loading petitions...</p>
+            </div>
+            <div id="petitionsPagination" class="pagination-controls"></div>
+        </div>
+
             </main> <!-- Close admin-content -->
         </div> <!-- Close admin-layout -->
 
@@ -2721,6 +2750,7 @@ Auto-refresh enabled every 60 seconds
     <script type="module" src="src/modules/admin/controllers/ErrorsController.js"></script>
     <script type="module" src="src/modules/admin/controllers/CivicEngagementController.js"></script>
     <script type="module" src="src/modules/admin/controllers/OrganizationsController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/PetitionsController.js"></script>
 
     <!-- Load Module Loader (orchestrates everything) -->
     <script type="module" src="src/modules/admin/AdminModuleLoader.js"></script>

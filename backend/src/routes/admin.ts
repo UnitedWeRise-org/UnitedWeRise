@@ -21,6 +21,7 @@ import { pushNotificationService } from '../services/pushNotificationService';
 import { safePaginationParams, PAGINATION_LIMITS } from '../utils/safeJson';
 import { organizationService } from '../services/organizationService';
 import { MembershipStatus } from '@prisma/client';
+import { petitionAuditService, PETITION_AUDIT_ACTIONS, PETITION_ACTOR_TYPES } from '../services/petitionAuditService';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -8110,6 +8111,774 @@ router.post(
     } catch (error) {
       logger.error({ error, organizationId: req.params.organizationId, adminId: req.user?.id }, 'Failed to reactivate organization');
       res.status(500).json({ error: 'Failed to reactivate organization' });
+    }
+  }
+);
+
+// ==================== PETITION MANAGEMENT ====================
+
+/**
+ * @swagger
+ * /api/admin/petitions:
+ *   get:
+ *     tags: [Admin - Petitions]
+ *     summary: List all petitions with pagination, filtering, and search
+ *     description: Retrieves petitions with optional filtering by status, category, text search, and sorting. Includes creator info and signature counts.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 25
+ *         description: Items per page (max 100)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [ACTIVE, COMPLETED, EXPIRED, CLOSED, UNDER_REVIEW, DRAFT, SUBMITTED_TO_STATE, ARCHIVED, all]
+ *         description: Filter by petition status (default all)
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [BALLOT_ACCESS, CIVIC_ADVOCACY, COMMUNITY, POLICY, all]
+ *         description: Filter by petition category (default all)
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in title and description
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, currentSignatures, title]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort direction
+ *     responses:
+ *       200:
+ *         description: Petitions list with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 petitions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
+router.get('/petitions', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { page, limit, offset } = safePagePagination(
+      req.query.page as string | undefined,
+      req.query.limit as string | undefined,
+      100
+    );
+    const status = req.query.status as string;
+    const category = req.query.category as string;
+    const search = req.query.search as string;
+    const sortBy = (req.query.sortBy as string) || 'createdAt';
+    const sortOrder = (req.query.sortOrder as string) === 'asc' ? 'asc' : 'desc';
+
+    // Build where clause
+    const where: any = {};
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    if (category && category !== 'all') {
+      where.petitionCategory = category;
+    }
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    // Build orderBy
+    const validSortFields = ['createdAt', 'currentSignatures', 'title'];
+    const orderByField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const orderBy: any = { [orderByField]: sortOrder };
+
+    const [petitions, total] = await Promise.all([
+      prisma.petition.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          status: true,
+          petitionCategory: true,
+          currentSignatures: true,
+          signatureGoal: true,
+          shortCode: true,
+          customSlug: true,
+          voterVerificationEnabled: true,
+          createdAt: true,
+          updatedAt: true,
+          creator: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
+          },
+          candidate: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          _count: {
+            select: {
+              signatures: true
+            }
+          }
+        },
+        orderBy,
+        skip: offset,
+        take: limit
+      }),
+      prisma.petition.count({ where })
+    ]);
+
+    res.json({
+      petitions,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    logger.error({
+      error,
+      endpoint: '/api/admin/petitions',
+      action: 'get_petitions_error',
+      adminId: req.user?.id,
+      adminUsername: req.user?.username,
+      status: req.query.status,
+      category: req.query.category,
+      search: req.query.search
+    }, 'Failed to retrieve admin petitions list');
+    res.status(500).json({ error: 'Failed to retrieve petitions' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/petitions/stats:
+ *   get:
+ *     tags: [Admin - Petitions]
+ *     summary: Get petition summary statistics
+ *     description: Retrieves aggregate statistics for all petitions including counts by status, total signatures, today's signatures, flagged signatures, and category breakdowns.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Petition statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total:
+ *                   type: integer
+ *                 active:
+ *                   type: integer
+ *                 draft:
+ *                   type: integer
+ *                 closed:
+ *                   type: integer
+ *                 totalSignatures:
+ *                   type: integer
+ *                 signaturesToday:
+ *                   type: integer
+ *                 flaggedSignatures:
+ *                   type: integer
+ *                 categoryCounts:
+ *                   type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
+router.get('/petitions/stats', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [
+      total,
+      active,
+      draft,
+      closed,
+      totalSignaturesResult,
+      signaturesToday,
+      flaggedSignatures,
+      categoryGroups
+    ] = await Promise.all([
+      prisma.petition.count(),
+      prisma.petition.count({ where: { status: 'ACTIVE' } }),
+      prisma.petition.count({ where: { status: 'DRAFT' } }),
+      prisma.petition.count({ where: { status: 'CLOSED' } }),
+      prisma.petition.aggregate({ _sum: { currentSignatures: true } }),
+      prisma.petitionSignature.count({
+        where: { signedAt: { gte: todayStart } }
+      }),
+      prisma.petitionSignature.count({
+        where: { signatureStatus: 'FLAGGED_DUPLICATE' }
+      }),
+      prisma.petition.groupBy({
+        by: ['petitionCategory'],
+        _count: { petitionCategory: true }
+      })
+    ]);
+
+    // Build category counts object
+    const categoryCounts: Record<string, number> = {};
+    for (const group of categoryGroups) {
+      const key = group.petitionCategory || 'UNCATEGORIZED';
+      categoryCounts[key] = group._count.petitionCategory;
+    }
+
+    res.json({
+      total,
+      active,
+      draft,
+      closed,
+      totalSignatures: totalSignaturesResult._sum.currentSignatures || 0,
+      signaturesToday,
+      flaggedSignatures,
+      categoryCounts
+    });
+  } catch (error) {
+    logger.error({
+      error,
+      endpoint: '/api/admin/petitions/stats',
+      action: 'get_petition_stats_error',
+      adminId: req.user?.id,
+      adminUsername: req.user?.username
+    }, 'Failed to retrieve petition statistics');
+    res.status(500).json({ error: 'Failed to retrieve petition statistics' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/petitions/{id}:
+ *   get:
+ *     tags: [Admin - Petitions]
+ *     summary: Get detailed petition view
+ *     description: Retrieves a single petition with all fields, recent signatures (last 50), audit log (last 50), and the signing URL.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Petition ID
+ *     responses:
+ *       200:
+ *         description: Detailed petition data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 petition:
+ *                   type: object
+ *                 signatures:
+ *                   type: array
+ *                 auditLog:
+ *                   type: array
+ *                 signingUrl:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       404:
+ *         description: Petition not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/petitions/:id', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const petition = await prisma.petition.findUnique({
+      where: { id },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        candidate: {
+          select: {
+            id: true,
+            name: true,
+            party: true
+          }
+        },
+        _count: {
+          select: {
+            signatures: true
+          }
+        }
+      }
+    });
+
+    if (!petition) {
+      return res.status(404).json({ error: 'Petition not found' });
+    }
+
+    // Get last 50 signatures with signer info
+    const signatures = await prisma.petitionSignature.findMany({
+      where: { petitionId: id },
+      select: {
+        id: true,
+        signedAt: true,
+        isVerified: true,
+        signatureStatus: true,
+        signerFirstName: true,
+        signerLastName: true,
+        signerEmail: true,
+        signerCity: true,
+        signerState: true,
+        captchaVerified: true,
+        reviewNote: true,
+        reviewedBy: true,
+        reviewedAt: true,
+        user: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      },
+      orderBy: { signedAt: 'desc' },
+      take: 50
+    });
+
+    // Get last 50 audit log entries
+    const auditLog = await petitionAuditService.getAuditLog(id, { limit: 50 });
+
+    // Build signing URL
+    const domain = process.env.NODE_ENV === 'production'
+      ? 'https://www.unitedwerise.org'
+      : 'https://dev.unitedwerise.org';
+    const signingUrl = `${domain}/sign/${petition.customSlug || petition.shortCode}`;
+
+    res.json({
+      petition,
+      signatures,
+      auditLog,
+      signingUrl
+    });
+  } catch (error) {
+    logger.error({
+      error,
+      endpoint: '/api/admin/petitions/:id',
+      action: 'get_petition_detail_error',
+      adminId: req.user?.id,
+      adminUsername: req.user?.username,
+      petitionId: req.params.id
+    }, 'Failed to retrieve petition details');
+    res.status(500).json({ error: 'Failed to retrieve petition details' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/petitions/{id}/status:
+ *   patch:
+ *     tags: [Admin - Petitions]
+ *     summary: Change petition status
+ *     description: |
+ *       Updates a petition's status with audit logging. Valid transitions:
+ *       - DRAFT → ACTIVE (publish)
+ *       - ACTIVE → CLOSED (close with reason)
+ *       - Any status → ARCHIVED
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Petition ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *               - reason
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [ACTIVE, CLOSED, ARCHIVED]
+ *                 description: New status
+ *               reason:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 500
+ *                 description: Reason for status change
+ *     responses:
+ *       200:
+ *         description: Status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 petition:
+ *                   type: object
+ *       400:
+ *         description: Invalid status transition or validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       404:
+ *         description: Petition not found
+ *       500:
+ *         description: Server error
+ */
+router.patch('/petitions/:id/status',
+  requireStagingAuth,
+  requireAdmin,
+  [
+    body('status').isIn(['ACTIVE', 'CLOSED', 'ARCHIVED']).withMessage('Invalid target status'),
+    body('reason').isLength({ min: 10, max: 500 }).withMessage('Reason must be 10-500 characters'),
+    handleValidationErrors
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { status: newStatus, reason } = req.body;
+      const adminUser = req.user!;
+
+      const petition = await prisma.petition.findUnique({
+        where: { id },
+        select: { id: true, title: true, status: true }
+      });
+
+      if (!petition) {
+        return res.status(404).json({ error: 'Petition not found' });
+      }
+
+      // Validate status transitions
+      const currentStatus = petition.status;
+      const validTransitions: Record<string, string[]> = {
+        'DRAFT': ['ACTIVE', 'ARCHIVED'],
+        'ACTIVE': ['CLOSED', 'ARCHIVED'],
+        'COMPLETED': ['ARCHIVED'],
+        'EXPIRED': ['ARCHIVED'],
+        'CLOSED': ['ARCHIVED'],
+        'UNDER_REVIEW': ['ACTIVE', 'CLOSED', 'ARCHIVED'],
+        'SUBMITTED_TO_STATE': ['ARCHIVED'],
+        'ARCHIVED': [] // Cannot transition out of ARCHIVED
+      };
+
+      const allowed = validTransitions[currentStatus] || [];
+      if (!allowed.includes(newStatus)) {
+        return res.status(400).json({
+          error: `Invalid status transition from ${currentStatus} to ${newStatus}`,
+          currentStatus,
+          allowedTransitions: allowed
+        });
+      }
+
+      // Update petition status
+      const updatedPetition = await prisma.petition.update({
+        where: { id },
+        data: { status: newStatus },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          updatedAt: true
+        }
+      });
+
+      // Log to petition audit
+      await petitionAuditService.logAction(
+        id,
+        PETITION_AUDIT_ACTIONS.STATUS_CHANGED,
+        PETITION_ACTOR_TYPES.ADMIN,
+        adminUser.id,
+        undefined,
+        {
+          previousStatus: currentStatus,
+          newStatus,
+          reason,
+          adminUsername: adminUser.username
+        }
+      );
+
+      logger.info({
+        action: 'petition_status_changed',
+        adminId: adminUser.id,
+        adminUsername: adminUser.username,
+        petitionId: id,
+        petitionTitle: petition.title,
+        previousStatus: currentStatus,
+        newStatus,
+        reason
+      }, `Admin changed petition status from ${currentStatus} to ${newStatus}`);
+
+      res.json({
+        message: `Petition status updated to ${newStatus}`,
+        petition: updatedPetition
+      });
+    } catch (error) {
+      logger.error({
+        error,
+        endpoint: '/api/admin/petitions/:id/status',
+        action: 'update_petition_status_error',
+        adminId: req.user?.id,
+        adminUsername: req.user?.username,
+        petitionId: req.params.id,
+        targetStatus: req.body.status
+      }, 'Failed to update petition status');
+      res.status(500).json({ error: 'Failed to update petition status' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/petitions/{id}:
+ *   delete:
+ *     tags: [Admin - Petitions]
+ *     summary: Delete a petition (requires TOTP confirmation)
+ *     description: Permanently deletes a petition and all associated signatures. Requires TOTP token for confirmation. An audit log entry is created before deletion.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Petition ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - totpToken
+ *               - reason
+ *             properties:
+ *               totpToken:
+ *                 type: string
+ *                 description: TOTP verification token
+ *               reason:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 500
+ *                 description: Reason for deletion
+ *     responses:
+ *       200:
+ *         description: Petition deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 deletedPetition:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     signatureCount:
+ *                       type: integer
+ *       400:
+ *         description: Invalid TOTP token or validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       404:
+ *         description: Petition not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/petitions/:id',
+  requireAuth,
+  requireAdmin,
+  [
+    body('totpToken').notEmpty().withMessage('TOTP token is required'),
+    body('reason').isLength({ min: 10, max: 500 }).withMessage('Reason must be 10-500 characters'),
+    handleValidationErrors
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { totpToken, reason } = req.body;
+      const adminUser = req.user!;
+
+      // Verify TOTP
+      const userWithTOTP = await prisma.user.findUnique({
+        where: { id: adminUser.id },
+        select: { totpSecret: true, totpEnabled: true }
+      });
+
+      if (!userWithTOTP?.totpEnabled || !userWithTOTP?.totpSecret) {
+        logger.warn({
+          action: 'petition_delete_no_totp',
+          adminId: adminUser.id,
+          adminUsername: adminUser.username,
+          securityEvent: 'totp_not_configured'
+        }, `Admin ${adminUser.username} attempting petition delete without TOTP configured`);
+        return res.status(400).json({ error: 'TOTP not configured for this account' });
+      }
+
+      const validTOTP = speakeasy.totp.verify({
+        secret: userWithTOTP.totpSecret,
+        encoding: 'base32',
+        token: totpToken,
+        window: 2
+      });
+
+      if (!validTOTP) {
+        logger.warn({
+          action: 'petition_delete_invalid_totp',
+          adminId: adminUser.id,
+          adminUsername: adminUser.username,
+          petitionId: id,
+          securityEvent: 'invalid_totp'
+        }, `Invalid TOTP for petition deletion by ${adminUser.username}`);
+        return res.status(400).json({ error: 'Invalid TOTP token' });
+      }
+
+      // Fetch petition details before deletion
+      const petition = await prisma.petition.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          currentSignatures: true,
+          createdBy: true,
+          _count: {
+            select: { signatures: true }
+          }
+        }
+      });
+
+      if (!petition) {
+        return res.status(404).json({ error: 'Petition not found' });
+      }
+
+      // Log audit entry before deletion (audit log entries are not cascade-deleted since they have no FK constraint)
+      await petitionAuditService.logAction(
+        id,
+        'DELETED',
+        PETITION_ACTOR_TYPES.ADMIN,
+        adminUser.id,
+        undefined,
+        {
+          petitionTitle: petition.title,
+          petitionStatus: petition.status,
+          signatureCount: petition._count.signatures,
+          reason,
+          adminUsername: adminUser.username
+        }
+      );
+
+      // Delete petition (signatures cascade via onDelete: Cascade)
+      await prisma.petition.delete({
+        where: { id }
+      });
+
+      logger.warn({
+        action: 'petition_deleted',
+        adminId: adminUser.id,
+        adminUsername: adminUser.username,
+        petitionId: id,
+        petitionTitle: petition.title,
+        signatureCount: petition._count.signatures,
+        reason
+      }, `Admin permanently deleted petition: ${petition.title}`);
+
+      res.json({
+        message: 'Petition permanently deleted',
+        deletedPetition: {
+          id: petition.id,
+          title: petition.title,
+          signatureCount: petition._count.signatures
+        }
+      });
+    } catch (error) {
+      logger.error({
+        error,
+        endpoint: '/api/admin/petitions/:id',
+        action: 'delete_petition_error',
+        adminId: req.user?.id,
+        adminUsername: req.user?.username,
+        petitionId: req.params.id
+      }, 'Failed to delete petition');
+      res.status(500).json({ error: 'Failed to delete petition' });
     }
   }
 );

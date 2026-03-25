@@ -1790,6 +1790,76 @@ class AdminAPI {
         });
     }
 
+    // ============================================================
+    // PETITION MANAGEMENT
+    // ============================================================
+
+    /**
+     * Get petitions list with pagination and filtering
+     * @param {Object} params - Query parameters (page, limit, status, category, search, sortBy, sortOrder)
+     * @returns {Promise<Object>} Petitions list with pagination
+     */
+    async getPetitions(params = {}) {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/petitions`, params);
+        if (!response.success) {
+            throw new Error(`Failed to fetch petitions: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get detailed petition information including signatures and audit log
+     * @param {string} id - Petition ID
+     * @returns {Promise<Object>} Full petition details
+     */
+    async getPetitionDetails(id) {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/petitions/${id}`);
+        if (!response.success) {
+            throw new Error(`Failed to fetch petition details: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Change petition status (activate, close, archive)
+     * @param {string} id - Petition ID
+     * @param {string} status - New status
+     * @param {string} reason - Reason for status change
+     * @returns {Promise<Object>} Updated petition
+     */
+    async changePetitionStatus(id, status, reason) {
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/petitions/${id}/status`, { status, reason });
+        if (!response.success) {
+            throw new Error(`Failed to change petition status: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Delete a petition (requires TOTP confirmation)
+     * @param {string} id - Petition ID
+     * @returns {Promise<Object>} Deletion result
+     */
+    async deletePetition(id) {
+        const response = await this.delete(`${this.BACKEND_URL}/api/admin/petitions/${id}`);
+        if (!response.success) {
+            throw new Error(`Failed to delete petition: ${response.status}`);
+        }
+        return response.data;
+    }
+
+    /**
+     * Get petition statistics for dashboard overview
+     * @returns {Promise<Object>} Petition stats
+     */
+    async getPetitionStats() {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/petitions/stats`);
+        if (!response.success) {
+            throw new Error(`Failed to fetch petition stats: ${response.status}`);
+        }
+        return response.data;
+    }
+
     /**
      * Check if errors should be suppressed because the session is ending.
      * Used by all controller showError() methods to prevent error popups during logout.

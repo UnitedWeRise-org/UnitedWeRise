@@ -450,6 +450,9 @@ class AdminState {
                 case 'analytics':
                     await this.loadAnalyticsData({}, false);
                     break;
+                case 'petitions':
+                    await this.loadPetitionsData();
+                    break;
                 default:
                     console.warn(`Unknown section: ${sectionId}`);
             }
@@ -1009,6 +1012,29 @@ class AdminState {
 
     displayErrorsData(data) {
         console.log('Displaying errors data:', data);
+    }
+
+    displayPetitionsData(data) {
+        // PetitionsController overrides this via init()
+        console.log('Displaying petitions data:', data);
+    }
+
+    /**
+     * Load petitions data from backend
+     * @param {Object} filters - Query parameters for filtering
+     * @returns {Promise<Object>} Petitions data
+     */
+    async loadPetitionsData(filters = {}) {
+        try {
+            const data = await window.AdminAPI.getPetitions(filters);
+            if (this.displayPetitionsData) {
+                this.displayPetitionsData(data);
+            }
+            return data;
+        } catch (error) {
+            adminDebugError('AdminState', 'Failed to load petitions data', error);
+            this.showError('Failed to load petitions data');
+        }
     }
 
     /**

@@ -13,6 +13,7 @@
 // Import dependencies
 import { apiClient } from '../../core/api/client.js';
 import { showToast } from '../../utils/toast.js';
+import { showPetitionCreatorModal } from '../petitions/petition-creator-modal.js';
 
 console.log('🏛️ Loading civic organizing module...');
 
@@ -56,7 +57,7 @@ if (document.readyState === 'loading') {
 
 /**
  * Show Petition Creator
- * Redirects to the petition dashboard where users can create and manage petitions
+ * Opens the petition creation modal wizard for in-app petition creation
  * with full feature support (QR codes, attestation, voter verification, etc.)
  */
 function showPetitionCreator() {
@@ -65,7 +66,7 @@ function showPetitionCreator() {
         return;
     }
 
-    window.open('/petition-dashboard', '_blank');
+    showPetitionCreatorModal();
 }
 
 /**

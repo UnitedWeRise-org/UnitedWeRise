@@ -29,7 +29,8 @@ class AdminModuleLoader {
             'SystemController',
             'ErrorsController',
             'ExternalCandidatesController',
-            'CivicEngagementController'
+            'CivicEngagementController',
+            'PetitionsController'
         ];
         this.isInitialized = false;
 
@@ -44,7 +45,8 @@ class AdminModuleLoader {
             'analytics': 'AnalyticsController',
             'candidates': 'CandidatesController',
             'civic-engagement': 'CivicEngagementController',
-            'organizations': 'OrganizationsController'
+            'organizations': 'OrganizationsController',
+            'petitions': 'PetitionsController'
         };
         this.dependencies = {
             'AdminGlobalUtils': [],
@@ -67,7 +69,8 @@ class AdminModuleLoader {
             'ErrorsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'ExternalCandidatesController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'CivicEngagementController': ['AdminAPI', 'AdminState', 'adminDebugLog'],
-            'OrganizationsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
+            'OrganizationsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'PetitionsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
         };
 
         // Bind methods
@@ -433,6 +436,16 @@ class AdminModuleLoader {
                 window.organizationsController = new window.OrganizationsController();
                 await window.organizationsController.init();
                 this.modules.set('OrganizationsController', window.organizationsController);
+                break;
+
+            case 'PetitionsController':
+                if (!window.PetitionsController) {
+                    await adminDebugLog('AdminModuleLoader', 'PetitionsController not available - module skipped (non-critical)');
+                    return;
+                }
+                window.petitionsController = new window.PetitionsController();
+                await window.petitionsController.init();
+                this.modules.set('PetitionsController', window.petitionsController);
                 break;
 
             default:
