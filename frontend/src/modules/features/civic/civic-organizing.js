@@ -12,7 +12,7 @@
 
 // Import dependencies
 import { apiClient } from '../../core/api/client.js';
-import { showToast } from '../../utils/toast.js';
+import { showToast } from '../../../utils/toast.js';
 import { showPetitionCreatorModal } from '../petitions/petition-creator-modal.js';
 
 console.log('🏛️ Loading civic organizing module...');
