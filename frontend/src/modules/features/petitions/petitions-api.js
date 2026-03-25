@@ -175,7 +175,7 @@ export async function getPetitionDetails(id) {
  */
 export async function publishPetition(id) {
     const response = await fetch(API_CONFIG.url(`${PETITIONS_BASE}/${encodeURIComponent(id)}/publish`), {
-        method: 'POST',
+        method: 'PATCH',
         credentials: 'include',
         headers: authHeaders()
     });

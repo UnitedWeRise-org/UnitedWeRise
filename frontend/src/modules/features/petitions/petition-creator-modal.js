@@ -269,7 +269,10 @@ function renderDetailsStep() {
     const { title, description, petitionCategory, geographicScope, signatureGoal } = modalState.formData;
     const errors = modalState.errors;
 
-    const categoryOptions = PETITION_CATEGORIES.map(c =>
+    const availableCategories = modalState.isCandidate
+        ? PETITION_CATEGORIES
+        : PETITION_CATEGORIES.filter(c => c.value !== 'BALLOT_ACCESS');
+    const categoryOptions = availableCategories.map(c =>
         `<option value="${c.value}" ${petitionCategory === c.value ? 'selected' : ''}>${c.label}</option>`
     ).join('');
 

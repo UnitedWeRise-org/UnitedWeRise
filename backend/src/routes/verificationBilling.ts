@@ -91,9 +91,18 @@ router.get('/balance', requireAuth, async (req: AuthRequest, res: Response) => {
     const candidate = await getCandidateForUser(userId);
 
     if (!candidate) {
-      return res.status(403).json({
-        success: false,
-        error: 'No candidate profile linked to this account',
+      // Non-candidates can still use verification — return zero balance
+      return res.json({
+        success: true,
+        data: {
+          totalPurchased: 0,
+          totalConsumed: 0,
+          remaining: 0,
+          dailyCap: 0,
+          dailyConsumed: 0,
+          autoReplenish: false,
+          hasBalance: false
+        }
       });
     }
 
