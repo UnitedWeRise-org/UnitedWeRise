@@ -179,7 +179,7 @@ function render() {
             <div class="petition-modal-content" role="dialog" aria-modal="true" aria-label="Create Petition">
                 <div class="petition-modal-header">
                     <h3>${modalState.createdPetition ? 'Petition Created' : step.title}</h3>
-                    <button class="petition-modal-close" data-action="close-modal" title="Close" aria-label="Close">&times;</button>
+                    <button class="petition-modal-close" data-petition-action="close-modal" title="Close" aria-label="Close">&times;</button>
                 </div>
 
                 <div class="petition-modal-steps">
@@ -236,7 +236,7 @@ function renderFooter() {
     return `
         <div class="petition-modal-footer">
             ${!isFirst ? `
-                <button class="petition-modal-btn petition-modal-btn-secondary" data-action="prev-step">
+                <button class="petition-modal-btn petition-modal-btn-secondary" data-petition-action="prev-step">
                     Back
                 </button>
             ` : '<div></div>'}
@@ -244,13 +244,13 @@ function renderFooter() {
             ${isLast ? `
                 <button
                     class="petition-modal-btn petition-modal-btn-primary"
-                    data-action="create-petition"
+                    data-petition-action="create-petition"
                     ${modalState.submitting ? 'disabled' : ''}
                 >
                     ${modalState.submitting ? 'Creating...' : 'Create as Draft'}
                 </button>
             ` : `
-                <button class="petition-modal-btn petition-modal-btn-primary" data-action="next-step">
+                <button class="petition-modal-btn petition-modal-btn-primary" data-petition-action="next-step">
                     Next
                 </button>
             `}
@@ -686,7 +686,7 @@ function renderSuccessState() {
                         readonly
                         id="petitionSigningLink"
                     />
-                    <button class="petition-modal-btn petition-modal-btn-secondary" data-action="copy-link">
+                    <button class="petition-modal-btn petition-modal-btn-secondary" data-petition-action="copy-link">
                         Copy
                     </button>
                 </div>
@@ -694,13 +694,13 @@ function renderSuccessState() {
 
             <div class="petition-modal-success-actions">
                 ${petition.status === 'DRAFT' ? `
-                    <button class="petition-modal-btn petition-modal-btn-primary" data-action="publish-petition">
+                    <button class="petition-modal-btn petition-modal-btn-primary" data-petition-action="publish-petition">
                         Publish Now
                     </button>
                 ` : `
                     <span class="petition-modal-published-badge">Published</span>
                 `}
-                <button class="petition-modal-btn petition-modal-btn-secondary" data-action="close-modal">
+                <button class="petition-modal-btn petition-modal-btn-secondary" data-petition-action="close-modal">
                     Close
                 </button>
             </div>
@@ -725,10 +725,10 @@ function attachListeners() {
 
     // Action button delegation
     modalContainer.addEventListener('click', (e) => {
-        const actionEl = e.target.closest('[data-action]');
+        const actionEl = e.target.closest('[data-petition-action]');
         if (!actionEl) return;
 
-        const action = actionEl.dataset.action;
+        const action = actionEl.dataset.petitionAction;
         switch (action) {
             case 'next-step':
                 nextStep();
@@ -1022,7 +1022,7 @@ async function fetchQRCode(petitionId) {
 async function handlePublish() {
     if (!modalState.createdPetition) return;
 
-    const publishBtn = modalContainer?.querySelector('[data-action="publish-petition"]');
+    const publishBtn = modalContainer?.querySelector('[data-petition-action="publish-petition"]');
     if (publishBtn) {
         publishBtn.disabled = true;
         publishBtn.textContent = 'Publishing...';
