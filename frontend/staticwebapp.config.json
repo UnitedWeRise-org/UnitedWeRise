@@ -2,18 +2,11 @@
   "routes": [
     {
       "route": "/sign/*",
-      "serve": "/sign.html",
-      "statusCode": 200
+      "rewrite": "/sign.html"
     },
     {
       "route": "/petition-dashboard",
-      "serve": "/petition-dashboard.html",
-      "statusCode": 200
-    },
-    {
-      "route": "/*",
-      "serve": "/index.html",
-      "statusCode": 200
+      "rewrite": "/petition-dashboard.html"
     }
   ],
   "navigationFallback": {
@@ -36,7 +29,9 @@
       "/*.woff",
       "/*.woff2",
       "/*.ttf",
-      "/*.eot"
+      "/*.eot",
+      "/sign/*",
+      "/petition-dashboard"
     ]
   },
   "mimeTypes": {

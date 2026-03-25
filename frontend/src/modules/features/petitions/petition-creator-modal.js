@@ -1018,7 +1018,7 @@ async function handleCreate() {
         }
 
         const result = await createPetition(petitionData);
-        const petition = result.petition || result;
+        const petition = result.data || result.petition || result;
 
         modalState.createdPetition = {
             ...petition,
@@ -1078,7 +1078,7 @@ async function handlePublish() {
 
     try {
         const result = await publishPetition(modalState.createdPetition.id);
-        const updated = result.petition || result;
+        const updated = result.data || result.petition || result;
         modalState.createdPetition.status = updated.status || 'ACTIVE';
         render();
         attachListeners();
