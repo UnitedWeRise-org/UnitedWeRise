@@ -641,6 +641,11 @@ function showDefaultOrganizingView() {
                     🏢 Organizations
                 </button>
             </div>
+            <div style="margin-top: 1.5rem;">
+                <a href="/petition-dashboard" target="_blank" style="color: #4b5c09; text-decoration: underline; font-size: 0.95rem;">
+                    📋 View & Manage My Petitions
+                </a>
+            </div>
         </div>
     `;
 }

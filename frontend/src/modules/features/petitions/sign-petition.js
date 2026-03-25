@@ -394,7 +394,8 @@ async function handleSubmit() {
             signerLastName: fd.signerLastName.trim(),
             signatureConfirmation: fd.signatureConfirmation.trim(),
             attestedAt: fd.attestedAt,
-            privacyConsented: fd.privacyConsented,
+            attestationLanguageShown: state.petition.declarationLanguage || 'I affirm under penalty of perjury that the information provided is true and correct.',
+            privacyConsented: true,
             captchaToken: fd.captchaToken,
             deviceFingerprint: fd.deviceFingerprint
         };

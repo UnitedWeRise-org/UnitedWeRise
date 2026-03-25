@@ -1023,7 +1023,7 @@ async function fetchQRCode(petitionId) {
     try {
         const qrResult = await getQRCode(petitionId);
         if (modalState.createdPetition && modalState.createdPetition.id === petitionId) {
-            modalState.createdPetition.qrCodeData = qrResult.qrCode || qrResult.image || qrResult.dataUrl;
+            modalState.createdPetition.qrCodeData = qrResult.data || qrResult.qrCode || qrResult.image || qrResult.dataUrl;
             render();
             attachListeners();
         }
