@@ -299,7 +299,7 @@ async function createPetition(petitionData) {
  * @returns {Promise<Array>} Array of petition objects
  */
 async function getMyPetitions() {
-    const result = await apiRequest('/petitions/me');
+    const result = await apiRequest('/petitions/mine');
     return result.petitions || result.data || [];
 }
 
