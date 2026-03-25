@@ -203,50 +203,6 @@ class AdvancedCaching {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 📦 SMART MODULE LOADING WITH CACHING
-    // ═══════════════════════════════════════════════════════════════
-
-    async loadModuleWithCache(moduleUrl) {
-        // Try to get from cache first
-        let moduleCode = await this.getCachedModule(moduleUrl);
-
-        if (moduleCode) {
-            // Execute cached module
-            console.log(`⚡ Using cached module: ${moduleUrl}`);
-            this.executeModule(moduleCode);
-            return;
-        }
-
-        // Not in cache, fetch from server
-        console.log(`🌐 Fetching module: ${moduleUrl}`);
-        try {
-            const response = await fetch(moduleUrl);
-            moduleCode = await response.text();
-
-            // Cache for next time
-            await this.cacheModule(moduleUrl, moduleCode);
-
-            // Execute module
-            this.executeModule(moduleCode);
-
-        } catch (error) {
-            console.error(`Failed to load module ${moduleUrl}:`, error);
-            throw error;
-        }
-    }
-
-    executeModule(moduleCode) {
-        try {
-            // Safely execute the module code
-            const script = document.createElement('script');
-            script.textContent = moduleCode;
-            document.head.appendChild(script);
-        } catch (error) {
-            console.error('Failed to execute module:', error);
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
     // 🧹 CACHE MANAGEMENT
     // ═══════════════════════════════════════════════════════════════
 
@@ -389,13 +345,7 @@ function cacheUserProfile(user) {
     });
 }
 
-// Example 2: Load modules with caching
-async function loadMapWithCache() {
-    await advancedCache.loadModuleWithCache('/src/js/map-maplibre.js');
-    // Map loads instantly if cached, or downloads and caches if not
-}
-
-// Example 3: Cache API responses
+// Example 2: Cache API responses
 async function getCachedPosts() {
     // Try cache first
     let posts = advancedCache.getCachedApiResponse('/api/feed');

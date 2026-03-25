@@ -521,20 +521,8 @@ document.addEventListener('DOMContentLoaded', addHCaptchaToRegistration);
 // Also add when auth modal is opened (in case it's dynamically created)
 document.addEventListener('authModalOpened', addHCaptchaToRegistration);
 
-// Load components
-document.addEventListener('DOMContentLoaded', () => {
-    // Load device fingerprinting for anti-bot protection
-    const fingerprintingScript = document.createElement('script');
-    fingerprintingScript.src = '/src/services/deviceFingerprinting.js';
-    fingerprintingScript.async = true;
-    document.head.appendChild(fingerprintingScript);
-    
-    // Load onboarding flow script
-    const onboardingScript = document.createElement('script');
-    onboardingScript.src = '/src/components/OnboardingFlow.js';
-    onboardingScript.async = true;
-    document.head.appendChild(onboardingScript);
-});
+// Components (OnboardingFlow, DeviceFingerprinting) are loaded via ES6 module
+// imports in main.js. No dynamic script injection needed.
 
 // Show onboarding for newly registered users
 window.onVerificationComplete = () => {

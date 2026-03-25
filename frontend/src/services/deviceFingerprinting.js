@@ -231,7 +231,6 @@ class DeviceFingerprinting {
 const deviceFingerprinting = new DeviceFingerprinting();
 window.deviceFingerprinting = deviceFingerprinting;
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = DeviceFingerprinting;
-}
+// ES6 module exports
+export default DeviceFingerprinting;
+export { deviceFingerprinting };

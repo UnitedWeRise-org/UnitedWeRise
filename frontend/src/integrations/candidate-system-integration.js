@@ -4468,17 +4468,12 @@ class CandidateSystemIntegration {
             return;
         }
 
-        // Load the PolicyPlatformManager script if not already loaded
+        // PolicyPlatformManager is loaded via ES6 module import in main.js
         if (!window.PolicyPlatformManager) {
-            const script = document.createElement('script');
-            script.src = '/src/components/PolicyPlatformManager.js';
-            script.onload = () => {
-                this.displayPolicyPlatform(mainContent);
-            };
-            document.head.appendChild(script);
-        } else {
-            this.displayPolicyPlatform(mainContent);
+            adminDebugError('PolicyPlatformManager not loaded — module import may have failed');
+            return;
         }
+        this.displayPolicyPlatform(mainContent);
     }
 
     // Display the Policy Platform interface

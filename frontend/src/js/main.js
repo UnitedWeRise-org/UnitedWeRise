@@ -118,7 +118,9 @@ import '../components/CandidateSystem.js';  // Candidate registration & manageme
 
 // Phase 5e-civic: Civic engagement components
 import '../components/OnboardingFlow.js';  // New user onboarding (used by backend-integration.js)
+import '../components/PolicyPlatformManager.js';  // Candidate policy platform management (used by candidate-system-integration.js)
 import '../components/PolicyDisplay.js';  // Candidate policy display
+import '../services/deviceFingerprinting.js';  // Anti-bot device fingerprinting (used by auth modal)
 import '../components/PolicyComparison.js';  // AI policy comparison
 import '../components/TopicNavigation.js';  // Topic mode navigation
 
