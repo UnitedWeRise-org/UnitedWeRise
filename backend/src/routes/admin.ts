@@ -8701,6 +8701,221 @@ router.patch('/petitions/:id/status',
 
 /**
  * @swagger
+ * /api/admin/petitions/{id}/edit:
+ *   patch:
+ *     tags: [Admin - Petitions]
+ *     summary: Edit a petition's fields (admin)
+ *     description: |
+ *       Allows an admin to edit editable fields on a petition. Only provided fields
+ *       are updated; omitted fields remain unchanged. All changes are audit-logged.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Petition ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 500
+ *                 description: Petition title
+ *               description:
+ *                 type: string
+ *                 minLength: 1
+ *                 description: Petition description
+ *               status:
+ *                 type: string
+ *                 enum: [DRAFT, ACTIVE, CLOSED, ARCHIVED]
+ *                 description: Petition status
+ *               voterVerificationEnabled:
+ *                 type: boolean
+ *                 description: Whether voter verification is enabled
+ *               requiredSignerFields:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Required signer field types
+ *               declarationLanguage:
+ *                 type: string
+ *                 description: State-specific attestation language
+ *               signatureGoal:
+ *                 type: integer
+ *                 nullable: true
+ *                 description: Target number of signatures
+ *               petitionCategory:
+ *                 type: string
+ *                 enum: [BALLOT_ACCESS, CIVIC_ADVOCACY, COMMUNITY, POLICY]
+ *                 description: Petition category
+ *               party:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Party line (for ballot access)
+ *               electionYear:
+ *                 type: integer
+ *                 nullable: true
+ *                 description: Election cycle year
+ *               filingDeadline:
+ *                 type: string
+ *                 format: date-time
+ *                 nullable: true
+ *                 description: Filing deadline
+ *               privacyConsentText:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Privacy/consent language
+ *     responses:
+ *       200:
+ *         description: Petition updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 petition:
+ *                   type: object
+ *       400:
+ *         description: Validation error or no fields provided
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       404:
+ *         description: Petition not found
+ *       500:
+ *         description: Server error
+ */
+router.patch('/petitions/:id/edit',
+  requireAuth,
+  requireAdmin,
+  [
+    body('title').optional().isString().isLength({ min: 1, max: 500 }).withMessage('Title must be 1-500 characters'),
+    body('description').optional().isString().isLength({ min: 1 }).withMessage('Description must not be empty'),
+    body('status').optional().isIn(['DRAFT', 'ACTIVE', 'CLOSED', 'ARCHIVED']).withMessage('Invalid status'),
+    body('voterVerificationEnabled').optional().isBoolean().withMessage('voterVerificationEnabled must be a boolean'),
+    body('requiredSignerFields').optional().isArray().withMessage('requiredSignerFields must be an array'),
+    body('declarationLanguage').optional().isString().withMessage('declarationLanguage must be a string'),
+    body('signatureGoal').optional({ nullable: true }).isInt({ min: 1 }).withMessage('signatureGoal must be a positive integer'),
+    body('petitionCategory').optional().isIn(['BALLOT_ACCESS', 'CIVIC_ADVOCACY', 'COMMUNITY', 'POLICY']).withMessage('Invalid petition category'),
+    body('party').optional({ nullable: true }).isString().withMessage('party must be a string'),
+    body('electionYear').optional({ nullable: true }).isInt({ min: 2000, max: 2100 }).withMessage('electionYear must be a valid year'),
+    body('filingDeadline').optional({ nullable: true }).isISO8601().withMessage('filingDeadline must be a valid date'),
+    body('privacyConsentText').optional({ nullable: true }).isString().withMessage('privacyConsentText must be a string'),
+    handleValidationErrors
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const adminUser = req.user!;
+
+      // Fetch existing petition
+      const petition = await prisma.petition.findUnique({
+        where: { id },
+        select: {
+          id: true, title: true, description: true, status: true,
+          voterVerificationEnabled: true, requiredSignerFields: true,
+          declarationLanguage: true, signatureGoal: true, petitionCategory: true,
+          party: true, electionYear: true, filingDeadline: true, privacyConsentText: true
+        }
+      });
+
+      if (!petition) {
+        return res.status(404).json({ error: 'Petition not found' });
+      }
+
+      // Build update data from provided fields only
+      const editableFields = [
+        'title', 'description', 'status', 'voterVerificationEnabled',
+        'requiredSignerFields', 'declarationLanguage', 'signatureGoal',
+        'petitionCategory', 'party', 'electionYear', 'filingDeadline',
+        'privacyConsentText'
+      ];
+
+      const updateData: Record<string, any> = {};
+      const changedFields: Record<string, { from: any; to: any }> = {};
+
+      for (const field of editableFields) {
+        if (req.body[field] !== undefined) {
+          const oldValue = (petition as any)[field];
+          const newValue = field === 'filingDeadline' && req.body[field]
+            ? new Date(req.body[field])
+            : req.body[field];
+
+          updateData[field] = newValue;
+          changedFields[field] = { from: oldValue, to: newValue };
+        }
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: 'No editable fields provided' });
+      }
+
+      // Update the petition
+      const updatedPetition = await prisma.petition.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true, title: true, description: true, status: true,
+          voterVerificationEnabled: true, requiredSignerFields: true,
+          declarationLanguage: true, signatureGoal: true, petitionCategory: true,
+          party: true, electionYear: true, filingDeadline: true,
+          privacyConsentText: true, updatedAt: true
+        }
+      });
+
+      // Log to petition audit
+      await petitionAuditService.logAction(
+        id,
+        PETITION_AUDIT_ACTIONS.EDITED,
+        PETITION_ACTOR_TYPES.ADMIN,
+        adminUser.id,
+        undefined,
+        {
+          changedFields,
+          adminUsername: adminUser.username
+        }
+      );
+
+      logger.info({
+        action: 'petition_edited',
+        adminId: adminUser.id,
+        adminUsername: adminUser.username,
+        petitionId: id,
+        petitionTitle: updatedPetition.title,
+        fieldsChanged: Object.keys(changedFields)
+      }, `Admin edited petition: ${updatedPetition.title}`);
+
+      res.json({
+        message: 'Petition updated successfully',
+        petition: updatedPetition
+      });
+    } catch (error) {
+      logger.error({
+        error,
+        endpoint: '/api/admin/petitions/:id/edit',
+        action: 'edit_petition_error',
+        adminId: req.user?.id,
+        adminUsername: req.user?.username,
+        petitionId: req.params.id
+      }, 'Failed to edit petition');
+      res.status(500).json({ error: 'Failed to edit petition' });
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/admin/petitions/{id}:
  *   delete:
  *     tags: [Admin - Petitions]

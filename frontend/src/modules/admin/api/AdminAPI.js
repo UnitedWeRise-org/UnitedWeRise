@@ -1849,6 +1849,24 @@ class AdminAPI {
     }
 
     /**
+     * Edit a petition's fields (admin)
+     * @param {string} id - Petition ID
+     * @param {Object} data - Fields to update (only provided fields are changed)
+     * @returns {Promise<Object>} Updated petition
+     */
+    async updatePetition(id, data) {
+        const response = await this.call(`${this.BACKEND_URL}/api/admin/petitions/${id}/edit`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+        const json = await response.json();
+        if (!response.ok) {
+            throw new Error(json.error || `Failed to update petition: ${response.status}`);
+        }
+        return json.data || json;
+    }
+
+    /**
      * Get petition statistics for dashboard overview
      * @returns {Promise<Object>} Petition stats
      */

@@ -24,6 +24,7 @@ export const PETITION_AUDIT_ACTIONS = {
   CLOSED: 'CLOSED',
   QR_GENERATED: 'QR_GENERATED',
   STATUS_CHANGED: 'STATUS_CHANGED',
+  EDITED: 'EDITED',
 } as const;
 
 export type PetitionAuditAction = typeof PETITION_AUDIT_ACTIONS[keyof typeof PETITION_AUDIT_ACTIONS];

@@ -148,6 +148,15 @@ class PetitionsController {
             case 'delete':
                 await this.deletePetition(petitionId);
                 break;
+            case 'edit':
+                await this.toggleEditForm(petitionId);
+                break;
+            case 'save-edit':
+                await this.savePetitionEdit(petitionId);
+                break;
+            case 'cancel-edit':
+                await this.cancelEditForm(petitionId);
+                break;
             case 'copy-link':
                 await this.copySigningLink(petitionId);
                 break;
@@ -561,6 +570,14 @@ class PetitionsController {
                 </div>
             </div>
 
+            <div style="margin: 1rem 0; padding-top: 0.5rem; border-top: 1px solid #dee2e6;">
+                <button data-petition-action="edit" data-petition-id="${petition.id}" class="btn-sm" style="background: #fd7e14; color: white; padding: 0.4rem 1rem; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">
+                    Edit Petition
+                </button>
+            </div>
+
+            <div id="petition-edit-form-${petition.id}" style="display: none;"></div>
+
             <h4 style="margin: 1rem 0 0.5rem;">Signatures (${signatures.length})</h4>
             ${signaturesTable}
 
@@ -627,6 +644,246 @@ class PetitionsController {
         } catch (error) {
             adminDebugError('PetitionsController', 'Failed to delete petition', error);
             this.showError(`Failed to delete petition: ${error.message}`);
+        }
+    }
+
+    /**
+     * Toggle the inline edit form for a petition
+     * @param {string} id - Petition ID
+     */
+    async toggleEditForm(id) {
+        const formContainer = document.getElementById(`petition-edit-form-${id}`);
+        if (!formContainer) return;
+
+        // If already visible, hide it
+        if (formContainer.style.display !== 'none') {
+            formContainer.style.display = 'none';
+            formContainer.innerHTML = '';
+            return;
+        }
+
+        try {
+            // Fetch latest petition data for the form
+            const result = await window.AdminAPI.getPetitionDetails(id);
+            const petition = result?.petition || result || {};
+
+            formContainer.innerHTML = this.renderEditForm(petition);
+            formContainer.style.display = 'block';
+
+            await adminDebugLog('PetitionsController', 'Edit form opened', { petitionId: id });
+        } catch (error) {
+            adminDebugError('PetitionsController', 'Failed to open edit form', error);
+            this.showError('Failed to load petition data for editing');
+        }
+    }
+
+    /**
+     * Cancel the edit form and hide it
+     * @param {string} id - Petition ID
+     */
+    async cancelEditForm(id) {
+        const formContainer = document.getElementById(`petition-edit-form-${id}`);
+        if (formContainer) {
+            formContainer.style.display = 'none';
+            formContainer.innerHTML = '';
+        }
+    }
+
+    /**
+     * Render the inline edit form HTML
+     * @param {Object} petition - Full petition data
+     * @returns {string} HTML string for the edit form
+     */
+    renderEditForm(petition) {
+        const statuses = ['DRAFT', 'ACTIVE', 'CLOSED', 'ARCHIVED'];
+        const categories = ['BALLOT_ACCESS', 'CIVIC_ADVOCACY', 'COMMUNITY', 'POLICY'];
+
+        const requiredFields = Array.isArray(petition.requiredSignerFields || petition.requiredFields)
+            ? (petition.requiredSignerFields || petition.requiredFields)
+            : [];
+
+        const allSignerFields = [
+            'signerFirstName', 'signerLastName', 'signerAddress',
+            'signerCity', 'signerState', 'signerZip'
+        ];
+
+        const filingDeadline = petition.filingDeadline
+            ? new Date(petition.filingDeadline).toISOString().slice(0, 16)
+            : '';
+
+        return `
+            <div style="background: #fff; border: 2px solid #fd7e14; border-radius: 6px; padding: 1.5rem; margin: 1rem 0;">
+                <h4 style="margin: 0 0 1rem; color: #fd7e14;">Edit Petition</h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Title</label>
+                        <input type="text" id="edit-petition-title-${petition.id}" value="${this.escapeHtml(petition.title || '')}"
+                            style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Status</label>
+                        <select id="edit-petition-status-${petition.id}" style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px;">
+                            ${statuses.map(s => `<option value="${s}" ${petition.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div style="grid-column: 1 / -1;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Description</label>
+                        <textarea id="edit-petition-description-${petition.id}" rows="4"
+                            style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; resize: vertical;">${this.escapeHtml(petition.description || '')}</textarea>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Petition Category</label>
+                        <select id="edit-petition-category-${petition.id}" style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px;">
+                            <option value="">-- None --</option>
+                            ${categories.map(c => `<option value="${c}" ${petition.petitionCategory === c ? 'selected' : ''}>${c.replace(/_/g, ' ')}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Signature Goal</label>
+                        <input type="number" id="edit-petition-goal-${petition.id}" value="${petition.signatureGoal || ''}" min="1" placeholder="Optional"
+                            style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">
+                            <input type="checkbox" id="edit-petition-voter-verify-${petition.id}" ${petition.voterVerificationEnabled ? 'checked' : ''}>
+                            Voter Verification Enabled
+                        </label>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Party</label>
+                        <input type="text" id="edit-petition-party-${petition.id}" value="${this.escapeHtml(petition.party || '')}" placeholder="Optional"
+                            style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Election Year</label>
+                        <input type="number" id="edit-petition-election-year-${petition.id}" value="${petition.electionYear || ''}" min="2000" max="2100" placeholder="Optional"
+                            style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Filing Deadline</label>
+                        <input type="datetime-local" id="edit-petition-deadline-${petition.id}" value="${filingDeadline}"
+                            style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Required Signer Fields</label>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${allSignerFields.map(f => `
+                                <label style="font-weight: normal; font-size: 0.9rem;">
+                                    <input type="checkbox" class="edit-petition-req-field-${petition.id}" value="${f}" ${requiredFields.includes(f) ? 'checked' : ''}>
+                                    ${f.replace('signer', '').replace(/([A-Z])/g, ' $1').trim()}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div style="grid-column: 1 / -1;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Declaration Language</label>
+                        <textarea id="edit-petition-declaration-${petition.id}" rows="3"
+                            style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; resize: vertical;">${this.escapeHtml(petition.declarationLanguage || '')}</textarea>
+                    </div>
+
+                    <div style="grid-column: 1 / -1;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Privacy Consent Text</label>
+                        <textarea id="edit-petition-privacy-${petition.id}" rows="2"
+                            style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; resize: vertical;">${this.escapeHtml(petition.privacyConsentText || '')}</textarea>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button data-petition-action="save-edit" data-petition-id="${petition.id}" class="btn-sm" style="background: #28a745; color: white; padding: 0.4rem 1.5rem; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">
+                        Save Changes
+                    </button>
+                    <button data-petition-action="cancel-edit" data-petition-id="${petition.id}" class="btn-sm" style="background: #6c757d; color: white; padding: 0.4rem 1.5rem; border: none; border-radius: 3px; cursor: pointer;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Save petition edit form data
+     * @param {string} id - Petition ID
+     */
+    async savePetitionEdit(id) {
+        try {
+            const data = {};
+
+            // Gather form values
+            const titleEl = document.getElementById(`edit-petition-title-${id}`);
+            if (titleEl) data.title = titleEl.value.trim();
+
+            const descEl = document.getElementById(`edit-petition-description-${id}`);
+            if (descEl) data.description = descEl.value.trim();
+
+            const statusEl = document.getElementById(`edit-petition-status-${id}`);
+            if (statusEl) data.status = statusEl.value;
+
+            const categoryEl = document.getElementById(`edit-petition-category-${id}`);
+            if (categoryEl) data.petitionCategory = categoryEl.value || null;
+
+            const goalEl = document.getElementById(`edit-petition-goal-${id}`);
+            if (goalEl) data.signatureGoal = goalEl.value ? parseInt(goalEl.value, 10) : null;
+
+            const verifyEl = document.getElementById(`edit-petition-voter-verify-${id}`);
+            if (verifyEl) data.voterVerificationEnabled = verifyEl.checked;
+
+            const partyEl = document.getElementById(`edit-petition-party-${id}`);
+            if (partyEl) data.party = partyEl.value.trim() || null;
+
+            const yearEl = document.getElementById(`edit-petition-election-year-${id}`);
+            if (yearEl) data.electionYear = yearEl.value ? parseInt(yearEl.value, 10) : null;
+
+            const deadlineEl = document.getElementById(`edit-petition-deadline-${id}`);
+            if (deadlineEl) data.filingDeadline = deadlineEl.value ? new Date(deadlineEl.value).toISOString() : null;
+
+            const declarationEl = document.getElementById(`edit-petition-declaration-${id}`);
+            if (declarationEl) data.declarationLanguage = declarationEl.value.trim() || null;
+
+            const privacyEl = document.getElementById(`edit-petition-privacy-${id}`);
+            if (privacyEl) data.privacyConsentText = privacyEl.value.trim() || null;
+
+            // Gather required signer fields checkboxes
+            const fieldCheckboxes = document.querySelectorAll(`.edit-petition-req-field-${id}:checked`);
+            data.requiredSignerFields = Array.from(fieldCheckboxes).map(cb => cb.value);
+
+            // Validate required fields
+            if (!data.title) {
+                this.showError('Title is required.');
+                return;
+            }
+            if (!data.description) {
+                this.showError('Description is required.');
+                return;
+            }
+
+            await window.AdminAPI.updatePetition(id, data);
+
+            // Close the edit form
+            const formContainer = document.getElementById(`petition-edit-form-${id}`);
+            if (formContainer) {
+                formContainer.style.display = 'none';
+                formContainer.innerHTML = '';
+            }
+
+            // Refresh the detail view and list
+            this.expandedPetitionId = null;
+            await this.loadData();
+
+            await adminDebugLog('PetitionsController', 'Petition edited successfully', { petitionId: id });
+        } catch (error) {
+            adminDebugError('PetitionsController', 'Failed to save petition edit', error);
+            this.showError(`Failed to save petition: ${error.message}`);
         }
     }
 
