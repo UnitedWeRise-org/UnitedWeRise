@@ -930,44 +930,13 @@ function validateAttestationStep() {
 // ==================== Actions ====================
 
 /**
- * Handle voter verification toggle with payment gate.
- * Checks if campaign has verification credits before enabling.
+ * Handle voter verification toggle.
+ * Simply enables/disables the setting. Payment is handled separately
+ * when verification credits are actually needed (at signing time).
  * @param {HTMLInputElement} toggleEl - The checkbox input element
  */
-async function handleVoterVerificationToggle(toggleEl) {
-    try {
-        const balance = await getVerificationBalance();
-        const remaining = (balance.total || 0) - (balance.used || 0);
-
-        if (remaining > 0) {
-            modalState.formData.voterVerificationEnabled = true;
-        } else {
-            // No balance -- show payment prompt, keep toggle off
-            toggleEl.checked = false;
-            modalState.formData.voterVerificationEnabled = false;
-
-            const proceed = confirm(
-                'Voter verification requires purchasing verification credits.\n\n' +
-                '$100 for 1,000 verifications.\n\n' +
-                'Would you like to purchase now?'
-            );
-
-            if (proceed) {
-                try {
-                    const checkout = await createVerificationCheckout();
-                    if (checkout.url) {
-                        window.location.href = checkout.url;
-                        return;
-                    }
-                } catch (checkoutError) {
-                    showToast(checkoutError.message || 'Failed to create checkout session.');
-                }
-            }
-        }
-    } catch {
-        // If balance check fails, allow toggle as a fallback
-        modalState.formData.voterVerificationEnabled = true;
-    }
+function handleVoterVerificationToggle(toggleEl) {
+    modalState.formData.voterVerificationEnabled = toggleEl.checked;
 }
 
 /**
@@ -988,7 +957,7 @@ async function handleCreate() {
         const petitionData = {
             title: formData.title.trim(),
             description: formData.description.trim(),
-            type: formData.petitionCategory,
+            petitionCategory: formData.petitionCategory,
             requiredSignerFields: formData.requiredSignerFields,
             declarationLanguage: formData.declarationLanguage.trim(),
             voterVerificationEnabled: formData.voterVerificationEnabled

@@ -231,8 +231,11 @@ function getCurrentStep() {
  */
 async function loadPetition(code) {
     try {
-        const data = await getPetitionForSigning(code);
-        state.petition = data.petition || data;
+        const rawData = await getPetitionForSigning(code);
+        const petitionData = rawData.data || rawData;
+        state.petition = petitionData.petition || petitionData;
+        state.signatureCount = petitionData.signatureCount || 0;
+        state.signingUrl = petitionData.signingUrl || '';
 
         if (data.alreadySigned) {
             state.alreadySigned = true;
