@@ -127,6 +127,9 @@ import '../components/TopicNavigation.js';  // Topic mode navigation
 // Phase 5e-orgs: Organizations module
 import '../modules/features/organizations/index.js';  // Organization browsing, profiles, membership
 
+// Phase 5e-civic: Civic organizing module
+import '../modules/features/civic/civic-organizing.js';  // Civic organizing (petitions, events, community)
+
 // Phase 5f: Small Integrations (Batch 8)
 import '../js/force-optimization.js';  // Force override old initialization system
 import '../integrations/officials-system-integration.js';  // Officials system integration
