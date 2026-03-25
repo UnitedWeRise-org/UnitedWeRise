@@ -195,6 +195,23 @@ function standardizeAddress(address) {
 }
 
 /**
+ * Generate a QR code image for a URL using a lightweight SVG approach.
+ * Uses the QR Server API for simplicity (no external library needed).
+ * @param {string} containerId - DOM element ID to render into
+ * @param {string} url - URL to encode
+ * @param {number} [size=200] - QR code size in pixels
+ */
+function renderQRCode(containerId, url, size = 200) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&margin=8&format=svg`;
+    container.innerHTML = `
+        <img src="${qrImageUrl}" alt="QR Code" class="sign-qr-image" width="${size}" height="${size}"
+             style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e5e7eb;" />
+    `;
+}
+
+/**
  * Format a number with commas for display
  * @param {number} num - Number to format
  * @returns {string} Formatted number string
@@ -665,6 +682,19 @@ function render() {
             </footer>
         </div>
     `;
+
+    // Post-render: generate QR codes if on info or confirmation step
+    const currentUrl = window.location.href;
+    if (currentStepObj.id === 'info') {
+        setTimeout(() => renderQRCode('sign-qr-display', currentUrl, 180), 50);
+    } else if (currentStepObj.id === 'confirmation') {
+        setTimeout(() => renderQRCode('sign-qr-confirmation', currentUrl, 200), 50);
+    }
+
+    // Post-render: initialize CAPTCHA widget if on captcha step
+    if (currentStepObj.id === 'captcha' && !state.captchaVerified) {
+        setTimeout(renderCaptcha, 100);
+    }
 }
 
 /**
@@ -761,6 +791,14 @@ function renderInfoStep() {
             <button class="sign-btn sign-btn--primary sign-btn--large" data-sign-action="start">
                 Sign This Petition
             </button>
+
+            <div class="sign-share-qr">
+                <p class="sign-share-qr-label">Share this petition</p>
+                <div class="sign-qr-container" id="sign-qr-display"></div>
+                <button class="sign-btn sign-btn--secondary sign-btn--small" data-sign-action="copy-link" data-url="${escapeHtml(window.location.href)}">
+                    Copy Link
+                </button>
+            </div>
 
             ${p.deadline ? `
                 <p class="sign-deadline">Deadline: ${new Date(p.deadline).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -1327,7 +1365,8 @@ function renderConfirmationStep() {
             ` : ''}
 
             <div class="sign-share">
-                <p>Help this petition reach its goal:</p>
+                <p>Help this petition reach its goal — share it!</p>
+                <div class="sign-qr-container" id="sign-qr-confirmation"></div>
                 <div class="sign-share-actions">
                     <button class="sign-btn sign-btn--secondary" data-sign-action="copy-link" data-url="${escapeHtml(shareUrl)}">
                         Copy Link

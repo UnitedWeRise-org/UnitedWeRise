@@ -1455,8 +1455,40 @@ select.sign-input {
     margin: 0.75rem 0 1.5rem;
 }
 
+/* QR Code Sharing Section */
+.sign-share-qr {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+}
+
+.sign-share-qr-label {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+}
+
+.sign-qr-container {
+    display: flex;
+    justify-content: center;
+    margin: 0.75rem 0;
+}
+
+.sign-qr-image {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+}
+
+.sign-btn--small {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+}
+
 .sign-share {
     margin: 1.5rem 0;
+    text-align: center;
 }
 
 .sign-share p {
@@ -1469,6 +1501,7 @@ select.sign-input {
     display: flex;
     justify-content: center;
     gap: 0.75rem;
+    margin-top: 1rem;
 }
 
 .sign-cta-account {
