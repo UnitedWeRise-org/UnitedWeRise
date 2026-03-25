@@ -2104,6 +2104,8 @@ model PetitionSignature {
   signerDateOfBirth     DateTime?
   /// Signer's email (for follow-up / account linking)
   signerEmail           String?
+  /// Signer's phone number
+  signerPhone           String?
   /// Typed name confirmation (must match first+last name entered above)
   signatureConfirmation String?
   /// Timestamp when signer affirmed perjury/attestation declaration

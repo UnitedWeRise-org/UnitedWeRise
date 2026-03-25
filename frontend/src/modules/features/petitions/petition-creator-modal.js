@@ -43,7 +43,8 @@ const OPTIONAL_SIGNER_FIELDS = [
     { value: 'zip', label: 'ZIP Code' },
     { value: 'county', label: 'County' },
     { value: 'dateOfBirth', label: 'Date of Birth' },
-    { value: 'email', label: 'Email' }
+    { value: 'email', label: 'Email' },
+    { value: 'phone', label: 'Phone Number' }
 ];
 
 /**
@@ -394,8 +395,10 @@ function renderSignerConfigStep() {
                         <span class="petition-modal-toggle-slider"></span>
                     </div>
                     <div class="petition-modal-toggle-text">
-                        <span>Enable voter registration verification</span>
-                        <small>Signers will be prompted to verify their voter registration status.</small>
+                        <span>Enable voter registration verification
+                            <span class="petition-modal-help-icon" title="Voter verification uses a third-party API to confirm signer registration. Cost: $0.10 per verification ($100 per 1,000 verifications). Charges apply only to successful lookups — failed or unavailable checks are not billed.">&#9432;</span>
+                        </span>
+                        <small>Signers' voter registration will be verified in real time. <strong>Additional cost: $0.10 per verification</strong> ($100 per 1,000 block).</small>
                     </div>
                 </label>
             </div>

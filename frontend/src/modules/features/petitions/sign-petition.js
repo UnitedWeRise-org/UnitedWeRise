@@ -66,6 +66,7 @@ const state = {
         signerCounty: '',
         signerDateOfBirth: '',
         signerEmail: '',
+        signerPhone: '',
         signatureConfirmation: '',
         attestedAt: null,
         privacyConsented: false,
@@ -354,7 +355,7 @@ async function handleSubmit() {
 
         const optionalFields = [
             'signerAddress', 'signerCity', 'signerState', 'signerZip',
-            'signerCounty', 'signerDateOfBirth', 'signerEmail'
+            'signerCounty', 'signerDateOfBirth', 'signerEmail', 'signerPhone'
         ];
         for (const field of optionalFields) {
             const value = state.formData[field];
@@ -664,7 +665,8 @@ function renderSignerStep() {
         { key: 'zip', field: 'signerZip', label: 'ZIP Code', type: 'text', extra: { placeholder: '78701', maxlength: '10', pattern: '\\d{5}(-\\d{4})?' } },
         { key: 'county', field: 'signerCounty', label: 'County', type: 'text', extra: { placeholder: 'Travis', maxlength: '100' } },
         { key: 'dateOfBirth', field: 'signerDateOfBirth', label: 'Date of Birth', type: 'date' },
-        { key: 'email', field: 'signerEmail', label: 'Email Address', type: 'email', extra: { placeholder: 'john@example.com', maxlength: '200' } }
+        { key: 'email', field: 'signerEmail', label: 'Email Address', type: 'email', extra: { placeholder: 'john@example.com', maxlength: '200' } },
+        { key: 'phone', field: 'signerPhone', label: 'Phone Number', type: 'tel', extra: { placeholder: '(555) 123-4567', maxlength: '20' } }
     ];
 
     for (const cf of conditionalFields) {

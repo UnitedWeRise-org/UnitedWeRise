@@ -8,6 +8,37 @@
 
 ---
 
+## [2026-03-25] - Petition System Integration & ES6 Cleanup
+
+### Added
+- Petition creator lazy-loaded modal wizard (4-step: Details, Signer Config, Attestation, Review)
+- Admin dashboard "Petitions" section under Content category with table, filters, and admin actions
+- 5 admin petition API endpoints (list, stats, detail, status change, delete with TOTP)
+- Phone number as optional signer field in petition configuration
+- Cost disclosure tooltip on voter verification toggle ($0.10 per verification)
+- `PetitionsController.js` for admin dashboard with auto-refresh and session cleanup
+- `petition-creator-modal.js` with responsive design (desktop modal + mobile bottom sheet)
+
+### Fixed
+- CSRF token missing on candidate registration — switched from raw fetch to apiCall()
+- Hardcoded production URL in candidate registration POST
+- OnboardingFlow.js SyntaxError caused by non-module dynamic script load (redundant load removed)
+- PolicyPlatformManager.js silently broken — was only loaded via broken dynamic script, now imported in main.js
+- civic-organizing.js never loaded — missing import in main.js load chain
+- toast.js import path wrong in civic-organizing.js (../../ → ../../../) — crashed entire app
+- petition.css not linked in index.html — modal rendered but invisible
+- Modal data-action attributes conflicting with navigation handler's stopPropagation()
+- deviceFingerprinting.js converted from legacy script to ES6 module
+
+### Removed
+- Redundant dynamic script loads for OnboardingFlow.js and deviceFingerprinting.js in backend-integration.js
+- Dead `utils/module-loader.js` (500 lines of unused legacy loading system)
+- Dangerous `executeModule()` inline script execution from advanced-caching.js
+- Dead petition form code in civic-organizing.js (replaced by modal)
+- Legacy CommonJS export pattern in deviceFingerprinting.js
+
+---
+
 ## [2026-03-24] - Unified Digital Petition System
 
 ### Added
