@@ -637,6 +637,19 @@ function setupEventListeners(container) {
                 }
                 break;
             }
+
+            case 'toggle-sig-detail': {
+                const idx = actionEl.dataset.sigIdx;
+                const detailRow = document.getElementById(`sig-detail-${idx}`);
+                if (detailRow) {
+                    detailRow.style.display = detailRow.style.display === 'none' ? 'table-row' : 'none';
+                }
+                break;
+            }
+
+            case 'export-signatures-csv':
+                exportSignaturesCSV();
+                break;
         }
     });
 
@@ -1424,6 +1437,71 @@ function renderQRSection(p) {
 }
 
 /**
+ * Export all signatures as a CSV file for BOE submission.
+ * Includes all collected fields regardless of what's displayed in the table.
+ */
+function exportSignaturesCSV() {
+    const sigs = dashboardState.signatures;
+    if (!sigs || sigs.length === 0) {
+        showToast('No signatures to export');
+        return;
+    }
+
+    const petition = dashboardState.selectedPetition;
+    const headers = [
+        'First Name', 'Last Name', 'Address', 'City', 'State', 'ZIP',
+        'County', 'Email', 'Phone', 'Date of Birth', 'Signed At',
+        'Verification Status', 'Voter File ID', 'Typed Signature',
+        'Attested At', 'IP Address', 'Privacy Consented'
+    ];
+
+    const rows = sigs.map(sig => [
+        sig.signerFirstName || '',
+        sig.signerLastName || '',
+        sig.signerAddress || '',
+        sig.signerCity || '',
+        sig.signerState || '',
+        sig.signerZip || '',
+        sig.signerCounty || '',
+        sig.signerEmail || '',
+        sig.signerPhone || '',
+        sig.signerDateOfBirth ? new Date(sig.signerDateOfBirth).toLocaleDateString() : '',
+        sig.signedAt ? new Date(sig.signedAt).toLocaleString() : '',
+        sig.signatureStatus || sig.verificationStatus || 'UNVERIFIED',
+        sig.voterFileId || '',
+        sig.signatureConfirmation || '',
+        sig.attestedAt ? new Date(sig.attestedAt).toLocaleString() : '',
+        sig.ipAddress || '',
+        sig.privacyConsented ? 'Yes' : 'No'
+    ]);
+
+    // Build CSV with proper escaping
+    const csvEscape = (val) => {
+        const str = String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
+
+    const csv = [
+        headers.map(csvEscape).join(','),
+        ...rows.map(row => row.map(csvEscape).join(','))
+    ].join('\n');
+
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const petitionTitle = (petition?.title || 'petition').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+    link.href = url;
+    link.download = `signatures_${petitionTitle}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV exported successfully');
+}
+
+/**
  * Render the signatures table section with filters and pagination
  * @returns {string} HTML string
  */
@@ -1442,21 +1520,50 @@ function renderSignaturesSection() {
             </tr>
         `;
     } else {
-        tableBodyHtml = sigs.map(sig => {
+        tableBodyHtml = sigs.map((sig, idx) => {
             const verClass = VERIFICATION_CLASSES[sig.signatureStatus || sig.verificationStatus] || 'unverified';
             const verLabel = VERIFICATION_LABELS[sig.signatureStatus || sig.verificationStatus] || sig.signatureStatus || 'Unverified';
             const name = [sig.signerFirstName || sig.firstName, sig.signerLastName || sig.lastName].filter(Boolean).join(' ') || 'Anonymous';
             const location = [sig.signerCity || sig.city, sig.signerState || sig.state].filter(Boolean).join(', ') || '-';
 
+            // Build detail fields for expanded view
+            const detailFields = [];
+            if (sig.signerFirstName) detailFields.push(['First Name', sig.signerFirstName]);
+            if (sig.signerLastName) detailFields.push(['Last Name', sig.signerLastName]);
+            if (sig.signerAddress) detailFields.push(['Address', sig.signerAddress]);
+            if (sig.signerCity) detailFields.push(['City', sig.signerCity]);
+            if (sig.signerState) detailFields.push(['State', sig.signerState]);
+            if (sig.signerZip) detailFields.push(['ZIP', sig.signerZip]);
+            if (sig.signerCounty) detailFields.push(['County', sig.signerCounty]);
+            if (sig.signerEmail) detailFields.push(['Email', sig.signerEmail]);
+            if (sig.signerPhone) detailFields.push(['Phone', sig.signerPhone]);
+            if (sig.signerDateOfBirth) detailFields.push(['Date of Birth', formatDate(sig.signerDateOfBirth)]);
+            if (sig.signatureConfirmation) detailFields.push(['Typed Signature', sig.signatureConfirmation]);
+            if (sig.attestedAt) detailFields.push(['Attested At', formatDate(sig.attestedAt)]);
+            if (sig.ipAddress) detailFields.push(['IP Address', sig.ipAddress]);
+            if (sig.voterFileId) detailFields.push(['Voter File ID', sig.voterFileId]);
+
             return `
-                <tr>
+                <tr class="petition-sig-row" data-action="toggle-sig-detail" data-sig-idx="${idx}" style="cursor: pointer;" title="Click to see all fields">
                     <td>${escapeHtml(name)}</td>
                     <td>${escapeHtml(location)}</td>
                     <td>${formatDate(sig.signedAt || sig.createdAt)}</td>
                     <td>
                         <span class="petition-verification-badge ${verClass}">${verLabel}</span>
                     </td>
-                    <td>-</td>
+                    <td><span style="font-size: 0.8rem; color: #6b7280;">Details &#9662;</span></td>
+                </tr>
+                <tr class="petition-sig-detail" id="sig-detail-${idx}" style="display: none;">
+                    <td colspan="5" style="padding: 0.75rem 1rem; background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem 1.5rem; font-size: 0.85rem;">
+                            ${detailFields.map(([label, value]) => `
+                                <div>
+                                    <span style="color: #6b7280; font-weight: 500;">${escapeHtml(label)}:</span>
+                                    <span style="margin-left: 0.25rem;">${escapeHtml(String(value))}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -1464,7 +1571,14 @@ function renderSignaturesSection() {
 
     return `
         <div class="petition-signatures-section">
-            <h3>Signatures</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h3 style="margin: 0;">Signatures</h3>
+                ${sigs.length > 0 ? `
+                    <button class="petition-btn petition-btn-secondary petition-btn-sm" data-action="export-signatures-csv" title="Export all signatures as CSV for BOE submission">
+                        Export CSV
+                    </button>
+                ` : ''}
+            </div>
             <div class="petition-signatures-filters">
                 <input type="text" id="sig-search-input" placeholder="Search by name..."
                     value="${escapeHtml(dashboardState.signatureFilters.search)}">
