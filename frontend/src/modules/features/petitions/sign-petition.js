@@ -159,6 +159,28 @@ function isValidZip(zip) {
 }
 
 /**
+ * Build personalized attestation text from signer data and voter verification result.
+ * Dynamically inserts the signer's name, address, and party enrollment.
+ * @param {Object} formData - The signer's form data
+ * @param {Object|null} verificationResult - Voter verification result (if performed)
+ * @returns {string} Personalized attestation text
+ */
+function buildAttestationText(formData, verificationResult) {
+    const name = `${formData.signerFirstName || ''} ${formData.signerLastName || ''}`.trim() || '[your name]';
+    const addressParts = [formData.signerAddress, formData.signerCity, formData.signerState, formData.signerZip].filter(Boolean);
+    const address = addressParts.length > 0 ? addressParts.join(', ') : '';
+
+    let partyClause = '';
+    if (verificationResult?.matched && verificationResult?.partyEnrollment) {
+        partyClause = `, a duly enrolled ${verificationResult.partyEnrollment} party voter,`;
+    } else if (verificationResult?.matched) {
+        partyClause = ', a registered voter,';
+    }
+
+    return `I, ${name}${address ? `, residing at ${address}` : ''}${partyClause} affirm under penalty of perjury that the information I have provided above is true and correct, and that I voluntarily indicate my support for this petition.`;
+}
+
+/**
  * Standardize a street address for better voter file matching.
  * Normalizes common abbreviations and formatting inconsistencies.
  * @param {string} address - Raw street address
@@ -470,7 +492,7 @@ async function handleSubmit() {
             signerLastName: fd.signerLastName.trim(),
             signatureConfirmation: fd.signatureConfirmation.trim(),
             attestedAt: fd.attestedAt,
-            attestationLanguageShown: state.petition.declarationLanguage || 'I affirm under penalty of perjury that the information provided is true and correct.',
+            attestationLanguageShown: buildAttestationText(fd, state.voterVerificationResult),
             privacyConsented: true,
             captchaToken: fd.captchaToken,
             deviceFingerprint: fd.deviceFingerprint
@@ -1245,7 +1267,7 @@ function renderReviewStep() {
                         data-field="attestation"
                         ${fd.attestedAt ? 'checked' : ''}
                     />
-                    <span>I agree that this has the full binding force as though it were signed in the presence of the bearer under penalty of perjury.
+                    <span>${escapeHtml(buildAttestationText(fd, state.voterVerificationResult))}
                     <a href="/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a></span>
                 </label>
                 ${errors.attestation ? `<span class="sign-field-error">${escapeHtml(errors.attestation)}</span>` : ''}

@@ -15,11 +15,34 @@ import { showToast } from '../../../utils/toast.js';
  * Petition category options
  */
 const PETITION_CATEGORIES = [
-    { value: 'BALLOT_ACCESS', label: 'Ballot Access' },
     { value: 'CIVIC_ADVOCACY', label: 'Civic Advocacy' },
     { value: 'COMMUNITY', label: 'Community' },
-    { value: 'POLICY', label: 'Policy' }
+    { value: 'POLICY', label: 'Policy' },
+    { value: 'BALLOT_ACCESS', label: 'Ballot Access (General)' },
+    { value: 'BALLOT_ACCESS_NY', label: 'NYS Ballot Access (§ 6-132)' }
 ];
+
+/**
+ * Template presets for ballot access petition types.
+ * Auto-populates required fields, declaration language, and guidance text.
+ */
+const PETITION_TEMPLATES = {
+    BALLOT_ACCESS: {
+        requiredFields: ['address', 'city', 'state', 'zip'],
+        voterVerificationEnabled: true,
+        descriptionPlaceholder: 'Describe the purpose of this ballot access petition and include candidate and office information as required by your state law.',
+        guidanceText: 'Include candidate name, office sought, party designation, and any other information required by your state\'s election law.',
+        warningText: 'Attention: Many state laws do not currently accept electronic petitions for ballot access. Please consult legal counsel before relying on UWR petitions for official ballot access purposes. UWR will NOT refund voter verification fees if petitions are not accepted by boards of election.'
+    },
+    BALLOT_ACCESS_NY: {
+        requiredFields: ['address', 'city', 'state', 'zip', 'county'],
+        voterVerificationEnabled: true,
+        declarationLanguage: 'I, the undersigned, do hereby state that I am a duly enrolled voter of the _____ party and entitled to vote at the next primary election of such party, to be held in the year _____, that my residence is truly stated opposite my signature hereto, and that I do hereby designate the above-named candidate(s) as a candidate for the above-designated office to be voted for at such primary election.',
+        descriptionPlaceholder: 'e.g., Designating petition for [Candidate Name], residing at [Address], for the office of [Office] on the [Party] party ballot.\n\nCommittee to fill vacancies:\n1. [Name]\n2. [Name]\n3. [Name]',
+        guidanceText: 'For NYS § 6-132 compliance, include in the description: candidate name, residence address, office sought, party designation, and committee to fill vacancies (three named enrolled voters of the same party).',
+        warningText: 'Attention: Many state laws do not currently accept electronic petitions for ballot access. Please consult legal counsel before relying on UWR petitions for official ballot access purposes. UWR will NOT refund voter verification fees if petitions are not accepted by boards of election.'
+    }
+};
 
 /**
  * Geographic scope options
@@ -298,11 +321,20 @@ function renderDetailsStep() {
             </div>
 
             <div class="petition-modal-field ${errors.description ? 'has-error' : ''}">
-                <label for="petitionDescription">Description *</label>
+                <label for="petitionDescription">
+                    Description *
+                    ${(() => {
+                        const tmpl = PETITION_TEMPLATES[petitionCategory];
+                        return tmpl?.guidanceText ? `<span class="petition-modal-help-icon" title="${escapeHtml(tmpl.guidanceText)}">&#9432;</span>` : '';
+                    })()}
+                </label>
                 <textarea
                     id="petitionDescription"
                     class="petition-modal-textarea"
-                    placeholder="Explain what this petition is about and why people should sign it..."
+                    placeholder="${(() => {
+                        const tmpl = PETITION_TEMPLATES[petitionCategory];
+                        return tmpl?.descriptionPlaceholder || 'Explain what this petition is about and why people should sign it...';
+                    })()}"
                     maxlength="5000"
                     rows="5"
                     data-field="description"
@@ -820,7 +852,55 @@ function attachListeners() {
         if (modalState.errors[field]) {
             delete modalState.errors[field];
         }
+
+        // Apply template when petition category changes
+        if (field === 'petitionCategory') {
+            applyPetitionTemplate(e.target.value);
+        }
     });
+}
+
+/**
+ * Apply a petition template based on category selection.
+ * Auto-populates required fields, declaration language, and shows warning for ballot access types.
+ * @param {string} categoryValue - The selected category value
+ */
+function applyPetitionTemplate(categoryValue) {
+    const template = PETITION_TEMPLATES[categoryValue];
+
+    // Show warning for any ballot access type
+    if (categoryValue.startsWith('BALLOT_ACCESS')) {
+        const warningText = template?.warningText || PETITION_TEMPLATES.BALLOT_ACCESS.warningText;
+        alert(warningText);
+    }
+
+    if (!template) {
+        // Non-template category — store as-is (BALLOT_ACCESS_NY stores as BALLOT_ACCESS in DB)
+        return;
+    }
+
+    // Auto-select required signer fields
+    if (template.requiredFields) {
+        modalState.formData.requiredSignerFields = ['firstName', 'lastName', ...template.requiredFields];
+    }
+
+    // Auto-enable voter verification
+    if (template.voterVerificationEnabled !== undefined) {
+        modalState.formData.voterVerificationEnabled = template.voterVerificationEnabled;
+    }
+
+    // Pre-populate declaration language (only if not already customized)
+    if (template.declarationLanguage && !modalState.formData.declarationLanguage) {
+        modalState.formData.declarationLanguage = template.declarationLanguage;
+    }
+
+    // Store as BALLOT_ACCESS in the DB regardless of sub-template
+    if (categoryValue === 'BALLOT_ACCESS_NY') {
+        modalState.formData.petitionCategory = 'BALLOT_ACCESS';
+    }
+
+    // Re-render to reflect changes
+    render();
 }
 
 // ==================== Navigation ====================
