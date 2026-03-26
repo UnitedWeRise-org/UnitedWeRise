@@ -90,6 +90,7 @@ const DEFAULT_DECLARATION = 'I affirm under penalty of perjury that the informat
 let modalState = {
     isOpen: false,
     currentStep: 0,
+    selectedTemplate: '', // Tracks the dropdown selection (e.g., BALLOT_ACCESS_NY) separately from DB value
     formData: {
         title: '',
         description: '',
@@ -295,8 +296,9 @@ function renderDetailsStep() {
     const availableCategories = modalState.isCandidate
         ? PETITION_CATEGORIES
         : PETITION_CATEGORIES.filter(c => c.value !== 'BALLOT_ACCESS');
+    const displayCategory = modalState.selectedTemplate || petitionCategory;
     const categoryOptions = availableCategories.map(c =>
-        `<option value="${c.value}" ${petitionCategory === c.value ? 'selected' : ''}>${c.label}</option>`
+        `<option value="${c.value}" ${displayCategory === c.value ? 'selected' : ''}>${c.label}</option>`
     ).join('');
 
     const scopeOptions = GEOGRAPHIC_SCOPES.map(s =>
@@ -894,12 +896,15 @@ function applyPetitionTemplate(categoryValue) {
         modalState.formData.declarationLanguage = template.declarationLanguage;
     }
 
-    // Store as BALLOT_ACCESS in the DB regardless of sub-template
+    // Track the template selection for the dropdown display
+    modalState.selectedTemplate = categoryValue;
+
+    // Store the DB-compatible enum value
     if (categoryValue === 'BALLOT_ACCESS_NY') {
         modalState.formData.petitionCategory = 'BALLOT_ACCESS';
     }
 
-    // Re-render to reflect changes
+    // Re-render to reflect field changes (without full modal re-create)
     render();
 }
 

@@ -310,7 +310,8 @@ async function getMyPetitions() {
  */
 async function getPetitionDetails(petitionId) {
     const result = await apiRequest(`/petitions/${petitionId}/details`);
-    return result.data || result.petition || result;
+    const data = result.data || result;
+    return data.petition || data;
 }
 
 /**
@@ -639,7 +640,7 @@ function setupEventListeners(container) {
             }
 
             case 'toggle-sig-detail': {
-                const idx = actionEl.dataset.sigIdx;
+                const idx = target.dataset.sigIdx;
                 const detailRow = document.getElementById(`sig-detail-${idx}`);
                 if (detailRow) {
                     detailRow.style.display = detailRow.style.display === 'none' ? 'table-row' : 'none';

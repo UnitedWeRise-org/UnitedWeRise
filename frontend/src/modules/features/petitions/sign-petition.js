@@ -1401,7 +1401,7 @@ function renderConfirmationStep() {
 
             <div class="sign-cta-account">
                 <a href="/" class="sign-btn sign-btn--link">
-                    Create a United We Rise account to track your civic engagement
+                    Create a United We Rise account for nonprofit ad-free social media aimed at uniting, not dividing
                 </a>
             </div>
         </div>
