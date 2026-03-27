@@ -109,6 +109,8 @@ interface SignatureSubmissionInput {
   userId?: string;
   /** Cached voter verification result from verify-registration endpoint */
   voterVerificationResult?: CachedVoterVerificationResult;
+  /** Whether the signer consented to being contacted about the petition */
+  contactConsented?: boolean;
 }
 
 /** Device/request metadata for a signature submission */
@@ -680,6 +682,7 @@ export class PetitionSigningService {
             geolocation: signatureData.geolocation
               ? (signatureData.geolocation as unknown as Prisma.InputJsonValue)
               : undefined,
+            contactConsented: signatureData.contactConsented || false,
             captchaVerified: true,
             isVerified: verificationStatus === 'VOTER_VERIFIED',
           },

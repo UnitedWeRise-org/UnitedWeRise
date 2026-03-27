@@ -22,6 +22,7 @@ import { safePaginationParams, PAGINATION_LIMITS } from '../utils/safeJson';
 import { organizationService } from '../services/organizationService';
 import { MembershipStatus } from '@prisma/client';
 import { petitionAuditService, PETITION_AUDIT_ACTIONS, PETITION_ACTOR_TYPES } from '../services/petitionAuditService';
+import { petitionRetentionService } from '../services/petitionRetentionService';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -8695,6 +8696,175 @@ router.patch('/petitions/:id/status',
         targetStatus: req.body.status
       }, 'Failed to update petition status');
       res.status(500).json({ error: 'Failed to update petition status' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/petitions/{id}/legal-hold:
+ *   put:
+ *     tags: [Admin - Petitions]
+ *     summary: Set legal hold on a petition
+ *     description: Places a legal hold on a petition to prevent automatic data deletion by the retention policy. Requires a reason (min 5 characters).
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Petition ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 minLength: 5
+ *                 description: Reason for the legal hold
+ *     responses:
+ *       200:
+ *         description: Legal hold set successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Validation error or petition already on legal hold
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       404:
+ *         description: Petition not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/petitions/:id/legal-hold',
+  requireAuth,
+  requireAdmin,
+  [
+    body('reason').isLength({ min: 5 }).withMessage('Reason must be at least 5 characters'),
+    handleValidationErrors
+  ],
+  async (req: AuthRequest, res: express.Response) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const adminUser = req.user!;
+
+      await petitionRetentionService.setLegalHold(id, adminUser.id, reason);
+
+      logger.info({
+        action: 'petition_legal_hold_set',
+        adminId: adminUser.id,
+        adminUsername: adminUser.username,
+        petitionId: id,
+        reason
+      }, 'Admin set legal hold on petition');
+
+      res.json({ message: 'Legal hold set successfully' });
+    } catch (error: any) {
+      if (error.message === 'Petition not found') {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error.message === 'Petition is already under legal hold') {
+        return res.status(400).json({ error: error.message });
+      }
+      logger.error({
+        error,
+        endpoint: '/api/admin/petitions/:id/legal-hold',
+        action: 'set_legal_hold_error',
+        adminId: req.user?.id,
+        adminUsername: req.user?.username,
+        petitionId: req.params.id
+      }, 'Failed to set legal hold on petition');
+      res.status(500).json({ error: 'Failed to set legal hold' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/petitions/{id}/legal-hold:
+ *   delete:
+ *     tags: [Admin - Petitions]
+ *     summary: Remove legal hold from a petition
+ *     description: Removes the legal hold from a petition, re-enabling automatic data deletion by the retention policy.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Petition ID
+ *     responses:
+ *       200:
+ *         description: Legal hold removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Petition is not under legal hold
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       404:
+ *         description: Petition not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/petitions/:id/legal-hold',
+  requireAuth,
+  requireAdmin,
+  async (req: AuthRequest, res: express.Response) => {
+    try {
+      const { id } = req.params;
+      const adminUser = req.user!;
+
+      await petitionRetentionService.removeLegalHold(id, adminUser.id);
+
+      logger.info({
+        action: 'petition_legal_hold_removed',
+        adminId: adminUser.id,
+        adminUsername: adminUser.username,
+        petitionId: id
+      }, 'Admin removed legal hold from petition');
+
+      res.json({ message: 'Legal hold removed successfully' });
+    } catch (error: any) {
+      if (error.message === 'Petition not found') {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error.message === 'Petition is not under legal hold') {
+        return res.status(400).json({ error: error.message });
+      }
+      logger.error({
+        error,
+        endpoint: '/api/admin/petitions/:id/legal-hold',
+        action: 'remove_legal_hold_error',
+        adminId: req.user?.id,
+        adminUsername: req.user?.username,
+        petitionId: req.params.id
+      }, 'Failed to remove legal hold from petition');
+      res.status(500).json({ error: 'Failed to remove legal hold' });
     }
   }
 );

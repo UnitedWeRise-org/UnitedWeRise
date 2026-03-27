@@ -1259,6 +1259,12 @@ function renderDetailHeader(p, statusClass, statusLabel, categoryLabel) {
                 <span style="color: #6b7280; font-size: 14px;">Created ${formatDate(p.createdAt)}</span>
             </div>
             <div class="petition-detail-description">${escapeHtml(p.description)}</div>
+            ${(p.filingDeadline || p.electionDate) ? `
+                <div class="petition-detail-dates" style="display: flex; gap: 1.5rem; margin: 0.75rem 0; font-size: 0.9rem; color: #6b7280;">
+                    ${p.filingDeadline ? `<span>Filing Deadline: <strong>${new Date(p.filingDeadline).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>` : ''}
+                    ${p.electionDate ? `<span>Election Date: <strong>${new Date(p.electionDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>` : ''}
+                </div>
+            ` : ''}
             ${actionsHtml ? `<div class="petition-detail-actions">${actionsHtml}</div>` : ''}
         </div>
     `;
@@ -1453,7 +1459,7 @@ function exportSignaturesCSV() {
         'First Name', 'Last Name', 'Address', 'City', 'State', 'ZIP',
         'County', 'Email', 'Phone', 'Date of Birth', 'Signed At',
         'Verification Status', 'Voter File ID', 'Typed Signature',
-        'Attested At', 'IP Address', 'Privacy Consented'
+        'Attested At', 'IP Address', 'Privacy Consented', 'Contact Consent'
     ];
 
     const rows = sigs.map(sig => [
@@ -1473,7 +1479,8 @@ function exportSignaturesCSV() {
         sig.signatureConfirmation || '',
         sig.attestedAt ? new Date(sig.attestedAt).toLocaleString() : '',
         sig.ipAddress || '',
-        sig.privacyConsented ? 'Yes' : 'No'
+        sig.privacyConsented ? 'Yes' : 'No',
+        sig.contactConsented ? 'Yes' : 'No'
     ]);
 
     // Build CSV with proper escaping
@@ -1543,6 +1550,7 @@ function renderSignaturesSection() {
             if (sig.attestedAt) detailFields.push(['Attested At', formatDate(sig.attestedAt)]);
             if (sig.ipAddress) detailFields.push(['IP Address', sig.ipAddress]);
             if (sig.voterFileId) detailFields.push(['Voter File ID', sig.voterFileId]);
+            detailFields.push(['Contact Consent', sig.contactConsented ? 'Yes - opted in' : 'No']);
 
             return `
                 <tr class="petition-sig-row" data-action="toggle-sig-detail" data-sig-idx="${idx}" style="cursor: pointer;" title="Click to see all fields">

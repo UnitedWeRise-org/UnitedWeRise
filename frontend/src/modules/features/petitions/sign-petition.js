@@ -77,6 +77,7 @@ const state = {
         signatureConfirmation: '',
         attestedAt: null,
         privacyConsented: false,
+        contactConsented: false,
         captchaToken: null,
         geolocation: null,
         geolocationConsented: false,
@@ -494,6 +495,7 @@ async function handleSubmit() {
             attestedAt: fd.attestedAt,
             attestationLanguageShown: buildAttestationText(fd, state.voterVerificationResult),
             privacyConsented: true,
+            contactConsented: fd.contactConsented || false,
             captchaToken: fd.captchaToken,
             deviceFingerprint: fd.deviceFingerprint
         };
@@ -810,6 +812,13 @@ function renderInfoStep() {
                 </div>
             ` : count > 0 ? `
                 <p class="sign-count"><strong>${formatNumber(count)}</strong> people have signed</p>
+            ` : ''}
+
+            ${(p.filingDeadline || p.electionDate) ? `
+                <div class="sign-dates" style="display: flex; gap: 1.5rem; justify-content: center; margin: 1rem 0; font-size: 0.9rem; color: #6b7280;">
+                    ${p.filingDeadline ? `<span>Filing Deadline: <strong>${new Date(p.filingDeadline).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>` : ''}
+                    ${p.electionDate ? `<span>Election Date: <strong>${new Date(p.electionDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>` : ''}
+                </div>
             ` : ''}
 
             <button class="sign-btn sign-btn--primary sign-btn--large" data-sign-action="start">
@@ -1288,6 +1297,13 @@ function renderReviewStep() {
                 </div>
             ` : ''}
 
+            <div class="sign-field">
+                <label class="sign-checkbox-label">
+                    <input type="checkbox" data-field="contactConsent" ${fd.contactConsented ? 'checked' : ''} />
+                    <span>I consent to being contacted by the petition creator about this petition. (Optional)</span>
+                </label>
+            </div>
+
             <div class="sign-attestation-reveal ${fd.attestedAt ? 'sign-attestation-reveal--visible' : ''}">
                 <div class="sign-signature-block">
                     <div class="sign-field ${errors.signatureConfirmation ? 'sign-field--error' : ''}">
@@ -1574,6 +1590,10 @@ function handleInput(e) {
     if (field === 'privacyConsent') {
         state.formData.privacyConsented = e.target.checked;
         render();
+        return;
+    }
+    if (field === 'contactConsent') {
+        state.formData.contactConsented = e.target.checked;
         return;
     }
 

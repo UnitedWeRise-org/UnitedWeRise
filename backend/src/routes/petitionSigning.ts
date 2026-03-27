@@ -221,6 +221,7 @@ router.post('/sign/:code',
     body('signerEmail').optional().isEmail().withMessage('Invalid email address'),
     body('geolocation').optional().isObject().withMessage('Geolocation must be an object'),
     body('geolocationConsented').optional().isBoolean(),
+    body('contactConsented').optional().isBoolean(),
     body('userId').optional().isString().trim()
   ],
   async (req: express.Request, res: express.Response) => {

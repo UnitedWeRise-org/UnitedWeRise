@@ -103,6 +103,7 @@ let modalState = {
         party: '',
         electionYear: null,
         filingDeadline: null,
+        electionDate: '',
         customSlug: '',
         privacyConsentText: ''
     },
@@ -137,6 +138,7 @@ export function showPetitionCreatorModal() {
             party: '',
             electionYear: null,
             filingDeadline: null,
+            electionDate: '',
             customSlug: '',
             privacyConsentText: ''
         },
@@ -461,7 +463,7 @@ function renderSignerConfigStep() {
 function renderAttestationStep() {
     const {
         declarationLanguage, privacyConsentText, customSlug,
-        party, electionYear, filingDeadline
+        party, electionYear, filingDeadline, electionDate
     } = modalState.formData;
     const errors = modalState.errors;
 
@@ -531,6 +533,17 @@ function renderAttestationStep() {
                         />
                     </div>
                 </div>
+
+                <div class="petition-modal-field">
+                    <label for="electionDate">Election Date</label>
+                    <input
+                        type="date"
+                        id="electionDate"
+                        class="petition-modal-input"
+                        value="${modalState.formData.electionDate || ''}"
+                        data-field="electionDate"
+                    />
+                </div>
             </div>
         `;
     }
@@ -577,7 +590,7 @@ function renderReviewStep() {
         title, description, petitionCategory, geographicScope,
         signatureGoal, requiredSignerFields, declarationLanguage,
         voterVerificationEnabled, privacyConsentText,
-        customSlug, party, electionYear, filingDeadline
+        customSlug, party, electionYear, filingDeadline, electionDate
     } = modalState.formData;
 
     const categoryLabel = PETITION_CATEGORIES.find(c => c.value === petitionCategory)?.label || petitionCategory;
@@ -590,7 +603,7 @@ function renderReviewStep() {
     });
 
     let candidateReview = '';
-    if (modalState.isCandidate && (customSlug || party || electionYear || filingDeadline)) {
+    if (modalState.isCandidate && (customSlug || party || electionYear || filingDeadline || electionDate)) {
         candidateReview = `
             <div class="petition-modal-review-section">
                 <h4>Candidate Settings</h4>
@@ -617,6 +630,12 @@ function renderReviewStep() {
                         <div class="petition-modal-review-item">
                             <dt>Filing Deadline</dt>
                             <dd>${filingDeadline}</dd>
+                        </div>
+                    ` : ''}
+                    ${electionDate ? `
+                        <div class="petition-modal-review-item">
+                            <dt>Election Date</dt>
+                            <dd>${electionDate}</dd>
                         </div>
                     ` : ''}
                 </dl>
@@ -1082,6 +1101,9 @@ async function handleCreate() {
             }
             if (formData.filingDeadline) {
                 petitionData.filingDeadline = formData.filingDeadline;
+            }
+            if (formData.electionDate) {
+                petitionData.electionDate = formData.electionDate;
             }
         }
 

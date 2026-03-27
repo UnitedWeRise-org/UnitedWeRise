@@ -1879,6 +1879,41 @@ class AdminAPI {
     }
 
     /**
+     * Set legal hold on a petition
+     * @param {string} id - Petition ID
+     * @param {string} reason - Reason for legal hold
+     * @returns {Promise<Object>} Updated petition
+     */
+    async setLegalHold(id, reason) {
+        const response = await this.call(`${this.BACKEND_URL}/api/admin/petitions/${id}/legal-hold`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        if (!response.ok) {
+            const json = await response.json().catch(() => ({}));
+            throw new Error(json.error || `Failed to set legal hold: ${response.status}`);
+        }
+        return response.json();
+    }
+
+    /**
+     * Remove legal hold from a petition
+     * @param {string} id - Petition ID
+     * @returns {Promise<Object>} Updated petition
+     */
+    async removeLegalHold(id) {
+        const response = await this.call(`${this.BACKEND_URL}/api/admin/petitions/${id}/legal-hold`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            const json = await response.json().catch(() => ({}));
+            throw new Error(json.error || `Failed to remove legal hold: ${response.status}`);
+        }
+        return response.json();
+    }
+
+    /**
      * Check if errors should be suppressed because the session is ending.
      * Used by all controller showError() methods to prevent error popups during logout.
      * Covers: active logout, wake-from-sleep recovery, and already-expired sessions.

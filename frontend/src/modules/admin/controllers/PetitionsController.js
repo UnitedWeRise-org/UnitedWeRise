@@ -160,6 +160,12 @@ class PetitionsController {
             case 'copy-link':
                 await this.copySigningLink(petitionId);
                 break;
+            case 'set-legal-hold':
+                await this.setLegalHold(petitionId);
+                break;
+            case 'remove-legal-hold':
+                await this.removeLegalHold(petitionId);
+                break;
             case 'page':
                 this.pagination.page = parseInt(button.getAttribute('data-page'), 10);
                 await this.loadData();
@@ -368,6 +374,7 @@ class PetitionsController {
             <tr id="petition-row-${petition.id}">
                 <td>
                     <strong>${this.escapeHtml(petition.title || 'Untitled')}</strong>
+                    ${petition.legalHold ? '<span style="background: #f59e0b; color: #000; padding: 1px 5px; border-radius: 3px; font-size: 11px; margin-left: 0.5rem; font-weight: bold;">LEGAL HOLD</span>' : ''}
                 </td>
                 <td>
                     <span>${this.escapeHtml(creatorName)}</span>
@@ -548,6 +555,19 @@ class PetitionsController {
         }
 
         return `
+            <div class="petition-legal-hold" style="margin-bottom: 1rem;">
+                ${petition.legalHold ? `
+                    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 0.75rem;">
+                        <strong>LEGAL HOLD</strong>
+                        <p style="margin: 0.25rem 0 0; font-size: 0.85rem;">Reason: ${this.escapeHtml(petition.legalHoldReason || 'Not specified')}</p>
+                        <p style="margin: 0.25rem 0 0; font-size: 0.8rem; color: #6b7280;">Set: ${petition.legalHoldSetAt ? new Date(petition.legalHoldSetAt).toLocaleString() : 'Unknown'}</p>
+                        <button data-petition-action="remove-legal-hold" data-petition-id="${petition.id}" class="btn-sm" style="margin-top: 0.5rem; background: #dc3545; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">Remove Hold</button>
+                    </div>
+                ` : `
+                    <button data-petition-action="set-legal-hold" data-petition-id="${petition.id}" class="btn-sm" style="background: #6c757d; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">Set Legal Hold</button>
+                `}
+            </div>
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div>
                     <h4 style="margin: 0 0 0.5rem;">Description</h4>
@@ -901,6 +921,51 @@ class PetitionsController {
             await adminDebugLog('PetitionsController', 'Signing link copied to clipboard', { petitionId: id });
         } catch (error) {
             adminDebugError('PetitionsController', 'Failed to copy signing link', error);
+        }
+    }
+
+    /**
+     * Prompt for a reason and set legal hold on a petition
+     * @param {string} id - Petition ID
+     */
+    async setLegalHold(id) {
+        const reason = prompt('Enter reason for legal hold:');
+        if (!reason) return;
+
+        try {
+            await window.AdminAPI.setLegalHold(id, reason);
+            await adminDebugLog('PetitionsController', 'Legal hold set', { petitionId: id, reason });
+            await this.loadData();
+            // Re-expand the detail panel if it was open
+            if (this.expandedPetitionId === id) {
+                this.expandedPetitionId = null;
+                await this.viewPetitionDetail(id);
+            }
+        } catch (error) {
+            adminDebugError('PetitionsController', 'Failed to set legal hold', error);
+            this.showError('Failed to set legal hold: ' + (error.message || 'Unknown error'));
+        }
+    }
+
+    /**
+     * Confirm and remove legal hold from a petition
+     * @param {string} id - Petition ID
+     */
+    async removeLegalHold(id) {
+        if (!confirm('Are you sure you want to remove the legal hold from this petition?')) return;
+
+        try {
+            await window.AdminAPI.removeLegalHold(id);
+            await adminDebugLog('PetitionsController', 'Legal hold removed', { petitionId: id });
+            await this.loadData();
+            // Re-expand the detail panel if it was open
+            if (this.expandedPetitionId === id) {
+                this.expandedPetitionId = null;
+                await this.viewPetitionDetail(id);
+            }
+        } catch (error) {
+            adminDebugError('PetitionsController', 'Failed to remove legal hold', error);
+            this.showError('Failed to remove legal hold: ' + (error.message || 'Unknown error'));
         }
     }
 

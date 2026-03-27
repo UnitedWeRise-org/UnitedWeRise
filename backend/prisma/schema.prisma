@@ -2064,6 +2064,16 @@ model Petition {
   circulatorAttestedAt     DateTime?
   /// Privacy/consent language shown alongside attestation
   privacyConsentText       String?
+  /// Full election date (for data retention calculations — 22-month auto-deletion)
+  electionDate             DateTime?
+  /// Whether this petition is under legal hold (prevents auto-deletion)
+  legalHold                Boolean              @default(false)
+  /// Reason for legal hold
+  legalHoldReason          String?
+  /// When legal hold was set
+  legalHoldSetAt           DateTime?
+  /// Admin who set the legal hold
+  legalHoldSetBy           String?
 
   creator           User                @relation("PetitionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   /// Candidate relationship (for ballot access petitions only)
@@ -2130,6 +2140,8 @@ model PetitionSignature {
   geolocation           Json?
   /// Whether hCaptcha was verified for this signature
   captchaVerified       Boolean              @default(false)
+  /// Whether signer opted in to being contacted by the petition creator
+  contactConsented      Boolean              @default(false)
   /// Review note for flagged/rejected signatures
   reviewNote            String?
   /// ID of admin/creator who reviewed this signature
