@@ -199,31 +199,42 @@ function render() {
 
     const step = STEPS[modalState.currentStep];
 
-    modalContainer.innerHTML = `
-        <div class="petition-modal-overlay">
-            <div class="petition-modal-content" role="dialog" aria-modal="true" aria-label="Create Petition">
-                <div class="petition-modal-header">
-                    <h3>${modalState.createdPetition ? 'Petition Created' : step.title}</h3>
-                    <button class="petition-modal-close" data-petition-action="close-modal" title="Close" aria-label="Close">&times;</button>
+    // On first render, create the full modal structure
+    if (!modalContainer.querySelector('.petition-modal-overlay')) {
+        modalContainer.innerHTML = `
+            <div class="petition-modal-overlay">
+                <div class="petition-modal-content" role="dialog" aria-modal="true" aria-label="Create Petition">
+                    <div class="petition-modal-header">
+                        <h3 id="petition-modal-title"></h3>
+                        <button class="petition-modal-close" data-petition-action="close-modal" title="Close" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="petition-modal-steps" id="petition-modal-steps"></div>
+                    <div class="petition-modal-body" id="petition-modal-body"></div>
+                    <div id="petition-modal-footer-container"></div>
                 </div>
-
-                <div class="petition-modal-steps">
-                    ${STEPS.map((s, i) => {
-                        let dotClass = 'petition-modal-step-dot';
-                        if (i === modalState.currentStep) dotClass += ' active';
-                        else if (i < modalState.currentStep || modalState.createdPetition) dotClass += ' completed';
-                        return `<div class="${dotClass}"></div>`;
-                    }).join('')}
-                </div>
-
-                <div class="petition-modal-body">
-                    ${renderCurrentStep()}
-                </div>
-
-                ${renderFooter()}
             </div>
-        </div>
-    `;
+        `;
+    }
+
+    // Update only the changing parts (prevents flicker from full DOM replacement)
+    const titleEl = modalContainer.querySelector('#petition-modal-title');
+    const stepsEl = modalContainer.querySelector('#petition-modal-steps');
+    const bodyEl = modalContainer.querySelector('#petition-modal-body');
+    const footerEl = modalContainer.querySelector('#petition-modal-footer-container');
+
+    if (titleEl) titleEl.textContent = modalState.createdPetition ? 'Petition Created' : step.title;
+
+    if (stepsEl) {
+        stepsEl.innerHTML = STEPS.map((s, i) => {
+            let dotClass = 'petition-modal-step-dot';
+            if (i === modalState.currentStep) dotClass += ' active';
+            else if (i < modalState.currentStep || modalState.createdPetition) dotClass += ' completed';
+            return `<div class="${dotClass}"></div>`;
+        }).join('');
+    }
+
+    if (bodyEl) bodyEl.innerHTML = renderCurrentStep();
+    if (footerEl) footerEl.innerHTML = renderFooter();
 }
 
 /**

@@ -7,6 +7,10 @@
     {
       "route": "/petition-dashboard",
       "rewrite": "/petition-dashboard.html"
+    },
+    {
+      "route": "/petition-privacy-policy",
+      "rewrite": "/petition-privacy-policy.html"
     }
   ],
   "navigationFallback": {
@@ -31,7 +35,8 @@
       "/*.ttf",
       "/*.eot",
       "/sign/*",
-      "/petition-dashboard"
+      "/petition-dashboard",
+      "/petition-privacy-policy"
     ]
   },
   "mimeTypes": {

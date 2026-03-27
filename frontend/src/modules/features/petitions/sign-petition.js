@@ -1268,7 +1268,7 @@ function renderReviewStep() {
                         ${fd.attestedAt ? 'checked' : ''}
                     />
                     <span>${escapeHtml(buildAttestationText(fd, state.voterVerificationResult))}
-                    <a href="/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a></span>
+                    <a href="/petition-privacy-policy" target="_blank" rel="noopener">Petition Privacy Policy</a></span>
                 </label>
                 ${errors.attestation ? `<span class="sign-field-error">${escapeHtml(errors.attestation)}</span>` : ''}
             </div>
