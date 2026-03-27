@@ -6,6 +6,7 @@
  */
 
 import { standaloneAuthRefresh } from '../../core/auth/standalone-refresh.js';
+import { API_CONFIG } from '../../../config/api.js';
 
 // ==================== Constants ====================
 
@@ -96,22 +97,7 @@ const DEFAULT_ATTESTATION = 'I affirm under penalty of perjury that the informat
 
 // ==================== API Base ====================
 
-/**
- * Detect API base URL based on hostname
- * @returns {string} API base URL
- */
-function detectApiBase() {
-    const hostname = window.location.hostname;
-    if (hostname === 'dev.unitedwerise.org' ||
-        hostname === 'dev-admin.unitedwerise.org' ||
-        hostname === 'localhost' ||
-        hostname === '127.0.0.1') {
-        return 'https://dev-api.unitedwerise.org/api';
-    }
-    return 'https://api.unitedwerise.org/api';
-}
-
-const API_BASE = detectApiBase();
+const API_BASE = API_CONFIG.BASE_URL;
 
 // ==================== State ====================
 

@@ -449,6 +449,7 @@ function renderSignerConfigStep() {
                             <span class="petition-modal-help-icon" title="Voter verification uses a third-party API to confirm signer registration. Cost: $0.10 per verification ($100 per 1,000 verifications). Charges apply only to successful lookups — failed or unavailable checks are not billed.">&#9432;</span>
                         </span>
                         <small>Signers' voter registration will be verified in real time. <strong>Additional cost: $0.10 per verification</strong> ($100 per 1,000 block).</small>
+                        ${voterVerificationEnabled ? '<small style="color: #b45309; display: block; margin-top: 4px;">⚠ Note: Voter verification service is not yet connected. Signatures will be accepted but marked as unverified until the service is activated.</small>' : ''}
                     </div>
                 </label>
             </div>

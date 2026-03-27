@@ -596,12 +596,12 @@ async function handleVerifyRegistration() {
         const fd = state.formData;
         const result = await verifyRegistration({
             petitionId: state.petition.id,
-            firstName: fd.signerFirstName.trim(),
-            lastName: fd.signerLastName.trim(),
-            address: fd.signerAddress.trim(),
-            city: fd.signerCity.trim(),
-            state: fd.signerState,
-            zip: fd.signerZip.trim(),
+            signerFirstName: fd.signerFirstName.trim(),
+            signerLastName: fd.signerLastName.trim(),
+            signerAddress: fd.signerAddress.trim(),
+            signerCity: fd.signerCity.trim(),
+            signerState: fd.signerState,
+            signerZip: fd.signerZip.trim(),
             captchaToken: fd.captchaToken
         });
 
