@@ -153,89 +153,65 @@ export class AuthHandlers {
     // inline by _tryPromptWithTimeout() with timeout-based fallback to button flow.
 
     /**
-     * Show a visible Google Sign-In button as fallback
-     * Required for iOS Safari and browsers that block automatic prompts
+     * Show Google Sign-In via popup-based OAuth flow.
+     * Bypasses the GIS renderButton() API entirely — opens Google's authorization
+     * endpoint in a popup, receives the ID token via postMessage from the callback page.
+     * Works on all browsers including Safari with ITP.
      */
     showGoogleSignInFallback() {
-        adminDebugLog('AuthHandlers', 'Showing Google Sign-In fallback button');
+        adminDebugLog('AuthHandlers', 'Opening Google Sign-In popup flow');
 
-        // Check if fallback already exists
-        if (document.getElementById('google-signin-fallback-overlay')) {
+        // Build Google OAuth authorization URL
+        const nonce = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString());
+        const redirectUri = `${window.location.origin}/oauth-callback.html`;
+        const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+            `client_id=${encodeURIComponent(this.googleClientId)}` +
+            `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+            `&response_type=id_token` +
+            `&scope=${encodeURIComponent('openid email profile')}` +
+            `&nonce=${encodeURIComponent(nonce)}` +
+            `&prompt=select_account`;
+
+        // Open popup centered on screen
+        const w = 500, h = 600;
+        const left = Math.round((screen.width - w) / 2);
+        const top = Math.round((screen.height - h) / 2);
+        const popup = window.open(authUrl, 'google-signin', `width=${w},height=${h},left=${left},top=${top}`);
+
+        if (!popup) {
+            showAuthMessage(
+                'Popup blocked by your browser. Please allow popups for this site and try again.',
+                'error'
+            );
             return;
         }
 
-        // Create overlay for the fallback button
-        const overlay = document.createElement('div');
-        overlay.id = 'google-signin-fallback-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10001;
-        `;
+        // Listen for the ID token from the callback page
+        const messageHandler = (event) => {
+            if (event.origin !== window.location.origin) return;
+            if (event.data?.type !== 'google-oauth-callback') return;
 
-        // Create container for button and close option
-        const container = document.createElement('div');
-        container.style.cssText = `
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            text-align: center;
-            max-width: 320px;
-        `;
+            window.removeEventListener('message', messageHandler);
+            clearInterval(popupCheck);
 
-        // Add instruction text
-        const instruction = document.createElement('p');
-        instruction.textContent = 'Tap the button below to sign in with Google:';
-        instruction.style.cssText = 'margin: 0 0 16px 0; color: #333; font-size: 14px;';
-        container.appendChild(instruction);
-
-        // Create button container
-        const buttonContainer = document.createElement('div');
-        buttonContainer.id = 'google-signin-fallback-button';
-        buttonContainer.style.cssText = 'display: flex; justify-content: center; margin-bottom: 16px;';
-        container.appendChild(buttonContainer);
-
-        // Add cancel link
-        const cancelLink = document.createElement('a');
-        cancelLink.textContent = 'Cancel';
-        cancelLink.href = '#';
-        cancelLink.style.cssText = 'color: #666; font-size: 12px; text-decoration: none;';
-        cancelLink.onclick = (e) => {
-            e.preventDefault();
-            overlay.remove();
-        };
-        container.appendChild(cancelLink);
-
-        overlay.appendChild(container);
-        document.body.appendChild(overlay);
-
-        // Close on overlay click (but not on container click)
-        overlay.onclick = (e) => {
-            if (e.target === overlay) {
-                overlay.remove();
+            if (event.data.idToken) {
+                this.handleGoogleCredentialResponse({ credential: event.data.idToken });
+            } else {
+                showAuthMessage(
+                    'Google Sign-In failed. Please try again or sign in with your email and password.',
+                    'error'
+                );
             }
         };
+        window.addEventListener('message', messageHandler);
 
-        // Render the actual Google Sign-In button - user must click this manually
-        if (window.google?.accounts?.id) {
-            google.accounts.id.renderButton(buttonContainer, {
-                type: 'standard',
-                size: 'large',
-                text: 'signin_with',
-                shape: 'rectangular',
-                logo_alignment: 'left',
-                width: 280
-            });
-        } else {
-            buttonContainer.innerHTML = '<p style="color: #c00;">Google Sign-In failed to load. Please refresh and try again.</p>';
-        }
+        // Clean up if user closes popup without completing sign-in
+        const popupCheck = setInterval(() => {
+            if (popup.closed) {
+                clearInterval(popupCheck);
+                window.removeEventListener('message', messageHandler);
+            }
+        }, 500);
     }
 
     /**
