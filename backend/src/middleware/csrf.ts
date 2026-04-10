@@ -44,6 +44,8 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
     '/api/auth/check-username',  // Username availability check during registration (before session)
     '/api/auth/google',
     '/api/auth/google/callback',
+    '/api/oauth/google',          // Google OAuth login (unauthenticated, no CSRF cookie available)
+    '/api/oauth/report-error',    // OAuth error reporting from unauthenticated users
     '/api/auth/refresh',
     '/api/auth/logout',  // Logout must work even if CSRF token issues
     '/api/auth/forgot-password',
