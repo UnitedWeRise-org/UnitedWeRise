@@ -13,6 +13,7 @@
  */
 
 import { apiClient } from '../../core/api/client.js';
+import { getCsrfToken } from '../../../utils/cookies.js';
 
 // Configuration
 const VIDEO_CONFIG = {
@@ -345,7 +346,7 @@ export class VideoUploader {
             xhr.withCredentials = true;
 
             // Add CSRF token for cross-origin POST request
-            const csrfToken = window.csrfToken || document.cookie.match(/csrf-token(?:_dev)?=([^;]+)/)?.[1];
+            const csrfToken = getCsrfToken();
             if (csrfToken) {
                 xhr.setRequestHeader('X-CSRF-Token', csrfToken);
             }

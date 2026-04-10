@@ -335,12 +335,12 @@ export class AuthHandlers {
                     await adminDebugLog('AuthHandlers', 'User needs to complete onboarding (select username)');
 
                     // Show username selection modal
-                    usernameModal.show(data.user, data.csrfToken, async (updatedUser) => {
+                    usernameModal.show(data.user, async (updatedUser) => {
                         await adminDebugLog('AuthHandlers', 'Onboarding completed successfully');
                     });
                 } else {
                     // User already has username, proceed normally
-                    await unifiedAuthManager.setAuthenticatedUser(data.user, data.csrfToken);
+                    await unifiedAuthManager.setAuthenticatedUser(data.user);
                     closeAuthModal();
 
                     // Show welcome message for new users

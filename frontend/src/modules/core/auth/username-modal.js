@@ -7,6 +7,7 @@
  */
 
 import { getApiBaseUrl } from '../../../utils/environment.js';
+import { getCsrfToken } from '../../../utils/cookies.js';
 import { showAuthMessage, closeAuthModal } from './modal.js';
 import { unifiedAuthManager } from './unified-manager.js';
 
@@ -19,12 +20,10 @@ export class UsernameModal {
     /**
      * Show username selection modal for OAuth users
      * @param {Object} userData - User data from OAuth response
-     * @param {string} csrfToken - CSRF token for API calls
      * @param {Function} onComplete - Callback when username is selected
      */
-    show(userData, csrfToken, onComplete) {
+    show(userData, onComplete) {
         this.onComplete = onComplete;
-        this.csrfToken = csrfToken;
         this.userData = userData;
 
         // Create modal HTML
@@ -224,7 +223,7 @@ export class UsernameModal {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': this.csrfToken
+                    'X-CSRF-Token': getCsrfToken()
                 },
                 credentials: 'include',
                 body: JSON.stringify({ username })
@@ -240,7 +239,7 @@ export class UsernameModal {
                 this.hide();
 
                 // Update unified auth manager
-                await unifiedAuthManager.setAuthenticatedUser(updatedUser, this.csrfToken);
+                await unifiedAuthManager.setAuthenticatedUser(updatedUser);
 
                 // Close any auth modals
                 closeAuthModal();

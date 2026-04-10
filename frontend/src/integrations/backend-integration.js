@@ -333,7 +333,7 @@ class BackendIntegration {
         this._lastAuthErrorHandled = Date.now();
 
         // Clear invalid session data
-        window.csrfToken = null;
+        // CSRF cookie cleared by backend logout response
         if (typeof window.authToken !== 'undefined') {
             window.authToken = null;
         }

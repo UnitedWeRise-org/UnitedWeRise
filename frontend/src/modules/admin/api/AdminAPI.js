@@ -7,7 +7,7 @@
  */
 
 import { getApiBaseUrl } from '../../../utils/environment.js';
-import { COOKIE_NAMES } from '../../../utils/cookies.js';
+import { getCsrfToken } from '../../../utils/cookies.js';
 
 class AdminAPI {
     constructor() {
@@ -192,9 +192,8 @@ class AdminAPI {
         // Merge with provided headers
         Object.assign(headers, options.headers);
 
-        // Add CSRF token for state-changing requests
-        // Fallback to reading from cookie if window.csrfToken not set
-        const csrfToken = window.csrfToken || getCookie(COOKIE_NAMES.CSRF_TOKEN);
+        // Add CSRF token for state-changing requests (read from cookie — single source of truth)
+        const csrfToken = getCsrfToken();
         if (csrfToken && options.method && options.method !== 'GET') {
             headers['X-CSRF-Token'] = csrfToken;
         }
@@ -233,7 +232,7 @@ class AdminAPI {
 
         // Log headers being sent
         console.log('📋 Request Headers:', headers);
-        console.log('🔐 Window CSRF Token:', window.csrfToken ? `Present (${window.csrfToken.substring(0, 20)}...)` : 'Missing');
+        console.log('🔐 CSRF Token:', csrfToken ? `Present (${csrfToken.substring(0, 20)}...)` : 'Missing');
         console.log('🔒 Credentials Mode:', 'include');
 
         // Log request body (if present and not FormData)
@@ -324,7 +323,6 @@ class AdminAPI {
 
                     // Clear all auth data via userState (httpOnly cookies cleared server-side)
                     window.currentUser = null;  // Routes through userState.clear() → removes localStorage
-                    window.csrfToken = null;
 
                     // Redirect to login
                     window.location.href = '/admin-dashboard.html';
@@ -411,10 +409,8 @@ class AdminAPI {
                         });
 
                         if (refreshResponse.ok) {
-                            const refreshData = await refreshResponse.json();
-                            if (refreshData.csrfToken) {
-                                window.csrfToken = refreshData.csrfToken;
-                            }
+                            // CSRF token automatically updated via Set-Cookie header
+                            await refreshResponse.json();
                             // Wait for cookie propagation (AdminAuth.refreshToken already does this)
                             await new Promise(resolve => setTimeout(resolve, 500));
                             refreshSucceeded = true;
@@ -1926,20 +1922,6 @@ class AdminAPI {
             (window.adminAuth && !window.adminAuth.isAuthenticated())
         );
     }
-}
-
-/**
- * Helper function to get cookie value by name
- * @param {string} name - Cookie name
- * @returns {string|null} Cookie value or null if not found
- */
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-        return parts.pop().split(';').shift();
-    }
-    return null;
 }
 
 // Create singleton instance

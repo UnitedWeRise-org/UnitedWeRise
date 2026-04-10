@@ -13,6 +13,7 @@
  */
 
 import { getApiBaseUrl } from '../../utils/environment.js';
+import { getCsrfToken } from '../../utils/cookies.js';
 
 class UnifiedAuth {
     constructor() {
@@ -204,8 +205,7 @@ class UnifiedAuth {
                 }
 
                 if (totpLoginResponse.ok && !totpResult.requiresTOTP) {
-                    // Store CSRF token and user data
-                    window.csrfToken = totpResult.csrfToken;
+                    // CSRF token set via Set-Cookie header (cookie is single source of truth)
                     // Note: window.currentUser setter routes through userState → localStorage
                     window.currentUser = totpResult.user;
 
@@ -234,8 +234,7 @@ class UnifiedAuth {
 
             // Regular login (no TOTP required)
             if (response.ok) {
-                // Store CSRF token and user data
-                window.csrfToken = result.csrfToken;
+                // CSRF token set via Set-Cookie header (cookie is single source of truth)
                 // Note: window.currentUser setter routes through userState → localStorage
                 window.currentUser = result.user;
 
@@ -296,7 +295,7 @@ class UnifiedAuth {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
-                    'X-CSRF-Token': window.csrfToken || '' // Empty string if undefined
+                    'X-CSRF-Token': getCsrfToken()
                 }
             });
 
@@ -309,7 +308,7 @@ class UnifiedAuth {
         }
 
         // Clear local data (window.currentUser setter routes through userState → localStorage)
-        window.csrfToken = null;
+        // CSRF cookie cleared by backend logout response
         window.currentUser = null;
 
         // Clear TOTP sessions for both contexts

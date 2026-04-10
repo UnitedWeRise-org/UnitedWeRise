@@ -202,13 +202,7 @@ class AdminAuth {
                     if (response.ok) {
                         const data = await response.json();
 
-                        // Update CSRF token if provided
-                        if (data.csrfToken) {
-                            window.csrfToken = data.csrfToken;
-                            if (window.AdminAPI) {
-                                window.AdminAPI.csrfToken = data.csrfToken;
-                            }
-                        }
+                        // CSRF token automatically updated via Set-Cookie header
 
                         this.lastTokenRefresh = new Date();
                         console.log(`✅ Token refreshed successfully (attempt ${attempt + 1})`);

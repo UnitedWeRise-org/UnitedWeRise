@@ -7,6 +7,7 @@
 
 import { ORG_TYPE_LABELS, JURISDICTION_LABELS } from './org-card.js';
 import { standaloneAuthRefresh } from '../../../core/auth/standalone-refresh.js';
+import { getCsrfToken } from '../../../../utils/cookies.js';
 
 /**
  * Capability categories for role creation UI
@@ -84,16 +85,7 @@ function detectApiBase() {
     return 'https://api.unitedwerise.org/api';
 }
 
-/**
- * Get CSRF token from window or cookie
- * @returns {string} CSRF token or empty string
- */
-function getCsrfToken() {
-    if (window.csrfToken) return window.csrfToken;
-    // Fallback: read from cookie (handles both prod and dev cookie names)
-    const match = document.cookie.match(/(?:^|;\s*)csrf-token(?:_dev)?=([^;]*)/);
-    return match ? decodeURIComponent(match[1]) : '';
-}
+// getCsrfToken imported from utils/cookies.js (cookie is single source of truth)
 
 /**
  * Dashboard state

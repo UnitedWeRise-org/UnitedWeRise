@@ -31,10 +31,7 @@ let selectedPostMedia = null;
 async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption = '', gallery = null) {
     await adminDebugLog('MyFeed', 'Uploading media files:', { files, photoType, purpose });
 
-    // DIAGNOSTIC: Check CSRF token before upload
-    console.log('🔍 CSRF Diagnostic - window.csrfToken:', window.csrfToken);
-    console.log('🔍 CSRF Diagnostic - apiClient.csrfToken:', apiClient.csrfToken);
-    console.log('🔍 CSRF Diagnostic - token exists:', !!(window.csrfToken || apiClient.csrfToken));
+    // DIAGNOSTIC: CSRF token is read from cookie on-demand by apiClient
 
     const fileArray = Array.isArray(files) ? files : [files];
     const uploadedPhotos = [];

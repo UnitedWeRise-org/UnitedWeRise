@@ -40,7 +40,6 @@ class UnifiedAuthManager {
         this._currentAuthState = {
             isAuthenticated: false,
             user: null,
-            csrfToken: null,
             sessionValid: false
         };
 
@@ -109,16 +108,8 @@ class UnifiedAuthManager {
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-
-                    // Update CSRF token if provided
-                    if (data.csrfToken) {
-                        window.csrfToken = data.csrfToken;
-                        if (window.apiClient) {
-                            window.apiClient.csrfToken = data.csrfToken;
-                        }
-                        this._currentAuthState.csrfToken = data.csrfToken;
-                    }
+                    // CSRF token is automatically updated via Set-Cookie header
+                    await response.json();
 
                     console.log('✅ Token refreshed successfully');
                     this._isRefreshingToken = false;
@@ -413,7 +404,7 @@ class UnifiedAuthManager {
                 // Use the existing unifiedLogin for TOTP handling
                 const result = await window.unifiedLogin(email, password, 'main-site');
                 if (result.success) {
-                    await this._setAuthenticatedState(result.user, result.csrfToken || window.csrfToken);
+                    await this._setAuthenticatedState(result.user);
                     return { success: true, user: result.user };
                 } else {
                     return { success: false, error: result.error || 'TOTP authentication failed' };
@@ -422,7 +413,7 @@ class UnifiedAuthManager {
 
             // Handle successful login
             if ((response.success || response.message === 'Login successful') && response.user) {
-                await this._setAuthenticatedState(response.user, response.csrfToken);
+                await this._setAuthenticatedState(response.user);
                 return { success: true, user: response.user };
             } else {
                 return { success: false, error: response.message || 'Login failed' };
@@ -437,17 +428,16 @@ class UnifiedAuthManager {
     /**
      * Set authenticated state and sync ALL systems
      */
-    async _setAuthenticatedState(user, csrfToken) {
+    async _setAuthenticatedState(user) {
         // Update internal state (silent during normal login)
         this._currentAuthState = {
             isAuthenticated: true,
             user: user,
-            csrfToken: csrfToken,
             sessionValid: true
         };
 
         // SYNCHRONIZE ALL SYSTEMS
-        await this._syncAllSystems(user, csrfToken);
+        await this._syncAllSystems(user);
 
         // Start proactive refresh timer for new session
         this._startProactiveRefreshTimer();
@@ -462,7 +452,7 @@ class UnifiedAuthManager {
     /**
      * Synchronize authentication state across ALL systems
      */
-    async _syncAllSystems(user, csrfToken) {
+    async _syncAllSystems(user) {
         // Synchronize all systems (silent during normal login)
 
         // 1. Update user state module
@@ -476,13 +466,7 @@ class UnifiedAuthManager {
         // 3. Update localStorage
         localStorage.setItem('currentUser', JSON.stringify(user));
 
-        // 4. Synchronize CSRF tokens everywhere
-        if (csrfToken) {
-            window.csrfToken = csrfToken;
-            if (window.apiClient) {
-                window.apiClient.csrfToken = csrfToken;
-            }
-        }
+        // 4. CSRF token handled by cookie (single source of truth) — no JS sync needed
 
         // 5. Update UI - prefer legacy function if available, fallback to modular
         if (window.setUserLoggedIn && typeof window.setUserLoggedIn === 'function') {
@@ -491,17 +475,17 @@ class UnifiedAuthManager {
             setUserLoggedIn(user);
         }
 
-        // 7. Dispatch events for other systems
+        // 6. Dispatch events for other systems
         window.dispatchEvent(new CustomEvent('userLoggedIn', { detail: { user } }));
         window.dispatchEvent(new CustomEvent('authStateChanged', {
-            detail: { authenticated: true, user, csrfToken }
+            detail: { authenticated: true, user }
         }));
     }
 
     /**
      * Synchronous version of _syncAllSystems for initialization
      */
-    _syncAllSystemsSync(user, csrfToken) {
+    _syncAllSystemsSync(user) {
         // Synchronize all systems during initialization (silent during normal operation)
 
         // 1. Update user state module
@@ -531,13 +515,7 @@ class UnifiedAuthManager {
         // 3. Update localStorage
         localStorage.setItem('currentUser', JSON.stringify(user));
 
-        // 4. Synchronize CSRF tokens everywhere
-        if (csrfToken) {
-            window.csrfToken = csrfToken;
-            if (window.apiClient) {
-                window.apiClient.csrfToken = csrfToken;
-            }
-        }
+        // 4. CSRF token handled by cookie (single source of truth) — no JS sync needed
 
         // 5. Update UI - prefer legacy function if available, fallback to modular
         if (window.setUserLoggedIn && typeof window.setUserLoggedIn === 'function') {
@@ -557,7 +535,7 @@ class UnifiedAuthManager {
         // 7. Dispatch events for other systems
         window.dispatchEvent(new CustomEvent('userLoggedIn', { detail: { user } }));
         window.dispatchEvent(new CustomEvent('authStateChanged', {
-            detail: { authenticated: true, user, csrfToken }
+            detail: { authenticated: true, user }
         }));
     }
 
@@ -671,7 +649,6 @@ class UnifiedAuthManager {
         this._currentAuthState = {
             isAuthenticated: false,
             user: null,
-            csrfToken: null,
             sessionValid: false
         };
 
@@ -694,9 +671,9 @@ class UnifiedAuthManager {
     /**
      * Missing methods that other systems call
      */
-    async setAuthenticatedUser(user, csrfToken = null) {
+    async setAuthenticatedUser(user) {
         await adminDebugLog('UnifiedAuthManager', 'Setting authenticated user via unified manager...');
-        await this._setAuthenticatedState(user, csrfToken || window.csrfToken);
+        await this._setAuthenticatedState(user);
     }
 
     async verifySession() {
@@ -758,11 +735,7 @@ class UnifiedAuthManager {
             window.setUserLoggedOut();
         }
 
-        // Clear CSRF tokens
-        window.csrfToken = null;
-        if (window.apiClient) {
-            window.apiClient.csrfToken = null;
-        }
+        // CSRF cookie is cleared by backend logout response (Set-Cookie with maxAge=0)
 
         // Update UI
         setUserLoggedOut();
@@ -836,27 +809,21 @@ class UnifiedAuthManager {
             this._currentAuthState = {
                 isAuthenticated: false,
                 user: null,
-                csrfToken: null,
                 sessionValid: false
             };
             return;
         }
 
-        const existingToken = window.csrfToken ||
-                            (window.apiClient && window.apiClient.csrfToken);
-
         adminDebugLog('UnifiedAuthManager', 'Syncing from existing user session', existingUser.username || existingUser.email);
         this._currentAuthState = {
             isAuthenticated: true,
             user: existingUser,
-            csrfToken: existingToken,
             sessionValid: true
         };
 
         // CRITICAL: Sync this user to ALL systems, including legacy
-        // Note: Can't await here since _syncFromExistingSystems is not async
-        // But we need to sync immediately to prevent race conditions
-        this._syncAllSystemsSync(existingUser, existingToken);
+        // CSRF token is read from cookie on-demand — no JS sync needed
+        this._syncAllSystemsSync(existingUser);
 
         // Start proactive refresh timer for existing session
         this._startProactiveRefreshTimer();

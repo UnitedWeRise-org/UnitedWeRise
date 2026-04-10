@@ -1,4 +1,5 @@
 import { COUNTRIES, getCountryName } from '../data/countries.js';
+import { getCsrfToken } from '../utils/cookies.js';
 
 /**
  * @module components/OnboardingFlow
@@ -27,14 +28,11 @@ class OnboardingFlow {
     }
 
     /**
-     * Get CSRF token for POST requests.
-     * Mirrors the pattern in api-manager.js: window.csrfToken or cookie fallback.
+     * Get CSRF token from cookie (single source of truth)
      * @returns {string} CSRF token or empty string
      */
     getCSRFToken() {
-        if (window.csrfToken) return window.csrfToken;
-        const match = document.cookie.match(/uwr_csrf=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
+        return getCsrfToken();
     }
 
     /**

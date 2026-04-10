@@ -42,3 +42,30 @@ export const COOKIE_NAMES = {
   REFRESH_TOKEN: getCookieName('refreshToken'),
   CSRF_TOKEN: getCookieName('csrf-token')
 };
+
+/**
+ * Read a cookie value by name from document.cookie
+ *
+ * @param {string} name - Cookie name to read
+ * @returns {string|null} Cookie value or null if not found
+ */
+export function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop().split(';').shift();
+  }
+  return null;
+}
+
+/**
+ * Get the current CSRF token from the cookie (single source of truth)
+ *
+ * The CSRF cookie is set by the backend on login/register/refresh responses
+ * with httpOnly: false so JavaScript can read it for the double-submit pattern.
+ *
+ * @returns {string} CSRF token value, or empty string if not found
+ */
+export function getCsrfToken() {
+  return getCookie(COOKIE_NAMES.CSRF_TOKEN) || '';
+}

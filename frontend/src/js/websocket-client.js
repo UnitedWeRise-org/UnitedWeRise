@@ -36,7 +36,7 @@ class UnifiedMessagingClient {
 
     // Initialize WebSocket connection only after user is authenticated
     initializeWhenAuthenticated() {
-        if (window.currentUser && window.csrfToken) {
+        if (window.currentUser) {
             // User already authenticated, connect now
             adminDebugLog('WebSocket', 'User authenticated, connecting...');
             this.connect();
@@ -44,11 +44,8 @@ class UnifiedMessagingClient {
             // Wait for authentication
             adminDebugLog('WebSocket', 'Waiting for authentication before connecting...');
             window.addEventListener('userLoggedIn', () => {
-                // Small delay to ensure csrfToken is set
-                setTimeout(() => {
-                    adminDebugLog('WebSocket', 'Authentication complete, connecting...');
-                    this.connect();
-                }, 500);
+                adminDebugLog('WebSocket', 'Authentication complete, connecting...');
+                this.connect();
             }, { once: true });
         }
     }
@@ -91,8 +88,8 @@ class UnifiedMessagingClient {
             return;
         }
 
-        // Verify user is still authenticated (belt and suspenders check)
-        if (!window.currentUser || !window.csrfToken) {
+        // Verify user is still authenticated
+        if (!window.currentUser) {
             adminDebugWarn('WebSocket', 'No user authentication available for WebSocket connection');
             return;
         }
@@ -108,7 +105,7 @@ class UnifiedMessagingClient {
                 hasLocalStorageToken: !!localStorage.getItem('authToken'),
                 hasCookie: !!document.cookie,
                 hasCurrentUser: !!window.currentUser,
-                hasCsrfToken: !!window.csrfToken
+                hasCsrfToken: !!document.cookie.includes('csrf-token=')
             });
 
             // WebSocket auth challenge: authToken is httpOnly cookie (can't access from JS)

@@ -9,7 +9,7 @@
  */
 
 import { adminDebugLog } from '../../../../js/adminDebugger.js';
-import { COOKIE_NAMES } from '../../../utils/cookies.js';
+import { getCsrfToken } from '../../../utils/cookies.js';
 
 const API_CONFIG = {
     get BASE_URL() {
@@ -29,7 +29,6 @@ class APIClient {
     constructor() {
         this.cache = new Map();
         this.pendingRequests = new Map();
-        this.csrfToken = null;
     }
 
     /**
@@ -101,21 +100,12 @@ class APIClient {
                 }
             }
             
-            // Add CSRF token if available - check instance → global → cookie (defense in depth)
-            const csrfToken = this.csrfToken || window.csrfToken || getCookie(COOKIE_NAMES.CSRF_TOKEN);
+            // Add CSRF token from cookie (single source of truth for double-submit pattern)
+            const csrfToken = getCsrfToken();
             if (csrfToken) {
                 fetchOptions.headers['X-CSRF-Token'] = csrfToken;
-                // Sync the tokens bidirectionally (including when read from cookie)
-                this.csrfToken = csrfToken;
-                window.csrfToken = csrfToken;
-            } else {
-                // CRITICAL: Warn if CSRF token is missing for state-changing requests
-                if (fetchOptions.method && fetchOptions.method !== 'GET' && fetchOptions.method !== 'OPTIONS') {
-                    console.warn(`⚠️ CSRF token missing for ${fetchOptions.method} request to ${url}`);
-                    console.warn(`⚠️ this.csrfToken:`, this.csrfToken);
-                    console.warn(`⚠️ window.csrfToken:`, window.csrfToken);
-                    console.warn(`⚠️ document.cookie (csrf-token):`, getCookie(COOKIE_NAMES.CSRF_TOKEN));
-                }
+            } else if (fetchOptions.method && fetchOptions.method !== 'GET' && fetchOptions.method !== 'OPTIONS') {
+                console.warn(`⚠️ CSRF token missing for ${fetchOptions.method} request to ${url}`);
             }
             
             // Set timeout
@@ -166,13 +156,8 @@ class APIClient {
                                 });
 
                                 if (refreshResponse.ok) {
-                                    const refreshData = await refreshResponse.json();
-
-                                    // Update CSRF token
-                                    if (refreshData.csrfToken) {
-                                        window.csrfToken = refreshData.csrfToken;
-                                        this.csrfToken = refreshData.csrfToken;
-                                    }
+                                    // CSRF token is automatically updated via Set-Cookie header
+                                    await refreshResponse.json();
 
                                     console.log('✅ Token refreshed, retrying original request');
 
@@ -219,13 +204,7 @@ class APIClient {
             
             // Parse response
             const data = await response.json();
-            
-            // Update CSRF token if provided - sync both instance and global
-            if (data.csrfToken) {
-                this.csrfToken = data.csrfToken;
-                window.csrfToken = data.csrfToken;
-            }
-            
+            // CSRF token is automatically updated via Set-Cookie header (cookie is single source of truth)
             return data;
             
         } catch (error) {
@@ -423,31 +402,14 @@ class APIClient {
             xhr.open('POST', url);
             xhr.withCredentials = true;
 
-            const csrfToken = this.csrfToken || window.csrfToken || getCookie(COOKIE_NAMES.CSRF_TOKEN);
+            const csrfToken = getCsrfToken();
             if (csrfToken) {
                 xhr.setRequestHeader('X-CSRF-Token', csrfToken);
-                // Sync the tokens bidirectionally
-                this.csrfToken = csrfToken;
-                window.csrfToken = csrfToken;
             }
 
             xhr.send(formData);
         });
     }
-}
-
-/**
- * Get cookie value by name
- * @param {string} name - Cookie name
- * @returns {string|null} - Cookie value or null
- */
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-        return parts.pop().split(';').shift();
-    }
-    return null;
 }
 
 // Create singleton instance

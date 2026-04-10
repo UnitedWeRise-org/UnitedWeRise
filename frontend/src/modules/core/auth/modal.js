@@ -367,7 +367,7 @@ export async function handleRegister() {
             // Registration now uses cookie-based auth (matching login pattern)
             // The backend has already set the httpOnly authToken cookie
             // Use unified auth manager for registration success
-            unifiedAuthManager.setAuthenticatedUser(response.user, response.csrfToken);
+            unifiedAuthManager.setAuthenticatedUser(response.user);
 
             showAuthMessage('Account created successfully!', 'success', 'register');
 

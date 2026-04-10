@@ -75,11 +75,8 @@ class StandaloneAuthRefresh {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                // Update CSRF token if provided
-                if (data.csrfToken) {
-                    window.csrfToken = data.csrfToken;
-                }
+                // CSRF token automatically updated via Set-Cookie header
+                await response.json();
                 this._lastRefresh = Date.now();
                 console.log('[StandaloneRefresh] Token refreshed successfully');
                 return true;

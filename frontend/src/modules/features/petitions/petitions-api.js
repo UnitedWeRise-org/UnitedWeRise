@@ -6,28 +6,10 @@
  */
 
 import { API_CONFIG } from '../../../config/api.js';
-import { COOKIE_NAMES } from '../../../utils/cookies.js';
+import { getCsrfToken } from '../../../utils/cookies.js';
 
 const PETITIONS_BASE = 'petitions';
 const BILLING_BASE = 'verification-billing';
-
-/**
- * Read a cookie value by name
- * @param {string} name - Cookie name
- * @returns {string} Cookie value or empty string
- */
-function getCookie(name) {
-    const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
-    return match ? decodeURIComponent(match[1]) : '';
-}
-
-/**
- * Extract CSRF token from cookies for authenticated requests
- * @returns {string} CSRF token value or empty string
- */
-function getCsrfToken() {
-    return window.csrfToken || getCookie(COOKIE_NAMES.CSRF_TOKEN) || '';
-}
 
 /**
  * Build authenticated request headers including CSRF token

@@ -6,6 +6,7 @@
  */
 
 import { standaloneAuthRefresh } from '../../core/auth/standalone-refresh.js';
+import { getCsrfToken } from '../../../utils/cookies.js';
 import { API_CONFIG } from '../../../config/api.js';
 
 // ==================== Constants ====================
@@ -139,15 +140,7 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-/**
- * Get CSRF token from window or cookie
- * @returns {string} CSRF token or empty string
- */
-function getCsrfToken() {
-    if (window.csrfToken) return window.csrfToken;
-    const match = document.cookie.match(/(?:^|;\s*)csrf-token(?:_dev)?=([^;]*)/);
-    return match ? decodeURIComponent(match[1]) : '';
-}
+// getCsrfToken imported from utils/cookies.js (cookie is single source of truth)
 
 /**
  * Make an authenticated API request
@@ -180,11 +173,7 @@ async function apiRequest(endpoint, options = {}) {
 
     const data = await response.json();
 
-    // Update CSRF token if provided
-    if (data.csrfToken) {
-        window.csrfToken = data.csrfToken;
-    }
-
+    // CSRF token automatically updated via Set-Cookie header
     return data;
 }
 

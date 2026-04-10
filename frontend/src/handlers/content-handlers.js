@@ -12,6 +12,7 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
+import { getCsrfToken } from '../utils/cookies.js';
 import { apiCall } from '../js/api-compatibility-shim.js';
 import { safeLocalStorageGet } from '../utils/security.js';
 
@@ -220,14 +221,14 @@ export class ContentHandlers {
         const checkInterval = 100; // Check every 100ms
         const startTime = Date.now();
 
-        // Wait loop for CSRF token
-        while (!window.csrfToken && (Date.now() - startTime) < maxWaitTime) {
+        // Wait loop for CSRF token cookie to be set
+        while (!getCsrfToken() && (Date.now() - startTime) < maxWaitTime) {
             console.log('⏳ MOTD dismiss waiting for CSRF token...');
             await new Promise(resolve => setTimeout(resolve, checkInterval));
         }
 
         // If CSRF token still not available, don't proceed with server call
-        if (!window.csrfToken) {
+        if (!getCsrfToken()) {
             console.error('CSRF token not available - cannot dismiss MOTD on server');
             // Show user feedback if showToast is available
             if (typeof window.showToast === 'function') {

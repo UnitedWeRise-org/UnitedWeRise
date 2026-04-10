@@ -6,6 +6,7 @@
  */
 
 import { ORG_TYPE_LABELS, JURISDICTION_LABELS } from './org-card.js';
+import { getCsrfToken } from '../../../../utils/cookies.js';
 
 // API Base URL detection
 const API_BASE = detectApiBase();
@@ -814,7 +815,7 @@ async function toggleFollow() {
             method: 'POST',
             credentials: 'include',
             headers: {
-                'X-CSRF-Token': window.csrfToken || ''
+                'X-CSRF-Token': getCsrfToken()
             }
         });
 
@@ -844,7 +845,7 @@ async function requestJoin() {
             method: 'POST',
             credentials: 'include',
             headers: {
-                'X-CSRF-Token': window.csrfToken || ''
+                'X-CSRF-Token': getCsrfToken()
             }
         });
 

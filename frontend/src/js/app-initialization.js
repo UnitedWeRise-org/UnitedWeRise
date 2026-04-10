@@ -119,7 +119,7 @@ class AppInitializer {
                     // Use unified auth manager to set user data if available
                     if (this.unifiedAuthManager) {
                         AppInitializer.log('🔧 Setting user via unified auth manager');
-                        this.unifiedAuthManager.setAuthenticatedUser(this.userData, initData.data.csrfToken);
+                        this.unifiedAuthManager.setAuthenticatedUser(this.userData);
                     } else {
                         // Fallback to direct setting
                         localStorage.setItem('currentUser', JSON.stringify(this.userData));
