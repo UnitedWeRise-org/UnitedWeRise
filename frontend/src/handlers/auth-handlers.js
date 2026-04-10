@@ -21,10 +21,21 @@ import { usernameModal } from '../modules/core/auth/username-modal.js';
 import { adminDebugLog } from '../../js/adminDebugger.js';
 import { escapeHTML } from '../utils/security.js';
 
+/**
+ * Google OAuth configuration — edit these values to adjust behavior
+ * without modifying the flow logic below.
+ */
+const GOOGLE_OAUTH_CONFIG = {
+    preferFedCM: true,           // Use FedCM prompt when browser supports it
+    buttonFallback: true,        // Fall back to renderButton if prompt fails/unsupported
+    promptTimeoutMs: 5000,       // Max ms to wait for One Tap prompt before showing button
+};
+
 export class AuthHandlers {
     constructor() {
         this.googleClientId = '496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleusercontent.com';
         this.initialized = false;
+        this._supportsFedCM = typeof window.IdentityCredential !== 'undefined';
         this.setupEventListeners();
     }
 
@@ -58,93 +69,88 @@ export class AuthHandlers {
      */
     async handleGoogleLogin() {
         try {
-            await adminDebugLog('AuthHandlers', 'Starting Google Sign-In process');
-            await adminDebugLog('AuthHandlers', 'Domain', { origin: window.location.origin });
+            await adminDebugLog('AuthHandlers', 'Starting Google Sign-In', {
+                supportsFedCM: this._supportsFedCM,
+                preferFedCM: GOOGLE_OAUTH_CONFIG.preferFedCM
+            });
 
-            // Initialize Google Sign-In if not already done
+            // Load and initialize Google library if not already done
             if (!window.google?.accounts?.id) {
-                await adminDebugLog('AuthHandlers', 'Google Sign-In not loaded, attempting to load');
                 try {
                     await this.loadGoogleSignIn();
-                    await adminDebugLog('AuthHandlers', 'Google Sign-In loaded successfully');
                 } catch (loadError) {
                     console.error('❌ Failed to load Google Sign-In:', loadError);
-
-                    // Handle both Error objects and Event objects from script loading failures
-                    const errorMessage = loadError?.message || loadError?.type || 'Unknown error';
-                    if (errorMessage.includes('domain authorization')) {
-                        showAuthMessage('Google Sign-In is still initializing. Domain authorization may be propagating. Please try again in 15-30 minutes.', 'warning');
-                        await adminDebugLog('AuthHandlers', 'Run testGoogleDomainAuth() to check status');
-                    } else {
-                        showAuthMessage('Google Sign-In is temporarily unavailable. Please try again later.', 'error');
-                    }
-                    // Report error to backend for admin visibility
-                    this.reportOAuthError('google', 'sdk_load_failed', errorMessage);
+                    showAuthMessage(
+                        'Google Sign-In is unavailable. Please sign in with your email and password.',
+                        'error'
+                    );
+                    this.reportOAuthError('google', 'sdk_load_failed', loadError?.message || 'Unknown error');
                     return;
                 }
             }
 
-            await adminDebugLog('AuthHandlers', 'Triggering Google Sign-In prompt');
+            // Strategy: use FedCM prompt if supported, otherwise go straight to button
+            const useFedCM = this._supportsFedCM && GOOGLE_OAUTH_CONFIG.preferFedCM;
 
-            // Use Google One Tap prompt - works on iOS Safari unlike programmatic click
-            // The prompt() method opens the account chooser dialog
-            try {
-                google.accounts.id.prompt((notification) => {
-                    this.handleGooglePromptNotification(notification);
-                });
-                await adminDebugLog('AuthHandlers', 'Google prompt triggered successfully');
-            } catch (promptError) {
-                await adminDebugLog('AuthHandlers', 'Prompt failed, trying fallback', { error: promptError?.message });
-                // Fallback: show a visible button for user to click (required for iOS)
+            if (useFedCM) {
+                await adminDebugLog('AuthHandlers', 'Using FedCM One Tap prompt');
+                try {
+                    await this._tryPromptWithTimeout();
+                } catch (promptError) {
+                    await adminDebugLog('AuthHandlers', 'FedCM prompt failed/timed out, showing button', {
+                        error: promptError?.message
+                    });
+                    if (GOOGLE_OAUTH_CONFIG.buttonFallback) {
+                        this.showGoogleSignInFallback();
+                    }
+                }
+            } else {
+                await adminDebugLog('AuthHandlers', 'FedCM not available, using button flow');
                 this.showGoogleSignInFallback();
             }
 
         } catch (error) {
             console.error('❌ Google login error:', error);
-            showAuthMessage('Google Sign-In encountered an error. Please try again later.', 'error');
+            showAuthMessage(
+                'Google Sign-In encountered an error. Please sign in with your email and password.',
+                'error'
+            );
             this.reportOAuthError('google', 'login_error', error?.message || 'Unknown error');
         }
     }
 
     /**
-     * Handle Google prompt notifications
-     * Called when the One Tap prompt changes state
+     * Try the One Tap prompt with a timeout. Resolves if credential is returned,
+     * rejects if prompt fails, is dismissed, or times out.
      */
-    async handleGooglePromptNotification(notification) {
-        await adminDebugLog('AuthHandlers', 'Google prompt notification', {
-            momentType: notification.getMomentType(),
-            isDismissedMoment: notification.isDismissedMoment?.(),
-            isSkippedMoment: notification.isSkippedMoment?.(),
-            isNotDisplayed: notification.isNotDisplayed?.()
+    _tryPromptWithTimeout() {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Prompt timed out'));
+            }, GOOGLE_OAUTH_CONFIG.promptTimeoutMs);
+
+            google.accounts.id.prompt((notification) => {
+                if (notification.isDismissedMoment?.() &&
+                    notification.getDismissedReason?.() === 'credential_returned') {
+                    clearTimeout(timeout);
+                    resolve();
+                } else if (notification.isNotDisplayed?.()) {
+                    clearTimeout(timeout);
+                    reject(new Error(`Prompt not displayed: ${notification.getNotDisplayedReason?.()}`));
+                } else if (notification.isSkippedMoment?.()) {
+                    clearTimeout(timeout);
+                    reject(new Error('Prompt skipped'));
+                } else if (notification.isDismissedMoment?.()) {
+                    clearTimeout(timeout);
+                    // User dismissed without selecting — not an error, just go back to form
+                    reject(new Error('User dismissed prompt'));
+                }
+            });
         });
-
-        if (notification.isNotDisplayed()) {
-            const reason = notification.getNotDisplayedReason();
-            await adminDebugLog('AuthHandlers', 'Prompt not displayed', { reason });
-
-            // If prompt can't display (e.g., browser blocks it), show fallback button
-            if (reason === 'opt_out_or_no_session' || reason === 'suppressed_by_user') {
-                // User has opted out or dismissed before - show fallback
-                this.showGoogleSignInFallback();
-            } else if (reason === 'browser_not_supported') {
-                showAuthMessage('Your browser does not support Google Sign-In. Please try a different browser.', 'warning');
-                this.reportOAuthError('google', 'browser_not_supported', reason);
-            }
-        } else if (notification.isDismissedMoment()) {
-            const reason = notification.getDismissedReason();
-            await adminDebugLog('AuthHandlers', 'Prompt dismissed', { reason });
-
-            // User dismissed the prompt - they can try again if they want
-            if (reason === 'credential_returned') {
-                // Success - credential was returned, handleGoogleCredentialResponse will be called
-                await adminDebugLog('AuthHandlers', 'Credential returned successfully');
-            }
-        } else if (notification.isSkippedMoment()) {
-            await adminDebugLog('AuthHandlers', 'Prompt skipped');
-            // Show fallback for manual selection
-            this.showGoogleSignInFallback();
-        }
     }
+
+    // handleGooglePromptNotification removed — prompt notifications are now handled
+    // inline by _tryPromptWithTimeout() with timeout-based fallback to button flow.
 
     /**
      * Show a visible Google Sign-In button as fallback
@@ -186,7 +192,7 @@ export class AuthHandlers {
 
         // Add instruction text
         const instruction = document.createElement('p');
-        instruction.textContent = 'Click below to sign in with Google:';
+        instruction.textContent = 'Tap the button below to sign in with Google:';
         instruction.style.cssText = 'margin: 0 0 16px 0; color: #333; font-size: 14px;';
         container.appendChild(instruction);
 
@@ -362,7 +368,10 @@ export class AuthHandlers {
             }
         } catch (error) {
             console.error('Google login error:', error);
-            showAuthMessage('Google sign-in failed. Please try again.', 'error');
+            showAuthMessage(
+                'Google Sign-In failed. Please try again or sign in with your email and password.',
+                'error'
+            );
             this.reportOAuthError('google', 'network_error', error?.message || 'Network error');
         }
     }
@@ -418,13 +427,14 @@ export class AuthHandlers {
                         }
 
                         try {
-                            await adminDebugLog('AuthHandlers', 'Initializing Google Sign-In');
+                            const useFedCM = this._supportsFedCM && GOOGLE_OAUTH_CONFIG.preferFedCM;
+                            await adminDebugLog('AuthHandlers', 'Initializing Google Sign-In', { useFedCM });
                             google.accounts.id.initialize({
                                 client_id: this.googleClientId,
                                 callback: this.handleGoogleCredentialResponse.bind(this),
                                 auto_select: false,
                                 cancel_on_tap_outside: false,
-                                use_fedcm_for_prompt: true
+                                use_fedcm_for_prompt: useFedCM
                             });
                             await adminDebugLog('AuthHandlers', 'Google Sign-In initialized successfully');
                             await adminDebugLog('AuthHandlers', 'You can now test Google OAuth by clicking the Google Sign-In button');
