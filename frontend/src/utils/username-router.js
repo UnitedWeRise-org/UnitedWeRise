@@ -14,7 +14,8 @@ class UsernameRouter {
             'admin-dashboard.html', 'candidate-verification.html',
             'donation-success.html', 'donation-cancelled.html',
             'verify-email.html', 'admin-feedback',
-            'reset-password'
+            'reset-password', 'privacy-policy', 'terms-of-service',
+            'support', 'petition-privacy-policy', 'petition-dashboard'
         ];
 
         this.init();

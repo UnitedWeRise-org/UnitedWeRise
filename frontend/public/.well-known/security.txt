@@ -1,7 +1,7 @@
 # Our security policy
 # https://securitytxt.org/
 
-Contact: mailto:security@unitedwerise.org
+Contact: mailto:contact@unitedwerise.org
 Expires: 2026-12-31T23:59:59.000Z
 Preferred-Languages: en
 Canonical: https://www.unitedwerise.org/.well-known/security.txt
@@ -13,7 +13,7 @@ Thank you for helping to keep UnitedWeRise and our users safe!
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability, please report it by emailing:
-security@unitedwerise.org
+contact@unitedwerise.org (include "SECURITY" in the subject line)
 
 Please include the following information in your report:
 - Type of vulnerability (e.g., XSS, SQL injection, authentication bypass)

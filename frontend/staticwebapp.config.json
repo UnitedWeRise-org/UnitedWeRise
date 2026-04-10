@@ -11,6 +11,18 @@
     {
       "route": "/petition-privacy-policy",
       "rewrite": "/petition-privacy-policy.html"
+    },
+    {
+      "route": "/privacy-policy",
+      "rewrite": "/privacy-policy.html"
+    },
+    {
+      "route": "/terms-of-service",
+      "rewrite": "/terms-of-service.html"
+    },
+    {
+      "route": "/support",
+      "rewrite": "/support.html"
     }
   ],
   "navigationFallback": {
@@ -36,7 +48,10 @@
       "/*.eot",
       "/sign/*",
       "/petition-dashboard",
-      "/petition-privacy-policy"
+      "/petition-privacy-policy",
+      "/privacy-policy",
+      "/terms-of-service",
+      "/support"
     ]
   },
   "mimeTypes": {

@@ -177,7 +177,7 @@ class EmailService {
                 Connecting Citizens, Empowering Democracy
               </p>
               <p style="margin: 10px 0 0 0;">
-                Questions? Contact us at support@yourdomain.com
+                Questions? Contact us at contact@unitedwerise.org
               </p>
             </div>
           </div>
@@ -587,7 +587,7 @@ The United We Rise Moderation Team`,
             </div>
             
             <p style="font-size: 14px; color: #666;">
-              Questions? Contact our candidate support team at <a href="mailto:candidates@unitedwerise.org" style="color: #4b5c09;">candidates@unitedwerise.org</a>
+              Questions? Contact our candidate support team at <a href="mailto:contact@unitedwerise.org" style="color: #4b5c09;">contact@unitedwerise.org</a>
             </p>
           </div>
         </body>
@@ -649,7 +649,7 @@ The United We Rise Moderation Team`,
             </div>
             
             <p style="font-size: 14px; color: #666;">
-              Questions or want to appeal? Contact us at <a href="mailto:waivers@unitedwerise.org" style="color: #4b5c09;">waivers@unitedwerise.org</a>
+              Questions or want to appeal? Contact us at <a href="mailto:contact@unitedwerise.org" style="color: #4b5c09;">contact@unitedwerise.org</a>
             </p>
             
             <p style="font-size: 14px; color: #666;">
@@ -712,7 +712,7 @@ The United We Rise Moderation Team`,
             </div>
 
             <p style="font-size: 14px; color: #666;">
-              Need help getting started? Contact our candidate support team at <a href="mailto:candidates@unitedwerise.org" style="color: #4b5c09;">candidates@unitedwerise.org</a>
+              Need help getting started? Contact our candidate support team at <a href="mailto:contact@unitedwerise.org" style="color: #4b5c09;">contact@unitedwerise.org</a>
             </p>
 
             <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; font-size: 14px; color: #666;">
@@ -739,7 +739,7 @@ The United We Rise Moderation Team`,
         - Set up inbox preferences
         - Engage with constituents
 
-        Questions? Contact candidates@unitedwerise.org
+        Questions? Contact contact@unitedwerise.org
 
         United We Rise - Connecting Citizens with Candidates
       `
@@ -802,7 +802,7 @@ The United We Rise Moderation Team`,
             </div>
 
             <p style="font-size: 14px; color: #666;">
-              Questions or want to appeal? Contact us at <a href="mailto:candidates@unitedwerise.org" style="color: #4b5c09;">candidates@unitedwerise.org</a>
+              Questions or want to appeal? Contact us at <a href="mailto:contact@unitedwerise.org" style="color: #4b5c09;">contact@unitedwerise.org</a>
             </p>
 
             <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; font-size: 14px; color: #666;">
@@ -830,7 +830,7 @@ The United We Rise Moderation Team`,
         - Appeal this decision
         - Contact support for guidance
 
-        Contact: candidates@unitedwerise.org
+        Contact: contact@unitedwerise.org
 
         United We Rise - Connecting Citizens with Candidates
       `
@@ -905,7 +905,7 @@ The United We Rise Moderation Team`,
             </div>
 
             <p style="font-size: 14px; color: #666;">
-              Questions or concerns? Contact our candidate support team at <a href="mailto:candidates@unitedwerise.org" style="color: #4b5c09;">candidates@unitedwerise.org</a>
+              Questions or concerns? Contact our candidate support team at <a href="mailto:contact@unitedwerise.org" style="color: #4b5c09;">contact@unitedwerise.org</a>
             </p>
 
             <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; font-size: 14px; color: #666;">
@@ -930,7 +930,7 @@ The United We Rise Moderation Team`,
 
         View your dashboard: ${process.env.FRONTEND_URL}/candidate-dashboard
 
-        Questions? Contact candidates@unitedwerise.org
+        Questions? Contact contact@unitedwerise.org
 
         United We Rise - Connecting Citizens with Candidates
       `
