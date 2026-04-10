@@ -424,7 +424,7 @@ export class AuthHandlers {
                                 callback: this.handleGoogleCredentialResponse.bind(this),
                                 auto_select: false,
                                 cancel_on_tap_outside: false,
-                                use_fedcm_for_prompt: false // Disable FedCM which can cause issues
+                                use_fedcm_for_prompt: true
                             });
                             await adminDebugLog('AuthHandlers', 'Google Sign-In initialized successfully');
                             await adminDebugLog('AuthHandlers', 'You can now test Google OAuth by clicking the Google Sign-In button');

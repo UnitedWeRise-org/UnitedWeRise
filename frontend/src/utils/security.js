@@ -99,7 +99,8 @@ export const ALLOWED_ORIGINS = [
     'https://www.unitedwerise.org',
     'https://dev.unitedwerise.org',
     'https://admin.unitedwerise.org',
-    'https://dev-admin.unitedwerise.org'
+    'https://dev-admin.unitedwerise.org',
+    'https://accounts.google.com'
 ];
 
 // Add localhost for development
