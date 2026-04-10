@@ -100,7 +100,9 @@ export const ALLOWED_ORIGINS = [
     'https://dev.unitedwerise.org',
     'https://admin.unitedwerise.org',
     'https://dev-admin.unitedwerise.org',
-    'https://accounts.google.com'
+    'https://accounts.google.com',
+    'https://newassets.hcaptcha.com',
+    'https://js.hcaptcha.com'
 ];
 
 // Add localhost for development

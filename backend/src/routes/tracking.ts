@@ -106,52 +106,58 @@ router.post(
             .trim()
     ],
     async (req: express.Request, res: express.Response) => {
-        // Parse text/plain bodies as JSON (sendBeacon compatibility)
-        if (typeof req.body === 'string') {
-            try {
-                req.body = JSON.parse(req.body);
-            } catch {
+        try {
+            // Parse text/plain bodies as JSON (sendBeacon compatibility)
+            if (typeof req.body === 'string') {
+                try {
+                    req.body = JSON.parse(req.body);
+                } catch {
+                    return res.status(204).send(); // Silently ignore malformed beacons
+                }
+            }
+
+            // Validation
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
                 return res.status(204).send(); // Silently ignore malformed beacons
             }
+
+            const { path, referrer, userId } = req.body;
+
+            // Extract client IP
+            const forwarded = req.headers['x-forwarded-for'];
+            let ip: string;
+            if (forwarded) {
+                const ips = typeof forwarded === 'string' ? forwarded.split(',') : forwarded;
+                ip = ips[0].trim();
+            } else {
+                ip = req.ip || req.socket?.remoteAddress || 'unknown';
+            }
+
+            const userAgent = req.headers['user-agent'] || '';
+
+            // Track asynchronously - don't block response
+            visitorAnalytics
+                .trackPageView({
+                    path,
+                    ip,
+                    userAgent,
+                    referrer: referrer || undefined,
+                    userId: userId || undefined
+                })
+                .catch(err => {
+                    logger.error(
+                        { error: err, path, userId },
+                        'Tracking: Error recording page view beacon'
+                    );
+                });
+
+            return res.status(204).send();
+        } catch (err) {
+            // Tracking must never return 500 — always degrade silently
+            logger.error({ error: err }, 'Tracking: Unhandled error in pageview handler');
+            return res.status(204).send();
         }
-
-        // Validation
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(204).send(); // Silently ignore malformed beacons
-        }
-
-        const { path, referrer, userId } = req.body;
-
-        // Extract client IP
-        const forwarded = req.headers['x-forwarded-for'];
-        let ip: string;
-        if (forwarded) {
-            const ips = typeof forwarded === 'string' ? forwarded.split(',') : forwarded;
-            ip = ips[0].trim();
-        } else {
-            ip = req.ip || req.socket?.remoteAddress || 'unknown';
-        }
-
-        const userAgent = req.headers['user-agent'] || '';
-
-        // Track asynchronously - don't block response
-        visitorAnalytics
-            .trackPageView({
-                path,
-                ip,
-                userAgent,
-                referrer: referrer || undefined,
-                userId: userId || undefined
-            })
-            .catch(err => {
-                logger.error(
-                    { error: err, path, userId },
-                    'Tracking: Error recording page view beacon'
-                );
-            });
-
-        return res.status(204).send();
     }
 );
 
