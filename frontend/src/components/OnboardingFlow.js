@@ -747,34 +747,77 @@ class OnboardingFlow {
 
     /**
      * Load onboarding steps and verification status from the backend.
-     * Sets this.emailVerified and this.onboardingCompleted from the response.
+     * Retries transient failures (network errors, 5xx, and the brief window
+     * right after registration where the auth cookie may not yet be readable)
+     * with exponential backoff. Sets this.emailVerified and
+     * this.onboardingCompleted from the response.
+     * @param {number} maxAttempts - Maximum fetch attempts before giving up
+     * @returns {Promise<boolean>} True if steps were loaded successfully
      */
-    async loadSteps() {
+    async loadSteps(maxAttempts = 3) {
         if (!window.authUtils?.isUserAuthenticated()) {
-            return;
+            console.warn('[OnboardingFlow] loadSteps called while not authenticated');
+            return false;
         }
 
-        try {
-            const response = await fetch(`${this.getApiBase()}/onboarding/steps`, {
-                credentials: 'include'
-            });
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const response = await fetch(`${this.getApiBase()}/onboarding/steps`, {
+                    credentials: 'include'
+                });
 
-            if (response.ok) {
-                const data = await response.json();
-                this.steps = data.steps;
-                this.emailVerified = data.emailVerified ?? false;
-                this.onboardingCompleted = data.onboardingCompleted ?? false;
-                this.updateProgress();
+                if (response.ok) {
+                    const data = await response.json();
+                    this.steps = Array.isArray(data.steps) ? data.steps : [];
+                    this.emailVerified = data.emailVerified ?? false;
+                    this.onboardingCompleted = data.onboardingCompleted ?? false;
+                    this.updateProgress();
 
-                // Load interests for interests step
-                await this.loadInterests();
-            } else {
-                const errorText = await response.text();
-                console.error(`[OnboardingFlow] Failed to load steps: ${response.status} ${response.statusText}`, errorText);
+                    // Load interests for the interests step
+                    await this.loadInterests();
+                    return this.steps.length > 0;
+                }
+
+                const errorText = await response.text().catch(() => '');
+                console.error(`[OnboardingFlow] Failed to load steps (attempt ${attempt}/${maxAttempts}): ${response.status} ${response.statusText}`, errorText);
+
+                // 401/403 can occur briefly right after registration before the auth
+                // cookie propagates; retry those and 5xx server errors. Give up on
+                // other 4xx client errors, which will not succeed on retry.
+                if (response.status !== 401 && response.status !== 403 && response.status < 500) {
+                    break;
+                }
+            } catch (error) {
+                console.error(`[OnboardingFlow] Load steps exception (attempt ${attempt}/${maxAttempts}):`, error);
             }
-        } catch (error) {
-            console.error('[OnboardingFlow] Load steps exception:', error);
+
+            if (attempt < maxAttempts) {
+                await this._sleep(1000 * attempt); // Exponential backoff: 1s, 2s
+            }
         }
+
+        return false;
+    }
+
+    /**
+     * Sleep helper for retry backoff.
+     * @param {number} ms - Milliseconds to sleep
+     * @returns {Promise<void>}
+     */
+    _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Hide the onboarding modal and reset visibility state so it can be
+     * reopened later. Used when steps fail to load, to avoid trapping the
+     * user in an undismissable modal with no path forward.
+     */
+    _releaseModal() {
+        const modal = document.getElementById('onboardingModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+        this.isVisible = false;
     }
 
     async loadInterests() {
@@ -1029,10 +1072,17 @@ class OnboardingFlow {
             await this.loadSteps();
         }
 
-        // If still no steps after loading, show error but don't auto-close
+        // If still no steps after retries, fail gracefully rather than trapping
+        // the user in an undismissable modal: surface an error, fire the closed
+        // event so listeners don't hang, and release the modal. Onboarding will
+        // re-trigger on the next page load, and the backend still gates
+        // unverified users from protected routes in the meantime.
         if (this.steps.length === 0) {
             console.error('Failed to load onboarding steps');
-            this.showMessage('Failed to load onboarding. Please refresh the page and try again.', 'error');
+            this.showMessage('We couldn\'t load your setup steps. Please check your connection and try again.', 'error');
+            this.trackEvent('onboarding_load_failed');
+            this.trackEvent('onboarding_closed');
+            this._releaseModal();
             return;
         }
 

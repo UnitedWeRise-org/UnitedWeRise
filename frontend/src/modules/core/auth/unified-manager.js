@@ -691,8 +691,16 @@ class UnifiedAuthManager {
             }
 
             const response = await window.apiCall('/auth/me');
-            if (response.ok && response.data) {
-                return { success: true, user: response.data };
+            // window.apiCall wraps the HTTP response as { ok, status, data: <body> }.
+            // The /auth/me body is itself enveloped as { success, data: <user> },
+            // so the actual user object lives at response.data.data. Previously this
+            // returned the envelope as the user, so consumers checking `user.id`
+            // (e.g. session.js) treated a valid session as invalid. Fall back to
+            // response.data in case a variant returns the user unwrapped.
+            const body = response?.data;
+            const user = body?.data ?? body;
+            if (response.ok && user?.id) {
+                return { success: true, user };
             }
             return { success: false, error: 'No user session' };
         } catch (error) {

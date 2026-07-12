@@ -13,7 +13,8 @@ import { userState } from '../state/user.js';
 import { setUserLoggedIn } from './session.js';
 import { unifiedAuthManager } from './unified-manager.js';
 import { isDevelopment } from '../../../utils/environment.js';
-import { isCaptchaBlocked, generateFallbackProof, initCaptchaFallback } from '../../../services/captchaFallback.js';
+import { generateFallbackProof, initCaptchaFallback } from '../../../services/captchaFallback.js';
+import { getHCaptchaToken, resetHCaptcha } from '../../../integrations/hcaptcha-integration.js';
 
 /**
  * Open authentication modal
@@ -282,53 +283,39 @@ export async function handleRegister() {
         return;
     }
 
-    // Get hCaptcha token
+    // Retrieve the hCaptcha token robustly. getHCaptchaToken() prefers the token
+    // captured by the widget's data-callback (window.hCaptchaToken) and only then
+    // falls back to hcaptcha.getResponse(). Relying on getResponse() alone caused
+    // users who completed the challenge to be blocked, because it can return an
+    // empty string when the token expired or the widget id can't be resolved.
     let hcaptchaToken = null;
-    let captchaErrorOccurred = false;
     try {
-        if (typeof hcaptcha !== 'undefined') {
-            // Try to get widget ID first, then fall back to no parameters
-            const widget = document.getElementById('hcaptcha-register');
-            const widgetId = widget ? widget.getAttribute('data-hcaptcha-widget-id') : null;
-
-            if (widgetId) {
-                hcaptchaToken = hcaptcha.getResponse(widgetId);
-            } else {
-                hcaptchaToken = hcaptcha.getResponse();
-            }
-        }
+        hcaptchaToken = getHCaptchaToken();
     } catch (captchaError) {
-        console.log('hCaptcha not available or local development mode');
-        captchaErrorOccurred = true;
+        console.log('hCaptcha token retrieval failed:', captchaError.message);
     }
 
-    // Three-path captcha validation:
-    // Path A: hCaptcha token available — proceed normally
-    // Path B: hCaptcha blocked/broken (ad blocker, CSP, or getResponse error) — use fallback proof
-    // Path C: hCaptcha available and functional but user didn't complete it — show error
+    // Captcha handling (production only):
+    // - Token present → send it for server-side verification (primary path).
+    // - No token → fall back to the invisible bot-protection proof (honeypot +
+    //   timing + device fingerprint) and let the backend make the final decision
+    //   via risk scoring. We intentionally do NOT hard-block here: hCaptcha token
+    //   retrieval is unreliable (ad blockers, CSP, postMessage, token expiry) and
+    //   the previous hard block prevented legitimate users who had completed the
+    //   challenge from registering. Server-side protection remains enforced.
     let useFallback = false;
     if (!isDevelopment() && !hcaptchaToken) {
-        // Treat as blocked if: detection says blocked, OR getResponse() threw,
-        // OR hcaptcha global doesn't exist
-        const captchaNonfunctional = isCaptchaBlocked() || captchaErrorOccurred || typeof hcaptcha === 'undefined';
-        if (captchaNonfunctional) {
-            // Path B: Captcha broken/blocked — validate fallback checks client-side
-            const proof = generateFallbackProof();
-            if (!proof.honeypotClean) {
-                // Silently reject (likely bot — don't reveal honeypot)
-                showAuthMessage('Registration failed. Please try again.', 'error', 'register');
-                return;
-            }
-            if (proof.timingSeconds < 2) {
-                showAuthMessage('Please take your time filling out the form.', 'error', 'register');
-                return;
-            }
-            useFallback = true;
-        } else {
-            // Path C: hCaptcha is available and functional but user didn't complete it
-            showAuthMessage('Please complete the captcha verification', 'error', 'register');
+        const proof = generateFallbackProof();
+        if (!proof.honeypotClean) {
+            // Silently reject (likely bot — don't reveal the honeypot)
+            showAuthMessage('Registration failed. Please try again.', 'error', 'register');
             return;
         }
+        if (proof.timingSeconds < 2) {
+            showAuthMessage('Please take your time filling out the form.', 'error', 'register');
+            return;
+        }
+        useFallback = true;
     }
 
     try {
@@ -390,10 +377,15 @@ export async function handleRegister() {
 
             console.log('✅ Registration successful via unified manager:', response.user.username);
         } else {
+            // Reset the captcha so a retry gets a fresh, single-use token
+            // (hCaptcha tokens are consumed on the first verification attempt).
+            resetHCaptcha();
             showAuthMessage(response.message || response.error || 'Registration failed', 'error', 'register');
         }
     } catch (error) {
         console.error('Registration error:', error);
+        // Reset the captcha so a retry gets a fresh, single-use token.
+        resetHCaptcha();
         // Extract the actual error message from the Error object
         const errorMessage = error.message || 'Registration failed. Please try again.';
         showAuthMessage(errorMessage, 'error', 'register');
