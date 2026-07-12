@@ -1,10 +1,26 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: March 12, 2026
+**Last Updated**: July 12, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-07-12] - Account Creation, Onboarding & Login-Persistence Fixes
+
+### Fixed
+- **Registration blocked after completing hCaptcha** — `handleRegister()` read the captcha token only via `hcaptcha.getResponse()`, which returns empty on token expiry / unresolved widget id, producing a hard "Please complete the captcha verification" dead-end for users who *had* completed the challenge. Now retrieves the token via `getHCaptchaToken()` (honors the `data-callback` token in `window.hCaptchaToken`), and no longer hard-blocks — falls through to the server-validated bot-protection proof (honeypot + timing + device fingerprint). Widget resets on failed attempts for fresh single-use tokens.
+- **Onboarding "data not loaded" dead-end** — `OnboardingFlow.loadSteps()` now retries transient failures (network, 5xx, and the post-registration window before the auth cookie propagates) with backoff; `show()` fails gracefully (fires `onboarding_closed`, releases the modal) instead of trapping users in the undismissable "Failed to load" state.
+- **Login not persisting for `verifySession` consumers** — `unifiedAuthManager.verifySession()` returned the `/auth/me` envelope (`{success, data:{…user}}`) as the user object, so `user.id` checks failed and valid sessions read as invalid. Now reads the nested user defensively.
+
+### Security
+- Frontend registration no longer hard-requires an hCaptcha token (soft fallback, product-approved). Server-side bot protection (risk scoring, honeypot, timing, device fingerprint) remains fully enforced — this extends the existing ad-blocker fallback to cover unreliable token retrieval (CSP/postMessage/expiry).
+
+### Files
+- `frontend/src/modules/core/auth/modal.js`, `frontend/src/components/OnboardingFlow.js`, `frontend/src/modules/core/auth/unified-manager.js`
+- Devlog: `docs/devlogs/2026-07-12-auth-onboarding-fixes.md`
 
 ---
 
