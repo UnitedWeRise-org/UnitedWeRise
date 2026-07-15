@@ -86,3 +86,13 @@ test-*.js
 debug-*.js
 *.bak
 *.backup
+
+# Claude Code — archived/ephemeral working files (kept locally, in git history)
+.claude/archive/
+.claude/scratchpads/
+.claude/handoffs/
+.claude/phase-planning/
+.claude/lessons-learned/
+.claude/css-audit/
+.claude/coordination/
+.claude/tracking/

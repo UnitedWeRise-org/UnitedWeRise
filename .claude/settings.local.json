@@ -148,7 +148,23 @@
       "Bash(xxd:*)",
       "Bash(git -C /Users/jeffreysmacbookpro/UnitedWeRise status:*)",
       "Bash(git -C /Users/jeffreysmacbookpro/UnitedWeRise log --oneline -5)",
-      "Bash(git -C /Users/jeffreysmacbookpro/UnitedWeRise push origin development)"
+      "Bash(git -C /Users/jeffreysmacbookpro/UnitedWeRise push origin development)",
+      "Bash(git show:*)",
+      "Bash(git -C /Users/jeffreysmacbookpro/UnitedWeRise log --oneline --all -20)",
+      "Bash(gh run cancel:*)",
+      "WebFetch(domain:docs.coconut.co)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm view:*)",
+      "Bash(nc:*)",
+      "Bash(PGPASSWORD='UWR-Secure2024!' psql:*)",
+      "Bash(DOCKER_TAG=\"backend-dev-519334f-20260209-121901\")",
+      "Bash(DATABASE_URL=\"postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require\" npx prisma migrate deploy:*)",
+      "Bash(gh workflow:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git rm:*)",
+      "Bash(this petition\" label and copy link button:*)",
+      "Bash(social media aimed at uniting, not dividing\":*)",
+      "Bash(git -c user.name=Vortionn -c user.email=jeffrey@peacefulrevolutions.org commit -q -m ' *)"
     ],
     "deny": [
       "Bash(npm run dev:*)"
@@ -168,7 +184,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'AUTH WORK: Read .claude/protocols/auth_protocol.md before modifying authentication'"
+            "command": "echo 'AUTH WORK: invoke the /auth-work skill for middleware selection (requireAuth / requireStagingAuth / requireAdmin) before modifying authentication.'"
+          }
+        ]
+      },
+      {
+        "matcher": "(deploy|merge to main|merge to development|push to production|push to staging|staging deployment|production deployment)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'DEPLOY: invoke the /deployment skill. NEVER deploy without an explicit user command. Migrations BEFORE code. development->staging, main->production. Verify SHA + health after.'"
           }
         ]
       }
