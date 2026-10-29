@@ -54,6 +54,8 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
     '/api/health',
     '/api/track/pageview',
     '/api/verification/email/verify',  // Token-based verification from standalone page (no CSRF cookie available)
+    '/api/payments/webhook',  // Stripe webhook — authenticated by Stripe signature, not CSRF tokens
+    '/api/payments/donation',  // Public/anonymous donations (similar to petitions): no CSRF cookie exists for guests, and no funds move until the donor completes Stripe checkout. Logged-in users remain protected by optionalAuth + input validation.
   ]);
 
   // SECURITY: Prefix-based exemptions for paths with dynamic segments

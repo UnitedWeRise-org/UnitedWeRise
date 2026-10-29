@@ -122,6 +122,14 @@ export class DonationSystem {
                             </div>
                         </div>
                         
+                        <!-- Guest Contact (shown only when not logged in) -->
+                        <div id="guestContact" class="guest-contact" style="display: none;">
+                            <label for="guestEmail">Email <strong>(for your receipt)</strong></label>
+                            <input type="email" id="guestEmail" placeholder="you@example.com" autocomplete="email" required>
+                            <label for="guestName">Name (optional)</label>
+                            <input type="text" id="guestName" placeholder="Your name" autocomplete="name">
+                        </div>
+                        
                         <!-- Recurring Info -->
                         <div id="recurringInfo" class="recurring-info" style="display: none;">
                             <p>💳 Your card will be charged <span id="recurringAmount">$25</span> <span id="recurringFrequency">monthly</span></p>
@@ -310,6 +318,42 @@ export class DonationSystem {
                     position: relative;
                     display: flex;
                     align-items: center;
+                }
+                
+                .guest-contact {
+                    background: #f8f9fa;
+                    border: 1px solid #e3e6ea;
+                    border-radius: 8px;
+                    padding: 14px;
+                    margin-bottom: 20px;
+                    text-align: left;
+                }
+                
+                .guest-contact label {
+                    display: block;
+                    margin: 0 0 6px;
+                    color: #555;
+                    font-weight: 500;
+                    font-size: 14px;
+                }
+                
+                .guest-contact label:not(:first-child) {
+                    margin-top: 12px;
+                }
+                
+                .guest-contact input {
+                    width: 100%;
+                    padding: 10px 12px;
+                    border: 2px solid #ddd;
+                    border-radius: 8px;
+                    font-size: 15px;
+                    box-sizing: border-box;
+                    transition: border-color 0.3s;
+                }
+                
+                .guest-contact input:focus {
+                    outline: none;
+                    border-color: #667eea;
                 }
                 
                 .currency-symbol {
@@ -595,10 +639,11 @@ export class DonationSystem {
     openDonationModal() {
         if (!this.modalElement) return;
         
-        // Check if user is logged in (using current user data)
-        if (!window.currentUser) {
-            alert('Please log in to make a donation');
-            return;
+        // Guests (not logged in) can donate too — show contact fields so Stripe/receipt
+        // has an email; logged-in users use their account email.
+        const guestContact = document.getElementById('guestContact');
+        if (guestContact) {
+            guestContact.style.display = window.currentUser ? 'none' : 'block';
         }
         
         this.modalElement.style.display = 'block';
@@ -684,24 +729,43 @@ export class DonationSystem {
         const loadingDiv = document.getElementById('donationLoading');
         const errorDiv = document.getElementById('donationError');
         
-        // Hide error, show loading
+        // Hide error
         errorDiv.style.display = 'none';
+
+        // Guests (not logged in) must provide a contact email for the receipt
+        let guestEmail;
+        let guestName;
+        if (!window.currentUser) {
+            guestEmail = (document.getElementById('guestEmail')?.value || '').trim();
+            guestName = (document.getElementById('guestName')?.value || '').trim();
+            if (!guestEmail) {
+                errorDiv.innerHTML = '<strong>Email required</strong><br>Please enter your email so we can send your tax-deductible receipt.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+        }
+
         donateBtn.disabled = true;
         loadingDiv.style.display = 'block';
-        
+
         try {
-            // Prepare donation data
+            // Prepare donation data — recurring is sent as RECURRING + interval (per the DonationType enum)
+            const isRecurring = this.donationType !== 'ONE_TIME';
             const donationData = {
                 amount: this.selectedAmount * 100, // Convert to cents
-                donationType: this.donationType,
-                isRecurring: this.donationType !== 'ONE_TIME'
+                donationType: isRecurring ? 'RECURRING' : 'ONE_TIME',
+                isRecurring
             };
-            
-            // Add recurring interval if it's a recurring donation
-            if (donationData.isRecurring) {
-                donationData.recurringInterval = 'MONTHLY'; // Default to monthly
+
+            // Set recurring interval based on selection (monthly or yearly)
+            if (isRecurring) {
+                donationData.recurringInterval = this.donationType === 'YEARLY' ? 'YEARLY' : 'MONTHLY';
             }
-            
+
+            // Include guest contact details when not logged in
+            if (guestEmail) donationData.email = guestEmail;
+            if (guestName) donationData.name = guestName;
+
             console.log('💳 Sending donation request:', donationData);
             
             // Call API to create Stripe checkout session using apiCall for cookie auth

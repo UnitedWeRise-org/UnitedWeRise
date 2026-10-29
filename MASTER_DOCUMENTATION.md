@@ -4139,15 +4139,17 @@ Request:
 ### Payment Endpoints (Stripe Integration) {#payment-endpoints}
 
 #### POST /api/payments/donation
-Create tax-deductible donation
+Create tax-deductible donation. Authentication is **optional** (cookie-based): logged-in users donate without extra fields; **guests** donate by providing `email` (required) and optional `name`. The endpoint is CSRF-exempt (public anonymous flow, same pattern as petition signing — no funds move until the donor completes Stripe checkout).
 ```javascript
 Request:
 {
   amount: number,              // Amount in cents ($25.00 = 2500)
-  donationType: "ONE_TIME" | "MONTHLY" | "YEARLY",
+  donationType: "ONE_TIME" | "RECURRING" | "CAMPAIGN_SPECIFIC" | "GENERAL_SUPPORT" | "MEMORIAL" | "HONOR",  // use RECURRING for monthly/yearly
   isRecurring?: boolean,       // For monthly/yearly donations
   recurringInterval?: "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY",
-  campaignId?: string         // Optional campaign association
+  campaignId?: string,         // Optional campaign association
+  email?: string,              // Required for guests (ignored for logged-in users)
+  name?: string                // Optional guest name
 }
 
 Response:
@@ -4155,8 +4157,8 @@ Response:
   success: true,
   data: {
     paymentId: string,         // Internal payment ID
-    checkoutUrl: string,       // Stripe Checkout URL
-    sessionId: string          // Stripe session ID
+    checkoutUrl: string,       // Stripe Payment Link URL
+    paymentLinkId: string      // Stripe Payment Link ID
   }
 }
 ```
@@ -4257,8 +4259,8 @@ Response:
 
 #### POST /api/payments/webhook
 Stripe webhook endpoint (internal use)
-- **Content-Type**: application/json (raw)
-- **Stripe-Signature**: Required header
+- **Content-Type**: application/json (raw — global JSON parser skips this path so the exact signed body reaches `express.raw()`)
+- **Stripe-Signature**: Required header (CSRF-exempt; Stripe signature is the only auth)
 - **Purpose**: Handle payment completion, failures, subscription updates
 
 ### Health & Monitoring Endpoints

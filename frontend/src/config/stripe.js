@@ -6,7 +6,7 @@ import { getEnvironment, getApiBaseUrl } from '../utils/environment.js';
 const STRIPE_CONFIG = {
     // Development/Staging
     development: {
-        publishableKey: 'pk_test_[YOUR_TEST_PUBLISHABLE_KEY]',
+        publishableKey: 'pk_test_51Rv6pdI45l290VNE3IrROlFx1JCh1znoFWqq34KuetkH9pMbx8RlTVnaC6GEYpedlGlJlVFAK3twKALiOqsDsR9T00XoQnM76E',
         backendUrl: getApiBaseUrl()
     },
 

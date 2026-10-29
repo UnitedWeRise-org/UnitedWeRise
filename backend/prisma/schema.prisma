@@ -2261,7 +2261,12 @@ model UserOAuthProvider {
 
 model Payment {
   id                      String                 @id @default(cuid())
-  userId                  String
+  /// Nullable to support guest (non-logged-in) donations; null when the donor donated without an account
+  userId                  String?
+  /// Email provided by a guest donor (required when userId is null)
+  guestEmail              String?
+  /// Optional name provided by a guest donor
+  guestName               String?
   amount                  Int
   currency                String                 @default("USD")
   type                    PaymentType
@@ -2290,7 +2295,7 @@ model Payment {
   processedAt             DateTime?
   refundedAt              DateTime?
   candidateRegistration   CandidateRegistration? @relation(fields: [candidateRegistrationId], references: [id])
-  user                    User                   @relation(fields: [userId], references: [id])
+  user                    User?                  @relation(fields: [userId], references: [id])
   refunds                 Refund[]
 
   @@index([userId])

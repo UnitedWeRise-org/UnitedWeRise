@@ -1,10 +1,35 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: July 12, 2026
+**Last Updated**: October 29, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-10-29] - Donation System Repair + Guest Donation Support
+
+### Fixed
+- **Stripe webhook completely dead since 2025-10-16** — `POST /api/payments/webhook` was blocked by CSRF (403 `CSRF_TOKEN_MISSING`); the global CSRF middleware only exempted the `/webhooks/` prefix. Also, the global JSON body parser consumed the raw stream before the route's `express.raw()`, so signature verification could never pass. Both fixed: webhook path is now CSRF-exempt and skips global body parsing, letting Stripe's signing secret be the only auth. **Result: completed payments were never marked `COMPLETED`** (no receipts, no campaign increments, no candidate-registration advancement, no verification-credit granting) — this now works.
+- **Recurring donations always failed (400)** — frontend sent `donationType: "MONTHLY"/"YEARLY"`, which is not a valid `DonationType`. Now sends `RECURRING` + `recurringInterval` (frontend maps selection → `MONTHLY`/`YEARLY`).
+- **`automatic_tax: { enabled: true }` on Payment Links** — could 500 unless Stripe Tax was configured; removed (donations are not sales-taxed).
+- **QUARTERLY recurring** — now uses `interval_count: 3` instead of silently billing monthly.
+
+### Added
+- **Guest donations (no login)** — `POST /api/payments/donation` now uses `optionalAuth`; guests donate by providing an `email` (required, validated) and optional `name`. Frontend modal shows email/name fields when logged out (replaces the "please log in" alert). Guests can also start recurring donations; Stripe handles billing + cancel/manage links via `customer_creation: 'always'`.
+- Schema: `Payment.userId` nullable + `guestEmail`/`guestName` (migration `20261029170000_add_guest_donation_support`).
+- Staging infrastructure: real test-mode Stripe keys, test webhook endpoint → `dev-api.unitedwerise.org`, corrected `FRONTEND_URL`/`SUCCESS_URL`/`CANCEL_URL` (were a dead `*.azurestaticapps.net` host).
+
+### Security
+- Donation endpoint is CSRF-exempt (public anonymous flow — same pattern as petition signing; no funds move until the donor completes Stripe checkout; logged-in users remain authenticated via `optionalAuth`).
+- Webhook remains signature-verified by Stripe only.
+
+### Files
+- Backend: `prisma/schema.prisma`, migration, `src/middleware/csrf.ts`, `src/server.ts`, `src/services/stripeService.ts`, `src/routes/payments.ts`
+- Frontend: `src/js/donation-system.js`, `src/config/stripe.js`, `src/modules/admin/controllers/PaymentsController.js`
+- Docs: `STRIPE-PAYMENT-SYSTEM-DOCUMENTATION.md`, `MASTER_DOCUMENTATION.md`
+- Devlog: `docs/devlogs/2026-10-29-donation-repair-guest-support.md`
 
 ---
 

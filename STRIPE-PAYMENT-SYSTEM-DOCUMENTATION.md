@@ -5,6 +5,14 @@
 **Status**: Live Production System
 **Compliance**: 501(c)(3) Tax-Deductible Donations & Non-Deductible Fees
 
+> ### 📌 2026-10-29 Update
+> - **Guest donations**: `POST /api/payments/donation` no longer requires a login. Guests donate by providing an `email` (and optional `name`) in the modal. Auth is `optionalAuth` (cookie-based); the endpoint is CSRF-exempt (public anonymous flow, same pattern as petition signing — no funds move until the donor completes Stripe checkout).
+> - **Recurring donations**: send `donationType: "RECURRING"` plus `recurringInterval` (frontend maps Monthly/Yearly accordingly). The enum `MONTHLY`/`YEARLY` is **not** a valid `donationType`.
+> - **`automatic_tax` removed** from Payment Links (donations are not sales-taxed; this also removes the Stripe Tax prerequisite).
+> - **Webhook**: `/api/payments/webhook` is now exempt from CSRF and preserves the raw signed body (global JSON parser skips this path). Stripe webhook signatures are the only auth.
+> - **QUARTERLY** recurring now uses `interval_count: 3`.
+> - **Schema**: `Payment.userId` is nullable; guest donations store `guestEmail`/`guestName`.
+
 ---
 
 ## 🎯 Executive Summary
@@ -163,7 +171,7 @@ DonationCampaign {
 
 #### `POST /api/payments/donation`
 **Purpose**: Create tax-deductible donation
-**Authentication**: Required (Bearer token)
+**Authentication**: Optional (cookie-based via `optionalAuth`). Guests donate without logging in by providing `email`.
 
 **Request Body**:
 ```json
@@ -172,7 +180,9 @@ DonationCampaign {
   "donationType": "ONE_TIME",        // or RECURRING, CAMPAIGN_SPECIFIC, etc.
   "campaignId": "optional-campaign-id",
   "isRecurring": false,
-  "recurringInterval": "MONTHLY"     // required if isRecurring: true
+  "recurringInterval": "MONTHLY",    // required if isRecurring: true (WEEKLY|MONTHLY|QUARTERLY|YEARLY)
+  "email": "guest@example.com",      // required for guests (ignored for logged-in users)
+  "name": "Guest Donor"              // optional, guests only
 }
 ```
 

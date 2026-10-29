@@ -27,7 +27,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
  * - FEE (not tax-deductible, via Checkout Sessions)
  *
  * Features:
- * - Automatic tax calculation
  * - Promotion code support
  * - Idempotent webhook processing
  * - Automatic subscription management
@@ -99,24 +98,55 @@ export class StripeService {
   }
 
   /**
+   * Create a Stripe customer for a guest (non-logged-in) donor.
+   *
+   * Creates a Stripe-side customer on the fly using the guest's contact details.
+   * Unlike {@link getOrCreateCustomer}, no {@link StripeCustomer} DB row is created
+   * because guests have no user account to key it to.
+   *
+   * @param email - Guest donor email (required)
+   * @param name - Optional guest donor name
+   * @returns Promise<string> Stripe customer ID
+   * @throws {Error} When email is missing
+   */
+  static async createGuestCustomer(email?: string, name?: string): Promise<string> {
+    if (!email) {
+      throw new Error('Guest donations require an email address');
+    }
+    const customer = await stripe.customers.create({
+      email,
+      name: name || undefined,
+      metadata: {
+        platform: 'UnitedWeRise',
+        guest: 'true'
+      }
+    });
+    return customer.id;
+  }
+
+  /**
    * Create tax-deductible donation payment
    *
    * Creates Payment record and generates Stripe Payment Link (most adblocker-resistant).
-   * Supports one-time and recurring donations.
+   * Supports one-time and recurring donations, for both logged-in users and guests.
    *
    * Features:
    * - Tax-deductible (501c3 nonprofit)
-   * - Automatic tax calculation
    * - Promotion codes enabled
    * - Success redirect to donation-success.html
    * - Automatic receipt generation on completion
+   * - Guest donations (no account) accepted via guestEmail/guestName
+   * - customer_creation: 'always' so Stripe emails receipts to the checkout email
    *
    * For recurring donations:
    * - Creates Stripe subscription via Payment Link
-   * - QUARTERLY mapped to monthly with interval_count (would need custom handling)
+   * - QUARTERLY uses interval_count: 3 on a monthly interval
+   * - Guests can create recurring donations; they manage/cancel via Stripe's hosted links
    *
    * @param params - Donation parameters
-   * @param params.userId - User ID making donation
+   * @param params.userId - User ID making donation (either userId or guestEmail is required)
+   * @param params.guestEmail - Guest donor email (required when userId is not provided)
+   * @param params.guestName - Optional guest donor name
    * @param params.amount - Amount in cents (e.g., 5000 = $50.00)
    * @param params.donationType - Type from DonationType enum
    * @param params.campaignId - Optional campaign to credit donation to
@@ -136,19 +166,26 @@ export class StripeService {
    * // Redirect user to: donation.checkoutUrl
    */
   static async createDonation(params: {
-    userId: string;
+    userId?: string;
+    guestEmail?: string;
+    guestName?: string;
     amount: number; // In cents
     donationType: DonationType;
     campaignId?: string;
     isRecurring?: boolean;
     recurringInterval?: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
   }) {
-    const customerId = await this.getOrCreateCustomer(params.userId);
+    // Resolve Stripe customer: existing user customer or on-the-fly guest customer
+    const customerId = params.userId
+      ? await this.getOrCreateCustomer(params.userId)
+      : await this.createGuestCustomer(params.guestEmail, params.guestName);
 
     // Create payment record
     const payment = await prisma.payment.create({
       data: {
-        userId: params.userId,
+        userId: params.userId || null,
+        guestEmail: params.userId ? null : params.guestEmail,
+        guestName: params.userId ? null : params.guestName,
         amount: params.amount,
         type: PaymentType.DONATION,
         status: PaymentStatus.PENDING,
@@ -165,12 +202,13 @@ export class StripeService {
 
     try {
       if (params.isRecurring && params.recurringInterval) {
-        // Create recurring price
+        // Create recurring price (QUARTERLY = monthly interval with interval_count 3)
         const price = await stripe.prices.create({
           unit_amount: params.amount,
           currency: 'usd',
           recurring: {
-            interval: this.mapRecurringInterval(params.recurringInterval)
+            interval: this.mapRecurringInterval(params.recurringInterval),
+            ...(params.recurringInterval === 'QUARTERLY' ? { interval_count: 3 } : {})
           },
           product_data: {
             name: 'United We Rise Recurring Donation',
@@ -193,11 +231,11 @@ export class StripeService {
               url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?payment_id=${payment.id}&amount=${params.amount}`
             }
           },
-          automatic_tax: { enabled: true },
           allow_promotion_codes: true,
+          customer_creation: 'always',
           metadata: {
             paymentId: payment.id,
-            userId: params.userId,
+            ...(params.userId ? { userId: params.userId } : {}),
             taxDeductible: 'true'
           }
         });
@@ -239,11 +277,11 @@ export class StripeService {
               url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?payment_id=${payment.id}&amount=${params.amount}`
             }
           },
-          automatic_tax: { enabled: true },
           allow_promotion_codes: true,
+          customer_creation: 'always',
           metadata: {
             paymentId: payment.id,
-            userId: params.userId,
+            ...(params.userId ? { userId: params.userId } : {}),
             taxDeductible: 'true'
           }
         });
@@ -695,7 +733,7 @@ export class StripeService {
     const mapping: Record<string, Stripe.Price.Recurring.Interval> = {
       'WEEKLY': 'week',
       'MONTHLY': 'month',
-      'QUARTERLY': 'month', // Will need to handle with interval_count
+      'QUARTERLY': 'month', // interval_count: 3 is applied in createDonation
       'YEARLY': 'year'
     };
     return mapping[interval] || 'month';

@@ -1,5 +1,5 @@
 import express, { Router, Response, Request } from 'express';
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 import { StripeService } from '../services/stripeService';
 import { DonationType, FeeType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
@@ -16,7 +16,7 @@ const router = Router();
  *   post:
  *     tags: [Payment]
  *     summary: Create tax-deductible donation
- *     description: Creates a donation payment with Stripe integration. Supports one-time and recurring donations. All donations are tax-deductible (501c3 nonprofit).
+ *     description: Creates a donation payment with Stripe integration. Supports one-time and recurring donations, for both logged-in users and guests (no account). Guest donations require an email. All donations are tax-deductible (501c3 nonprofit). CSRF-exempt (public anonymous donations, same pattern as petition signing); authentication is cookie-based via optionalAuth.
  *     security:
  *       - cookieAuth: []
  *     requestBody:
@@ -37,7 +37,7 @@ const router = Router();
  *               donationType:
  *                 type: string
  *                 enum: [ONE_TIME, RECURRING, CAMPAIGN_SPECIFIC, GENERAL_SUPPORT, MEMORIAL, HONOR]
- *                 description: Type of donation
+ *                 description: Type of donation (use RECURRING with recurringInterval for monthly/yearly)
  *                 example: "ONE_TIME"
  *               campaignId:
  *                 type: string
@@ -49,6 +49,13 @@ const router = Router();
  *                 type: string
  *                 enum: [WEEKLY, MONTHLY, QUARTERLY, YEARLY]
  *                 description: Interval for recurring donations (required if isRecurring is true)
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Guest donor email (required when not authenticated; ignored for logged-in users)
+ *               name:
+ *                 type: string
+ *                 description: Optional guest donor name (ignored for logged-in users)
  *     responses:
  *       200:
  *         description: Donation created successfully with Stripe Payment Link
@@ -64,18 +71,18 @@ const router = Router();
  *                   type: object
  *                   description: Stripe payment details (Payment Link URL, payment ID, etc.)
  *       400:
- *         description: Validation error - invalid amount or donation type
- *       401:
- *         description: Unauthorized - authentication required
+ *         description: Validation error - invalid amount, donation type, or missing guest email
  *       500:
  *         description: Server error - Stripe integration failure
  */
 router.post('/donation',
-  requireAuth,
+  optionalAuth,
   [
     body('amount').isInt({ min: 100 }).withMessage('Minimum donation is $1.00'),
     body('donationType').isIn(['ONE_TIME', 'RECURRING', 'CAMPAIGN_SPECIFIC', 'GENERAL_SUPPORT', 'MEMORIAL', 'HONOR']),
-    body('recurringInterval').optional().isIn(['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'])
+    body('recurringInterval').optional().isIn(['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']),
+    body('email').optional().isEmail().withMessage('A valid email is required for guest donations'),
+    body('name').optional().isString().withMessage('Name must be a string')
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -84,11 +91,18 @@ router.post('/donation',
     }
 
     try {
-      const userId = req.user!.id;
-      const { amount, donationType, campaignId, isRecurring, recurringInterval } = req.body;
+      const userId = req.user?.id;
+      const { amount, donationType, campaignId, isRecurring, recurringInterval, email, name } = req.body;
+
+      // Guest donations require an email; logged-in users use their account email
+      if (!userId && !email) {
+        return res.status(400).json({ success: false, error: 'Email is required for guest donations' });
+      }
 
       const result = await StripeService.createDonation({
         userId,
+        guestEmail: userId ? undefined : email,
+        guestName: userId ? undefined : (typeof name === 'string' ? name : undefined),
         amount,
         donationType: donationType as DonationType,
         campaignId,

@@ -297,9 +297,13 @@ class PaymentsController {
 
         const rows = this.currentPayments.map(payment => {
             const user = payment.user || {};
-            const userName = user.firstName && user.lastName
-                ? `${user.firstName} ${user.lastName}`
-                : user.username || user.email || 'Unknown';
+            const guestName = payment.guestName || '';
+            const userName = guestName
+                ? guestName
+                : (user.firstName && user.lastName
+                    ? `${user.firstName} ${user.lastName}`
+                    : user.username || user.email || payment.guestEmail || 'Unknown');
+            const userEmail = payment.guestEmail || user.email || '';
 
             const stripeLink = payment.stripeLink || (payment.stripePaymentIntentId
                 ? `https://dashboard.stripe.com/payments/${payment.stripePaymentIntentId}`
@@ -314,7 +318,7 @@ class PaymentsController {
                     <td style="padding: 0.75rem;">${this.formatDate(payment.createdAt)}</td>
                     <td style="padding: 0.75rem;">
                         <div style="font-weight: 500;">${this.escapeHtml(userName)}</div>
-                        <div style="font-size: 0.8rem; color: #666;">${this.escapeHtml(user.email || '')}</div>
+                        <div style="font-size: 0.8rem; color: #666;">${this.escapeHtml(userEmail)}</div>
                     </td>
                     <td style="padding: 0.75rem; font-weight: 600;">${payment.amountFormatted || '$' + (payment.amount / 100).toFixed(2)}</td>
                     <td style="padding: 0.75rem;">${this.getTypeBadge(payment.type)}</td>

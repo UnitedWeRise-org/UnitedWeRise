@@ -217,6 +217,13 @@ app.use((req, res, next) => {
     return next();
   }
 
+  // Stripe webhook: skip JSON parsing so the route's express.raw() receives the exact
+  // signed payload required for signature verification.
+  if (req.path === '/api/payments/webhook') {
+    pinoLogger.debug({ contentType }, 'Skipping body parsing for Stripe webhook (raw body required)');
+    return next();
+  }
+
   // Only parse as JSON if content-type indicates JSON
   if (contentType.includes('application/json')) {
     return express.json({ limit: '10mb' })(req, res, next);
@@ -260,8 +267,8 @@ app.use((req, res, next) => {
     return next();
   }
 
-  // Exempt webhook endpoints — these use path-based secret validation instead
-  if (req.path.startsWith('/webhooks/')) {
+  // Exempt webhook endpoints — these use path-based secret or Stripe signature validation instead
+  if (req.path.startsWith('/webhooks/') || req.path === '/api/payments/webhook') {
     return next();
   }
 
