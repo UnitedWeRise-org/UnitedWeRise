@@ -226,43 +226,54 @@
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
         const paymentId = urlParams.get('payment_id');
-        
+        const interval = urlParams.get('interval');
+
+        // Map a recurring interval to a display suffix ('' for one-time)
+        const intervalSuffix = (iv) => {
+            const map = { WEEKLY: ' / week', MONTHLY: ' / month', QUARTERLY: ' / quarter', YEARLY: ' / year' };
+            return (iv && map[iv]) ? map[iv] : '';
+        };
+        const formatAmount = (cents, iv) => `$${(cents / 100).toFixed(2)}${intervalSuffix(iv)}`;
+
         // Update donation details from payment data
         document.addEventListener('DOMContentLoaded', function() {
             // Try to get payment details from URL or fetch from backend
             setTimeout(async () => {
                 let donationAmount = 'Unknown';
-                
-                // Try to fetch from backend using payment_id
+                let receiptNumber = '';
+
+                // Try to fetch from backend using payment_id (works when logged in;
+                // guests rely on the URL params below)
                 if (paymentId) {
                     try {
                         const response = await fetch(`https://api.unitedwerise.org/api/payments/receipt/${paymentId}`, {
                             credentials: 'include'
                         });
-                        
+
                         if (response.ok) {
                             const result = await response.json();
                             if (result.success && result.data) {
-                                donationAmount = `$${(result.data.amount / 100).toFixed(2)}`;
+                                donationAmount = formatAmount(result.data.amount, interval);
+                                receiptNumber = result.data.receiptNumber ? `Receipt #: ${result.data.receiptNumber}` : '';
                             }
                         }
                     } catch (error) {
                         console.error('Error fetching payment details:', error);
                     }
                 }
-                
+
                 // Fallback: try to get amount from URL parameters
                 if (donationAmount === 'Unknown') {
                     const amount = urlParams.get('amount');
                     if (amount) {
-                        donationAmount = `$${(parseInt(amount) / 100).toFixed(2)}`;
+                        donationAmount = formatAmount(parseInt(amount), interval);
                     }
                 }
-                
+
                 // Update display
                 document.getElementById('donationAmount').textContent = `Amount: ${donationAmount}`;
                 document.getElementById('donationDate').textContent = 'Date: ' + new Date().toLocaleDateString();
-                document.getElementById('receiptNumber').textContent = 'Receipt #: UWR-' + Date.now().toString().slice(-8);
+                document.getElementById('receiptNumber').textContent = receiptNumber;
             }, 500);
             
             // Store success flag
