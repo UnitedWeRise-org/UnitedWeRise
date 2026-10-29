@@ -50,17 +50,23 @@ jobs:
 
           # Build Docker image in ACR
           echo "🔨 Building Docker image in Azure Container Registry..."
-          az acr build --registry $AZURE_REGISTRY \
+          BUILD_OUTPUT=$(az acr build --registry $AZURE_REGISTRY \
             --image "unitedwerise-backend:$DOCKER_TAG" \
             --no-wait \
-            https://github.com/${{ github.repository }}.git#main:backend
+            https://github.com/${{ github.repository }}.git#main:backend 2>&1)
+          echo "$BUILD_OUTPUT"
+          RUN_ID=$(echo "$BUILD_OUTPUT" | sed -n 's/.*Queued a build with ID: \([A-Za-z0-9]*\).*/\1/p' | head -1)
 
-          echo "⏳ Waiting 180 seconds for build to complete..."
-          sleep 180
-
-          # Check build status
-          echo "📊 Checking build status..."
-          az acr task list-runs --registry $AZURE_REGISTRY --output table | head -3
+          # Poll the ACR build until it finishes. A fixed 180s sleep was flaky:
+          # slow builds left the digest lookup racing a still-running build.
+          echo "⏳ Waiting for ACR build to complete..."
+          for i in $(seq 1 30); do
+            STATUS=$(az acr task show-run --registry $AZURE_REGISTRY --run-id "$RUN_ID" --query status -o tsv 2>/dev/null)
+            echo "   [$((i*20))s] ACR build $RUN_ID status: $STATUS"
+            if [ "$STATUS" = "Succeeded" ]; then echo "✅ ACR build succeeded"; break; fi
+            if [ "$STATUS" = "Failed" ]; then echo "❌ ACR build failed"; exit 1; fi
+            sleep 20
+          done
 
           # Get image digest
           echo "🔍 Getting image digest..."
