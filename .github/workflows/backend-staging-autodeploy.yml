@@ -80,9 +80,12 @@ jobs:
           node-version: '20'
 
       - name: Install Prisma CLI
+        # Pinned to match backend/package.json + package-lock (7.4.2).
+        # Do NOT revert to @latest: npm's 'latest' tag pointed at an 8.0.0-rc
+        # and broke the install (npm error 'edgesOut') on 2026-10-29.
         run: |
           cd backend
-          npm install prisma@latest --no-save
+          npm install prisma@7.4.2 --no-save
 
       - name: Pre-Migration - Add PostgreSQL Enum Values (Staging)
         env:
