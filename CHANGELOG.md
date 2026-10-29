@@ -15,6 +15,7 @@
 - **Recurring donations always failed (400)** — frontend sent `donationType: "MONTHLY"/"YEARLY"`, which is not a valid `DonationType`. Now sends `RECURRING` + `recurringInterval` (frontend maps selection → `MONTHLY`/`YEARLY`).
 - **`automatic_tax: { enabled: true }` on Payment Links** — could 500 unless Stripe Tax was configured; removed (donations are not sales-taxed).
 - **QUARTERLY recurring** — now uses `interval_count: 3` instead of silently billing monthly.
+- **Donation success page showed "Amount: Unknown"** — the Payment-Link success redirect used the bare `SUCCESS_URL` with no query params. The redirect now always appends `payment_id` + `amount`, so the success page can display the donation amount (and a logged-in user's receipt) for both members and guests.
 
 ### Added
 - **Guest donations (no login)** — `POST /api/payments/donation` now uses `optionalAuth`; guests donate by providing an `email` (required, validated) and optional `name`. Frontend modal shows email/name fields when logged out (replaces the "please log in" alert). Guests can also start recurring donations; Stripe handles billing + cancel/manage links (one-time links use `customer_creation: 'always'`; recurring links omit it since Stripe rejects it there and auto-creates the subscription customer).

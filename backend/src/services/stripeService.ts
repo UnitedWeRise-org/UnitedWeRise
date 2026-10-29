@@ -231,7 +231,7 @@ export class StripeService {
           after_completion: {
             type: 'redirect',
             redirect: {
-              url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?payment_id=${payment.id}&amount=${params.amount}`
+              url: `${process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html`}?payment_id=${payment.id}&amount=${params.amount}`
             }
           },
           allow_promotion_codes: true,
@@ -276,7 +276,7 @@ export class StripeService {
           after_completion: {
             type: 'redirect',
             redirect: {
-              url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?payment_id=${payment.id}&amount=${params.amount}`
+              url: `${process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html`}?payment_id=${payment.id}&amount=${params.amount}`
             }
           },
           allow_promotion_codes: true,
