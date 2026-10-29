@@ -17,7 +17,7 @@ Reinstated a working end-to-end Stripe donation pipeline and added guest (no-log
 
 - `POST /api/payments/donation` switched from `requireAuth` to `optionalAuth`; guests must provide `email` (validated) + optional `name`.
 - CSRF-exempt for the donation endpoint (same pattern as petition signing — no funds move until the donor completes Stripe checkout; logged-in users still authenticated via `optionalAuth`).
-- `StripeService.createDonation` accepts `userId` OR `guestEmail/guestName`; guests get an on-the-fly Stripe customer (`createGuestCustomer`), no `StripeCustomer` DB row. Payment Links use `customer_creation: 'always'` so Stripe emails receipts (and subscription-management links for recurring).
+- `StripeService.createDonation` accepts `userId` OR `guestEmail/guestName`; guests get an on-the-fly Stripe customer (`createGuestCustomer`), no `StripeCustomer` DB row. One-time Payment Links use `customer_creation: 'always'` so Stripe emails receipts. **Recurring links must NOT set `customer_creation`** — Stripe rejects it on links containing recurring prices (test-confirmed `invalid_request_error`); Stripe auto-creates the subscription customer from the checkout email instead.
 - Schema: `Payment.userId` nullable + `guestEmail`/`guestName` (migration `20261029170000_add_guest_donation_support`).
 - Frontend: removed the "please log in" gate; guests see email/name fields in the donation modal.
 

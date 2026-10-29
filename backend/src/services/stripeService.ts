@@ -219,7 +219,10 @@ export class StripeService {
           }
         });
 
-        // Create Payment Link for subscription (most adblocker-resistant)
+        // Create Payment Link for subscription (most adblocker-resistant).
+          // NOTE: customer_creation is NOT set here — Stripe rejects it on links
+          // containing recurring prices. Stripe auto-creates the subscription
+          // customer from the checkout email, so receipts + manage links still work.
         const paymentLink = await stripe.paymentLinks.create({
           line_items: [{
             price: price.id,
@@ -232,7 +235,6 @@ export class StripeService {
             }
           },
           allow_promotion_codes: true,
-          customer_creation: 'always',
           metadata: {
             paymentId: payment.id,
             ...(params.userId ? { userId: params.userId } : {}),

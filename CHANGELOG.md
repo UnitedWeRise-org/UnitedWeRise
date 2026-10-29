@@ -17,7 +17,7 @@
 - **QUARTERLY recurring** — now uses `interval_count: 3` instead of silently billing monthly.
 
 ### Added
-- **Guest donations (no login)** — `POST /api/payments/donation` now uses `optionalAuth`; guests donate by providing an `email` (required, validated) and optional `name`. Frontend modal shows email/name fields when logged out (replaces the "please log in" alert). Guests can also start recurring donations; Stripe handles billing + cancel/manage links via `customer_creation: 'always'`.
+- **Guest donations (no login)** — `POST /api/payments/donation` now uses `optionalAuth`; guests donate by providing an `email` (required, validated) and optional `name`. Frontend modal shows email/name fields when logged out (replaces the "please log in" alert). Guests can also start recurring donations; Stripe handles billing + cancel/manage links (one-time links use `customer_creation: 'always'`; recurring links omit it since Stripe rejects it there and auto-creates the subscription customer).
 - Schema: `Payment.userId` nullable + `guestEmail`/`guestName` (migration `20261029170000_add_guest_donation_support`).
 - Staging infrastructure: real test-mode Stripe keys, test webhook endpoint → `dev-api.unitedwerise.org`, corrected `FRONTEND_URL`/`SUCCESS_URL`/`CANCEL_URL` (were a dead `*.azurestaticapps.net` host).
 
