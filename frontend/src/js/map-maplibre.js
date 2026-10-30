@@ -6,6 +6,7 @@
 import { getApiBaseUrl } from '../utils/environment.js';
 import { adminDebugLog } from '../../js/adminDebugger.js';
 import { escapeHTML } from '../utils/security.js';
+import { MAP_STYLE_URL } from '../config/map.js';
 
 class UWRMapLibre {
     constructor(containerId = 'map') {
@@ -82,38 +83,14 @@ class UWRMapLibre {
         // Create MapLibre map instance
         this.map = new maplibregl.Map({
             container: this.containerId,
-            style: {
-                version: 8,
-                sources: {
-                    'carto-light': {
-                        type: 'raster',
-                        tiles: [
-                            'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-                            'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-                            'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'
-                        ],
-                        tileSize: 256,
-                        attribution: '© OpenStreetMap contributors © CARTO'
-                    }
-                },
-                layers: [
-                    {
-                        id: 'carto-light-layer',
-                        type: 'raster',
-                        source: 'carto-light',
-                        minzoom: 0,
-                        maxzoom: 22
-                    }
-                ],
-                glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf'
-            },
+            style: MAP_STYLE_URL,
             center: this.US_CENTER,
             zoom: 3.6,
             bearing: 0, // Lock to north
             pitch: 0,   // No 3D tilt
             minZoom: 2,
             maxZoom: 18,
-            attributionControl: false,
+            attributionControl: true,
             // Disable rotation and pitch
             dragRotate: false,
             pitchWithRotate: false

@@ -13,6 +13,7 @@
  */
 
 import { apiCall } from '../js/api-compatibility-shim.js';
+import { MAP_RASTER_TILES } from '../config/map.js';
 
 export class MapHandlers {
     constructor() {
@@ -96,9 +97,8 @@ export class MapHandlers {
             touchZoom: false
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '',
-            subdomains: 'abcd',
+        L.tileLayer(MAP_RASTER_TILES, {
+            attribution: '&copy; <a href="https://stadiamaps.com/attribution/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         }).addTo(this.map);
 
         // Initialize default topics array - will be updated with AI-generated content

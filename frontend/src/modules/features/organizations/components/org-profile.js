@@ -7,6 +7,7 @@
 
 import { ORG_TYPE_LABELS, JURISDICTION_LABELS } from './org-card.js';
 import { getCsrfToken } from '../../../../utils/cookies.js';
+import { MAP_STYLE_URL } from '../../../../config/map.js';
 
 // API Base URL detection
 const API_BASE = detectApiBase();
@@ -663,30 +664,7 @@ function initCoverageMap() {
         // Create map
         profileState.map = new maplibregl.Map({
             container: 'coverageMap',
-            style: {
-                version: 8,
-                sources: {
-                    'carto-light': {
-                        type: 'raster',
-                        tiles: [
-                            'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-                            'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-                            'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'
-                        ],
-                        tileSize: 256,
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                    }
-                },
-                layers: [
-                    {
-                        id: 'carto-light-layer',
-                        type: 'raster',
-                        source: 'carto-light',
-                        minzoom: 0,
-                        maxzoom: 19
-                    }
-                ]
-            },
+            style: MAP_STYLE_URL,
             center: [-98.5795, 39.8283],
             zoom: 4,
             minZoom: 3,
