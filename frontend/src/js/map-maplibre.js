@@ -90,11 +90,15 @@ class UWRMapLibre {
             pitch: 0,   // No 3D tilt
             minZoom: 2,
             maxZoom: 18,
-            attributionControl: true,
+            attributionControl: false, // compact AttributionControl added below
             // Disable rotation and pitch
             dragRotate: false,
             pitchWithRotate: false
         });
+
+        // Compact attribution (required by Stadia Maps / OpenMapTiles / OSM).
+        // It collapses to a small "i" button instead of a full-width text bar.
+        this.map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
         // Store globally for compatibility
         window.mapLibre = this.map;
@@ -1588,10 +1592,9 @@ class UWRMapLibre {
             return window.mapDummyData.getRandomCoordinate().coordinates;
         }
 
-        // Fallback to proper continental US bounds only
-        const lng = -125 + Math.random() * 59; // -125 to -66 (continental US)
-        const lat = 25 + Math.random() * 24;   // 25 to 49 (continental US)
-        return [lng, lat];
+        // Fallback: geographic center of the US (avoids landing in the ocean,
+        // which random bounding-box coordinates frequently do)
+        return [-98.5795, 39.8283];
     }
 
     getStateCapitolCoords(stateCode) {
@@ -1662,20 +1665,15 @@ class UWRMapLibre {
     }
 
     getRandomStateCoordinates(stateCode) {
-        // Random coordinates within state bounds for district summaries
-        const stateBounds = {
-            'CA': { minLng: -124.4, maxLng: -114.1, minLat: 32.5, maxLat: 42.0 },
-            'TX': { minLng: -106.6, maxLng: -93.5, minLat: 25.8, maxLat: 36.5 },
-            'NY': { minLng: -79.8, maxLng: -71.9, minLat: 40.5, maxLat: 45.0 },
-            'FL': { minLng: -87.6, maxLng: -80.0, minLat: 24.4, maxLat: 31.0 }
-            // Add more as needed
-        };
-        
-        const bounds = stateBounds[stateCode];
-        if (bounds) {
-            const lng = bounds.minLng + Math.random() * (bounds.maxLng - bounds.minLng);
-            const lat = bounds.minLat + Math.random() * (bounds.maxLat - bounds.minLat);
-            return [lng, lat];
+        // Jitter around the state capitol (always on land) instead of a
+        // bounding box, which lands in the ocean for coastal states.
+        const capitol = this.getStateCapitolCoords(stateCode);
+        if (capitol) {
+            const jitter = 0.35; // ~25 miles
+            return [
+                capitol[0] + (Math.random() * 2 - 1) * jitter,
+                capitol[1] + (Math.random() * 2 - 1) * jitter
+            ];
         }
         // Use dummy data system for consistent coordinate generation
         if (window.mapDummyData && window.mapDummyData.getRandomCoordinate) {
