@@ -11,6 +11,7 @@ import { feedbackAnalysisService } from '../services/feedbackAnalysisService';
 import { reputationService } from '../services/reputationService';
 import { ActivityTracker } from '../services/activityTracker';
 import { PostGeographicService } from '../services/postGeographicService';
+import { GeoAreaService, normalizeZip } from '../services/geoAreaService';
 import { PostManagementService } from '../services/postManagementService';
 import { EngagementScoringService } from '../services/engagementScoringService';
 import { RiseAIEnrichmentService } from '../services/riseAIEnrichmentService';
@@ -25,24 +26,53 @@ const router = express.Router();
  * /api/posts/map-data:
  *   get:
  *     tags: [Post]
- *     summary: Get posts with geographic data for map display
- *     description: Returns posts filtered by geographic scope (national, state, or local) for map visualization
+ *     summary: Get privacy-safe posts for the map view
+ *     description: |
+ *       Returns posts whose coarse home area is near the map center. The query
+ *       radius is determined by the zoom tier (national/regional/metro/city),
+ *       never the pixel viewport, so resizing does not trigger refetches.
+ *
+ *       Posts store only a home ZIP, a privacy area (ZIP or county), and a random
+ *       seed. Display coordinates are derived from precomputed in-area sample
+ *       points using `geoSeed + sessionNonce`; precise locations are never stored
+ *       or returned. Ranking reuses feed signals (recency with a 72-hour curve,
+ *       engagement, similarity, social, reputation).
  *     security:
  *       - cookieAuth: []
  *     parameters:
  *       - in: query
- *         name: scope
+ *         name: lat
  *         schema:
- *           type: string
- *           enum: [national, state, local]
- *           default: national
- *         description: Geographic scope for post filtering
+ *           type: number
+ *         description: Map center latitude (preferred)
+ *       - in: query
+ *         name: lng
+ *         schema:
+ *           type: number
+ *         description: Map center longitude (preferred)
+ *       - in: query
+ *         name: zoom
+ *         schema:
+ *           type: number
+ *         description: MapLibre zoom level (preferred)
+ *       - in: query
+ *         name: sessionNonce
+ *         schema:
+ *           type: integer
+ *         description: Client-generated per-session nonce; varies display points per session
  *       - in: query
  *         name: count
  *         schema:
  *           type: integer
  *           default: 9
+ *           maximum: 40
  *         description: Maximum number of posts to return
+ *       - in: query
+ *         name: scope
+ *         schema:
+ *           type: string
+ *           enum: [national, state, local]
+ *         description: Legacy fallback when lat/lng/zoom are omitted
  *     responses:
  *       200:
  *         description: Posts retrieved successfully
@@ -58,9 +88,35 @@ const router = express.Router();
  *                   type: array
  *                   items:
  *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       coordinates:
+ *                         type: array
+ *                         items:
+ *                           type: number
+ *                         description: "[longitude, latitude] display point inside the privacy area"
+ *                       content:
+ *                         type: string
+ *                       author:
+ *                         type: string
+ *                       engagement:
+ *                         type: number
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       areaLabel:
+ *                         type: string
+ *                         nullable: true
+ *                       isRealPost:
+ *                         type: boolean
+ *                       tier:
+ *                         type: string
+ *                 tier:
+ *                   type: string
+ *                   enum: [national, regional, metro, city]
  *                 scope:
  *                   type: string
- *                   example: national
  *                 hasRealPosts:
  *                   type: boolean
  *                 fallbackNeeded:
@@ -72,33 +128,80 @@ const router = express.Router();
  */
 router.get('/map-data', requireAuth, async (req: AuthRequest, res) => {
     try {
-        const { scope = 'national', count = 9 } = req.query;
         const userId = req.user!.id;
+        const count = Math.min(Math.max(parseInt(String(req.query.count ?? '9'), 10) || 9, 1), 40);
+        const lat = Number.parseFloat(String(req.query.lat ?? ''));
+        const lng = Number.parseFloat(String(req.query.lng ?? ''));
+        const zoom = Number.parseFloat(String(req.query.zoom ?? ''));
+        const sessionNonce = Number.parseInt(String(req.query.sessionNonce ?? '0'), 10) || 0;
+        const scope = String(req.query.scope ?? '');
 
-        // Get user's H3 index for jurisdiction filtering
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { h3Index: true }
+        let queryLat = lat;
+        let queryLng = lng;
+        let queryZoom = zoom;
+        let effectiveScope = scope || null;
+
+        // Preferred path: center + zoom from the live map.
+        if (!Number.isFinite(queryLat) || !Number.isFinite(queryLng) || !Number.isFinite(queryZoom)) {
+            // Legacy fallback: national/state/local scopes based on the viewer.
+            const legacyScope = ['national', 'state', 'local'].includes(scope) ? scope : 'national';
+            effectiveScope = legacyScope;
+
+            if (legacyScope === 'national') {
+                queryLat = 39.8283;
+                queryLng = -98.5795;
+                queryZoom = 3;
+            } else {
+                const homeZip = await PostGeographicService.getUserHomeZip(userId);
+                const zip = homeZip ? normalizeZip(homeZip) : null;
+                const area = zip ? await GeoAreaService.ensureZipArea(zip) : null;
+                if (!area) {
+                    return res.json({
+                        success: true,
+                        data: [],
+                        scope: legacyScope,
+                        tier: legacyScope === 'state' ? 'regional' : 'city',
+                        hasRealPosts: false,
+                        fallbackNeeded: true
+                    });
+                }
+                queryLat = area.centroidLat;
+                queryLng = area.centroidLng;
+                queryZoom = legacyScope === 'state' ? 7 : 12;
+            }
+        }
+
+        const { posts, tier, areaCount } = await PostGeographicService.getPostsForMapArea({
+            lat: queryLat,
+            lng: queryLng,
+            zoom: queryZoom,
+            userId,
+            count,
+            sessionNonce
         });
 
-        const posts = await PostGeographicService.getPostsForMap(
-            scope as 'national' | 'state' | 'local',
-            user?.h3Index || undefined,
-            parseInt(count as string)
+        logger.info(
+            {
+                postCount: posts.length,
+                tier: tier.name,
+                areaCount,
+                scope: effectiveScope,
+                userId
+            },
+            'Map data request'
         );
-
-        logger.info({ postCount: posts.length, scope, userId }, 'Map data request');
 
         res.json({
             success: true,
             data: posts,
-            scope,
+            tier: tier.name,
+            scope: effectiveScope,
             hasRealPosts: posts.length > 0,
             fallbackNeeded: posts.length < 2
         });
 
     } catch (error) {
-        logger.error({ err: error, scope: req.query.scope, userId: req.user!.id }, 'Error fetching map data');
+        logger.error({ err: error, query: req.query, userId: req.user!.id }, 'Error fetching map data');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch map data',
@@ -379,11 +482,12 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                 ...feedbackData,
                 // Include geographic data if available (null values are handled gracefully)
                 ...(geographicData && {
-                    h3Index: geographicData.h3Index,
-                    latitude: geographicData.latitude,
-                    longitude: geographicData.longitude,
-                    originalH3Index: geographicData.originalH3Index,
-                    privacyDisplaced: geographicData.privacyDisplaced
+                    areaType: geographicData.areaType,
+                    areaId: geographicData.areaId,
+                    privacyAreaType: geographicData.privacyAreaType,
+                    privacyAreaId: geographicData.privacyAreaId,
+                    geoSeed: geographicData.geoSeed,
+                    geoOptIn: geographicData.geoOptIn
                 })
             },
             include: {
@@ -727,11 +831,12 @@ router.post('/thread', requireAuth, checkUserSuspension, postLimiter, contentFil
                     threadHeadId: null,
                     threadPosition: 0,
                     ...(geographicData && {
-                        h3Index: geographicData.h3Index,
-                        latitude: geographicData.latitude,
-                        longitude: geographicData.longitude,
-                        originalH3Index: geographicData.originalH3Index,
-                        privacyDisplaced: geographicData.privacyDisplaced
+                        areaType: geographicData.areaType,
+                        areaId: geographicData.areaId,
+                        privacyAreaType: geographicData.privacyAreaType,
+                        privacyAreaId: geographicData.privacyAreaId,
+                        geoSeed: geographicData.geoSeed,
+                        geoOptIn: geographicData.geoOptIn
                     })
                 },
                 include: {
@@ -783,11 +888,12 @@ router.post('/thread', requireAuth, checkUserSuspension, postLimiter, contentFil
                         threadHeadId: headPost.id,
                         threadPosition: i + 1,
                         ...(geographicData && {
-                            h3Index: geographicData.h3Index,
-                            latitude: geographicData.latitude,
-                            longitude: geographicData.longitude,
-                            originalH3Index: geographicData.originalH3Index,
-                            privacyDisplaced: geographicData.privacyDisplaced
+                            areaType: geographicData.areaType,
+                            areaId: geographicData.areaId,
+                            privacyAreaType: geographicData.privacyAreaType,
+                            privacyAreaId: geographicData.privacyAreaId,
+                            geoSeed: geographicData.geoSeed,
+                            geoOptIn: geographicData.geoOptIn
                         })
                     },
                     include: {

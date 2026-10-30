@@ -136,6 +136,8 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
                 campaignWebsite: true,
                 // Preferences
                 notificationPreferences: true,
+                // Map visibility preference
+                geoOptIn: true,
                 // Photo tagging preferences
                 photoTaggingEnabled: true,
                 requireTagApproval: true,
@@ -1415,7 +1417,7 @@ router.get('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
  *   put:
  *     tags: [User]
  *     summary: Update profile privacy settings
- *     description: Updates privacy levels for profile fields. Each field can be public, followers, friends, or private.
+ *     description: Updates privacy levels for profile fields. Each field can be public, followers, friends, or private. Also updates the map visibility preference (geoOptIn), which syncs to existing posts.
  *     security:
  *       - cookieAuth: []
  *     requestBody:
@@ -1425,6 +1427,9 @@ router.get('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
  *           schema:
  *             type: object
  *             properties:
+ *               geoOptIn:
+ *                 type: boolean
+ *                 description: Whether the user's posts may appear on the map (area-level only)
  *               privacySettings:
  *                 type: object
  *                 properties:
@@ -1470,9 +1475,16 @@ router.get('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
 router.put('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
     try {
         const userId = req.user!.id;
-        const { privacySettings, maritalStatus } = req.body;
+        const { privacySettings, maritalStatus, geoOptIn } = req.body;
 
-        if (!privacySettings) {
+        if (geoOptIn !== undefined && typeof geoOptIn !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                error: 'geoOptIn must be a boolean'
+            });
+        }
+
+        if (!privacySettings && geoOptIn === undefined) {
             return res.status(400).json({
                 success: false,
                 error: 'Privacy settings are required'
@@ -1483,19 +1495,28 @@ router.put('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
         const validPrivacyLevels = ['public', 'followers', 'friends', 'private'];
         const allowedFields = ['bio', 'website', 'city', 'state', 'maritalStatus', 'phoneNumber'];
 
-        // Validate field names and privacy levels
-        for (const [field, level] of Object.entries(privacySettings)) {
-            if (!allowedFields.includes(field)) {
+        if (privacySettings) {
+            if (typeof privacySettings !== 'object' || Array.isArray(privacySettings)) {
                 return res.status(400).json({
                     success: false,
-                    error: `Invalid field: ${field}`
+                    error: 'Privacy settings must be an object'
                 });
             }
-            if (!validPrivacyLevels.includes(level as string)) {
-                return res.status(400).json({
-                    success: false,
-                    error: `Invalid privacy level: ${level} for field ${field}`
-                });
+
+            // Validate field names and privacy levels
+            for (const [field, level] of Object.entries(privacySettings)) {
+                if (!allowedFields.includes(field)) {
+                    return res.status(400).json({
+                        success: false,
+                        error: `Invalid field: ${field}`
+                    });
+                }
+                if (!validPrivacyLevels.includes(level as string)) {
+                    return res.status(400).json({
+                        success: false,
+                        error: `Invalid privacy level: ${level} for field ${field}`
+                    });
+                }
             }
         }
 
@@ -1508,10 +1529,10 @@ router.put('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
         const currentPrivacySettings = (user?.profilePrivacySettings as Record<string, any>) || {};
         const updatedPrivacySettings = {
             ...currentPrivacySettings,
-            ...privacySettings
+            ...(privacySettings || {})
         };
 
-        // Update user privacy settings and marital status
+        // Update user privacy settings, marital status, and map visibility
         const updateData: any = {
             profilePrivacySettings: updatedPrivacySettings
         };
@@ -1520,18 +1541,32 @@ router.put('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
             updateData.maritalStatus = maritalStatus;
         }
 
+        if (geoOptIn !== undefined) {
+            updateData.geoOptIn = geoOptIn;
+        }
+
         await prisma.user.update({
             where: { id: userId },
             data: updateData
         });
 
-        logger.info({ userId, privacySettings }, 'Updated profile privacy settings');
+        // The preference is copied onto each post at creation; sync existing
+        // posts so opting out immediately removes them from the map.
+        if (geoOptIn !== undefined) {
+            await prisma.post.updateMany({
+                where: { authorId: userId, geoOptIn: { not: geoOptIn } },
+                data: { geoOptIn }
+            });
+        }
+
+        logger.info({ userId, privacySettings, geoOptIn }, 'Updated profile privacy settings');
 
         res.json({
             success: true,
             data: {
                 privacySettings: updatedPrivacySettings,
-                maritalStatus
+                maritalStatus,
+                geoOptIn
             }
         });
     } catch (error) {

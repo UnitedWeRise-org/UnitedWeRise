@@ -1,10 +1,10 @@
 # UnitedWeRise Database Schema Reference
 
 **Status**: ✅ Production Ready
-**Last Updated**: 2026-01-22
+**Last Updated**: 2026-10-30
 **Database**: PostgreSQL (Azure Flexible Server)
 **ORM**: Prisma
-**Total Models**: 89
+**Total Models**: 129
 
 ---
 
@@ -205,6 +205,7 @@ UnitedWeRise uses PostgreSQL with Prisma ORM for data management. The schema is 
 - `ElectoralDistrict` - District boundaries with H3 indexing
 - `AddressDistrictMapping` - Address geocoding and district mapping
 - `ExternalOfficial` - Cached official data with H3 indexing
+- `GeoArea` - Census ZCTA/county polygon cache + display samples
 
 ### Cache & External Data Models
 - `ApiCache` - External API response caching
@@ -577,12 +578,14 @@ model Post {
   editHistory        Json?
   originalContent    String?
 
-  // Geographic (H3 Privacy-Preserving)
-  h3Index            String?
-  latitude           Float?
-  longitude          Float?
-  originalH3Index    String?
-  privacyDisplaced   Boolean           @default(true)
+  // Geographic (ZIP/county area + seed; no precise location)
+  areaType           String?
+  areaId             String?
+  privacyAreaType    String?
+  privacyAreaId      String?
+  geoSeed            Int?
+  geoOptIn           Boolean           @default(true)
+  // Deprecated: h3Index, latitude, longitude, originalH3Index (no longer written)
 
   // Relations
   comments           Comment[]
@@ -597,9 +600,9 @@ model Post {
 
   @@index([authorId])
   @@index([createdAt])
-  @@index([h3Index])
-  @@index([h3Index, createdAt])
-  @@index([originalH3Index, createdAt])
+  @@index([areaType, areaId, createdAt])
+  @@index([areaId, createdAt])
+  @@index([privacyAreaType, privacyAreaId])
   @@index([likesCount])
   @@index([isPolitical])
   @@index([containsFeedback, feedbackType, feedbackPriority])
@@ -623,9 +626,13 @@ model Post {
 - `editCount` (Int): Number of times post was edited
 - `editHistory` (Json): Complete edit history with timestamps
 - `originalContent` (String): Original post content before edits
-- `h3Index` (String): Privacy-displaced geographic location (H3 hexagon)
-- `originalH3Index` (String): Actual precise location (private)
-- `privacyDisplaced` (Boolean): Whether location was displaced for privacy
+- `areaType` (String): Home area type (`zip`) for map discovery
+- `areaId` (String): 5-digit home ZIP
+- `privacyAreaType` (String): `zip` or `county` used for display randomization
+- `privacyAreaId` (String): ZIP or 5-digit county FIPS
+- `geoSeed` (Int): Random per-post sample selector (display point)
+- `geoOptIn` (Boolean): Author map-visibility snapshot at post creation
+- Deprecated: `h3Index`, `latitude`, `longitude`, `originalH3Index` are no longer written; the migration cleared existing values
 
 **Relationships:**
 - `author`: Many-to-one with User
@@ -640,8 +647,9 @@ model Post {
 **Indexes:**
 - `authorId`: Fast author queries
 - `createdAt`: Chronological sorting
-- `h3Index`: Geographic proximity queries
-- `h3Index, createdAt`: Combined geographic + temporal queries
+- `areaType, areaId, createdAt`: Map area queries (home ZIP)
+- `areaId, createdAt`: Map area queries by ZIP
+- `privacyAreaType, privacyAreaId`: Display-area sample lookups
 - `likesCount`: Popular posts ranking
 - `isPolitical`: Filter political vs non-political content
 - `containsFeedback, feedbackType, feedbackPriority`: Constituent feedback dashboard
@@ -649,11 +657,51 @@ model Post {
 **Business Logic:**
 - Soft deletes preserve content for moderation review
 - Edit history tracked to prevent abuse (max 10 edits)
-- H3 geospatial indexing provides privacy-preserving location features
-- Geographic displacement randomizes exact location within ~1km radius
+- Map privacy uses a home ZIP + privacy area (ZIP/county) + `geoSeed`; no precise post coordinates are stored
+- Display coordinates are ephemeral in-polygon samples; see `GeoAreaService`
 - AI content moderation flags inappropriate content
 - Engagement counts cached for performance (updated via transactions)
 - Feedback detection enables elected officials to find constituent input
+
+---
+
+### GeoArea Model
+
+Caches Census ZCTA/county polygons, populations, and precomputed interior sample
+points. Contains no user-specific data.
+
+```prisma
+model GeoArea {
+  id          String   @id @default(cuid())
+  areaType    String   // "zip" or "county"
+  areaId      String   // ZIP or 5-digit county FIPS
+  label       String?  // County name, when available
+  population  Int?
+  centroidLat Float
+  centroidLng Float
+  minLat      Float
+  maxLat      Float
+  minLng      Float
+  maxLng      Float
+  samples     Json     // [[lat, lng], ...] (64 in-polygon points)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([areaType, areaId])
+  @@index([centroidLat, centroidLng])
+}
+```
+
+**Fields:**
+- `areaType` / `areaId`: Composite identity (`zip` or `county`)
+- `population`: Census 2020 population (drives the ZIP -> county escalation)
+- `centroidLat` / `centroidLng`: Average of valid samples (map proximity queries)
+- `samples`: 64 precomputed points inside the Census polygon
+
+**Business Logic:**
+- Created lazily on the first post in a ZIP, or via `npm run backfill-map-areas`
+- Display points are selected at read time: `samples[(geoSeed + sessionNonce) % 64]`
+- The population floor (`MAP_AREA_MIN_POPULATION`, default 50) escalates low-population ZIPs to counties
 
 ---
 
@@ -1729,10 +1777,15 @@ Conversation
 - Added Azure Content Safety API integration
 - Moderation status tracking on images
 
-**`20250922_add_post_geographic_fields`** - Geographic privacy
-- Added H3 geospatial indexing to Post model
-- Privacy-preserving location features with displacement
-- Fields: h3Index, latitude, longitude, originalH3Index, privacyDisplaced
+**`20261030213000_add_map_privacy_areas`** - Map privacy v2 (current)
+- Post: home ZIP + privacy area (ZIP/county) + geoSeed + geoOptIn
+- User: geoOptIn preference
+- GeoArea: cached Census polygons/populations + 64 in-area samples
+- Cleared legacy precise fields (h3Index, latitude, longitude, originalH3Index)
+
+**`20250922_add_post_geographic_fields`** - Legacy geographic fields (superseded)
+- Added h3Index, latitude, longitude, originalH3Index, privacyDisplaced to Post
+- No longer written as of `20261030213000_add_map_privacy_areas`
 
 **`20250809234855_add_device_fingerprint_antibot`** - Security
 - Added device fingerprinting to User model
@@ -1814,27 +1867,30 @@ Vector embeddings stored as `Float[]`:
 - Primary keys (automatic)
 - Foreign keys (automatic)
 - Unique constraints (`email`, `username`)
-- High-cardinality fields (`createdAt`, `h3Index`)
+- High-cardinality fields (`createdAt`, `areaId`)
 
 **Composite Indexes:**
-- `Post`: `[h3Index, createdAt]` - Geographic + temporal queries
+- `Post`: `[areaType, areaId, createdAt]` - Map area + temporal queries
+- `Post`: `[privacyAreaType, privacyAreaId]` - Display-area lookups
 - `Friendship`: `[requesterId, recipientId]` - Prevent duplicate friend requests
 - `Follow`: `[followerId, followingId]` - Prevent duplicate follows
 - `Report`: `[status, priority]` - Moderation queue sorting
 - `FeedFilter`: `[userId, isPinned]` - Quick access filters
 
-**H3 Geospatial Indexes:**
+**Geographic Indexes:**
+- `Post(areaType, areaId, createdAt)`: Map area queries (home ZIP)
+- `Post(privacyAreaType, privacyAreaId)`: Display-area lookups
+- `GeoArea(centroidLat, centroidLng)`: Map proximity queries
 - `User.h3Index`: User location proximity
-- `Post.h3Index`: Post location proximity
 - `ExternalOfficial.h3Index`: Official district lookup
 - `AddressDistrictMapping.h3Index`: Address geocoding
 
 **Index Usage Patterns:**
 ```sql
--- Efficient: Uses h3Index + createdAt composite index
+-- Efficient: Uses the map area composite index
 SELECT * FROM "Post"
-WHERE h3Index = '8428309ffffffff'
-ORDER BY createdAt DESC
+WHERE "areaType" = 'zip' AND "areaId" = '60601'
+ORDER BY "createdAt" DESC
 LIMIT 20;
 
 -- Inefficient: Requires full table scan
@@ -1919,10 +1975,12 @@ const users = await prisma.$queryRaw`
 ```
 
 ### Privacy Protection
-Geographic privacy via H3 displacement:
-- `Post.h3Index`: Privacy-displaced location (~1km displacement)
-- `Post.originalH3Index`: Actual location (private, admin-only)
-- `Post.privacyDisplaced`: Flag indicating displacement applied
+Map privacy via coarse area + seeded display points:
+- `Post.areaType` / `Post.areaId`: Home ZIP for map discovery
+- `Post.privacyAreaType` / `Post.privacyAreaId`: ZIP or county used for display
+- `Post.geoSeed`: Random per-post display sample selector
+- No precise post coordinates or real H3 are stored
+- `GeoArea.samples`: Precomputed in-polygon points (no user-specific data)
 
 EXIF stripping from photos:
 - GPS coordinates removed

@@ -1,10 +1,40 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: October 29, 2026
+**Last Updated**: October 30, 2026
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [2026-10-30] - Map Privacy v2: ZIP Areas + Seeded Display Points
+
+### Added
+- **Privacy-safe posts on the map** — posts now store only a coarse home ZIP, a privacy area (ZIP, or enclosing county when the ZIP has < 50 residents), a random `geoSeed`, and `geoOptIn`. Display coordinates are chosen at read time from 64 precomputed Census-polygon interior samples using `(geoSeed + sessionNonce) % N`; no precise post location is stored or returned.
+- **`GeoArea` table + `GeoAreaService`** — Census TIGERweb ZCTA/county lookup (DB-cached), population floor / county escalation, in-polygon sample generation, and O(1) seeded display points.
+- **Area-scoped map API** — `GET /api/posts/map-data` accepts `lat/lng/zoom/sessionNonce` and returns posts for discrete tiers (national/regional/metro/city), ranked with `ProbabilityFeedService.rankAreaPosts` (72-hour recency curve, weighted sampling, max 2 per author). Legacy `scope` remains as a fallback.
+- **Map visibility setting** — Profile → Settings → "Show my posts on the map"; toggling syncs `geoOptIn` to existing posts.
+- **Backfill script** — `npm run backfill-map-areas` hydrates areas for existing post ZIPs and applies county escalation.
+
+### Changed
+- **Post creation** writes only area + seed (uses the stored ZIP; no geocoding call, no precise coordinates).
+- **Map frontend** fetches one real-post batch for the live center/zoom, caches it for 3 minutes, refreshes on meaningful `moveend`, and rotates real posts through the bubbles.
+- **Feed geographic boost** now falls back to ZIP proximity (`UserInterestService.calculateAreaBoost`) because posts no longer store H3.
+- **Attribution** stays as the compact bottom-right ⓘ control (licence-compliant, unobtrusive).
+
+### Fixed
+- **Bubbles in the ocean** — removed the ±1° popup coordinate jitter and the bounding-box random coordinates; display points are now in-area samples.
+- **Real posts mislabeled as demo data** — bubble rendering now trusts the API's `isRealPost` flag instead of a global dummy-data check.
+
+### Security / Privacy
+- Migration `20261030213000_add_map_privacy_areas` nulls all legacy `Post.latitude`, `Post.longitude`, `Post.originalH3Index`, and `Post.h3Index` values; these fields are deprecated and no longer written.
+- Rural ZIPs below the population floor display within the enclosing county to avoid household re-identification.
+
+### Files
+- Backend: `prisma/schema.prisma`, migration, `src/services/geoAreaService.ts`, `src/services/postGeographicService.ts`, `src/services/probabilityFeedService.ts`, `src/routes/posts.ts`, `src/routes/users.ts`, `src/scripts/backfillMapAreas.ts`
+- Frontend: `src/js/map-maplibre.js`, `src/components/Profile.js`
+- Docs: `.claude/plans/map-system-rework-plan.md`, `docs/devlogs/2026-10-30-map-privacy-zip-areas.md`
 
 ---
 

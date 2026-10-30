@@ -1,7 +1,7 @@
 # Map System Rework — Plan
 
-**Status**: Draft — awaiting approval
-**Date**: 2026-10-29
+**Status**: Phase 4 implemented on `development` (ZIP + population floor); awaiting staging deploy/verification
+**Date**: 2026-10-29 (updated 2026-10-30)
 **Risk**: High (schema/privacy change, external APIs, multiple layers)
 **Branch**: `development` (staging) → `main` (production only on explicit command)
 
@@ -47,16 +47,15 @@
 
 ---
 
-## 3. Design decisions to confirm (blocking)
+## 3. Design decisions (confirmed in discussion; implemented in Phase 4)
 
-1. **Privacy schema** — to do "area population" we must store an *area*, not a point:
-   - Store coarse `areaH3` (e.g., H3 res‑5/6 ≈ neighborhood/city) + `geoSeed` (random int per post), and **no** precise lat/lng or real H3.
-   - At display: `deriveDisplayCoords(areaH3, geoSeed, sessionNonce)` → a stable-in-session, approximate point inside the area.
-   - Requires migration: drop `Post.originalH3Index`, stop writing `latitude/longitude`, add `areaH3`, `geoSeed`, `geoOptIn`.
-   - **Confirm**: storing a coarse area cell (not a precise location) is acceptable for area-population.
-2. **Opt-in default**: on by default (with clear disclosure) or off by default?
-3. **Ranking**: start with a simple tunable score (recency + engagement + proximity within area), behind a function we can iterate on.
-4. **Production**: deploy the Stadia basemap fix now as a hotfix, or bundle with the rework?
+1. **Privacy schema** — store an *area*, not a point:
+   - Store home ZIP (`areaType`/`areaId`), privacy area (`privacyAreaType`/`privacyAreaId`; ZIP or enclosing county when ZIP population < 50), `geoSeed` (random int per post), and `geoOptIn`. No precise lat/lng or real H3.
+   - At display: pick a precomputed in-polygon sample using `(geoSeed + sessionNonce) % N` → a stable-in-session, approximate point inside the privacy area.
+   - Migration adds the coarse fields; legacy precise fields are no longer written and were nulled.
+2. **Opt-in default**: on by default, with disclosure in Profile → Settings.
+3. **Ranking**: `ProbabilityFeedService.rankAreaPosts` (recency 72h curve, similarity, social, trending, reputation; weighted sampling; max 2 per author).
+4. **Production**: Stadia basemap hotfix shipped separately (`34c4783`); Phase 2–4 await staging verification.
 
 ---
 
@@ -79,21 +78,33 @@ Merge `34c4783` to `main` so prod maps render again (no schema/API changes).
 - Frontend: add address input to the map UI; on submit → flyTo result; drop Nominatim browser calls.
 - Optional: fallback to Census Geocoder (keyless) if Geocodio is unavailable.
 
-### Phase 4 — Posts-on-map v2 (privacy redesign) — the core new feature
-**Data layer (migration)**
-- `Post`: remove/stop writing `latitude/longitude` + `originalH3Index`; add `areaH3 String?`, `geoSeed Int?`, `geoOptIn Boolean @default(...)`.
-- Backfill strategy for existing posts: derive coarse area from existing `originalH3Index`/coords, generate `geoSeed`, then null out precise fields.
-- Migration-first (CI applies before code).
+### Phase 4 — Posts-on-map v2 (privacy redesign) — IMPLEMENTED 2026-10-30
+**Data layer**
+- `Post`: added `areaType`/`areaId` (home ZIP), `privacyAreaType`/`privacyAreaId`
+  (ZIP, or county when ZIP population < `MAP_AREA_MIN_POPULATION`, default 50),
+  `geoSeed`, `geoOptIn`. Precise `latitude`/`longitude`/`originalH3Index`/
+  `h3Index` are no longer written and were nulled by the migration.
+- `User.geoOptIn` (default true) with a Profile → Settings toggle; toggling syncs
+  existing posts.
+- New `GeoArea` table caches Census ZCTA/county polygons, population, centroid,
+  and 64 precomputed in-polygon sample points.
+- Migration `20261030213000_add_map_privacy_areas` (additive columns + table,
+  backfill from author ZIP, privacy cleanup). Run
+  `npm run backfill-map-areas` after deploy to hydrate old post ZIPs.
 
 **Backend**
-- `PostGeographicService`: compute `areaH3` (coarse) at creation from user's geocoded address + random `geoSeed`; never write precise coords or real H3.
-- `GET /api/posts/map-data`: accept **map viewport** (`bbox` or `center+zoom` → H3 cells) instead of user scope; return display coords computed with the double-randomization; authorization: public/optional-auth (map browsing).
-- Ranking function: pluggable `score = f(recency, engagement, distanceWithinArea)`.
-- Respect `geoOptIn`.
+- `GeoAreaService`: TIGERweb ZCTA/county lookup (cached), population floor,
+  ray-cast rejection sampling, seeded display-point derivation.
+- `PostGeographicService`: writes area + seed only; `/api/posts/map-data` now
+  accepts `lat/lng/zoom` and returns area-scoped, ranked posts with ephemeral
+  coordinates. Legacy `scope` remains as a fallback.
+- `ProbabilityFeedService.rankAreaPosts`: reuses feed signals with the map
+  recency curve `0.05 + 0.95·exp(-ageHours/72)`, weighted sampling, max 2/author.
 
 **Frontend**
-- On map move/zoom (debounced), request posts for the visible area; render markers with popups; cap count; reuse `getPostsForMap` shape.
-- Privacy toggle in user settings; disclosure copy.
+- Map fetches posts for the live center/zoom (debounced `moveend`), caches a
+  batch per area, and renders real bubbles. Large random coordinate jitter was
+  removed (it caused ocean bubbles). Compact ⓘ attribution remains.
 
 ### Phase 5 — Representatives & candidates in the viewed area
 - Endpoint using `RepresentativeService` (Geocodio + Google Civic + FEC + `ApiCacheService`), keyed off map center/district.
@@ -168,20 +179,22 @@ Requires explicit approval to: change schema, alter privacy storage, add endpoin
 - Discrete zoom tiers, each with a fixed geographic query radius:
   T1 National (<5) = whole US · T2 Regional (5–8) = ~300 km · T3 Metro (8–11) = ~60 km · T4 City (≥11) = ~10 km.
 - Query area is a function of **(map center, tier)** — **never** the pixel viewport. Resize ⇒ no refetch.
-- Cache key = `(tier, centerCell-set)` using H3 cells at the tier resolution; fetch a 3×3 cell block with
-  **hysteresis** (refetch only when the center exits the block).
-- Layered caches: server short-TTL response cache → client LRU → idle prefetch of adjacent blocks.
-- Debounce (~300 ms) + abort in-flight + coalesce duplicates; render via one MapLibre GeoJSON source
-  `setData` (diffing) with clustering → no flicker.
+- Cache key = map tier + coarse center bucket; `GeoArea` centroids provide the query area.
+  Client cache is per-jurisdiction with a 3-minute TTL; `moveend` clears it only when the
+  tier or coarse center bucket changes.
+- Layered caches: `GeoArea` (polygons/samples, long-lived) → client topic cache (3 min).
+- Debounce `moveend` (~900 ms); one batch request per area (no per-topic calls).
 
 ### Recency curve (matches user's spec)
 `recency = 0.05 + 0.95 · exp(-ageHours / 72)`, hard cutoff 30 days.
 → ~1.0 now · 0.54 @48h · 0.14 @7d · 0.05 asymptote @30d. (`TAU` tunable.)
 
-### Privacy (pending final confirmation)
-- **Recommended: store coarse `areaH3` (res 5–6) + `geoSeed` + `geoOptIn`; never store precise coords or real H3.**
-- Display coords generated per render from `(areaH3 centroid, geoSeed, session nonce)` using the user's two-stage
-  randomizer (random vector, distance ∈ [0.05R, 0.5R], applied twice; final point ≤ R from area anchor).
-- Rejected (for now): storing a first-stage displaced H3 — vulnerable to multi-post triangulation and causes
-  posts to appear in the wrong area.
-- Open: area granularity (H3 res 5 vs 6 vs city/zip/county) and the user-facing radius options (5/10/20/50 mi).
+### Privacy (implemented 2026-10-30)
+- **Implemented: home ZIP + privacy area (ZIP, escalated to county when ZIP population < 50) + `geoSeed` + `geoOptIn`.**
+- No precise post coordinates or real H3 are written; the migration nulled legacy values.
+- Display coords are chosen at read time from 64 Census-polygon interior samples:
+  `samples[(geoSeed + sessionNonce) % 64]` → constant-time, in-area, no stored point.
+- Population floor is k-anonymity-style: rural ZIPs with < 50 residents display within the county.
+- `geoOptIn` defaults on with disclosure; toggling off hides existing posts from the map.
+- Follow-ups: user-selectable privacy level (Standard/High/Maximum), optional public/optional-auth
+  map browsing, AI topic bubbles on top of the ranked post pool.

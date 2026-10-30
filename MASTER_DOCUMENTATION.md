@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: January 22, 2026
-**Version**: 6.0.0 (iOS Native App & Push Notification Infrastructure)
+**Last Updated**: October 30, 2026
+**Version**: 6.1.0 (Map Privacy v2: ZIP Areas + Seeded Display Points)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
 > **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
@@ -740,61 +740,48 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User Creates Post with Address] --> B[PostGeographicService.processUserLocation]
-    B --> C[Geocodio API: Address → Real Coordinates]
-    C --> D[Generate Real H3 Index]
-    D --> E[Apply Privacy Displacement 50-2000m]
-    E --> F[Generate Display H3 Index]
-    F --> G[Store Dual Coordinates in Database]
-    G --> H{Map Request?}
-    H -->|Yes| I[Return Display Coordinates Only]
-    H -->|No| J{District Lookup?}
-    J -->|Yes| K[Use Real Coordinates for Accuracy]
-    I --> L[MapLibre Display with Privacy Protection]
-    K --> M[Representative Matching & Civic Targeting]
-    M --> N[Return Jurisdiction Data]
+    A[User creates post] --> B[Read stored ZIP from profile]
+    B --> C[GeoAreaService: resolve ZIP/county + population]
+    C --> D{Population >= 50?}
+    D -->|Yes| E[Privacy area = ZIP]
+    D -->|No| F[Privacy area = enclosing county]
+    E --> G[Generate random geoSeed]
+    F --> G
+    G --> H[Store area + seed + geoOptIn only]
+    H --> I[Map request with center + zoom]
+    I --> J[Find home ZIP areas near center]
+    J --> K[Rank with ProbabilityFeedService]
+    K --> L[Derive sample: geoSeed + sessionNonce]
+    L --> M[Return ephemeral coordinates to MapLibre]
 ```
 
 **Systems Involved**:
-1. **PostGeographicService** (`backend/src/services/PostGeographicService.ts`): Core geographic processing
-2. **Geocodio API**: Address resolution to precise coordinates
-3. **H3 Library**: Hexagonal spatial indexing for both real and display coordinates
-4. **Database** (`Post` model): Dual-coordinate storage with privacy separation
-5. **AddressDistrictMapping**: Cached district lookups using real coordinates
-6. **MapLibre Frontend** (`frontend/src/js/map-maplibre.js`): Privacy-protected visualization
-7. **API Endpoint** (`/api/posts/map-data`): Secure coordinate delivery
-
-**Data Flow Security**:
-- **Real Coordinates**: Geocodio → PostGeographicService → Database (originalH3Index field) → Jurisdiction only
-- **Display Coordinates**: Privacy displacement → Database (h3Index, lat, lng fields) → Map display
-- **API Security**: Only displaced coordinates exposed via public endpoints
+1. **GeoAreaService** (`backend/src/services/geoAreaService.ts`): Census TIGERweb ZCTA/county polygons, population floor, in-polygon samples, seeded display points.
+2. **PostGeographicService** (`backend/src/services/postGeographicService.ts`): Writes area + seed only; area-scoped map queries.
+3. **GeoArea table**: Cached Census polygons/populations/samples (no user-specific data).
+4. **ProbabilityFeedService**: Area ranking (recency 72h curve, similarity, social, trending, reputation; max 2/author).
+5. **MapLibre Frontend** (`frontend/src/js/map-maplibre.js`): Fetches the current view, rotates real posts through bubbles.
+6. **API Endpoint** (`/api/posts/map-data`): Accepts `lat/lng/zoom/sessionNonce`, returns ephemeral coordinates.
 
 **Privacy Safeguards**:
-- Minimum 50m displacement prevents exact location identification
-- Maximum 2km displacement maintains geographic relevance
-- Random direction and distance prevent reverse engineering
-- Real coordinates never leave server context
-- Separate H3 indexes for jurisdiction vs. display
+- No precise post coordinates or real H3 are written or returned.
+- Display points are precomputed Census-polygon interior samples.
+- ZIPs below the population floor escalate to the enclosing county.
+- The client nonce varies display points per session; nothing is persisted.
+- `geoOptIn` (default on) lets users hide all their posts from the map.
 
-**Geographic Accuracy Preservation**:
-- District classification uses real coordinates for proper representative matching
-- Civic engagement targeting uses original H3 index for local issue relevance
-- Election information tied to actual jurisdiction boundaries
-- Cache efficiency through dual H3 indexing system
-
-**Performance Optimizations**:
-- H3 spatial indexing enables sub-second geographic queries
-- AddressDistrictMapping cache prevents repeated district API calls
-- Database indexes on both geographic field sets
-- Efficient coordinate displacement algorithm using bearing calculations
+**Performance**:
+- `GeoArea` caches polygons/samples; display is an O(1) array lookup.
+- Map tiers use fixed query radii, so resizing the viewport does not refetch.
+- `Post(areaType, areaId, createdAt)` and `GeoArea(centroidLat, centroidLng)` indexes support area queries.
+- The frontend batches one request per area and caches it for 3 minutes.
 
 **Error Handling**:
-- Geocodio API failure → Graceful fallback with enhanced dummy data
-- Invalid address → User notification with suggestion
-- Privacy displacement failure → Fallback to larger displacement range
-- Database storage failure → Retry with backup coordinate storage
+- Census lookup failure → post is created without map geography (graceful).
+- Unknown/PO-box ZIP → no ZCTA area; post is not mapped.
+- Missing `GeoArea` for legacy posts → bounded lazy hydration, plus `npm run backfill-map-areas`.
 
-**Related Systems**: {#h3-geographic-indexing}, {#geographic-privacy-protection}, {#map-civic-features}, {#api-reference}
+**Related Systems**: {#geographic-privacy-protection}, {#map-civic-features}, {#api-reference}
 
 ---
 
@@ -1180,12 +1167,14 @@ model Post {
   feedbackSummary    String?           // AI-generated summary
   feedbackType       String?           // Type classification
 
-  // Geographic Data (H3 Indexing + Privacy Protection)
-  h3Index            String?           // Display H3 index (may be privacy-displaced)
-  latitude           Float?            // Display coordinates (privacy-displaced for map)
-  longitude          Float?            // Display coordinates (privacy-displaced for map)
-  originalH3Index    String?           // Real H3 index (used for jurisdiction classification)
-  privacyDisplaced   Boolean           @default(true)  // Whether coordinates are displaced
+  // Geographic Data (Area + Seed Privacy Model)
+  areaType           String?           // "zip" — home area for map discovery
+  areaId             String?           // 5-digit home ZIP
+  privacyAreaType    String?           // "zip" or "county" — display area
+  privacyAreaId      String?           // ZIP or 5-digit county FIPS
+  geoSeed            Int?              // Random per-post display sample selector
+  geoOptIn           Boolean           @default(true)  // Author map visibility snapshot
+  // Deprecated: h3Index, latitude, longitude, originalH3Index are no longer written
 
   // Content Management
   isDeleted          Boolean           @default(false)
@@ -3435,50 +3424,47 @@ Get single post with details
 - **Related**: See {#comment-threading} for comment endpoints
 
 #### GET /api/posts/map-data
-Get posts with geographic data for map display
+Get privacy-safe, area-scoped posts for the map view.
+
 ```javascript
-Query params:
-  bounds?: string // "lat1,lng1,lat2,lng2" (map viewport bounds)
-  h3Index?: string // H3 index for specific hexagon
-  limit?: number (default: 100, max: 500)
-  includeRealPosts?: boolean (default: true)
-  includeDummyData?: boolean (default: true)
+Query params (preferred):
+  lat: number          // map center latitude
+  lng: number          // map center longitude
+  zoom: number         // MapLibre zoom (tier is derived)
+  count?: number       // default 9, max 40
+  sessionNonce?: number // client per-session nonce (varies display points)
+
+Query params (legacy fallback):
+  scope?: "national" | "state" | "local"
 
 Response:
 {
   success: true,
-  data: {
-    posts: [{
-      id: string,
-      content: string,
-      latitude: number,      // Privacy-displaced coordinates for display
-      longitude: number,     // Privacy-displaced coordinates for display
-      h3Index: string,       // Display H3 index (may be displaced)
-      privacyDisplaced: boolean,
-      author: {
-        id: string,
-        name: string,
-        username: string
-      },
-      createdAt: string,
-      likesCount: number,
-      commentsCount: number
-    }],
-    source: "real" | "legacy" | "dummy", // Data source used
-    count: number,
-    hasMore: boolean
-  }
+  tier: "national" | "regional" | "metro" | "city",
+  data: [{
+    id: string,
+    coordinates: [number, number], // [lng, lat] inside the privacy area
+    content: string,
+    author: string,
+    engagement: number,
+    createdAt: string,
+    areaLabel: string | null,
+    isRealPost: true,
+    tier: string
+  }],
+  hasRealPosts: boolean,
+  fallbackNeeded: boolean
 }
 ```
 
 **System Behavior**:
-- **Triple-Fallback System**: Real posts → Legacy API → Enhanced dummy data
-- **Privacy Protection**: Displays privacy-displaced coordinates while using real coordinates for jurisdiction classification
-- **H3 Integration**: Efficient spatial indexing for geographic queries
-- **Jurisdiction Filtering**: Uses originalH3Index for district-based filtering
-- **Real + Dummy Hybrid**: Combines actual user content with enhanced dummy fallback data
+- **Tier radii**: national (<5) = whole US · regional (5–8) = ~300 km · metro (8–11) = ~60 km · city (≥11) = ~10 km.
+- **Privacy**: returns only ephemeral sample points from the post's ZIP/county privacy area; no precise location or real H3.
+- **Ranking**: `ProbabilityFeedService.rankAreaPosts` — 72-hour recency curve, similarity/social/trending/reputation, weighted sampling, max 2 posts per author.
+- **Opt-in**: posts with `geoOptIn=false` are excluded.
+- **Fallback**: the frontend uses legacy topics/dummy data only when the real area returns fewer than 2 posts.
 
-**Related Systems**: Integrates with {#map-civic-features}, PostGeographicService, and AddressDistrictMapping cache.
+**Related Systems**: {#map-civic-features}, {#geographic-privacy-protection}, GeoAreaService, PostGeographicService.
 
 #### GET /api/feed/
 Get personalized feed using probability-based algorithm
@@ -11302,135 +11288,17 @@ this.map.on('error', (e) => {
 
 **Testing**: Switch from National to Local view - should see smooth transition without console errors
 
-#### H3 Geographic Indexing + Geocodio Integration {#h3-geographic-indexing}
-**Status**: ✅ **FULLY IMPLEMENTED** - September 22, 2025
+#### H3 Indexing & Area Privacy {#h3-geographic-indexing}
+**Status**: H3 remains for user/district feeds; **post map privacy moved to ZIP/county areas (2026-10-30)**.
 
-**Complete Geographic Infrastructure**: Full production implementation of H3 hexagonal indexing with Geocodio address resolution and privacy-protected coordinate display.
+- **Users/districts**: `User.h3Index` and `AddressDistrictMapping` still use H3 + Geocodio for
+  jurisdiction classification and proximity feeds.
+- **Posts**: no longer store precise coordinates, real H3, or displaced points. Posts store a
+  home ZIP, a privacy area (ZIP/county), a random `geoSeed`, and `geoOptIn`; display coordinates
+  are ephemeral in-area samples. See {#geographic-privacy-protection}.
+- **Map API**: `GET /api/posts/map-data?lat=&lng=&zoom=&sessionNonce=` — see {#api-reference}.
 
-##### System Architecture
-```javascript
-// Complete geographic data flow
-User Address → Geocodio API → Real Coordinates → H3 Index → Privacy Displacement → Map Display
-             ↓
-          District Classification (real coordinates) + Map Visualization (displaced coordinates)
-```
-
-##### PostGeographicService Implementation
-```javascript
-class PostGeographicService {
-  // Core geographic processing
-  async processUserLocation(address) {
-    // 1. Geocode address via Geocodio API
-    const realCoords = await geocodioClient.geocode(address);
-
-    // 2. Generate H3 index from real coordinates
-    const originalH3Index = h3.geoToH3(realCoords.lat, realCoords.lng, 9);
-
-    // 3. Apply privacy displacement (50-2000m from real address)
-    const displacedCoords = this.applyPrivacyDisplacement(realCoords);
-    const displayH3Index = h3.geoToH3(displacedCoords.lat, displacedCoords.lng, 9);
-
-    return {
-      // Real data - used for jurisdiction classification
-      originalH3Index,
-      realLatitude: realCoords.lat,
-      realLongitude: realCoords.lng,
-
-      // Display data - privacy-displaced for map
-      h3Index: displayH3Index,
-      latitude: displacedCoords.lat,
-      longitude: displacedCoords.lng,
-      privacyDisplaced: true
-    };
-  }
-
-  applyPrivacyDisplacement(coords) {
-    // Random displacement 50-2000 meters from real address
-    const distance = Math.random() * 1950 + 50; // 50-2000m
-    const bearing = Math.random() * 360; // Random direction
-    return this.displaceBearing(coords, distance, bearing);
-  }
-}
-```
-
-##### Map Data Integration
-```javascript
-// Enhanced map data endpoint with triple-fallback system
-GET /api/posts/map-data?bounds=lat1,lng1,lat2,lng2
-
-// Data Sources (in priority order):
-1. **Real Posts**: Actual user content with privacy-displaced coordinates
-2. **Legacy API**: Existing API compatibility layer
-3. **Enhanced Dummy Data**: Realistic fallback content
-
-// Response includes privacy protection indicators
-{
-  posts: [{
-    latitude: 40.7128,        // Privacy-displaced for display
-    longitude: -74.0060,      // Privacy-displaced for display
-    h3Index: "891ea6d...",    // Display H3 index
-    originalH3Index: "891ea7c...", // Real H3 (server-only)
-    privacyDisplaced: true    // Privacy indicator
-  }]
-}
-```
-
-##### Privacy Protection System
-**Dual-Coordinate Architecture**:
-- **Real Coordinates**: Used for jurisdiction classification, district lookup, representative matching
-- **Display Coordinates**: Privacy-displaced 50-2000m from real address for map visualization
-- **H3 Integration**: Both real and display coordinates get H3 indexes for efficient spatial queries
-
-**AddressDistrictMapping Integration**:
-```javascript
-// Cached district lookups use REAL coordinates for accuracy
-const districts = await getDistrictsForLocation({
-  lat: realLatitude,      // Uses real coordinates
-  lng: realLongitude,     // for accurate jurisdiction
-  h3Index: originalH3Index // Real H3 index
-});
-
-// Map display uses DISPLACED coordinates
-map.addMarker({
-  lat: displatedLatitude,  // Privacy-protected
-  lng: displatedLongitude, // Privacy-protected
-  h3Index: displayH3Index  // Displaced H3 index
-});
-```
-
-##### Database Integration
-```prisma
-model Post {
-  // Geographic fields (as documented in Database Schema)
-  h3Index         String?   // Display H3 index (privacy-displaced)
-  latitude        Float?    // Display coordinates (privacy-displaced)
-  longitude       Float?    // Display coordinates (privacy-displaced)
-  originalH3Index String?   // Real H3 index (jurisdiction classification)
-  privacyDisplaced Boolean  @default(false)
-
-  // Server-only real coordinates stored separately for security
-}
-```
-
-##### Geocodio API Integration
-- **Address Resolution**: Converts user addresses to precise lat/lng coordinates
-- **District Caching**: Integrates with existing AddressDistrictMapping cache system
-- **Batch Processing**: Efficient bulk geocoding for multiple addresses
-- **Error Handling**: Graceful fallback when geocoding fails
-
-**Files Modified**:
-- `backend/src/services/PostGeographicService.ts` - Core geographic processing
-- `backend/src/routes/posts.ts` - /api/posts/map-data endpoint
-- `prisma/schema.prisma` - Geographic Post model fields
-- `frontend/src/js/map-maplibre.js` - Enhanced map data loading
-
-**Benefits Achieved**:
-- ✅ **Privacy Protection**: Real addresses never exposed on maps
-- ✅ **Jurisdiction Accuracy**: District classification uses real coordinates
-- ✅ **Performance**: H3 spatial indexing for efficient geographic queries
-- ✅ **Scalability**: Cached district mappings + indexed database queries
-- ✅ **Real + Dummy Hybrid**: Seamless fallback to enhanced dummy data
-
+#### Conversation Bubbles
 #### Conversation Bubbles
 ```javascript
 // Bubble structure
@@ -11469,9 +11337,9 @@ const districts = await getDistrictsForLocation({
 });
 
 // Privacy-aware implementation:
-// - Uses REAL coordinates for accurate district classification
-// - Displays DISPLACED coordinates on map for privacy
-// - Integrates with PostGeographicService for complete flow
+// - District classification uses the user's real address/H3 (server-side)
+// - Map posts use ZIP/county area samples + geoSeed (no precise post coordinates)
+// - See {#geographic-privacy-protection}
 ```
 
 #### Representative Lookup
@@ -11560,223 +11428,122 @@ Response:
 ## 🔐 GEOGRAPHIC PRIVACY PROTECTION {#geographic-privacy-protection}
 
 ### Privacy-First Geographic Architecture
-**Implementation Date**: September 22, 2025
-**Status**: ✅ **PRODUCTION READY** - Complete dual-coordinate privacy system
+**Implementation Date**: October 30, 2026
+**Status**: ✅ **Stage 4 implemented** (staging verification pending)
 
 ### Core Privacy Principles
 
-#### Dual-Coordinate System
-**Fundamental Architecture**: Separation of real coordinates (for accuracy) and display coordinates (for privacy).
+#### Area + Seed, Never a Point
+Posts never store a precise location. At creation the backend resolves the
+author's stored ZIP to a **home area** and a **privacy area**, and generates a
+random per-post seed:
 
-```javascript
-// Real Coordinates (Server-Side Only)
-const realData = {
-  realLatitude: 40.7589,      // Actual user address
-  realLongitude: -73.9851,    // Actual user address
-  originalH3Index: "891ea7c..." // Real H3 for district lookup
-};
-
-// Display Coordinates (Public/Map Display)
-const displayData = {
-  latitude: 40.7612,          // Privacy-displaced (50-2000m)
-  longitude: -73.9834,        // Privacy-displaced (50-2000m)
-  h3Index: "891ea6d...",      // Display H3 index
-  privacyDisplaced: true      // Privacy indicator
-};
-```
-
-#### Privacy Displacement Algorithm
-```javascript
-class PrivacyProtection {
-  applyPrivacyDisplacement(realCoords) {
-    // Random displacement parameters
-    const minDistance = 50;   // Minimum 50m displacement
-    const maxDistance = 2000; // Maximum 2km displacement
-    const distance = Math.random() * (maxDistance - minDistance) + minDistance;
-    const bearing = Math.random() * 360; // Random direction
-
-    // Calculate displaced coordinates
-    return this.displaceBearing(realCoords, distance, bearing);
-  }
-
-  displaceBearing(coords, distanceMeters, bearingDegrees) {
-    const R = 6371000; // Earth radius in meters
-    const lat1 = coords.lat * Math.PI / 180;
-    const lng1 = coords.lng * Math.PI / 180;
-    const bearing = bearingDegrees * Math.PI / 180;
-
-    const lat2 = Math.asin(
-      Math.sin(lat1) * Math.cos(distanceMeters / R) +
-      Math.cos(lat1) * Math.sin(distanceMeters / R) * Math.cos(bearing)
-    );
-
-    const lng2 = lng1 + Math.atan2(
-      Math.sin(bearing) * Math.sin(distanceMeters / R) * Math.cos(lat1),
-      Math.cos(distanceMeters / R) - Math.sin(lat1) * Math.sin(lat2)
-    );
-
-    return {
-      lat: lat2 * 180 / Math.PI,
-      lng: lng2 * 180 / Math.PI
-    };
-  }
+```prisma
+model Post {
+  areaType        String?   // "zip" — home area for map discovery
+  areaId          String?   // 5-digit home ZIP
+  privacyAreaType String?   // "zip" or "county" — display area
+  privacyAreaId   String?   // ZIP or 5-digit county FIPS
+  geoSeed         Int?      // random per-post sample selector
+  geoOptIn        Boolean   @default(true)
 }
 ```
+
+The legacy `h3Index`, `latitude`, `longitude`, and `originalH3Index` columns are
+deprecated: they are no longer written and the migration nulled existing values.
+
+#### Population Floor (k-anonymity)
+A ZIP is used directly only when its Census 2020 population is at least
+`MAP_AREA_MIN_POPULATION` (default **50**). Lower-population ZIPs are escalated
+to the enclosing county, so a displayed point cannot identify one of a handful of
+rural households. Set the env var to override the threshold.
+
+#### Display Point Derivation
+`GeoArea` caches the Census ZCTA/county polygon and **64 precomputed in-polygon
+sample points** (ray-cast rejection sampling). At read time:
+
+```javascript
+const index = (post.geoSeed + sessionNonce) % area.samples.length;
+const [lat, lng] = area.samples[index]; // inside the privacy area
+```
+
+* O(1) per post/render — no geometry or geocoding at display time.
+* The client sends a random per-session nonce, so points are stable within a
+  session but vary across sessions.
+* Nothing derived from the user's address is stored; the sample set belongs to
+  the area, not the person.
+
+#### Opt-In
+`User.geoOptIn` defaults to `true` with disclosure in **Profile → Settings**.
+Toggling it syncs `Post.geoOptIn` for all of the author's posts, so opting out
+immediately removes them from the map.
 
 ### Data Flow & Usage
 
-#### Jurisdiction Classification (Uses Real Coordinates)
-```javascript
-// District lookup uses REAL coordinates for accuracy
-const districts = await getDistrictsForLocation({
-  lat: realLatitude,        // Actual address coordinates
-  lng: realLongitude,       // Actual address coordinates
-  h3Index: originalH3Index  // Real H3 index
-});
-
-// Representative matching
-const representatives = await findRepresentatives(districts);
-
-// Civic engagement targeting
-const localIssues = await getLocalIssues(originalH3Index);
+```mermaid
+graph TD
+    A[User creates post] --> B[Read user's stored ZIP]
+    B --> C{ZIP population >= 50?}
+    C -->|Yes| D[Privacy area = ZIP]
+    C -->|No| E[Privacy area = enclosing county]
+    D --> F[Generate random geoSeed]
+    E --> F
+    F --> G[Store area + seed + geoOptIn only]
+    G --> H[Map request: center + zoom]
+    H --> I[Tier radius: national/regional/metro/city]
+    I --> J[Find home ZIP areas near center]
+    J --> K[Rank posts with ProbabilityFeedService]
+    K --> L[Pick sample: geoSeed + sessionNonce]
+    L --> M[Return ephemeral coordinates]
 ```
 
-#### Map Display (Uses Displaced Coordinates)
+#### API Endpoint
 ```javascript
-// Map markers use DISPLACED coordinates for privacy
-map.addSource('posts', {
-  type: 'geojson',
-  data: {
-    features: posts.map(post => ({
-      geometry: {
-        coordinates: [post.longitude, post.latitude] // Displaced coordinates
-      },
-      properties: {
-        id: post.id,
-        h3Index: post.h3Index, // Display H3 index
-        privacyDisplaced: post.privacyDisplaced
-      }
-    }))
-  }
-});
-```
-
-#### API Endpoint Security
-```javascript
-// /api/posts/map-data - Only returns displaced coordinates
+// GET /api/posts/map-data
+// Preferred: live map center + zoom
 {
-  posts: [{
-    latitude: 40.7612,         // ✅ Displaced (safe for public)
-    longitude: -73.9834,       // ✅ Displaced (safe for public)
-    h3Index: "891ea6d...",     // ✅ Display H3 index
-    // ❌ originalH3Index: NEVER exposed in API
-    // ❌ realLatitude: NEVER exposed in API
-    // ❌ realLongitude: NEVER exposed in API
-    privacyDisplaced: true     // ✅ Privacy indicator
-  }]
+  lat: 41.8781,
+  lng: -87.6298,
+  zoom: 12,
+  count: 9,
+  sessionNonce: 123456789
+}
+
+// Response item (no area id or precise location)
+{
+  id: "post_id",
+  coordinates: [-87.6149, 41.8874], // [lng, lat] inside the privacy area
+  content: "...",
+  author: "Display Name",
+  engagement: 12,
+  createdAt: "2026-10-30T...",
+  areaLabel: null,
+  isRealPost: true,
+  tier: "city"
 }
 ```
 
-### Database Security
+The legacy `scope=national|state|local` parameter remains as a fallback when
+`lat/lng/zoom` are omitted.
 
-#### Storage Architecture
-```prisma
-model Post {
-  // PUBLIC FIELDS (displaced coordinates)
-  h3Index         String?   // Display H3 (may be displaced)
-  latitude        Float?    // Display coordinates (displaced)
-  longitude       Float?    // Display coordinates (displaced)
-  privacyDisplaced Boolean  @default(false)
-
-  // SERVER-ONLY FIELDS (real coordinates)
-  originalH3Index String?   // Real H3 index (jurisdiction only)
-  // Real lat/lng stored in separate secure table or encrypted
-}
-
-// Separate secure table for real coordinates (optional architecture)
-model PostGeographicData {
-  postId          String    @unique
-  realLatitude    Float     // Encrypted at rest
-  realLongitude   Float     // Encrypted at rest
-  createdAt       DateTime  @default(now())
-
-  post            Post      @relation(fields: [postId], references: [id])
-}
-```
-
-#### Query Security
-```javascript
-// Map queries - only displaced coordinates
-const mapPosts = await prisma.post.findMany({
-  select: {
-    id: true,
-    content: true,
-    latitude: true,        // Safe - displaced coordinates
-    longitude: true,       // Safe - displaced coordinates
-    h3Index: true,         // Safe - display H3 index
-    privacyDisplaced: true,
-    // originalH3Index: FALSE - never exposed to frontend
-    author: { select: { id: true, name: true, username: true } }
-  },
-  where: { h3Index: { in: nearbyH3Indexes } }
-});
-
-// Jurisdiction queries - uses secure real coordinates
-const jurisdictionPosts = await prisma.post.findMany({
-  where: { originalH3Index: realH3Index }, // Server-side only
-  // Real coordinates never leave server context
-});
-```
-
-### Privacy Benefits
-
-#### User Protection
-- ✅ **Real Address Never Exposed**: Actual location coordinates never sent to frontend or stored in public fields
-- ✅ **Meaningful Displacement**: 50m-2km displacement prevents precise location identification
-- ✅ **Random Direction**: Unpredictable displacement pattern prevents reverse engineering
-- ✅ **H3 Index Privacy**: Display H3 index differs from real H3 index
-
-#### Functionality Preservation
-- ✅ **Accurate Districts**: Jurisdiction classification uses real coordinates for proper representative matching
-- ✅ **Civic Engagement**: Local issues and elections targeted using real geographic data
-- ✅ **Map Visualization**: Displaced coordinates still provide meaningful geographic context
-- ✅ **Performance**: H3 indexing on both real and display coordinates enables efficient queries
+### Privacy Guarantees & Limits
+- ✅ No precise post coordinates or real H3 are stored or returned.
+- ✅ Display points always lie inside the privacy area's Census polygon.
+- ✅ Population floor prevents household-level identification in low-density ZIPs.
+- ✅ Seeded selection is stable per session and varies across sessions.
+- ⚠️ The displayed area itself (ZIP/county) is intentionally public metadata.
+- ⚠️ A ZIP with ≥50 residents is still a coarse but potentially identifying area;
+  the county escalation is a floor, not a formal differential-privacy guarantee.
 
 ### Integration Points
-
-#### Related Systems
-- **{#h3-geographic-indexing}**: Core implementation of privacy displacement
-- **{#database-schema}**: Post model geographic fields and security architecture
-- **{#api-reference}**: /api/posts/map-data endpoint with privacy protection
-- **{#map-civic-features}**: MapLibre integration with displaced coordinate display
-- **{#security-authentication}**: Server-side protection of real coordinate data
-
-#### PostGeographicService Integration
-```javascript
-// Complete privacy-aware geographic processing
-const geoService = new PostGeographicService();
-
-// Process user address with privacy protection
-const geoData = await geoService.processUserLocation(userAddress);
-// Returns: real coordinates (server-only) + displaced coordinates (public)
-
-// Store with privacy separation
-await prisma.post.create({
-  data: {
-    content: postContent,
-    // Public fields (safe for API)
-    latitude: geoData.latitude,           // Displaced
-    longitude: geoData.longitude,         // Displaced
-    h3Index: geoData.h3Index,             // Display H3
-    privacyDisplaced: geoData.privacyDisplaced,
-
-    // Server-only field (never exposed)
-    originalH3Index: geoData.originalH3Index  // Real H3
-  }
-});
-```
-
-**Result**: Complete geographic functionality with industry-standard privacy protection that maintains both user safety and civic engagement accuracy.
+- `GeoAreaService` — Census TIGERweb ZCTA/county lookup, population floor,
+  polygon sampling, seeded display points.
+- `PostGeographicService` — writes area + seed, area-scoped map queries.
+- `ProbabilityFeedService.rankAreaPosts` — map ranking (72-hour recency curve,
+  similarity/social/trending/reputation, weighted sampling, max 2/author).
+- `GeoArea` table — cached polygons/samples (Census data, no user data).
+- `npm run backfill-map-areas` — one-off hydration for posts created before the
+  migration.
 
 ---
 
@@ -13033,11 +12800,12 @@ CREATE INDEX idx_posts_created ON posts(createdAt DESC);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_h3_location ON users(h3Index);
 
--- Geographic indexes for posts (H3 + coordinate-based queries)
-CREATE INDEX idx_posts_h3_index ON posts(h3Index);
-CREATE INDEX idx_posts_original_h3 ON posts(originalH3Index);
-CREATE INDEX idx_posts_coordinates ON posts(latitude, longitude);
-CREATE INDEX idx_posts_geo_created ON posts(h3Index, createdAt DESC);
+-- Map area indexes (post privacy v2)
+CREATE INDEX idx_posts_area_type_id ON posts(areaType, areaId, createdAt DESC);
+CREATE INDEX idx_posts_area_created ON posts(areaId, createdAt DESC);
+CREATE INDEX idx_posts_privacy_area ON posts(privacyAreaType, privacyAreaId);
+CREATE UNIQUE INDEX idx_geo_area_type_id ON "GeoArea"(areaType, areaId);
+CREATE INDEX idx_geo_area_centroid ON "GeoArea"(centroidLat, centroidLng);
 ```
 
 #### Query Optimization

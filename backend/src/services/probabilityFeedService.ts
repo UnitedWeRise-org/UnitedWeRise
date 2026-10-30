@@ -161,6 +161,101 @@ export class ProbabilityFeedService {
     }
 
     /**
+     * Rank area-scoped posts for the map using the same signals as the feed.
+     *
+     * Map-specific differences:
+     * - Recency uses the map curve `0.05 + 0.95 * exp(-ageHours / 72)`
+     *   (30-day hard cutoff is applied by the caller).
+     * - Weighted random sampling limits each author to at most 2 markers.
+     * - Own posts are allowed (users should see their own area activity).
+     *
+     * @param posts - Candidate posts already filtered to the map area
+     * @param userId - Viewer user id (drives similarity/social scores)
+     * @param limit - Maximum posts to return
+     * @returns Selected posts in sample order
+     */
+    static async rankAreaPosts(posts: any[], userId: string, limit: number): Promise<any[]> {
+        if (posts.length === 0 || limit <= 0) return [];
+
+        let userProfile: any;
+        try {
+            userProfile = await this.getUserProfile(userId);
+        } catch (error) {
+            logger.warn({ error, userId }, 'ProbabilityFeedService: map profile lookup failed');
+            userProfile = {
+                user: null,
+                followedUserIds: new Set<string>(),
+                interactionEmbeddings: [],
+                isColdStart: true
+            };
+        }
+
+        const weights = userProfile.isColdStart ? this.coldStartWeights : this.defaultWeights;
+        const scored = await Promise.all(
+            posts.map((post) =>
+                this.scorePost(post, userProfile, weights, {
+                    floor: 0.05,
+                    tauHours: 72
+                })
+            )
+        );
+
+        return this.probabilitySampleWithAuthorCap(scored, limit, 2).map(
+            (entry) => entry.post
+        );
+    }
+
+    /**
+     * Weighted random sampling with a per-author cap.
+     *
+     * @param scoredPosts - Scored posts
+     * @param limit - Maximum selections
+     * @param maxPerAuthor - Maximum selections per author
+     * @returns Selected scored posts
+     */
+    private static probabilitySampleWithAuthorCap(
+        scoredPosts: (PostScore & { post: any })[],
+        limit: number,
+        maxPerAuthor: number
+    ) {
+        const remaining = [...scoredPosts].sort((a, b) => b.finalScore - a.finalScore);
+        const selected: (PostScore & { post: any })[] = [];
+        const perAuthor = new Map<string, number>();
+
+        while (selected.length < limit && remaining.length > 0) {
+            const eligible = remaining.filter(
+                (entry) => (perAuthor.get(entry.post.authorId) || 0) < maxPerAuthor
+            );
+            if (eligible.length === 0) break;
+
+            const totalScore = eligible.reduce(
+                (sum, entry) => sum + Math.max(0.1, entry.finalScore),
+                0
+            );
+            const random = Math.random() * totalScore;
+            let accumulator = 0;
+            let picked = eligible[eligible.length - 1];
+
+            for (const entry of eligible) {
+                accumulator += Math.max(0.1, entry.finalScore);
+                if (random <= accumulator) {
+                    picked = entry;
+                    break;
+                }
+            }
+
+            selected.push(picked);
+            remaining.splice(remaining.indexOf(picked), 1);
+            perAuthor.set(
+                picked.post.authorId,
+                (perAuthor.get(picked.post.authorId) || 0) + 1
+            );
+        }
+
+        return selected;
+    }
+
+    /**
      * Get user profile with interaction patterns for similarity scoring
      *
      * Fetches user data including:
@@ -389,13 +484,21 @@ export class ProbabilityFeedService {
      * console.log(scored.socialScore); // 1.0 (from followed user)
      * console.log(scored.finalScore); // 0.73 (weighted + visibility)
      */
-    private static async scorePost(post: any, userProfile: any, weights: FeedWeights): Promise<PostScore & { post: any }> {
+    private static async scorePost(
+        post: any,
+        userProfile: any,
+        weights: FeedWeights,
+        recencyOptions?: { floor?: number; tauHours?: number }
+    ): Promise<PostScore & { post: any }> {
         const now = Date.now();
         const postTime = new Date(post.createdAt).getTime();
         
         // 1. Recency Score (exponential decay)
         const hoursSincePost = (now - postTime) / (1000 * 60 * 60);
-        const recencyScore = Math.exp(-hoursSincePost / 24); // Half-life of 24 hours
+        const recencyFloor = recencyOptions?.floor ?? 0;
+        const recencyTauHours = recencyOptions?.tauHours ?? 24;
+        const recencyScore =
+            recencyFloor + (1 - recencyFloor) * Math.exp(-hoursSincePost / recencyTauHours);
         
         // 2. Social Score (posts from followed users get boost)
         const socialScore = userProfile.followedUserIds.has(post.authorId) ? 1.0 : 0.1;

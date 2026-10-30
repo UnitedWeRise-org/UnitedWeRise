@@ -261,6 +261,7 @@ class Profile {
                 case 'uploadProfilePicture': this.uploadProfilePicture(target); break;
                 case 'toggleActivityFilter': this.toggleActivityFilter(param1, target.checked); break;
                 case 'updatePrivacySetting': this.updatePrivacySetting(param1, target.value); break;
+                case 'updateGeoOptIn': this.updateGeoOptIn(target.checked); break;
                 case 'updateNotificationPreference': this.updateNotificationPreference(param1, target.checked); break;
                 case 'updateTaggingPreference': this.updateTaggingPreference(param1, target.checked); break;
                 case 'handleBulkUpload': this.handleBulkUpload(target); break;
@@ -1104,6 +1105,19 @@ class Profile {
                                 </select>
                             </div>
 
+                        </div>
+
+                        <div class="map-privacy-settings" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                            <label class="setting-item">
+                                <input type="checkbox"
+                                       id="mapGeoOptIn"
+                                       ${this.userProfile?.geoOptIn !== false ? 'checked' : ''}
+                                       data-change-action="updateGeoOptIn">
+                                <span>Show my posts on the map</span>
+                            </label>
+                            <p class="setting-description" style="margin-top: 0.25rem;">
+                                Map posts use a coarse ZIP/county area and a random seed. Your precise location is never stored or shown.
+                            </p>
                         </div>
                     </div>
 
@@ -4375,6 +4389,35 @@ class Profile {
         } catch (error) {
             adminDebugError('Error updating privacy settings:', error);
             this.showToast('Failed to update privacy settings', 5000);
+        }
+    }
+
+    async updateGeoOptIn(value) {
+        try {
+            const response = await apiCall('/users/profile-privacy', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ geoOptIn: value })
+            });
+
+            if (response.ok && response.data?.success) {
+                this.userProfile.geoOptIn = value;
+                adminDebugLog('Map visibility updated:', { geoOptIn: value });
+                this.showToast(
+                    value
+                        ? 'Your posts will appear on the map (area-level only)'
+                        : 'Your posts are hidden from the map'
+                );
+            } else {
+                throw new Error(response.data?.error || 'Failed to update map visibility');
+            }
+        } catch (error) {
+            adminDebugError('Error updating map visibility:', error);
+            this.showToast('Failed to update map visibility', 5000);
+            const checkbox = document.getElementById('mapGeoOptIn');
+            if (checkbox) checkbox.checked = !value;
         }
     }
 

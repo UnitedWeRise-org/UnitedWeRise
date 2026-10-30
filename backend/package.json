@@ -9,6 +9,7 @@
     "migrate": "npx prisma migrate deploy",
     "generate-test-users": "ts-node src/scripts/generate-test-users.ts",
     "check-database": "ts-node src/scripts/check-database.ts",
+    "backfill-map-areas": "ts-node src/scripts/backfillMapAreas.ts",
     "update-deployment": "node scripts/update-deployment.js",
     "deploy": "npm run update-deployment && npm run build"
   },

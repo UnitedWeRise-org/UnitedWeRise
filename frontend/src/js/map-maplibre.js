@@ -38,6 +38,12 @@ class UWRMapLibre {
         this.cacheValidityMs = 180000; // 3 minutes cache validity
         this.lastBubbleCount = 0; // Track last bubble count to avoid consecutive same numbers
         this.activeAnimations = []; // Track ongoing animations for cleanup
+
+        // Map-view awareness: a per-session nonce varies display points without
+        // re-storing them, and the last view prevents refetch churn on tiny pans.
+        this.sessionNonce = Math.floor(Math.random() * 2147483647);
+        this.lastMapView = null;
+        this.moveEndTimer = null;
         
         // Map layers system
         this.activeLayers = new Set(['trending', 'events', 'news', 'civic', 'community']); // Default active layers
@@ -121,6 +127,11 @@ class UWRMapLibre {
 
         // Setup event handlers
         this.setupEventHandlers();
+
+        // Refresh the map content when the viewed area changes. Debounced so
+        // flyTo animations and small pans do not spam the API.
+        this.map.on('moveend', () => this.handleMapViewChanged());
+        this.lastMapView = this.describeMapView();
         
         // Show map container when fully loaded
         this.map.on('load', () => {
@@ -305,7 +316,13 @@ class UWRMapLibre {
                     } else if (isAiTopic && topicId) {
                         if (window.enterTopicMode) window.enterTopicMode(topicId);
                     } else if (commentId) {
-                        if (window.navigateToComment) window.navigateToComment(commentId);
+                        // Real map posts open in the feed; legacy mock topics use
+                        // the old comment viewer.
+                        if (window.showPostInFeed) {
+                            window.showPostInFeed(commentId);
+                        } else if (window.navigateToComment) {
+                            window.navigateToComment(commentId);
+                        }
                     }
                     break;
                 }
@@ -1056,27 +1073,41 @@ class UWRMapLibre {
         this.bubbleCycles.push(newCycle);
     }
 
-    // Enhanced caching system to reduce API calls with jurisdiction support
+    // Cache posts for the current map view. One request returns a batch; the
+    // bubble cycle rotates through it for ~3 minutes.
     async ensureTopicCache() {
         const now = Date.now();
         const currentCache = this.topicCaches[this.currentJurisdiction];
         const isExpired = (now - currentCache.timestamp) > this.cacheValidityMs;
 
-        if (currentCache.topics.length === 0 || isExpired) {
-            // Fetch a batch of topics (12-15 topics for 3-minute cache period)
-            const batchSize = 15;
-            const newTopics = [];
-
-            for (let i = 0; i < batchSize; i++) {
-                const topic = await this.fetchTrendingComment(this.currentJurisdiction);
-                if (topic) {
-                    newTopics.push(topic);
-                }
-            }
-
-            currentCache.topics = newTopics;
-            currentCache.timestamp = now;
+        if (currentCache.topics.length > 0 && !isExpired) {
+            return;
         }
+
+        // Preferred path: real, area-scoped posts for the current map view.
+        const posts = await this.fetchMapPosts(15);
+        if (posts.length > 0) {
+            currentCache.topics = posts.map((post) =>
+                this.mapPostToTopic(post, this.currentJurisdiction)
+            );
+            currentCache.timestamp = now;
+            return;
+        }
+
+        // Fallback: legacy topics / dummy content (development and empty areas).
+        window.mapRealDataAvailable = false;
+        const batchSize = 15;
+        const newTopics = [];
+
+        for (let i = 0; i < batchSize; i++) {
+            const topic = await this.fetchFallbackTopic(this.currentJurisdiction);
+            if (topic) {
+                newTopics.push(topic);
+            }
+        }
+
+        currentCache.topics = newTopics;
+        currentCache.timestamp = now;
     }
 
     showInsufficientContentMessage() {
@@ -1149,8 +1180,8 @@ class UWRMapLibre {
         const currentCache = this.topicCaches[this.currentJurisdiction];
 
         if (currentCache.topics.length === 0) {
-            // Fallback if cache is empty
-            return this.fetchTrendingComment(this.currentJurisdiction);
+            // ensureTopicCache() normally fills this before bubbles are created.
+            return null;
         }
 
         // Rotate through cached topics to provide variety
@@ -1325,64 +1356,96 @@ class UWRMapLibre {
         }
     }
 
-    async fetchTrendingComment(jurisdiction) {
-        // Check if user is authenticated before making API calls
+    /**
+     * Fetch real posts for the current map view.
+     *
+     * Sends the live center/zoom and a per-session nonce. The backend resolves
+     * the map tier, returns area-scoped posts, and derives privacy-safe display
+     * coordinates from each post's ZIP/county sample set.
+     *
+     * @param {number} count - Maximum posts to request
+     * @returns {Promise<Array>} Map posts (empty on failure)
+     */
+    async fetchMapPosts(count = 9) {
         const authToken = localStorage.getItem('authToken');
-        if (!authToken) {
-            // Silent fallback to dummy data when not authenticated
-            return this.getDummyTopicFromHelper(jurisdiction);
-        }
+        if (!authToken) return [];
 
-        // Add simple rate limiting to prevent API spam
-        const now = Date.now();
-        if (!this.lastApiCall) this.lastApiCall = 0;
-        if (now - this.lastApiCall < 2000) { // Wait at least 2 seconds between API calls
-            // Silent fallback to dummy data when rate limited
-            return this.getDummyTopicFromHelper(jurisdiction);
-        }
-        this.lastApiCall = now;
-
-        // Try to fetch real posts with geographic data first
         try {
             const apiUrl = getApiBaseUrl().replace('/api', '');
+            const center = this.map?.getCenter
+                ? this.map.getCenter()
+                : { lat: this.US_CENTER[1], lng: this.US_CENTER[0] };
+            const zoom = this.map?.getZoom ? this.map.getZoom() : 3.6;
 
-            const response = await fetch(`${apiUrl}/api/posts/map-data?scope=${jurisdiction}&count=9`, {
+            const params = new URLSearchParams({
+                lat: center.lat.toFixed(5),
+                lng: center.lng.toFixed(5),
+                zoom: zoom.toFixed(2),
+                count: String(count),
+                sessionNonce: String(this.sessionNonce)
+            });
+
+            const response = await fetch(`${apiUrl}/api/posts/map-data?${params.toString()}`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.data && data.data.length > 0) {
-                    const post = data.data[Math.floor(Math.random() * data.data.length)];
-
-                    if (typeof adminDebugLog !== 'undefined') {
-                        adminDebugLog('MapSystem', `Retrieved real post from ${post.author} for ${jurisdiction}`, null);
-                    }
-
-                    return {
-                        id: post.id,
-                        summary: post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content,
-                        topic: 'Real Discussion',
-                        location: `${post.author}'s area`,
-                        coordinates: post.coordinates, // Privacy-displaced coordinates
-                        engagement: post.engagement,
-                        timestamp: this.formatTimestamp(post.createdAt),
-                        isEdge: false,
-                        jurisdiction: jurisdiction,
-                        isRealPost: true
-                    };
-                }
-            } else {
+            if (!response.ok) {
                 if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MapSystem', `Posts API call failed (${response.status}), checking legacy API`, null);
+                    adminDebugLog('MapSystem', `Map data request failed (${response.status})`, null);
                 }
+                return [];
             }
+
+            const data = await response.json();
+            const posts = data.success && Array.isArray(data.data) ? data.data : [];
+            window.mapRealDataAvailable = posts.length > 0;
+            return posts;
         } catch (error) {
             if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Posts API error: ${error.message}, trying legacy API`, null);
+                adminDebugLog('MapSystem', `Map data error: ${error.message}`, null);
             }
+            return [];
+        }
+    }
+
+    /**
+     * Convert a backend map post into the bubble/topic shape used by the UI.
+     * @param {Object} post - Map post from /api/posts/map-data
+     * @param {string} jurisdiction - Current jurisdiction label
+     * @returns {Object} Topic object
+     */
+    mapPostToTopic(post, jurisdiction) {
+        return {
+            id: post.id,
+            summary: post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content,
+            topic: null,
+            location: post.areaLabel || `${post.author}'s area`,
+            coordinates: post.coordinates,
+            engagement: post.engagement,
+            timestamp: this.formatTimestamp(post.createdAt),
+            isEdge: false,
+            jurisdiction: jurisdiction,
+            isRealPost: true
+        };
+    }
+
+    async fetchTrendingComment(jurisdiction) {
+        const posts = await this.fetchMapPosts(9);
+        if (posts.length > 0) {
+            const post = posts[Math.floor(Math.random() * posts.length)];
+            return this.mapPostToTopic(post, jurisdiction);
+        }
+        return this.fetchFallbackTopic(jurisdiction);
+    }
+
+    async fetchFallbackTopic(jurisdiction) {
+        // Check if user is authenticated before making API calls
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            // Silent fallback to dummy data when not authenticated
+            return this.getDummyTopicFromHelper(jurisdiction);
         }
 
         // Try legacy trending topics API as secondary fallback
@@ -1752,11 +1815,19 @@ class UWRMapLibre {
     }
 
     displayTrendingPopup(comment) {
-        // Adjust coordinates slightly to prevent overlapping popups
+        // Coordinates are already privacy-safe samples inside the post's area.
+        // Do not add large random offsets here (that was putting bubbles in the
+        // ocean and outside the intended ZIP).
+        if (!Array.isArray(comment.coordinates) || comment.coordinates.length < 2) {
+            return null;
+        }
         const adjustedCoords = [
-            comment.coordinates[0] + (Math.random() - 0.5) * 2, // ±1 degree longitude
-            comment.coordinates[1] + (Math.random() - 0.5) * 1   // ±0.5 degree latitude
+            Number(comment.coordinates[0]),
+            Number(comment.coordinates[1])
         ];
+        if (!Number.isFinite(adjustedCoords[0]) || !Number.isFinite(adjustedCoords[1])) {
+            return null;
+        }
 
         // Truncate text to appropriate length for bubble display
         const maxLength = 120; // Character limit for bubble text
@@ -1766,8 +1837,8 @@ class UWRMapLibre {
         }
 
         // Determine if this is dummy data or real content
-        const isDummyData = comment.id?.toString().startsWith('dummy-') ||
-                           (window.mapDummyData && window.mapDummyData.shouldUseDummyData());
+        const isDummyData = comment.isRealPost !== true ||
+                           comment.id?.toString().startsWith('dummy-');
 
         // Set click handler based on content type
         const isAITopic = comment.topic || (comment.topicId && comment.aiTopic);
@@ -1887,6 +1958,70 @@ class UWRMapLibre {
         // Add other layer types here as they're implemented
     }
 
+    /**
+     * Describe the current map view as a tier + coarse center bucket.
+     * @returns {{tier: string, bucket: string}}
+     */
+    describeMapView() {
+        if (!this.map) return { tier: 'national', bucket: 'us' };
+        const center = this.map.getCenter();
+        const zoom = this.map.getZoom();
+
+        let tier = 'national';
+        let precision = 0;
+        if (zoom >= 11) {
+            tier = 'city';
+            precision = 3;
+        } else if (zoom >= 8) {
+            tier = 'metro';
+            precision = 2;
+        } else if (zoom >= 5) {
+            tier = 'regional';
+            precision = 1;
+        }
+
+        const bucket = `${center.lat.toFixed(precision)},${center.lng.toFixed(precision)}`;
+        return { tier, bucket };
+    }
+
+    /**
+     * Debounced moveend handler. Clears cached posts when the viewer enters a
+     * different tier or a meaningfully different center, then starts a new
+     * bubble cycle for that area.
+     */
+    handleMapViewChanged() {
+        if (this.moveEndTimer) {
+            clearTimeout(this.moveEndTimer);
+        }
+
+        this.moveEndTimer = setTimeout(() => {
+            const nextView = this.describeMapView();
+            const previousView = this.lastMapView;
+            this.lastMapView = nextView;
+
+            if (!previousView) return;
+            if (nextView.tier === previousView.tier && nextView.bucket === previousView.bucket) {
+                return;
+            }
+
+            this.clearTopicCaches();
+            if (this.activeLayers.has('trending')) {
+                this.manageBubbleCycles();
+            }
+        }, 900);
+    }
+
+    /**
+     * Invalidate the per-jurisdiction post cache after the viewed area changes.
+     */
+    clearTopicCaches() {
+        Object.keys(this.topicCaches).forEach((key) => {
+            this.topicCaches[key].topics = [];
+            this.topicCaches[key].timestamp = 0;
+        });
+        window.mapRealDataAvailable = false;
+    }
+
     async setJurisdiction(jurisdiction) {
         await adminDebugLog('MapLibre', `Setting jurisdiction to: ${jurisdiction}`);
 
@@ -1934,6 +2069,7 @@ class UWRMapLibre {
         }
         
         // Refresh content for new jurisdiction
+        this.clearTopicCaches();
         this.refreshActiveLayersContent();
     }
 

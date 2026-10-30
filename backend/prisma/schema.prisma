@@ -54,6 +54,8 @@ model User {
   /// @description Used for feed proximity calculations and local content recommendations.
   /// Privacy displacement may offset from actual address to protect user location.
   h3Index                 String?
+  /// Whether the user's posts may appear on the public map (area-level only, never precise location)
+  geoOptIn                Boolean              @default(true)
   /// Type of political profile (CITIZEN, CANDIDATE, ELECTED_OFFICIAL, POLITICAL_ORG)
   politicalProfileType    PoliticalProfileType @default(CITIZEN)
   /// Verification status for candidates and elected officials (PENDING, APPROVED, DENIED)
@@ -629,15 +631,33 @@ model Post {
   originalContent    String?
   /// H3 geospatial index for post location (may be privacy-displaced)
   /// @description Used for local feed discovery and proximity-based content
+  /// @deprecated Map privacy v2 stores area + seed instead. No longer written; cleared for privacy.
   h3Index            String?
   /// Latitude coordinate (for precise location, may be privacy-displaced)
+  /// @deprecated Never store precise post coordinates. No longer written; cleared for privacy.
   latitude           Float?
   /// Longitude coordinate (for precise location, may be privacy-displaced)
+  /// @deprecated Never store precise post coordinates. No longer written; cleared for privacy.
   longitude          Float?
   /// Original H3 index before privacy displacement (stored for admin audit)
+  /// @deprecated Leaked a precise location. No longer written; cleared for privacy.
   originalH3Index    String?
   /// Whether location has been offset for privacy protection
   privacyDisplaced   Boolean      @default(true)
+  /// Coarse home area type for map discovery (currently "zip")
+  areaType           String?
+  /// Coarse home area id for map discovery (5-digit ZIP)
+  areaId             String?
+  /// Privacy area type used to derive display coordinates ("zip" or "county")
+  /// @description When a ZIP has fewer than MAP_AREA_MIN_POPULATION residents, this
+  /// escalates to the enclosing county so the displayed point cannot identify a household.
+  privacyAreaType    String?
+  /// Privacy area id used to derive display coordinates (ZIP or 5-digit county FIPS)
+  privacyAreaId      String?
+  /// Random per-post seed selecting a precomputed interior sample point at display time
+  geoSeed            Int?
+  /// Snapshot of the author's map visibility preference at post creation
+  geoOptIn           Boolean      @default(true)
 
   // Thread linking (for multi-post threads, Twitter-style)
   /// Thread head post ID for thread continuations (null = standalone or is head)
@@ -696,6 +716,9 @@ model Post {
   @@index([h3Index]) /// Geospatial queries for local content
   @@index([h3Index, createdAt]) /// Combined index for location-based chronological feeds
   @@index([originalH3Index, createdAt]) /// Admin audit queries with original location
+  @@index([areaType, areaId, createdAt]) /// Map area queries (home ZIP)
+  @@index([areaId, createdAt]) /// Map area queries by ZIP
+  @@index([privacyAreaType, privacyAreaId]) /// Display-area sample lookups
   @@index([likesCount]) /// Sorting by popularity
   @@index([isPolitical]) /// Filtering political vs non-political content
   @@index([containsFeedback, feedbackType, feedbackPriority]) /// Feedback management dashboard queries
@@ -1498,6 +1521,36 @@ model AddressDistrictMapping {
   @@index([zipCode, state])
   @@index([lat, lng])
   @@index([districtId])
+}
+
+/// Coarse geographic area (ZIP/ZCTA or county) with precomputed interior sample
+/// points. Used to derive ephemeral, privacy-safe post display coordinates.
+/// No user-specific location is ever stored here.
+model GeoArea {
+  id          String   @id @default(cuid())
+  /// Area type ("zip" for ZCTA, "county" for county FIPS)
+  areaType    String
+  /// Area identifier (5-digit ZIP or 5-digit county FIPS)
+  areaId      String
+  /// Human-readable label (county name, when available)
+  label       String?
+  /// Total population of the area (Census 2020)
+  population  Int?
+  /// Representative point inside the area (average of valid samples)
+  centroidLat Float
+  centroidLng Float
+  /// Bounding box used for fast proximity queries
+  minLat      Float
+  maxLat      Float
+  minLng      Float
+  maxLng      Float
+  /// Precomputed in-polygon sample points as [[lat, lng], ...]
+  samples     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([areaType, areaId])
+  @@index([centroidLat, centroidLng])
 }
 
 model DistrictConflict {

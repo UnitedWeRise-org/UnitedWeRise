@@ -407,10 +407,9 @@ export class SlotRollService {
                         },
                         profile
                     );
-                    const geoBoost = UserInterestService.calculateGeoBoost(
-                        post.h3Index || null,
-                        profile
-                    );
+                    const geoBoost = post.h3Index
+                        ? UserInterestService.calculateGeoBoost(post.h3Index, profile)
+                        : UserInterestService.calculateAreaBoost(post.areaId || null, profile);
 
                     // Combine scores: base score * relationship weight * relevance boost * geo boost
                     const baseScore = post.finalScore || 1;

@@ -51,6 +51,7 @@ export interface UserInterestProfile {
     explicitInterests: string[];
     // Geographic
     h3Index: string | null;
+    zipCode: string | null;
     // Negative
     mutedIds: Set<string>;
     blockedIds: Set<string>;
@@ -177,6 +178,7 @@ export class UserInterestService {
                         embedding: true,
                         onboardingData: true,
                         h3Index: true,
+                        zipCode: true,
                         createdAt: true
                     }
                 }),
@@ -256,6 +258,7 @@ export class UserInterestService {
                 ownPostEmbeddings,
                 explicitInterests,
                 h3Index: user?.h3Index || null,
+                zipCode: user?.zipCode || null,
                 mutedIds,
                 blockedIds,
                 aggregateVector
@@ -469,6 +472,32 @@ export class UserInterestService {
      * Calculate geographic proximity boost based on H3 indexes
      * Returns 1.0-1.5 boost for nearby posts, 1.0 for distant/no location
      */
+    /**
+     * Area-based proximity boost for map-era posts that no longer store H3.
+     * Compares the user's home ZIP with the post's home ZIP:
+     * - exact ZIP: 1.5x
+     * - same 3-digit ZIP prefix: 1.3x
+     * - same leading digit (broad region): 1.05x
+     * - otherwise: 1.0x
+     *
+     * @param postAreaId - Post home ZIP
+     * @param profile - Viewer interest profile
+     * @returns Multiplier for feed ranking
+     */
+    static calculateAreaBoost(
+        postAreaId: string | null,
+        profile: UserInterestProfile
+    ): number {
+        if (!profile.zipCode || !postAreaId) return 1.0;
+        const userZip = profile.zipCode.replace(/\D/g, '').slice(0, 5);
+        const postZip = postAreaId.replace(/\D/g, '').slice(0, 5);
+        if (userZip.length < 5 || postZip.length < 5) return 1.0;
+        if (userZip === postZip) return 1.5;
+        if (userZip.slice(0, 3) === postZip.slice(0, 3)) return 1.3;
+        if (userZip[0] === postZip[0]) return 1.05;
+        return 1.0;
+    }
+
     static calculateGeoBoost(
         postH3Index: string | null,
         profile: UserInterestProfile
