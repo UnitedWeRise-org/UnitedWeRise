@@ -112,6 +112,9 @@ class UWRMapLibre {
         // Setup event delegation for map UI
         this.setupEventDelegation();
 
+        // Setup address search (zoom to any US address)
+        this.setupAddressSearch();
+
         // Setup event handlers
         this.setupEventHandlers();
         
@@ -148,6 +151,58 @@ class UWRMapLibre {
         }, 5000);
         
         return this.map;
+    }
+
+    /**
+     * Wire up the map address search box (zoom to any US address).
+     */
+    setupAddressSearch() {
+        const input = document.getElementById('mapAddressInput');
+        const btn = document.getElementById('mapAddressSearchBtn');
+        if (!input || !btn) return;
+
+        const run = () => this.searchAddress(input.value);
+        this.addTrackedEventListener(btn, 'click', run);
+        this.addTrackedEventListener(input, 'keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                run();
+            }
+        });
+    }
+
+    /**
+     * Geocode a US address via the backend (Geocodio + DB cache) and fly to it.
+     * @param {string} query - Address or place query
+     */
+    async searchAddress(query) {
+        const q = (query || '').trim();
+        if (q.length < 3) return;
+
+        const btn = document.getElementById('mapAddressSearchBtn');
+        if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+        try {
+            const resp = await fetch(`${getApiBaseUrl()}/geo/search?q=${encodeURIComponent(q)}`, {
+                credentials: 'include'
+            });
+            const json = await resp.json();
+            if (!resp.ok || !json.success) {
+                throw new Error(json.error || 'Address not found');
+            }
+
+            const { lat, lng, formattedAddress } = json.data;
+
+            // Direct flyTo (bypass smartFlyTo cooldown so search always responds)
+            this.lastAnimationTime = Date.now();
+            this.map.flyTo({ center: [lng, lat], zoom: 13, essential: true });
+            this.createPopup([lng, lat], `<strong>${escapeHTML(formattedAddress || q)}</strong>`);
+        } catch (err) {
+            await adminDebugLog('MapLibre', 'Address search failed: ' + (err?.message || err));
+            window.alert('Address not found. Try a more specific US address.');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Go'; }
+        }
     }
 
     // Smart flyTo method with dynamic cooldown based on zoom level changes

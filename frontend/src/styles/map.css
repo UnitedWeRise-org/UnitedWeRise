@@ -187,6 +187,64 @@
     overflow: hidden;
 }
 
+/* Address search box (top-left) */
+.map-address-search {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 1001;
+    display: flex;
+    gap: 0;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    border: 1px solid rgba(0,0,0,0.15);
+    overflow: hidden;
+}
+
+.map-address-search input {
+    border: none;
+    outline: none;
+    padding: 8px 10px;
+    font-size: 14px;
+    width: 250px;
+    max-width: 55vw;
+    background: transparent;
+    color: #333;
+}
+
+.map-address-search button {
+    border: none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 0 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.map-address-search button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+#mapContainer.collapsed .map-address-search {
+    display: none;
+}
+
+@media screen and (max-width: 767px) {
+    .map-address-search {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+    }
+    .map-address-search input {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+}
+
 /* Map control buttons - redesigned layout */
 .map-action-buttons {
     position: absolute;

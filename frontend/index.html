@@ -841,7 +841,13 @@
             <div class="map-loading-spinner"></div>
             <div class="map-loading-text">Loading Map...</div>
         </div>
-        
+
+        <!-- Address search (zoom to any US address) -->
+        <div class="map-address-search">
+            <input type="text" id="mapAddressInput" placeholder="Search any US address…" autocomplete="off" aria-label="Search US address" />
+            <button type="button" id="mapAddressSearchBtn" aria-label="Go to address">Go</button>
+        </div>
+
         <div class="map-action-buttons">
             <!-- Main button row -->
             <div class="zoom-buttons-group">
