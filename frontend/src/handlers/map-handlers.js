@@ -3,17 +3,16 @@
  * Comprehensive map system management for United We Rise
  *
  * Handles:
- * - Map initialization (Leaflet and MapLibre implementations)
- * - Interactive topic popups with timing system
- * - Layer controls and visibility toggles
- * - Map view switching (national/state/local)
- * - Dynamic topic updates from AI system
+ * - Map utility helpers (geocoding, state/district centers, zoom helpers)
+ * - Layer dropdown outside-click closing and layer toggle bridging
+ *
+ * Map rendering and initialization are owned solely by map-maplibre.js (UWRMapLibre).
+ * Map button actions are dispatched by navigation-handlers.js.
  *
  * @module handlers/map-handlers
  */
 
 import { apiCall } from '../js/api-compatibility-shim.js';
-import { MAP_RASTER_TILES } from '../config/map.js';
 
 export class MapHandlers {
     constructor() {
@@ -26,23 +25,18 @@ export class MapHandlers {
         // Configuration
         this.USE_MAPLIBRE = typeof USE_MAPLIBRE !== 'undefined' ? USE_MAPLIBRE : true;
 
-        // Initialize event listeners with delegation
+        // Close layers dropdown on outside click
         this.initializeEventListeners();
     }
 
     /**
-     * Initialize event delegation for map controls
+     * Close the layers dropdown when clicking outside of it.
+     * (The open/close toggle itself is dispatched by navigation-handlers.js;
+     * the old duplicate toggle here caused a double-toggle that kept the
+     * dropdown from opening.)
      */
     initializeEventListeners() {
-        // Layer dropdown toggle handler
         document.addEventListener('click', (e) => {
-            // Toggle layer dropdown
-            if (e.target.matches('.layer-dropdown-btn')) {
-                e.preventDefault();
-                this.toggleLayerDropdown();
-            }
-
-            // Close dropdown when clicking outside
             const dropdown = document.getElementById('layerDropdown');
             const dropdownContainer = document.querySelector('.map-layer-dropdown');
             if (dropdown && dropdownContainer && !dropdownContainer.contains(e.target)) {
@@ -51,246 +45,31 @@ export class MapHandlers {
                 if (btn) btn.textContent = 'Layers ▼';
             }
         });
-
-        // Map view button handlers (zoom level switching)
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('[data-map-view]')) {
-                e.preventDefault();
-                const jurisdiction = e.target.getAttribute('data-map-view');
-                this.toggleMapView(jurisdiction);
-            }
-        });
-
-        // Layer toggle handlers
-        document.addEventListener('change', (e) => {
-            if (e.target.matches('[data-layer-toggle]')) {
-                const layerName = e.target.getAttribute('data-layer-toggle');
-                this.toggleMapLayer(layerName);
-            }
-        });
     }
 
     /**
-     * Initialize main map - chooses between Leaflet and MapLibre
-     * @returns {Object} Map instance
+     * Initialize main map.
+     * MapLibre (map-maplibre.js) is the single map implementation; this simply
+     * delegates to it. (Map UI button actions are dispatched by
+     * navigation-handlers.js.)
+     * @returns {Object|undefined} Map instance
      */
     initializeMap() {
-        console.log('🗺️ initializeMap() called');
-
-        if (this.USE_MAPLIBRE) {
-            // Use new MapLibre implementation
-            this.initializeMapLibreLocal();
-            return;
+        if (typeof window.initializeMapLibre === 'function') {
+            return window.initializeMapLibre();
         }
-
-        // Original Leaflet implementation (fallback)
-        this.map = L.map('map', {
-            center: [37.8283, -98.5795],
-            zoom: 5,
-            zoomControl: false,
-            dragging: false,
-            scrollWheelZoom: false,
-            doubleClickZoom: false,
-            boxZoom: false,
-            keyboard: false,
-            tap: false,
-            touchZoom: false
-        });
-
-        L.tileLayer(MAP_RASTER_TILES, {
-            attribution: '&copy; <a href="https://stadiamaps.com/attribution/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        }).addTo(this.map);
-
-        // Initialize default topics array - will be updated with AI-generated content
-        this.topics = [
-            { coords: [40.7128, -74.0060], text: '📢 Rent control in NYC gaining momentum!' },
-            { coords: [34.0522, -118.2437], text: '🚗 EV subsidies debated in California legislature.' },
-            { coords: [41.8781, -87.6298], text: '⚖️ Chicago voters discuss criminal justice reform.' },
-            { coords: [29.7604, -95.3698], text: '🗳️ Texas push for open primaries gaining traction.' },
-            { coords: [47.6062, -122.3321], text: '🌳 Seattle community organizing for green zoning laws.' },
-            { coords: [39.7392, -104.9903], text: '🏡 Denver debates housing-first initiatives.' },
-            { coords: [33.4484, -112.0740], text: '🚁 Phoenix drone delivery regulations spark debate.' },
-            { coords: [25.7617, -80.1918], text: '🏖️ Miami climate resiliency bonds trending.' },
-            { coords: [32.7767, -96.7970], text: '💼 Dallas campaign finance reform gaining traction.' },
-            { coords: [42.3601, -71.0589], text: '📚 Boston pushes universal childcare ballot measure.' }
-        ];
-
-        // Make update function globally accessible
-        window.updateMapTopics = (newTopics) => this.updateLeafletMapTopics(newTopics);
-
-        // Start random popup animation
-        this.showRandomPopups();
-
-        // Set map instance for zoom controls
-        if (typeof setMapInstance === 'function') {
-            setMapInstance(this.map);
-        }
-
-        return this.map;
+        console.warn('MapLibre initializer unavailable');
     }
 
     /**
-     * Create interactive topic popup with "Join Discussion" functionality
-     * @param {Object} topicData - Topic data with coords, text, topicId
-     * @param {Object} map - Leaflet map instance
-     * @returns {Object} Leaflet popup instance
-     */
-    createTopicPopup(topicData, map) {
-        const popupOptions = {
-            closeButton: false,
-            autoClose: false,
-            closeOnClick: false,
-            autoPan: false
-        };
-
-        let popupContent = topicData.text;
-
-        // Add click functionality for AI topics
-        if (topicData.topicId) {
-            popupContent += `<br><div style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: rgba(255,107,53,0.9); color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; text-align: center;" data-topic-id="${topicData.topicId}" class="topic-popup-join">💬 Join Discussion</div>`;
-        }
-
-        const popup = L.popup(popupOptions)
-            .setLatLng(topicData.coords)
-            .setContent(popupContent)
-            .openOn(map);
-
-        // Add click handler for "Join Discussion" button using event delegation
-        // (Event delegation is handled at document level in content-handlers.js for enterTopicMode)
-
-        return popup;
-    }
-
-    /**
-     * Update Leaflet map topics dynamically with AI-generated content
-     * @param {Array} newTopics - Array of topic objects with coords, text, topicId
-     */
-    updateLeafletMapTopics(newTopics) {
-        if (newTopics && newTopics.length > 0) {
-            this.topics = newTopics.map(bubble => ({
-                coords: bubble.coords,
-                text: bubble.text,
-                topicId: bubble.topicId || null,
-                priority: bubble.priority || 'normal'
-            }));
-            console.log('🗺️ Updated Leaflet map topics with', this.topics.length, 'AI-generated topics');
-        }
-    }
-
-    /**
-     * Show random topic popups with timing logic
-     * Animates topic display on map with controlled timing
-     */
-    showRandomPopups() {
-        const count = Math.floor(Math.random() * 2) + 1;
-        const now = Date.now();
-
-        const availableTopics = this.topics.filter(t => {
-            const lastShown = this.usedTopics.has(t.text) ? this.usedTopics.get(t.text) : 0;
-            return now - lastShown > 180000; // 3 minutes cooldown
-        });
-
-        const shuffled = availableTopics.sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, count);
-
-        selected.forEach(topic => {
-            const popup = this.createTopicPopup(topic, this.map);
-
-            this.usedTopics.set(topic.text, now);
-            setTimeout(() => this.map.closePopup(popup), 30000); // 30 second display
-        });
-
-        // Schedule next popup cycle
-        const nextDelay = Math.floor(Math.random() * 3000) + 13000; // 13-16 seconds
-        this.popupInterval = setTimeout(() => this.showRandomPopups(), nextDelay);
-    }
-
-    /**
-     * Initialize MapLibre GL map implementation
-     * Alternative to Leaflet with modern WebGL rendering
+     * Initialize MapLibre (delegates to the single implementation in map-maplibre.js).
      */
     initializeMapLibreLocal() {
-        console.log('🗺️ initializeMapLibreLocal() called');
-
-        // Set loading start time for minimum loading duration
         window.mapLoadStartTime = Date.now();
-
-        // CRITICAL FIX: Show the map container BEFORE initializing MapLibre
-        // MapLibre needs the container to be visible to measure dimensions correctly
-        const mapContainer = document.getElementById('mapContainer');
-        const loadingState = document.getElementById('mapLoadingState');
-
-        console.log('Showing map container for MapLibre initialization...');
-        if (mapContainer && loadingState) {
-            // Hide loading state and show map container immediately
-            loadingState.classList.add('hidden');
-            mapContainer.style.display = 'block';
-            console.log('Map container is now visible');
+        if (typeof window.initializeMapLibre === 'function') {
+            return window.initializeMapLibre();
         }
-
-        // Initialize MapLibre through the class in map-maplibre.js
-        console.log('🔍 Checking for external initializeMapLibre function...');
-        console.log('🔍 typeof window.initializeMapLibre:', typeof window.initializeMapLibre);
-
-        if (typeof window.initializeMapLibre === 'function' && window.initializeMapLibre !== this.initializeMapLibreLocal) {
-            console.log('✅ Found external initializeMapLibre function, calling it...');
-            window.initializeMapLibre();
-        } else {
-            console.error('❌ External initializeMapLibre function not found - map-maplibre.js may not have loaded correctly');
-
-            // Fallback: Initialize directly if the function isn't available
-            if (typeof UWRMapLibre !== 'undefined') {
-                console.log('UWRMapLibre class found, initializing directly...');
-                const mapInstance = new UWRMapLibre('map');
-                mapInstance.initialize().then(map => {
-                    console.log('Direct MapLibre initialization complete');
-
-                    // Create window.map object manually since initializeMapLibre() wasn't called
-                    window.map = {
-                        // Wrapper methods for Leaflet compatibility
-                        setView: (center, zoom) => mapInstance.setView(center, zoom),
-                        invalidateSize: () => mapInstance.invalidateSize(),
-                        closePopup: () => mapInstance.closeAllPopups(),
-                        fitBounds: (bounds) => mapInstance.fitBounds(bounds),
-                        // New MapLibre-specific methods
-                        toggleCollapsed: () => {
-                            console.log('window.map.toggleCollapsed called');
-                            return mapInstance.toggleCollapsed();
-                        },
-                        closeMap: () => mapInstance.closeMap(),
-                        showMap: () => mapInstance.showMap(),
-                        // Transition methods for smooth bubble handling
-                        hideBubbles: () => mapInstance.hideAllBubblesDuringTransition(),
-                        showBubbles: () => mapInstance.showAllBubblesAfterTransition(),
-                        // Map container state adjustment
-                        adjustForContainerState: (isCollapsed) => mapInstance.adjustForContainerState(isCollapsed),
-                        setZoomLevel: (level) => {
-                            mapInstance.setZoomLevel(level);
-                            // Update button states
-                            if (typeof updateMapViewButtons === 'function') {
-                                updateMapViewButtons(level);
-                            }
-                        },
-                        geocodeAndZoom: () => mapInstance.geocodeAndZoom(),
-                        // Layer management system
-                        toggleLayer: (layerName) => mapInstance.toggleLayer(layerName),
-                        setJurisdiction: (jurisdiction) => mapInstance.setJurisdiction(jurisdiction),
-                        // MapLibre instance for advanced use
-                        _maplibre: map,
-                        _uwrMap: mapInstance
-                    };
-
-                    console.log('window.map object created with adjustForContainerState:', !!window.map.adjustForContainerState);
-                }).catch(error => {
-                    console.error('Direct MapLibre initialization failed:', error);
-                });
-            } else {
-                console.error('UWRMapLibre class not found - falling back to Leaflet');
-                // Fall back to Leaflet if MapLibre fails completely
-                this.USE_MAPLIBRE = false;
-                this.initializeMap();
-            }
-        }
+        console.error('MapLibre initializer unavailable (map-maplibre.js not loaded)');
     }
 
     /**
@@ -932,23 +711,12 @@ export class MapHandlers {
      * Update map visualization with topics
      */
     updateMapVisualization(topics) {
-        if (!this.map || !topics || topics.length === 0) return;
-
-        // Clear existing topic markers
-        if (this.topicMarkers) {
-            this.topicMarkers.forEach(marker => this.map.removeLayer(marker));
+        // Legacy Leaflet renderer removed during Phase 2 consolidation.
+        // MapLibre (map-maplibre.js) owns all map rendering now.
+        if (!topics || topics.length === 0) return;
+        if (window.DEBUG_MAP) {
+            console.debug('updateMapVisualization skipped — MapLibre owns rendering:', topics.length);
         }
-        this.topicMarkers = [];
-
-        // Add new topic markers
-        topics.forEach(topic => {
-            if (topic.coordinates) {
-                const marker = L.marker([topic.coordinates.lat, topic.coordinates.lng])
-                    .bindPopup(`<strong>${topic.name}</strong><br>${topic.description || ''}`);
-                marker.addTo(this.map);
-                this.topicMarkers.push(marker);
-            }
-        });
     }
 
     /**
@@ -982,7 +750,6 @@ window.initializeMap = () => mapHandlers.initializeMap();
 window.initializeMapLibreLocal = () => mapHandlers.initializeMapLibreLocal();
 window.toggleMapLayer = (layerName) => mapHandlers.toggleMapLayer(layerName);
 window.toggleLayerDropdown = () => mapHandlers.toggleLayerDropdown();
-window.toggleMapView = (jurisdiction) => mapHandlers.toggleMapView(jurisdiction);
 window.updateMapTopics = () => mapHandlers.updateMapTopics();
 window.syncMapWithTrendingTopics = () => mapHandlers.syncMapWithTrendingTopics();
 window.updateMapWithTrendingTopics = () => mapHandlers.updateMapWithTrendingTopics();

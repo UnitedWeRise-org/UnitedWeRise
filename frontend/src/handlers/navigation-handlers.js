@@ -1614,6 +1614,12 @@ class NavigationHandlers {
 
         console.log(`✅ Map should now be ${isCollapsed ? 'expanded' : 'collapsed'}`);
 
+        // Resize/reposition the MapLibre canvas for the new container size so the
+        // map fills the corner (collapsed) or full view (expanded) correctly.
+        if (window.map && typeof window.map.adjustForContainerState === 'function') {
+            window.map.adjustForContainerState(newIsCollapsed);
+        }
+
         // Force a style recalculation
         this.mapContainer.offsetHeight; // Trigger reflow
 
