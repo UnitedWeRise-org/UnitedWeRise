@@ -579,6 +579,33 @@ export async function openUserProfile(userId, username) {
     }
 }
 
+/**
+ * Scroll a post into view inside the feed's own scroll container.
+ * @param {HTMLElement} postElement - Post element to reveal
+ */
+function scrollPostIntoFeedView(postElement) {
+    const scroller = document.getElementById('myFeedPosts');
+    if (!scroller || !scroller.contains(postElement)) return;
+    const scrollerRect = scroller.getBoundingClientRect();
+    const postRect = postElement.getBoundingClientRect();
+    const targetTop = scroller.scrollTop + (postRect.top - scrollerRect.top) - 120;
+    scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+}
+
+/**
+ * Reset document-level scroll for the fixed top bar/sidebar layout.
+ */
+function resetDocumentScroll() {
+    if (document.documentElement) {
+        document.documentElement.scrollTop = 0;
+        document.documentElement.scrollLeft = 0;
+    }
+    if (document.body) {
+        document.body.scrollTop = 0;
+        document.body.scrollLeft = 0;
+    }
+}
+
 export async function showPostInFeed(postId) {
     try {
         closeSearch();
@@ -591,11 +618,13 @@ export async function showPostInFeed(postId) {
                 window.showMyFeedInMain();
             }
             
-            // Highlight the specific post
+            // Highlight the specific post. Scroll the feed container only;
+            // scrollIntoView would scroll the document under the fixed layout.
+            resetDocumentScroll();
             setTimeout(() => {
                 const postElement = document.querySelector(`[data-post-id="${postId}"]`);
                 if (postElement) {
-                    postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    scrollPostIntoFeedView(postElement);
                     postElement.style.border = '2px solid #4b5c09';
                     postElement.style.borderRadius = '8px';
                     setTimeout(() => {
@@ -603,6 +632,7 @@ export async function showPostInFeed(postId) {
                         postElement.style.borderRadius = '';
                     }, 3000);
                 }
+                resetDocumentScroll();
             }, 1000);
             
             if (window.showToast) {

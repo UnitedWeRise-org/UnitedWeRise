@@ -63,6 +63,9 @@ class UWRMapLibre {
         // Event listener cleanup tracking
         this.eventCleanupFunctions = [];
         this.resizeObserver = null;
+
+        // Attribution control state persistence
+        this.attributionObserver = null;
     }
 
     /**
@@ -105,6 +108,7 @@ class UWRMapLibre {
         // Compact attribution (required by Stadia Maps / OpenMapTiles / OSM).
         // It collapses to a small "i" button instead of a full-width text bar.
         this.map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+        this.setupAttributionPersistence();
 
         // Store globally for compatibility
         window.mapLibre = this.map;
@@ -136,6 +140,10 @@ class UWRMapLibre {
         // Show map container when fully loaded
         this.map.on('load', () => {
             this.showMapContainer();
+
+            // MapLibre's compact attribution opens itself on first layout;
+            // re-apply the persisted state once the control exists.
+            this.setupAttributionPersistence();
             
             // Display dummy civic events on the map
             this.displayCivicEvents();
@@ -166,6 +174,53 @@ class UWRMapLibre {
         }, 5000);
         
         return this.map;
+    }
+
+    /**
+     * Apply the persisted open/closed state to MapLibre's compact attribution
+     * control and persist future toggles. MapLibre opens the compact control by
+     * default, so we force the stored state (closed unless the user opened it).
+     */
+    setupAttributionPersistence() {
+        const control = this.map?.getContainer?.()?.querySelector('.maplibregl-ctrl-attrib');
+        if (!control || this.attributionObserver) return;
+
+        let stored = null;
+        try {
+            stored = localStorage.getItem('uwrMapAttributionOpen');
+        } catch (_) {
+            // Storage can be unavailable in private/embedded contexts.
+        }
+
+        this.applyAttributionState(control, stored === 'true');
+
+        this.attributionObserver = new MutationObserver(() => {
+            const isOpen = control.classList.contains('maplibregl-compact-show');
+            try {
+                localStorage.setItem('uwrMapAttributionOpen', String(isOpen));
+            } catch (_) {
+                // Ignore storage failures.
+            }
+        });
+        this.attributionObserver.observe(control, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+    }
+
+    /**
+     * Set the compact attribution control's visual state.
+     * @param {HTMLElement} control - The `.maplibregl-ctrl-attrib` element
+     * @param {boolean} isOpen - Whether the attribution details are expanded
+     */
+    applyAttributionState(control, isOpen) {
+        if (isOpen) {
+            control.classList.add('maplibregl-compact-show');
+            control.removeAttribute('open');
+        } else {
+            control.classList.remove('maplibregl-compact-show');
+            control.setAttribute('open', '');
+        }
     }
 
     /**
@@ -316,8 +371,9 @@ class UWRMapLibre {
                     } else if (isAiTopic && topicId) {
                         if (window.enterTopicMode) window.enterTopicMode(topicId);
                     } else if (commentId) {
-                        // Real map posts open in the feed; legacy mock topics use
-                        // the old comment viewer.
+                        // Collapse the map so the feed is visible behind the
+                        // opened post, then navigate to it.
+                        this.collapseMapForPostView();
                         if (window.showPostInFeed) {
                             window.showPostInFeed(commentId);
                         } else if (window.navigateToComment) {
@@ -602,6 +658,34 @@ class UWRMapLibre {
             // Simplify interactions
             this.map.dragRotate.disable();
             this.map.touchZoomRotate.disableRotation();
+        }
+    }
+
+    /**
+     * Idempotently collapse the map (used when opening a post from a bubble).
+     * Unlike toggleCollapsed this never expands an already-collapsed map.
+     */
+    collapseMapForPostView() {
+        const container = document.getElementById(`${this.containerId}Container`);
+        if (!container || container.classList.contains('collapsed')) return;
+
+        if (window.map && typeof window.map.hideBubbles === 'function') {
+            window.map.hideBubbles();
+        }
+
+        container.classList.add('collapsed');
+
+        const toggleBtn = document.getElementById('mapToggleBtn');
+        if (toggleBtn) {
+            toggleBtn.textContent = 'Expand';
+        }
+
+        if (window.map && typeof window.map.adjustForContainerState === 'function') {
+            window.map.adjustForContainerState(true);
+        }
+
+        if (window.map && typeof window.map.showBubbles === 'function') {
+            window.map.showBubbles();
         }
     }
 
@@ -2269,6 +2353,12 @@ class UWRMapLibre {
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
+        }
+
+        // Clean up attribution state observer
+        if (this.attributionObserver) {
+            this.attributionObserver.disconnect();
+            this.attributionObserver = null;
         }
 
         // Clean up trending interval

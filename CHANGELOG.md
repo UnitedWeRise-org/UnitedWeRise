@@ -27,6 +27,9 @@
 - **Bubbles in the ocean** — removed the ±1° popup coordinate jitter and the bounding-box random coordinates; display points are now in-area samples.
 - **Real posts mislabeled as demo data** — bubble rendering now trusts the API's `isRealPost` flag instead of a global dummy-data check.
 - **Map ignored real posts (auth mismatch)** — `fetchMapPosts`/legacy fallback required a legacy `localStorage.authToken`, but auth is HttpOnly-cookie based. Switched to `window.apiClient.call(...)`, so the map now receives the signed-in user's area posts.
+- **Attribution reopened on every refresh** — MapLibre's compact control opens itself on init. The map now forces it closed by default and persists open/closed state in `localStorage`.
+- **Map stayed expanded when opening a post** — bubble clicks now collapse the map idempotently before opening the post in the feed.
+- **Layout gap after clicking a map post** — `showPostInFeed` used `scrollIntoView`, which scrolled the document under the fixed top bar/sidebar. It now scrolls `#myFeedPosts` internally and resets document scroll.
 
 ### Security / Privacy
 - Migration `20261030213000_add_map_privacy_areas` nulls all legacy `Post.latitude`, `Post.longitude`, `Post.originalH3Index`, and `Post.h3Index` values; these fields are deprecated and no longer written.

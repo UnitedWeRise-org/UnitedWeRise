@@ -708,6 +708,35 @@ class SearchHandlers {
     }
 
     /**
+     * Scroll a post into view inside the feed's scroll container.
+     * @param {HTMLElement} postElement - Post element to reveal
+     */
+    scrollPostIntoFeedView(postElement) {
+        const scroller = document.getElementById('myFeedPosts');
+        if (!scroller || !scroller.contains(postElement)) return;
+
+        const scrollerRect = scroller.getBoundingClientRect();
+        const postRect = postElement.getBoundingClientRect();
+        const targetTop = scroller.scrollTop + (postRect.top - scrollerRect.top) - 120;
+        scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    }
+
+    /**
+     * Reset document-level scroll. The app uses a fixed top bar/sidebar and a
+     * 100vh layout, so any document scroll creates a visible gap.
+     */
+    resetDocumentScroll() {
+        if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+            document.documentElement.scrollLeft = 0;
+        }
+        if (document.body) {
+            document.body.scrollTop = 0;
+            document.body.scrollLeft = 0;
+        }
+    }
+
+    /**
      * Show specific post in feed
      * Migrated from index.html line 3022
      */
@@ -723,11 +752,14 @@ class SearchHandlers {
                     showMyFeedInMain();
                 }
 
-                // Highlight the specific post
+                // Highlight the specific post. Scroll the feed's own
+                // container; scrollIntoView here would scroll the document
+                // under the fixed top bar/sidebar and break the layout.
+                this.resetDocumentScroll();
                 setTimeout(() => {
                     const postElement = document.querySelector(`[data-post-id="${postId}"]`);
                     if (postElement) {
-                        postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        this.scrollPostIntoFeedView(postElement);
                         postElement.style.border = '2px solid #4b5c09';
                         postElement.style.borderRadius = '8px';
                         setTimeout(() => {
@@ -735,6 +767,7 @@ class SearchHandlers {
                             postElement.style.borderRadius = '';
                         }, 3000);
                     }
+                    this.resetDocumentScroll();
                 }, 1000);
 
                 if (typeof showToast === 'function') {
