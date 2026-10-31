@@ -65,7 +65,10 @@ class UWRMapLibre {
         this.resizeObserver = null;
 
         // Attribution control state persistence
-        this.attributionObserver = null;
+        this.attributionOpen = false;
+        this.attributionClickHandler = null;
+        this.attributionUserToggled = false;
+        this.attributionRestoreTimer = null;
     }
 
     /**
@@ -136,14 +139,23 @@ class UWRMapLibre {
         // flyTo animations and small pans do not spam the API.
         this.map.on('moveend', () => this.handleMapViewChanged());
         this.lastMapView = this.describeMapView();
+
+        // Attribution text arrives with style/source metadata. Re-apply the
+        // desired compact state whenever MapLibre updates the control.
+        this.map.on('styledata', () => this.scheduleAttributionRestore());
+        this.map.on('sourcedata', () => this.scheduleAttributionRestore());
         
         // Show map container when fully loaded
         this.map.on('load', () => {
             this.showMapContainer();
 
-            // MapLibre's compact attribution opens itself on first layout;
-            // re-apply the persisted state once the control exists.
+            // MapLibre's compact attribution opens itself when the first
+            // attribution text arrives, which can happen after addControl.
+            // Re-apply the persisted state after the style settles.
             this.setupAttributionPersistence();
+            setTimeout(() => this.restoreAttributionState(), 0);
+            setTimeout(() => this.restoreAttributionState(), 750);
+            this.map.once('idle', () => this.restoreAttributionState());
             
             // Display dummy civic events on the map
             this.displayCivicEvents();
@@ -178,12 +190,12 @@ class UWRMapLibre {
 
     /**
      * Apply the persisted open/closed state to MapLibre's compact attribution
-     * control and persist future toggles. MapLibre opens the compact control by
+     * control and persist user toggles. MapLibre opens the compact control by
      * default, so we force the stored state (closed unless the user opened it).
      */
     setupAttributionPersistence() {
         const control = this.map?.getContainer?.()?.querySelector('.maplibregl-ctrl-attrib');
-        if (!control || this.attributionObserver) return;
+        if (!control || this.attributionClickHandler) return;
 
         let stored = null;
         try {
@@ -192,20 +204,50 @@ class UWRMapLibre {
             // Storage can be unavailable in private/embedded contexts.
         }
 
-        this.applyAttributionState(control, stored === 'true');
+        this.attributionOpen = stored === 'true';
+        this.applyAttributionState(control, this.attributionOpen);
 
-        this.attributionObserver = new MutationObserver(() => {
-            const isOpen = control.classList.contains('maplibregl-compact-show');
-            try {
-                localStorage.setItem('uwrMapAttributionOpen', String(isOpen));
-            } catch (_) {
-                // Ignore storage failures.
-            }
-        });
-        this.attributionObserver.observe(control, {
-            attributes: true,
-            attributeFilter: ['class']
-        });
+        const button = control.querySelector('.maplibregl-ctrl-attrib-button');
+        if (button) {
+            this.attributionClickHandler = () => {
+                // Mark it as user-controlled so late restores cannot undo the click.
+                this.attributionUserToggled = true;
+
+                // MapLibre's own click handler toggles the class; read it next tick.
+                setTimeout(() => {
+                    const current = this.map?.getContainer?.()?.querySelector('.maplibregl-ctrl-attrib');
+                    if (!current) return;
+                    this.attributionOpen = current.classList.contains('maplibregl-compact-show');
+                    try {
+                        localStorage.setItem('uwrMapAttributionOpen', String(this.attributionOpen));
+                    } catch (_) {
+                        // Ignore storage failures.
+                    }
+                }, 0);
+            };
+            button.addEventListener('click', this.attributionClickHandler);
+        }
+    }
+
+    /**
+     * Re-apply the desired attribution state after MapLibre's late style updates.
+     */
+    scheduleAttributionRestore() {
+        if (this.attributionUserToggled) return;
+        if (this.attributionRestoreTimer) {
+            clearTimeout(this.attributionRestoreTimer);
+        }
+        this.attributionRestoreTimer = setTimeout(() => {
+            this.attributionRestoreTimer = null;
+            this.restoreAttributionState();
+        }, 50);
+    }
+
+    restoreAttributionState() {
+        if (this.attributionUserToggled) return;
+        const control = this.map?.getContainer?.()?.querySelector('.maplibregl-ctrl-attrib');
+        if (!control) return;
+        this.applyAttributionState(control, this.attributionOpen);
     }
 
     /**
@@ -214,6 +256,9 @@ class UWRMapLibre {
      * @param {boolean} isOpen - Whether the attribution details are expanded
      */
     applyAttributionState(control, isOpen) {
+        // Ensure the compact presentation even before MapLibre's attribution
+        // text arrives (otherwise the full bar is visible).
+        control.classList.add('maplibregl-compact');
         if (isOpen) {
             control.classList.add('maplibregl-compact-show');
             control.removeAttribute('open');
@@ -2355,10 +2400,16 @@ class UWRMapLibre {
             this.resizeObserver = null;
         }
 
-        // Clean up attribution state observer
-        if (this.attributionObserver) {
-            this.attributionObserver.disconnect();
-            this.attributionObserver = null;
+        // Clean up attribution state listener/timer
+        if (this.attributionRestoreTimer) {
+            clearTimeout(this.attributionRestoreTimer);
+            this.attributionRestoreTimer = null;
+        }
+        if (this.attributionClickHandler) {
+            const control = this.map?.getContainer?.()?.querySelector('.maplibregl-ctrl-attrib');
+            const button = control?.querySelector('.maplibregl-ctrl-attrib-button');
+            if (button) button.removeEventListener('click', this.attributionClickHandler);
+            this.attributionClickHandler = null;
         }
 
         // Clean up trending interval

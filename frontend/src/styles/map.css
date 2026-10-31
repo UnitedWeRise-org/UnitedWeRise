@@ -701,6 +701,30 @@
     display: none !important;
 }
 
+/* Compact MapLibre attribution: licence-required, but small and unobtrusive. */
+#mapContainer .maplibregl-ctrl-attrib.maplibregl-compact {
+    margin: 4px;
+    padding: 1px 18px 1px 0;
+    min-height: 18px;
+    border-radius: 9px;
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+#mapContainer .maplibregl-ctrl-attrib.maplibregl-compact-show {
+    max-width: min(260px, calc(100% - 8px));
+    padding: 2px 20px 2px 7px;
+}
+
+#mapContainer .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background-size: 14px 14px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
 /* ========================================
    TRENDING COMMENTS POPUPS - MINIMAL CHAT BUBBLES
 ======================================== */
