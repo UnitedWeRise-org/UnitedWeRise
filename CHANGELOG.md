@@ -26,6 +26,7 @@
 ### Fixed
 - **Bubbles in the ocean** — removed the ±1° popup coordinate jitter and the bounding-box random coordinates; display points are now in-area samples.
 - **Real posts mislabeled as demo data** — bubble rendering now trusts the API's `isRealPost` flag instead of a global dummy-data check.
+- **Map ignored real posts (auth mismatch)** — `fetchMapPosts`/legacy fallback required a legacy `localStorage.authToken`, but auth is HttpOnly-cookie based. Switched to `window.apiClient.call(...)`, so the map now receives the signed-in user's area posts.
 
 ### Security / Privacy
 - Migration `20261030213000_add_map_privacy_areas` nulls all legacy `Post.latitude`, `Post.longitude`, `Post.originalH3Index`, and `Post.h3Index` values; these fields are deprecated and no longer written.

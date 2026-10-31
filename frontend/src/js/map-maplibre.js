@@ -1367,39 +1367,44 @@ class UWRMapLibre {
      * @returns {Promise<Array>} Map posts (empty on failure)
      */
     async fetchMapPosts(count = 9) {
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) return [];
-
         try {
-            const apiUrl = getApiBaseUrl().replace('/api', '');
             const center = this.map?.getCenter
                 ? this.map.getCenter()
                 : { lat: this.US_CENTER[1], lng: this.US_CENTER[0] };
             const zoom = this.map?.getZoom ? this.map.getZoom() : 3.6;
 
-            const params = new URLSearchParams({
+            const params = {
                 lat: center.lat.toFixed(5),
                 lng: center.lng.toFixed(5),
                 zoom: zoom.toFixed(2),
                 count: String(count),
                 sessionNonce: String(this.sessionNonce)
-            });
+            };
 
-            const response = await fetch(`${apiUrl}/api/posts/map-data?${params.toString()}`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
+            let data;
+            if (window.apiClient?.call) {
+                // Cookie-based auth (HttpOnly) + CSRF handling.
+                data = await window.apiClient.call('/posts/map-data', {
+                    params,
+                    bypassCache: true
+                });
+            } else {
+                // Compatibility fallback for older clients.
+                const apiUrl = getApiBaseUrl().replace('/api', '');
+                const query = new URLSearchParams(params);
+                const response = await fetch(`${apiUrl}/api/posts/map-data?${query.toString()}`, {
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('MapSystem', `Map data request failed (${response.status})`, null);
+                    }
+                    return [];
                 }
-            });
-
-            if (!response.ok) {
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MapSystem', `Map data request failed (${response.status})`, null);
-                }
-                return [];
+                data = await response.json();
             }
 
-            const data = await response.json();
-            const posts = data.success && Array.isArray(data.data) ? data.data : [];
+            const posts = data?.success && Array.isArray(data.data) ? data.data : [];
             window.mapRealDataAvailable = posts.length > 0;
             return posts;
         } catch (error) {
@@ -1441,45 +1446,36 @@ class UWRMapLibre {
     }
 
     async fetchFallbackTopic(jurisdiction) {
-        // Check if user is authenticated before making API calls
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) {
-            // Silent fallback to dummy data when not authenticated
-            return this.getDummyTopicFromHelper(jurisdiction);
-        }
-
         // Try legacy trending topics API as secondary fallback
         try {
-            const apiUrl = getApiBaseUrl().replace('/api', '');
+            if (!window.apiClient?.call) {
+                return this.getDummyTopicFromHelper(jurisdiction);
+            }
 
-            const response = await fetch(`${apiUrl}/api/trending/map-topics?count=9&scope=${jurisdiction}`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+            const data = await window.apiClient.call('/trending/map-topics', {
+                params: { count: 9, scope: jurisdiction },
+                bypassCache: true
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.data && data.data.length > 0) {
-                    const topic = data.data[Math.floor(Math.random() * data.data.length)];
+            if (data?.success && data.data && data.data.length > 0) {
+                const topic = data.data[Math.floor(Math.random() * data.data.length)];
 
-                    if (typeof adminDebugLog !== 'undefined') {
-                        adminDebugLog('MapSystem', `Retrieved legacy topic: "${topic.topic}" for ${jurisdiction}`, null);
-                    }
-
-                    return {
-                        id: topic.id,
-                        summary: topic.topic,
-                        topic: 'Trending Topic',
-                        location: 'Community',
-                        coordinates: topic.coordinates,
-                        engagement: topic.participantCount || 0,
-                        timestamp: 'Recent',
-                        isEdge: false,
-                        jurisdiction: jurisdiction,
-                        isRealPost: false
-                    };
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Retrieved legacy topic: "${topic.topic}" for ${jurisdiction}`, null);
                 }
+
+                return {
+                    id: topic.id,
+                    summary: topic.topic,
+                    topic: 'Trending Topic',
+                    location: 'Community',
+                    coordinates: topic.coordinates,
+                    engagement: topic.participantCount || 0,
+                    timestamp: 'Recent',
+                    isEdge: false,
+                    jurisdiction: jurisdiction,
+                    isRealPost: false
+                };
             }
         } catch (error) {
             if (typeof adminDebugLog !== 'undefined') {
