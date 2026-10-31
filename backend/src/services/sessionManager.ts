@@ -384,44 +384,21 @@ class SessionManager {
       throw new Error('Refresh token not found');
     }
 
-    // Check if this token was already rotated
-    // IDEMPOTENCY: If already rotated, return the new token instead of throwing
-    // This handles concurrent refresh requests during session resume
-    if (oldRefreshToken.revokedAt) {
-      // Find the token that was created during the rotation
-      const existingNewToken = await prisma.refreshToken.findFirst({
-        where: {
-          userId: oldRefreshToken.userId,
-          createdAt: { gt: oldRefreshToken.createdAt },
-          revokedAt: null,
-          expiresAt: { gt: new Date() }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-
-      if (existingNewToken) {
-        logger.info({
-          tokenId: oldRefreshToken.id,
-          userId: oldRefreshToken.userId,
-          existingNewTokenId: existingNewToken.id,
-          revokedAt: oldRefreshToken.revokedAt
-        }, 'Token already rotated - returning existing new token (idempotent refresh)');
-
-        // Return the existing new token - concurrent refresh is idempotent
-        return existingNewToken;
-      }
-
-      // No valid new token found - this could be a replay attack or expired session
+    // If the token was rotated earlier, it remains usable during the grace
+    // window. A concurrent refresh may reach this point with the old token;
+    // always store the caller's new token so the cookie we return is valid.
+    const now = new Date();
+    if (oldRefreshToken.revokedAt && oldRefreshToken.revokedAt <= now) {
       logger.warn({
         tokenId: oldRefreshToken.id,
         userId: oldRefreshToken.userId,
         revokedAt: oldRefreshToken.revokedAt
-      }, 'SECURITY: Token rotation attempted on revoked token without valid successor - possible token theft');
+      }, 'SECURITY: Token rotation attempted on fully revoked token - possible token theft');
       throw new Error('Refresh token already revoked');
     }
 
-    const now = new Date();
-    // Revoke old token (with grace period for concurrent requests)
+    // Revoke old token (with grace period for concurrent requests). If it was
+    // already rotated within the grace window, extend/refresh the timestamp.
     const revokeAt = new Date(now.getTime() + gracePeriodSeconds * 1000);
 
     await prisma.refreshToken.update({

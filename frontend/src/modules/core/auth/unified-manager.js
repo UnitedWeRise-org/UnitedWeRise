@@ -402,7 +402,7 @@ class UnifiedAuthManager {
                 await adminDebugLog('UnifiedAuthManager', 'TOTP required, delegating to unified auth system');
 
                 // Use the existing unifiedLogin for TOTP handling
-                const result = await window.unifiedLogin(email, password, 'main-site');
+                const result = await window.unifiedLogin(email, password, 'main-site', null, rememberMe);
                 if (result.success) {
                     await this._setAuthenticatedState(result.user);
                     return { success: true, user: result.user };

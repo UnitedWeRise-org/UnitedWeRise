@@ -8,6 +8,31 @@
 
 ---
 
+## [2026-10-30] - Login Persistence & TOTP Session Fix
+
+### Fixed
+- **Frequent re-login / repeated 2FA** — the 30-minute access cookie often disappeared before the frontend tried to refresh. `apiClient` only refreshed on `ACCESS_TOKEN_EXPIRED`, but a missing cookie returns a plain 401 (`No token provided`), so it called `_handleUnauthorized()` → logout → **revoked the 90-day refresh token**. The client now refreshes on any non-auth 401, retries once, and only logs out if refresh actually fails.
+- **Same issue in the legacy `apiCall` path** — `api-manager` now refreshes/retries 401s too, so older components share the persistent session.
+- **Logout failed with an expired access token** — `POST /auth/logout` now uses `optionalAuth`, so it can always clear cookies and revoke the refresh token.
+- **“Keep me logged in (90 days)” was lost on 2FA logins** — `rememberMe` is now passed through the TOTP verification flow (`UnifiedAuth.login` and callers).
+- **Concurrent refresh could set an unpersisted token** — `rotateRefreshToken` now stores the new token during the grace window instead of returning an existing record while the endpoint set a different, unstored token.
+
+### Security / Persistence
+- TOTP verification remains in the refreshed access token (`totpEnabled`), so a validated 2FA session persists until the refresh token expires.
+- Refresh rotation remains DB-backed and revocable; logout still invalidates the refresh token.
+
+### Files
+- `frontend/src/modules/core/api/client.js`
+- `frontend/src/js/api-manager.js`
+- `frontend/src/modules/auth/UnifiedAuth.js`
+- `frontend/src/modules/core/auth/unified-manager.js`
+- `frontend/src/modules/core/auth/modal.js`
+- `backend/src/routes/auth.ts`
+- `backend/src/services/sessionManager.ts`
+- Devlog: `docs/devlogs/2026-10-30-auth-session-persistence.md`
+
+---
+
 ## [2026-10-30] - Notifications Overhaul + Map Attribution Polish
 
 ### Added

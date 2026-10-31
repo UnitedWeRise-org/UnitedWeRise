@@ -8317,20 +8317,21 @@ document.addEventListener('visibilitychange', async () => {
   }
 });
 
-// 401 Error auto-refresh (when access token expires during API call)
-if (response.status === 401 && data.code === 'ACCESS_TOKEN_EXPIRED') {
-  const refreshed = await refreshAuthToken(); // Calls /api/auth/refresh
-  if (refreshed) {
-    return await fetch(url, options); // Retry original request
-  }
+// 401 auto-refresh. Refresh on ANY non-auth 401, not only when the body has
+// code=ACCESS_TOKEN_EXPIRED: after the 30-minute access cookie expires the
+// server returns a plain "No token provided" 401. Missing this case used to
+// log the user out and revoke the long-lived refresh token.
+if (response.status === 401 && !isAuthFlowEndpoint && !options._retry) {
+  await apiClient._refreshAccessToken(); // coalesced /api/auth/refresh
+  return apiClient._makeRequest(url, { ...options, _retry: true }, 1);
 }
 
-// Proactive refresh (5 minutes before expiration)
-setInterval(async () => {
-  if (isTokenExpiringWithin(5 * 60 * 1000)) { // 5 minutes
-    await refreshAuthToken();
+// Proactive refresh while the tab is visible
+setInterval(() => {
+  if (isAuthenticated() && !document.hidden) {
+    refreshAuthToken();
   }
-}, 60 * 1000); // Check every minute
+}, 14 * 60 * 1000); // 14 minutes (half of the 30-minute access lifetime)
 ```
 
 **Backend Token Rotation:**

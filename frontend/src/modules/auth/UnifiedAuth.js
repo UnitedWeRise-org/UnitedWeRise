@@ -152,7 +152,7 @@ class UnifiedAuth {
      * @param {string} totpSessionToken - Optional existing TOTP session token
      * @returns {Promise<Object>} - Login result with user data and tokens
      */
-    async login(email, password, context = 'main-site', totpSessionToken = null) {
+    async login(email, password, context = 'main-site', totpSessionToken = null, rememberMe = false) {
         try {
             if (typeof adminDebugLog !== 'undefined') {
                 await adminDebugLog('UnifiedAuth', `Starting unified login for ${context}`);
@@ -163,6 +163,7 @@ class UnifiedAuth {
 
             // Initial login attempt
             const loginData = { email, password };
+            if (rememberMe) loginData.rememberMe = true;
 
             const response = await fetch(`${this.BACKEND_URL}/api/auth/login`, {
                 method: 'POST',
@@ -194,7 +195,8 @@ class UnifiedAuth {
                     body: JSON.stringify({
                         email,
                         password,
-                        totpToken: verificationToken
+                        totpToken: verificationToken,
+                        ...(rememberMe ? { rememberMe: true } : {})
                     })
                 });
 

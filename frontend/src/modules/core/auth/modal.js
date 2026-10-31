@@ -192,7 +192,7 @@ export async function handleLogin() {
             // Handle TOTP requirement (you could implement TOTP input UI here)
             // For now, fall back to the unified login system for TOTP handling
             try {
-                const totpResult = await window.unifiedLogin(email, password, 'main-site');
+                const totpResult = await window.unifiedLogin(email, password, 'main-site', null, rememberMe);
                 if (totpResult.success) {
                     showAuthMessage('Login successful! Reloading...', 'success');
                     // Reload page to ensure clean state with auth cookie

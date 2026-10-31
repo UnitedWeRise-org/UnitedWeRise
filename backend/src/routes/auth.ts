@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma';
 import express from 'express';
 ;
 import { hashPassword, comparePassword, generateToken, generateResetToken, generateRefreshToken, hashResetToken, hashRefreshToken } from '../utils/auth';
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 import { validateRegistration, validateLogin, validatePasswordReset } from '../middleware/validation';
 import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiting';
 import { sessionManager } from '../services/sessionManager';
@@ -909,7 +909,7 @@ router.post('/reset-password', validatePasswordReset, async (req, res) => {
 });
 
 // Logout user (blacklist token and revoke refresh token)
-router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
+router.post('/logout', optionalAuth, async (req: AuthRequest, res) => {
   try {
     // Get token from cookie first, fallback to header for transition period
     let token = req.cookies?.[COOKIE_NAMES.AUTH_TOKEN];

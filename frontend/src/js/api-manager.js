@@ -139,6 +139,31 @@ class APIRequestManager {
                 const response = await fetch(url, fetchOptions);
 
                 if (!response.ok) {
+                    // Access token can expire while the refresh token is still
+                    // valid. Refresh once and retry before surfacing a 401.
+                    const isAuthFlowEndpoint = /\/auth\/(login|register|refresh|logout|forgot-password|reset-password)\b/.test(url);
+                    if (response.status === 401 && !options._retriedAuth && !isAuthFlowEndpoint) {
+                        try {
+                            if (window.apiClient?._refreshAccessToken) {
+                                await window.apiClient._refreshAccessToken();
+                            } else {
+                                const refreshResponse = await fetch(`${window.API_CONFIG?.BASE_URL || 'https://api.unitedwerise.org/api'}/auth/refresh`, {
+                                    method: 'POST',
+                                    credentials: 'include',
+                                    cache: 'no-store'
+                                });
+                                if (!refreshResponse.ok) {
+                                    throw new Error(`Token refresh failed (${refreshResponse.status})`);
+                                }
+                                await refreshResponse.json();
+                            }
+                            return this.executeRequest(endpoint, { ...options, _retriedAuth: true });
+                        } catch (refreshError) {
+                            await adminDebugWarn('APIManager', `Token refresh failed for ${endpoint}`, refreshError.message);
+                            // Fall through to normal error handling below.
+                        }
+                    }
+
                     // Handle rate limiting with exponential backoff
                     if (response.status === 429) {
                         const retryAfter = parseInt(response.headers.get('Retry-After')) || 60;

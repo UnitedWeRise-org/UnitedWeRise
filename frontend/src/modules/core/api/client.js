@@ -29,6 +29,7 @@ class APIClient {
     constructor() {
         this.cache = new Map();
         this.pendingRequests = new Map();
+        this._refreshPromise = null;
     }
 
     /**
@@ -140,50 +141,47 @@ class APIClient {
             // Handle response
             if (!response.ok) {
                 if (response.status === 401) {
-                    // Try to parse error response to check for ACCESS_TOKEN_EXPIRED
+                    let errorData = null;
                     try {
-                        const errorData = await response.json();
-
-                        // If access token expired and this is not a retry, try to refresh
-                        if (errorData.code === 'ACCESS_TOKEN_EXPIRED' && !options._retry) {
-                            console.log('🔄 Access token expired, attempting refresh...');
-
-                            try {
-                                // Call refresh endpoint
-                                const refreshResponse = await fetch(`${API_CONFIG.BASE_URL}/auth/refresh`, {
-                                    method: 'POST',
-                                    credentials: 'include'
-                                });
-
-                                if (refreshResponse.ok) {
-                                    // CSRF token is automatically updated via Set-Cookie header
-                                    await refreshResponse.json();
-
-                                    console.log('✅ Token refreshed, retrying original request');
-
-                                    // Retry original request with _retry flag to prevent infinite loops
-                                    return this._makeRequest(url, { ...options, _retry: true }, 1);
-                                } else {
-                                    // Refresh token also expired - force logout
-                                    console.warn('⚠️ Refresh token expired - forcing logout');
-                                    this._handleUnauthorized();
-                                    throw new Error('Session expired');
-                                }
-                            } catch (refreshError) {
-                                console.error('❌ Token refresh failed:', refreshError);
-                                this._handleUnauthorized();
-                                throw new Error('Session expired');
-                            }
-                        } else {
-                            // Not an access token expiration or already retried - handle as normal 401
-                            this._handleUnauthorized();
-                            throw new Error(errorData.error || errorData.message || 'Unauthorized');
-                        }
-                    } catch (parseError) {
-                        // Could not parse response - handle as normal 401
-                        this._handleUnauthorized();
-                        throw new Error('Unauthorized');
+                        errorData = await response.json();
+                    } catch (_) {
+                        // Non-JSON 401 body
                     }
+
+                    // Never try to refresh credential flows (login/register/etc.).
+                    const isAuthFlowEndpoint = /\/auth\/(login|register|refresh|logout|forgot-password|reset-password)\b/.test(url);
+
+                    if (!options._retry && !isAuthFlowEndpoint) {
+                        try {
+                            // If the unified manager is already refreshing (tab wake), wait first.
+                            if (window.unifiedAuthManager?.isRefreshPending?.()) {
+                                await window.unifiedAuthManager.waitForPendingRefresh?.(5000);
+                            }
+
+                            await this._refreshAccessToken();
+
+                            // Retry exactly once with the new access-token cookie.
+                            return this._makeRequest(url, { ...options, _retry: true }, 1);
+                        } catch (refreshError) {
+                            console.warn('⚠️ Token refresh failed:', refreshError.message);
+                            const hadSession = !!(window.currentUser || localStorage.getItem('currentUser'));
+                            if (hadSession) {
+                                await this._handleUnauthorized();
+                            }
+                            throw new Error('Session expired');
+                        }
+                    }
+
+                    // A retry still failed (or this is a credential flow). Only clear
+                    // an existing session; guest 401s should not trigger logout or
+                    // revoke a refresh token.
+                    if (!isAuthFlowEndpoint) {
+                        const hadSession = !!(window.currentUser || localStorage.getItem('currentUser'));
+                        if (hadSession) {
+                            await this._handleUnauthorized();
+                        }
+                    }
+                    throw new Error(errorData?.error || errorData?.message || 'Unauthorized');
                 }
 
                 // Retry on 5xx errors
@@ -282,6 +280,39 @@ class APIClient {
             const firstKey = this.cache.keys().next().value;
             this.cache.delete(firstKey);
         }
+    }
+
+    /**
+     * Refresh the access token using the httpOnly refresh-token cookie.
+     * Coalesces concurrent 401 refreshes into one request.
+     *
+     * @returns {Promise<boolean>} True when new cookies were issued
+     * @throws {Error} When the refresh token is invalid/expired
+     * @private
+     */
+    async _refreshAccessToken() {
+        if (this._refreshPromise) return this._refreshPromise;
+
+        this._refreshPromise = (async () => {
+            const refreshResponse = await fetch(`${API_CONFIG.BASE_URL}/auth/refresh`, {
+                method: 'POST',
+                credentials: 'include',
+                cache: 'no-store'
+            });
+
+            if (!refreshResponse.ok) {
+                throw new Error(`Token refresh failed (${refreshResponse.status})`);
+            }
+
+            // New auth + refresh + CSRF cookies are set by the response.
+            await refreshResponse.json();
+            console.log('✅ Token refreshed, retrying original request');
+            return true;
+        })().finally(() => {
+            this._refreshPromise = null;
+        });
+
+        return this._refreshPromise;
     }
 
     /**
