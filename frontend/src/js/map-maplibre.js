@@ -199,7 +199,10 @@ class UWRMapLibre {
 
         let stored = null;
         try {
-            stored = localStorage.getItem('uwrMapAttributionOpen');
+            // The first build persisted the initial programmatic open state;
+            // ignore/clear it so everyone starts from the collapsed default.
+            localStorage.removeItem('uwrMapAttributionOpen');
+            stored = localStorage.getItem('uwrMapAttributionOpenV2');
         } catch (_) {
             // Storage can be unavailable in private/embedded contexts.
         }
@@ -219,7 +222,7 @@ class UWRMapLibre {
                     if (!current) return;
                     this.attributionOpen = current.classList.contains('maplibregl-compact-show');
                     try {
-                        localStorage.setItem('uwrMapAttributionOpen', String(this.attributionOpen));
+                        localStorage.setItem('uwrMapAttributionOpenV2', String(this.attributionOpen));
                     } catch (_) {
                         // Ignore storage failures.
                     }
