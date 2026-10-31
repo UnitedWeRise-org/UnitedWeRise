@@ -8,6 +8,25 @@
 
 ---
 
+## [2026-10-30] - Notifications Overhaul + Map Attribution Polish
+
+### Added
+- **Real social notification panel** — avatar/icon, message, timestamp, unread dot, “Load more,” and inline **Accept/Decline** for friend requests. Opening the panel now marks fetched notifications read and clears the bell badge.
+- **Notification coverage** — friends/followers are notified when someone posts (not just opt-in subscribers), plus reply-to-comment and `@mention` notifications.
+- **In-app notification settings** — per-category toggles for new posts from friends/follows, follows, friend requests, likes/reactions, comments/replies, mentions, and message requests.
+
+### Fixed
+- **Real-time notifications never reached the UI** — `websocket-client.js` checked module-scoped function names, which are not globals in ES modules. It now calls `window.updateNotificationUI` / `window.showNotificationToast` / `window.updateNotificationBadge`.
+- **Badge counted only the cached page** — the bell now uses the server’s total `unreadCount`, refreshes on focus/visibility (60s fallback), and clears when the panel is opened.
+- **Map attribution** — forced compact before attribution text arrives, persisted open/closed state, cleared the legacy bad state, and reduced the ⓘ to a 16px icon without the surrounding white bubble.
+
+### Files
+- Backend: `src/routes/notifications.ts`, `src/routes/users.ts`, `src/routes/posts.ts`, `src/services/relationshipService.ts`, `src/services/mentionNotificationService.ts`
+- Frontend: `src/handlers/notification-handlers.js`, `src/js/websocket-client.js`, `src/js/app-initialization.js`, `src/handlers/navigation-handlers.js`, `src/components/Profile.js`, `src/styles/notifications.css`, `src/styles/map.css`, `src/js/map-maplibre.js`
+- Devlog: `docs/devlogs/2026-10-30-notifications-overhaul.md`
+
+---
+
 ## [2026-10-30] - Map Privacy v2: ZIP Areas + Seeded Display Points
 
 ### Added

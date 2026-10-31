@@ -733,8 +733,8 @@ class NavigationHandlers {
 
                     // Fetch and display notifications
                     if (typeof window.fetchNotifications === 'function') {
-                        window.fetchNotifications().then(() => {
-                            const notifications = window.notificationsCache || [];
+                        window.fetchNotifications().then((fetched) => {
+                            const notifications = fetched || window.notificationsCache || [];
 
                             if (notifications.length === 0) {
                                 mainContent.innerHTML = `

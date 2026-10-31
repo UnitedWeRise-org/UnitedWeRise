@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
 **Last Updated**: October 30, 2026
-**Version**: 6.1.0 (Map Privacy v2: ZIP Areas + Seeded Display Points)
+**Version**: 6.2.0 (Notifications Overhaul + Map Attribution Polish)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
 > **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
@@ -4463,157 +4463,62 @@ socket.emit('send-message', {
 **Architecture**: WebSocket-based real-time notifications with REST API persistence  
 **Features**: Instant notifications, toast messages, badge updates, dropdown refresh
 
-##### System Architecture
+##### Current Notification Flow
 
-**Complete Notification Flow**:
-1. **Trigger Event** → User likes post/comment, follows user, sends message
-2. **Database Persistence** → `createNotification()` stores notification in database
-3. **WebSocket Emission** → Real-time notification sent to target user via WebSocket
-4. **Push Notification** → If recipient is offline, APNs push sent to registered iOS devices via `PushNotificationService` (`backend/src/services/pushNotificationService.ts`)
-5. **Frontend Reception** → WebSocket client receives `new_notification` event
-6. **UI Updates** → Toast notification, badge count, dropdown refresh, smooth animations
+1. **Event** — like, comment/reply, follow, friend request/accept, mention, or new post.
+2. **Preference gate** — `createNotification()` checks the receiver's in-app
+   preference for that category (`inAppNotify*`, default on).
+3. **Persistence + WebSocket** — the notification is stored in `Notification`
+   and emitted to `user:<receiverId>` as `new_notification`.
+4. **Frontend** — `window.updateNotificationUI()` updates the panel and badge;
+   `window.showNotificationToast()` shows a toast when the panel is closed.
 
-##### Backend Implementation
+**NEW_POST audience** (`RelationshipUtils.getPostNotificationAudience`):
+- accepted friends
+- followers
+- subscribers with `notifyOnNewPosts = true`
+It is deduplicated, excludes the author, and respects post audience:
+`PUBLIC` = all, `FRIENDS_ONLY` = friends, `NON_FRIENDS` = followers/subscribers
+minus friends.
 
-**WebSocket Service Integration** (`backend/src/services/WebSocketService.ts:336-344`):
-```typescript
-// Emit notification to user
-emitNotification(receiverId: string, notification: any): void {
-    try {
-        this.io.to(`user:${receiverId}`).emit('new_notification', notification);
-        console.log(`Notification emitted to user ${receiverId}:`, notification.type);
-    } catch (error) {
-        console.error('Error emitting notification:', error);
-    }
-}
-```
+**Reply/mention coverage**:
+- comments notify the post author, and replies also notify the parent comment author
+- `@username` mentions create `MENTION` notifications for public posts/comments
+  (reserved accounts like `@RiseAI` and email addresses are ignored)
 
-**Notification Creation with Real-Time Emission** (`backend/src/routes/notifications.ts:35-65`):
-```typescript
-export const createNotification = async (type, senderId, receiverId, message, postId?, commentId?) => {
-    const notification = await prisma.notification.create({
-        data: { type, senderId, receiverId, message, postId, commentId },
-        include: {
-            sender: { select: { id: true, username: true, firstName: true, lastName: true } }
-        }
-    });
-
-    // Real-time WebSocket emission
-    if (webSocketService) {
-        webSocketService.emitNotification(receiverId, {
-            id: notification.id,
-            type: notification.type,
-            message: notification.message,
-            sender: notification.sender,
-            createdAt: notification.createdAt,
-            postId: notification.postId,
-            commentId: notification.commentId
-        });
-    }
-
-    return notification;
-};
-```
-
-**API Endpoints**:
+**API endpoints**:
 ```javascript
-GET  /api/notifications              // Fetch user notifications with pagination
-POST /api/notifications/:id/read     // Mark individual notification as read
-POST /api/notifications/mark-read-batch // Mark multiple notifications as read
+GET  /api/notifications                 // paginated list + unreadCount
+GET  /api/notifications/unread-count    // lightweight badge refresh
+PUT  /api/notifications/:id/read        // mark one read (returns unreadCount)
+PUT  /api/notifications/mark-read-batch // mark fetched page read
+PUT  /api/notifications/read-all        // mark everything read
 ```
 
-##### Frontend Implementation
+**In-app preferences** (Profile → Settings):
+`inAppNotifyNewPosts`, `inAppNotifyFollows`, `inAppNotifyFriendRequests`,
+`inAppNotifyLikes`, `inAppNotifyComments`, `inAppNotifyMentions`,
+`inAppNotifyMessages`. Defaults are on; existing browser/email/candidate keys
+remain.
 
-**WebSocket Integration** (See {#unified-messaging-system} for complete implementation):
-```javascript
-this.socket.on('new_notification', (notification) => {
-    updateNotificationUI(notification);
-});
-```
+##### Frontend Panel
 
-**Real-Time UI Updates** (`frontend/index.html:1737-1787`):
-```javascript
-async function updateNotificationUI(notification) {
-    // Show toast notification
-    showNotificationToast(notification);
-    
-    // Update badge count
-    await fetchNotifications();
-    
-    // Refresh dropdown if open
-    const dropdown = document.querySelector('.notification-dropdown');
-    if (dropdown && !dropdown.classList.contains('d-none')) {
-        displayNotifications();
-    }
-}
+- Bell badge uses the server's total `unreadCount` (not just the cached page).
+- Opening the panel fetches page 1, renders it, then marks the fetched unread
+  IDs via `mark-read-batch`; the badge clears immediately.
+- Supports avatars, unread dots, timestamps, “Load more,” and inline
+  **Accept/Decline** for friend requests.
+- Refreshes on focus/visibility and a 60s visible-tab fallback.
+- `websocket-client.js` calls the `window.*` handlers (module-scoped function
+  checks silently failed before this fix).
 
-function showNotificationToast(notification) {
-    const toast = document.createElement('div');
-    toast.className = 'notification-toast';
-    toast.innerHTML = `
-        <div class="toast-content">
-            <strong>${notification.sender.firstName} ${notification.sender.lastName}</strong>
-            <div>${notification.message}</div>
-        </div>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Auto-remove after 4 seconds
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-        }
-    }, 4000);
-}
-```
+##### Security / Performance
 
-**Toast Notification Styling** (`frontend/src/styles/main.css:2089-2106`):
-```css
-.notification-toast {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    background: #ffffff;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 10000;
-    max-width: 350px;
-    animation: slideInRight 0.3s ease-out;
-}
-
-@keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-```
-
-##### Notification Types
-
-**Supported Types** (NotificationType enum):
-- `LIKE` - Post or comment likes
-- `COMMENT` - New comments on posts  
-- `FOLLOW` - New followers
-- `MENTION` - User mentions in posts/comments
-- `FRIEND_REQUEST` - Friend requests
-- `MESSAGE` - Direct messages
-- `ADMIN_MESSAGE` - Admin communications
-
-##### Security Features
-
-- **User Verification**: Only authenticated users receive notifications
-- **Room-Based Delivery**: WebSocket rooms ensure notifications go to correct recipients
-- **Database Persistence**: All notifications stored for reliability
-- **Error Handling**: Graceful fallback when WebSocket unavailable
-
-##### Performance Optimizations
-
-- **Real-Time Delivery**: Eliminates need for polling, reducing API calls by 99%
-- **Efficient UI Updates**: Batch updates to minimize DOM manipulation
-- **Smart Caching**: Notification preferences cached to reduce API calls
-- **Resource Management**: Auto-cleanup of toast notifications prevents memory leaks
+- Only authenticated users receive notifications; WebSocket rooms target the
+  correct recipient.
+- Notification messages and sender names are escaped before `innerHTML`.
+- Preference checks are resolved once per batch (post audience) or once per
+  single notification; WebSocket delivery is fire-and-forget.
 
 ### Related Systems
 - **{#database-schema}**: Database models underlying all API responses

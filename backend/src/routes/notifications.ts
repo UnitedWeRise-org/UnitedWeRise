@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma';
+import { NotificationType } from '@prisma/client';
 import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { logger } from '../services/logger';
@@ -20,6 +21,63 @@ const getWebSocketService = async () => {
   return webSocketService;
 };
 // Using singleton prisma from lib/prisma.ts
+
+/**
+ * Default notification preferences. These are merged over the user's stored
+ * JSON so new preference keys default on without a migration.
+ */
+export const DEFAULT_NOTIFICATION_PREFERENCES = {
+  browserNotifications: true,
+  browserNotifyNewMessages: true,
+  browserNotifyLikes: false,
+  browserNotifyComments: true,
+  emailNotifications: true,
+  emailNotifyImportantMessages: true,
+  emailNotifyWeeklyDigest: false,
+  emailNotifySecurityAlerts: true,
+  candidateInboxNotifications: true,
+  candidateElectionReminders: true,
+  // In-app bell preferences
+  inAppNotifyFollows: true,
+  inAppNotifyFriendRequests: true,
+  inAppNotifyLikes: true,
+  inAppNotifyComments: true,
+  inAppNotifyMentions: true,
+  inAppNotifyNewPosts: true,
+  inAppNotifyMessages: true
+};
+
+/**
+ * Maps a notification type to the in-app preference that controls it.
+ * Types not listed (verification, org, system) are always delivered.
+ */
+const IN_APP_PREFERENCE_BY_TYPE: Partial<Record<NotificationType, string>> = {
+  FOLLOW: 'inAppNotifyFollows',
+  FRIEND_REQUEST: 'inAppNotifyFriendRequests',
+  FRIEND_ACCEPTED: 'inAppNotifyFriendRequests',
+  LIKE: 'inAppNotifyLikes',
+  REACTION: 'inAppNotifyLikes',
+  COMMENT: 'inAppNotifyComments',
+  MENTION: 'inAppNotifyMentions',
+  NEW_POST: 'inAppNotifyNewPosts',
+  MESSAGE_REQUEST: 'inAppNotifyMessages'
+};
+
+/**
+ * Check whether a user's in-app preferences allow a notification type.
+ * @param type - Notification type
+ * @param preferences - User's notificationPreferences JSON
+ * @returns True when the notification should be created
+ */
+export function isInAppNotificationEnabled(
+  type: NotificationType,
+  preferences?: Record<string, any> | null
+): boolean {
+  const key = IN_APP_PREFERENCE_BY_TYPE[type];
+  if (!key) return true;
+  const prefs = { ...DEFAULT_NOTIFICATION_PREFERENCES, ...(preferences || {}) };
+  return prefs[key] !== false;
+}
 
 /**
  * @swagger
@@ -185,6 +243,40 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 
 /**
  * @swagger
+ * /api/notifications/unread-count:
+ *   get:
+ *     tags: [Notification]
+ *     summary: Get unread notification count
+ *     description: Lightweight endpoint for badge refresh (focus/polling fallback).
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Unread count
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 unreadCount:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/unread-count', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const unreadCount = await prisma.notification.count({
+      where: { receiverId: req.user!.id, read: false }
+    });
+    res.json({ unreadCount });
+  } catch (error) {
+    logger.error({ error, userId: req.user!.id }, 'Get unread notification count error');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
  * /api/notifications/{notificationId}/read:
  *   put:
  *     tags: [Notification]
@@ -247,7 +339,11 @@ router.put('/:notificationId/read', requireAuth, async (req: AuthRequest, res) =
       data: { read: true }
     });
 
-    res.json({ message: 'Notification marked as read' });
+    const unreadCount = await prisma.notification.count({
+      where: { receiverId: userId, read: false }
+    });
+
+    res.json({ message: 'Notification marked as read', unreadCount });
   } catch (error) {
     logger.error({ error, userId: req.user?.id, notificationId: req.params.notificationId }, 'Mark notification read error');
     res.status(500).json({ error: 'Internal server error' });
@@ -359,10 +455,15 @@ router.put('/mark-read-batch', requireAuth, async (req: AuthRequest, res) => {
       data: { read: true }
     });
 
+    const unreadCount = await prisma.notification.count({
+      where: { receiverId: userId, read: false }
+    });
+
     res.json({ 
       message: `${updateResult.count} notifications marked as read`,
       updatedCount: updateResult.count,
       requestedCount: notificationIds.length,
+      unreadCount,
       optimized: true // Flag to indicate this is the batched endpoint
     });
   } catch (error) {
@@ -409,7 +510,7 @@ router.put('/read-all', requireAuth, async (req: AuthRequest, res) => {
       data: { read: true }
     });
 
-    res.json({ message: 'All notifications marked as read' });
+    res.json({ message: 'All notifications marked as read', unreadCount: 0 });
   } catch (error) {
     logger.error({ error, userId: req.user?.id }, 'Mark all notifications read error');
     res.status(500).json({ error: 'Internal server error' });
@@ -453,14 +554,28 @@ router.put('/read-all', requireAuth, async (req: AuthRequest, res) => {
  */
 // Helper function to create notifications (we'll use this in other routes)
 export const createNotification = async (
-  type: 'LIKE' | 'COMMENT' | 'FOLLOW' | 'MENTION' | 'FRIEND_REQUEST' | 'FRIEND_ACCEPTED' | 'REACTION' | 'NEW_POST' | 'MESSAGE_REQUEST',
+  type: NotificationType,
   senderId: string | null,
   receiverId: string,
   message: string,
   postId?: string,
-  commentId?: string
+  commentId?: string,
+  receiverPreferences?: Record<string, any> | null
 ) => {
   try {
+    let preferences = receiverPreferences;
+    if (preferences === undefined) {
+      const receiver = await prisma.user.findUnique({
+        where: { id: receiverId },
+        select: { notificationPreferences: true }
+      });
+      preferences = (receiver?.notificationPreferences as Record<string, any> | null) || null;
+    }
+
+    if (!isInAppNotificationEnabled(type, preferences)) {
+      return null;
+    }
+
     // Create notification in database
     const notification = await prisma.notification.create({
       data: {

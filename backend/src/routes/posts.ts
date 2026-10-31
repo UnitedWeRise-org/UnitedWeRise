@@ -11,6 +11,8 @@ import { feedbackAnalysisService } from '../services/feedbackAnalysisService';
 import { reputationService } from '../services/reputationService';
 import { ActivityTracker } from '../services/activityTracker';
 import { PostGeographicService } from '../services/postGeographicService';
+import { RelationshipUtils } from '../services/relationshipService';
+import { MentionNotificationService } from '../services/mentionNotificationService';
 import { GeoAreaService, normalizeZip } from '../services/geoAreaService';
 import { PostManagementService } from '../services/postManagementService';
 import { EngagementScoringService } from '../services/engagementScoringService';
@@ -20,6 +22,50 @@ import { safePaginationParams } from '../utils/safeJson';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
+
+/**
+ * Notify friends, followers, and opted-in subscribers about a new post.
+ * Fire-and-forget: never blocks the post response.
+ *
+ * @param authorId - Post author
+ * @param postId - New post (or thread head) id
+ * @param authorName - Display name used in the notification
+ * @param isThread - Whether the post is a thread head
+ */
+async function notifyNewPostAudience(
+    authorId: string,
+    postId: string,
+    authorName: string,
+    isThread: boolean = false,
+    postAudience: 'PUBLIC' | 'NON_FRIENDS' | 'FRIENDS_ONLY' = 'PUBLIC'
+): Promise<void> {
+    try {
+        const audience = await RelationshipUtils.getPostNotificationAudience(authorId, postAudience);
+        if (audience.length === 0) return;
+
+        const message = isThread
+            ? `${authorName} posted a new thread`
+            : `${authorName} posted something new`;
+
+        await Promise.allSettled(
+            audience.map((recipient) =>
+                createNotification(
+                    'NEW_POST',
+                    authorId,
+                    recipient.userId,
+                    message,
+                    postId,
+                    undefined,
+                    recipient.notificationPreferences
+                )
+            )
+        );
+
+        logger.info({ postId, notifiedCount: audience.length }, 'Post audience notifications sent');
+    } catch (error) {
+        logger.error({ err: error, postId }, 'Failed to send post audience notifications');
+    }
+}
 
 /**
  * @swagger
@@ -600,41 +646,19 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                 });
         }
 
-        // Notify subscribers who have opted into new post notifications (async, don't block response)
-        (async () => {
-            try {
-                // Find all subscribers who want notifications when this user posts
-                const subscribersToNotify = await prisma.subscription.findMany({
-                    where: {
-                        subscribedId: userId,
-                        notifyOnNewPosts: true
-                    },
-                    select: { subscriberId: true }
-                });
-
-                if (subscribersToNotify.length > 0) {
-                    const authorName = post.author.firstName && post.author.lastName
-                        ? `${post.author.firstName} ${post.author.lastName}`
-                        : post.author.username;
-
-                    // Create notifications for each subscriber (batch notification)
-                    const notificationPromises = subscribersToNotify.map(sub =>
-                        createNotification(
-                            'NEW_POST',
-                            userId,
-                            sub.subscriberId,
-                            `${authorName} posted something new`,
-                            post.id
-                        )
-                    );
-
-                    await Promise.allSettled(notificationPromises);
-                    logger.info({ postId: post.id, notifiedCount: subscribersToNotify.length }, 'Subscription notifications sent');
-                }
-            } catch (error) {
-                logger.error({ err: error, postId: post.id }, 'Failed to send subscription notifications');
-            }
-        })();
+        // Notify friends, followers, and opted-in subscribers (async, don't block response)
+        const authorName = post.author.firstName && post.author.lastName
+            ? `${post.author.firstName} ${post.author.lastName}`
+            : post.author.username;
+        void notifyNewPostAudience(userId, post.id, authorName, false, postAudience);
+        if (postAudience === 'PUBLIC') {
+            void MentionNotificationService.notifyMentions({
+                senderId: userId,
+                senderUsername: post.author.username,
+                content: post.content,
+                postId: post.id
+            });
+        }
 
         res.status(201).json({
             message: 'Post created successfully',
@@ -928,39 +952,17 @@ router.post('/thread', requireAuth, checkUserSuspension, postLimiter, contentFil
             logger.error({ err: error, postId: result.headPost.id }, 'Failed to track thread creation activity');
         }
 
-        // Notify subscribers (async, don't block response)
-        (async () => {
-            try {
-                const subscribersToNotify = await prisma.subscription.findMany({
-                    where: {
-                        subscribedId: userId,
-                        notifyOnNewPosts: true
-                    },
-                    select: { subscriberId: true }
-                });
-
-                if (subscribersToNotify.length > 0) {
-                    const authorName = result.headPost.author.firstName && result.headPost.author.lastName
-                        ? `${result.headPost.author.firstName} ${result.headPost.author.lastName}`
-                        : result.headPost.author.username;
-
-                    const notificationPromises = subscribersToNotify.map(sub =>
-                        createNotification(
-                            'NEW_POST',
-                            userId,
-                            sub.subscriberId,
-                            `${authorName} posted a new thread`,
-                            result.headPost.id
-                        )
-                    );
-
-                    await Promise.allSettled(notificationPromises);
-                    logger.info({ postId: result.headPost.id, notifiedCount: subscribersToNotify.length }, 'Thread subscription notifications sent');
-                }
-            } catch (error) {
-                logger.error({ err: error, postId: result.headPost.id }, 'Failed to send thread subscription notifications');
-            }
-        })();
+        // Notify friends, followers, and opted-in subscribers (async, don't block response)
+        const threadAuthorName = result.headPost.author.firstName && result.headPost.author.lastName
+            ? `${result.headPost.author.firstName} ${result.headPost.author.lastName}`
+            : result.headPost.author.username;
+        void notifyNewPostAudience(userId, result.headPost.id, threadAuthorName, true);
+        void MentionNotificationService.notifyMentions({
+            senderId: userId,
+            senderUsername: result.headPost.author.username,
+            content: result.headPost.content,
+            postId: result.headPost.id
+        });
 
         logger.info({
             userId,
@@ -2401,7 +2403,7 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
         // Check if post exists
         const post = await prisma.post.findUnique({
             where: { id: postId },
-            select: { id: true, authorId: true, content: true }
+            select: { id: true, authorId: true, content: true, audience: true }
         });
 
         if (!post) {
@@ -2509,9 +2511,11 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
             // Don't fail the comment creation if activity tracking fails
         }
 
-        // Create notification if not commenting on own post
+        // Notify the post author and, for replies, the parent comment author.
+        const notifiedCommentUserIds = new Set<string>();
+
         if (post.authorId !== userId) {
-            await createNotification(
+            const created = await createNotification(
                 'COMMENT',
                 userId,
                 post.authorId,
@@ -2519,6 +2523,41 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
                 postId,
                 comment.id
             );
+            if (created) notifiedCommentUserIds.add(post.authorId);
+        }
+
+        if (comment.parentId) {
+            const parentComment = await prisma.comment.findUnique({
+                where: { id: comment.parentId },
+                select: { userId: true }
+            });
+            if (
+                parentComment &&
+                parentComment.userId !== userId &&
+                !notifiedCommentUserIds.has(parentComment.userId)
+            ) {
+                const created = await createNotification(
+                    'COMMENT',
+                    userId,
+                    parentComment.userId,
+                    `${req.user!.username} replied to your comment`,
+                    postId,
+                    comment.id
+                );
+                if (created) notifiedCommentUserIds.add(parentComment.userId);
+            }
+        }
+
+        // Mentions could leak non-public posts to people who cannot see them.
+        if (post.audience === 'PUBLIC') {
+            void MentionNotificationService.notifyMentions({
+                senderId: userId,
+                senderUsername: req.user!.username,
+                content,
+                postId,
+                commentId: comment.id,
+                excludeUserIds: [...notifiedCommentUserIds]
+            });
         }
 
         res.status(201).json({

@@ -1030,6 +1030,81 @@ export class RelationshipUtils {
     }
 
     /**
+     * Resolve everyone who should receive a NEW_POST notification when a user
+     * publishes: accepted friends, followers, and subscribers who explicitly
+     * opted into new-post notifications. Deduplicated and excluding the author.
+     *
+     * Preferences are returned with each recipient so batch notification
+     * creation can gate on the in-app `inAppNotifyNewPosts` preference without
+     * one query per recipient.
+     *
+     * @param authorId - Author user id
+     * @returns Recipients with their notification preferences
+     */
+    static async getPostNotificationAudience(
+        authorId: string,
+        audience: 'PUBLIC' | 'NON_FRIENDS' | 'FRIENDS_ONLY' = 'PUBLIC'
+    ): Promise<Array<{ userId: string; notificationPreferences: Record<string, any> | null }>> {
+        try {
+            const [friendships, follows, subscriptions] = await Promise.all([
+                prisma.friendship.findMany({
+                    where: {
+                        status: FriendshipStatus.ACCEPTED,
+                        OR: [{ requesterId: authorId }, { recipientId: authorId }]
+                    },
+                    select: { requesterId: true, recipientId: true }
+                }),
+                prisma.follow.findMany({
+                    where: { followingId: authorId },
+                    select: { followerId: true }
+                }),
+                prisma.subscription.findMany({
+                    where: { subscribedId: authorId, notifyOnNewPosts: true },
+                    select: { subscriberId: true }
+                })
+            ]);
+
+            const friendIds = new Set<string>();
+            for (const friendship of friendships) {
+                friendIds.add(
+                    friendship.requesterId === authorId
+                        ? friendship.recipientId
+                        : friendship.requesterId
+                );
+            }
+
+            const recipientIds = new Set<string>();
+            if (audience === 'PUBLIC' || audience === 'FRIENDS_ONLY') {
+                for (const friendId of friendIds) recipientIds.add(friendId);
+            }
+            if (audience === 'PUBLIC' || audience === 'NON_FRIENDS') {
+                for (const follow of follows) recipientIds.add(follow.followerId);
+                for (const subscription of subscriptions) recipientIds.add(subscription.subscriberId);
+            }
+            if (audience === 'NON_FRIENDS') {
+                // NON_FRIENDS explicitly excludes friends.
+                for (const friendId of friendIds) recipientIds.delete(friendId);
+            }
+            recipientIds.delete(authorId);
+
+            if (recipientIds.size === 0) return [];
+
+            const users = await prisma.user.findMany({
+                where: { id: { in: [...recipientIds] } },
+                select: { id: true, notificationPreferences: true }
+            });
+
+            return users.map((user) => ({
+                userId: user.id,
+                notificationPreferences: (user.notificationPreferences as Record<string, any> | null) || null
+            }));
+        } catch (error) {
+            logger.error({ error, authorId }, 'Get post notification audience error');
+            return [];
+        }
+    }
+
+    /**
      * Suggest people to follow/friend based on mutual connections
      */
     static async getSuggestions(userId: string, type: 'follow' | 'friend' = 'follow', limit: number = 10) {

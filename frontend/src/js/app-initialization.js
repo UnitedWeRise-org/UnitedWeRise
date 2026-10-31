@@ -341,6 +341,10 @@ class AppInitializer {
 
     // Update notification count
     updateNotificationCount(count) {
+        if (typeof window.setNotificationUnreadCount === 'function') {
+            window.setNotificationUnreadCount(count);
+        }
+
         const notificationBtn = document.querySelector('.notification-btn');
         const badge = document.querySelector('.notification-badge');
         

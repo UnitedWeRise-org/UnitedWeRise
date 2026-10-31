@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma';
-import { createNotification } from './notifications';
+import { createNotification, DEFAULT_NOTIFICATION_PREFERENCES } from './notifications';
 import express from 'express';
 ;
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
@@ -1624,21 +1624,8 @@ router.get('/notification-preferences', requireAuth, async (req: AuthRequest, re
         }
 
         // Return preferences or default values
-        const defaultPreferences = {
-            browserNotifications: true,
-            browserNotifyNewMessages: true,
-            browserNotifyLikes: false,
-            browserNotifyComments: true,
-            emailNotifications: true,
-            emailNotifyImportantMessages: true,
-            emailNotifyWeeklyDigest: false,
-            emailNotifySecurityAlerts: true,
-            candidateInboxNotifications: true,
-            candidateElectionReminders: true
-        };
-
         const preferences = {
-            ...defaultPreferences,
+            ...DEFAULT_NOTIFICATION_PREFERENCES,
             ...(user.notificationPreferences as Record<string, any> || {})
         };
 
@@ -1691,6 +1678,20 @@ router.get('/notification-preferences', requireAuth, async (req: AuthRequest, re
  *                 type: boolean
  *               candidateElectionReminders:
  *                 type: boolean
+ *               inAppNotifyFollows:
+ *                 type: boolean
+ *               inAppNotifyFriendRequests:
+ *                 type: boolean
+ *               inAppNotifyLikes:
+ *                 type: boolean
+ *               inAppNotifyComments:
+ *                 type: boolean
+ *               inAppNotifyMentions:
+ *                 type: boolean
+ *               inAppNotifyNewPosts:
+ *                 type: boolean
+ *               inAppNotifyMessages:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Preferences updated successfully
@@ -1726,7 +1727,14 @@ router.put('/notification-preferences', requireAuth, async (req: AuthRequest, re
             'emailNotifyWeeklyDigest',
             'emailNotifySecurityAlerts',
             'candidateInboxNotifications',
-            'candidateElectionReminders'
+            'candidateElectionReminders',
+            'inAppNotifyFollows',
+            'inAppNotifyFriendRequests',
+            'inAppNotifyLikes',
+            'inAppNotifyComments',
+            'inAppNotifyMentions',
+            'inAppNotifyNewPosts',
+            'inAppNotifyMessages'
         ];
 
         const invalidKeys = Object.keys(updates).filter(key => !allowedKeys.includes(key));

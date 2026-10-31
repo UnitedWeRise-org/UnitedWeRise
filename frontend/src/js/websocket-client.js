@@ -254,19 +254,19 @@ class UnifiedMessagingClient {
         this.socket.on('new_notification', (notification) => {
             adminDebugSensitive('WebSocket', 'New notification received', notification);
             
-            // Update notification UI
-            if (typeof updateNotificationUI === 'function') {
-                updateNotificationUI(notification);
+            // Update notification UI (globals exposed by notification-handlers.js)
+            if (typeof window.updateNotificationUI === 'function') {
+                window.updateNotificationUI(notification);
             }
-            
+
             // Update notification badge
-            if (typeof updateNotificationBadge === 'function') {
-                updateNotificationBadge();
+            if (typeof window.updateNotificationBadge === 'function') {
+                window.updateNotificationBadge();
             }
-            
+
             // Show notification popup/toast if implemented
-            if (typeof showNotificationToast === 'function') {
-                showNotificationToast(notification);
+            if (typeof window.showNotificationToast === 'function') {
+                window.showNotificationToast(notification);
             }
         });
 

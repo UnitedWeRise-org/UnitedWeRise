@@ -1126,6 +1126,57 @@ class Profile {
                         <p class="setting-description">Control how you receive notifications and which types of notifications to receive.</p>
                         
                         <div class="notification-settings">
+                            <h5>In-App Notifications</h5>
+                            <label class="setting-item">
+                                <input type="checkbox"
+                                       id="inAppNotifyNewPosts"
+                                       ${this.getNotificationPreference('inAppNotifyNewPosts') ? 'checked' : ''}
+                                       data-change-action="updateNotificationPreference" data-param1="inAppNotifyNewPosts">
+                                <span>New posts from friends and people I follow</span>
+                            </label>
+                            <label class="setting-item">
+                                <input type="checkbox"
+                                       id="inAppNotifyFollows"
+                                       ${this.getNotificationPreference('inAppNotifyFollows') ? 'checked' : ''}
+                                       data-change-action="updateNotificationPreference" data-param1="inAppNotifyFollows">
+                                <span>New followers</span>
+                            </label>
+                            <label class="setting-item">
+                                <input type="checkbox"
+                                       id="inAppNotifyFriendRequests"
+                                       ${this.getNotificationPreference('inAppNotifyFriendRequests') ? 'checked' : ''}
+                                       data-change-action="updateNotificationPreference" data-param1="inAppNotifyFriendRequests">
+                                <span>Friend requests and accepts</span>
+                            </label>
+                            <label class="setting-item">
+                                <input type="checkbox"
+                                       id="inAppNotifyLikes"
+                                       ${this.getNotificationPreference('inAppNotifyLikes') ? 'checked' : ''}
+                                       data-change-action="updateNotificationPreference" data-param1="inAppNotifyLikes">
+                                <span>Likes and reactions</span>
+                            </label>
+                            <label class="setting-item">
+                                <input type="checkbox"
+                                       id="inAppNotifyComments"
+                                       ${this.getNotificationPreference('inAppNotifyComments') ? 'checked' : ''}
+                                       data-change-action="updateNotificationPreference" data-param1="inAppNotifyComments">
+                                <span>Comments and replies</span>
+                            </label>
+                            <label class="setting-item">
+                                <input type="checkbox"
+                                       id="inAppNotifyMentions"
+                                       ${this.getNotificationPreference('inAppNotifyMentions') ? 'checked' : ''}
+                                       data-change-action="updateNotificationPreference" data-param1="inAppNotifyMentions">
+                                <span>Mentions</span>
+                            </label>
+                            <label class="setting-item">
+                                <input type="checkbox"
+                                       id="inAppNotifyMessages"
+                                       ${this.getNotificationPreference('inAppNotifyMessages') ? 'checked' : ''}
+                                       data-change-action="updateNotificationPreference" data-param1="inAppNotifyMessages">
+                                <span>Message requests</span>
+                            </label>
+
                             <h5>Browser Notifications</h5>
                             <label class="setting-item">
                                 <input type="checkbox" 
@@ -4186,6 +4237,13 @@ class Profile {
         
         // Default values for different notification types
         const defaults = {
+            inAppNotifyFollows: true,
+            inAppNotifyFriendRequests: true,
+            inAppNotifyLikes: true,
+            inAppNotifyComments: true,
+            inAppNotifyMentions: true,
+            inAppNotifyNewPosts: true,
+            inAppNotifyMessages: true,
             browserNotifications: true,
             browserNotifyNewMessages: true,
             browserNotifyLikes: false,
