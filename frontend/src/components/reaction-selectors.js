@@ -4,8 +4,13 @@
  * Quality = content vote (Love/Like/Meh/Dislike).
  * Feeling = how the event/issue feels (Beaming/Smile/Neutral/Sad/Angry).
  *
- * Rendered as two compact <details> selectors so clicking the summary opens
- * the options without a permanent 4/5-button matrix.
+ * Display rules:
+ * - Quality summary shows only the combined LOVE + LIKE count (likes), and the
+ *   selected quality icon (or an outline thumbs-up when nothing is selected).
+ * - Feeling summary shows the top three feeling icons by count, overlapping,
+ *   plus the total feeling count.
+ * - Option words are available in the expanded menu; the collapsed summary is
+ *   icon + count only (word via native title/aria-label).
  *
  * @module components/reaction-selectors
  */
@@ -25,18 +30,76 @@ export const FEELING_OPTIONS = [
     { value: 'VERY_NEGATIVE', icon: '😠', label: 'Angry', countKey: 'veryNegativeCount' }
 ];
 
+const THUMB_OUTLINE_ICON = `
+    <svg class="reaction-thumb-outline" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M7 10.5V21H4.5A1.5 1.5 0 0 1 3 19.5v-7.5A1.5 1.5 0 0 1 4.5 10.5H7Zm0 0 4.2-7.1a1.6 1.6 0 0 1 2.9 1.2L13 10.5h5.2a2 2 0 0 1 2 2.4l-1.3 6.5a2 2 0 0 1-2 1.6H7"
+              fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+`;
+
 function optionFor(options, value) {
     return options.find((option) => option.value === value) || null;
 }
 
-function renderSelector(params) {
-    const { axis, action, idAttribute, targetId, options, selected, emptyIcon, emptyLabel, counts } = params;
-    const selectedOption = optionFor(options, selected);
-    const total = options.reduce((sum, option) => sum + (Number(counts?.[option.countKey]) || 0), 0);
+function countOf(counts, option) {
+    return Number(counts?.[option.countKey]) || 0;
+}
 
-    const optionsHtml = options.map((option) => {
-        const count = Number(counts?.[option.countKey]) || 0;
+function qualityLikeCount(counts) {
+    return (Number(counts?.loveCount) || 0) + (Number(counts?.likeCount) || 0);
+}
+
+function feelingTotal(counts) {
+    return FEELING_OPTIONS.reduce((sum, option) => sum + countOf(counts, option), 0);
+}
+
+function topFeelings(counts, limit = 3) {
+    return FEELING_OPTIONS
+        .map((option) => ({ option, count: countOf(counts, option) }))
+        .filter((entry) => entry.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+}
+
+function feelingTitle(counts) {
+    const entries = topFeelings(counts, FEELING_OPTIONS.length);
+    const total = feelingTotal(counts);
+    if (entries.length === 0) return 'How does this make you feel?';
+    return `Feeling: ${entries.map((entry) => `${entry.option.label} ${entry.count}`).join(', ')} (${total} total)`;
+}
+
+function summaryContent(axis, selected, counts) {
+    if (axis === 'quality') {
+        const selectedOption = optionFor(QUALITY_OPTIONS, selected);
+        const icon = selectedOption ? selectedOption.icon : THUMB_OUTLINE_ICON;
+        const title = selectedOption
+            ? `Quality: ${selectedOption.label} (${qualityLikeCount(counts)} likes)`
+            : `Rate the information quality (${qualityLikeCount(counts)} likes)`;
+        return {
+            html: `<span class="reaction-summary-icon">${icon}</span><span class="reaction-summary-count">${qualityLikeCount(counts)}</span>`,
+            title
+        };
+    }
+
+    const top = topFeelings(counts);
+    const icons = top.length > 0
+        ? top.map((entry, index) => `<span class="reaction-summary-face" style="z-index:${10 - index}">${entry.option.icon}</span>`).join('')
+        : '<span class="reaction-summary-face">🙂</span>';
+
+    return {
+        html: `<span class="reaction-summary-faces">${icons}</span><span class="reaction-summary-count">${feelingTotal(counts)}</span>`,
+        title: feelingTitle(counts)
+    };
+}
+
+function renderOptions(axis, action, idAttribute, targetId, options, selected, counts) {
+    return options.map((option) => {
         const active = selected === option.value ? 'active' : '';
+        const count = countOf(counts, option);
+        const countHtml = axis === 'feeling'
+            ? `<span class="reaction-option-count">${count}</span>`
+            : '';
         return `
             <button type="button"
                     class="reaction-option ${active}"
@@ -49,17 +112,21 @@ function renderSelector(params) {
                     aria-pressed="${selected === option.value ? 'true' : 'false'}">
                 <span class="reaction-option-icon">${option.icon}</span>
                 <span class="reaction-option-label">${option.label}</span>
-                <span class="reaction-option-count">${count}</span>
+                ${countHtml}
             </button>
         `;
     }).join('');
+}
+
+function renderSelector(params) {
+    const { axis, action, idAttribute, targetId, options, selected, counts } = params;
+    const summary = summaryContent(axis, selected, counts);
+    const optionsHtml = renderOptions(axis, action, idAttribute, targetId, options, selected, counts);
 
     return `
         <details class="reaction-selector" data-reaction-axis="${axis}">
-            <summary class="reaction-selector-summary" title="${axis === 'quality' ? 'Rate the information quality' : 'How does this make you feel?'}">
-                <span class="reaction-summary-icon">${selectedOption ? selectedOption.icon : emptyIcon}</span>
-                <span class="reaction-summary-label">${selectedOption ? selectedOption.label : emptyLabel}</span>
-                <span class="reaction-summary-count">${total}</span>
+            <summary class="reaction-selector-summary" title="${summary.title}" aria-label="${summary.title}">
+                ${summary.html}
             </summary>
             <div class="reaction-selector-options">${optionsHtml}</div>
         </details>
@@ -67,7 +134,7 @@ function renderSelector(params) {
 }
 
 /**
- * Render both reaction selectors.
+ * Render both reaction selectors (side by side).
  *
  * @param {Object} params
  * @param {'post'|'comment'} params.targetType
@@ -91,8 +158,6 @@ export function renderReactionSelectors(params) {
                 targetId,
                 options: QUALITY_OPTIONS,
                 selected: selectedQuality || null,
-                emptyIcon: '⚖️',
-                emptyLabel: 'Quality',
                 counts
             })}
             ${renderSelector({
@@ -102,8 +167,6 @@ export function renderReactionSelectors(params) {
                 targetId,
                 options: FEELING_OPTIONS,
                 selected: selectedFeeling || null,
-                emptyIcon: '🙂',
-                emptyLabel: 'Feeling',
                 counts
             })}
         </div>
@@ -111,7 +174,7 @@ export function renderReactionSelectors(params) {
 }
 
 /**
- * Update a rendered selector's counts/active state from the API response.
+ * Update a rendered selector's summary/options from the API response.
  *
  * @param {HTMLElement} container - Post actions or comment element
  * @param {'quality'|'feeling'} axis
@@ -125,28 +188,27 @@ export function updateReactionSelector(container, axis, response) {
     const counts = response?.counts || {};
     const selected = axis === 'quality' ? response?.quality : response?.feeling;
     const options = axis === 'quality' ? QUALITY_OPTIONS : FEELING_OPTIONS;
-    const selectedOption = optionFor(options, selected);
-    let total = 0;
+    const summary = summaryContent(axis, selected, counts);
 
     selector.querySelectorAll('.reaction-option').forEach((button) => {
         const value = button.dataset.reactionValue;
-        const option = optionFor(options, value);
-        if (!option) return;
-        const count = Number(counts[option.countKey]) || 0;
-        total += count;
         const active = selected === value;
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
-        const countElement = button.querySelector('.reaction-option-count');
-        if (countElement) countElement.textContent = count;
+
+        if (axis === 'feeling') {
+            const option = optionFor(options, value);
+            const countElement = button.querySelector('.reaction-option-count');
+            if (option && countElement) countElement.textContent = countOf(counts, option);
+        }
     });
 
-    const summaryIcon = selector.querySelector('.reaction-summary-icon');
-    const summaryLabel = selector.querySelector('.reaction-summary-label');
-    const summaryCount = selector.querySelector('.reaction-summary-count');
-    if (summaryIcon) summaryIcon.textContent = selectedOption ? selectedOption.icon : (axis === 'quality' ? '⚖️' : '🙂');
-    if (summaryLabel) summaryLabel.textContent = selectedOption ? selectedOption.label : (axis === 'quality' ? 'Quality' : 'Feeling');
-    if (summaryCount) summaryCount.textContent = total;
+    const summaryElement = selector.querySelector('.reaction-selector-summary');
+    if (summaryElement) {
+        summaryElement.innerHTML = summary.html;
+        summaryElement.setAttribute('title', summary.title);
+        summaryElement.setAttribute('aria-label', summary.title);
+    }
 }
 
 export default { renderReactionSelectors, updateReactionSelector, QUALITY_OPTIONS, FEELING_OPTIONS };
