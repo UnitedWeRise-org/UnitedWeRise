@@ -16,6 +16,14 @@ export interface EngagementWeights {
   reportsWeight: number; // Negative weight for reported content
   commentEngagement: number; // Weight for comment engagement metrics
   enhancedShares: number; // Weight for enhanced share metrics (quote shares, quality, etc.)
+  // Reaction quality (content vote)
+  qualityLove: number;
+  qualityLike: number;
+  qualityMeh: number;
+  qualityDislike: number;
+  // Feeling intensity (not valence) for ranking
+  feelingStrong: number;
+  feelingMild: number;
 }
 
 export interface EngagementMetrics {
@@ -23,6 +31,16 @@ export interface EngagementMetrics {
   dislikesCount: number;
   agreesCount: number;
   disagreesCount: number;
+  // Detailed reaction counters (preferred when present)
+  loveCount?: number;
+  likeCount?: number;
+  mehCount?: number;
+  dislikeCount?: number;
+  veryPositiveCount?: number;
+  positiveCount?: number;
+  neutralFeelingCount?: number;
+  negativeCount?: number;
+  veryNegativeCount?: number;
   commentsCount: number;
   sharesCount: number;
   viewsCount: number;
@@ -77,7 +95,15 @@ export class EngagementScoringService {
       communityNotes: 2.5,
       reportsWeight: -0.5, // Negative impact
       commentEngagement: 1.5, // Comment reactions show deep engagement
-      enhancedShares: 2.5 // Enhanced share metrics (quote shares, quality)
+      enhancedShares: 2.5, // Enhanced share metrics (quote shares, quality)
+      // Quality is a content vote. Negative quality lowers the score.
+      qualityLove: 2.0,
+      qualityLike: 1.0,
+      qualityMeh: -0.5,
+      qualityDislike: -1.0,
+      // Feeling intensity is engagement/controversy, not happy=good/sad=bad.
+      feelingStrong: 1.0,
+      feelingMild: 0.5
     },
     modifiers: {
       timeDecayEnabled: true,
@@ -138,7 +164,13 @@ export class EngagementScoringService {
           communityNotes: 1.0,
           reportsWeight: -1.0,
           commentEngagement: 1.0,
-          enhancedShares: 2.0
+          enhancedShares: 2.0,
+          qualityLove: 2.0,
+          qualityLike: 1.0,
+          qualityMeh: -0.5,
+          qualityDislike: -1.0,
+          feelingStrong: 1.0,
+          feelingMild: 0.5
         },
         modifiers: {
           timeDecayEnabled: true,
@@ -163,7 +195,13 @@ export class EngagementScoringService {
           communityNotes: 3.0, // Community notes indicate importance
           reportsWeight: 0.0, // Don't penalize controversial content
           commentEngagement: 2.0, // High weight for controversial discussions
-          enhancedShares: 1.5 // Moderate weight for controversial content sharing
+          enhancedShares: 1.5, // Moderate weight for controversial content sharing
+          qualityLove: 2.0,
+          qualityLike: 1.0,
+          qualityMeh: -0.5,
+          qualityDislike: -1.0,
+          feelingStrong: 1.0,
+          feelingMild: 0.5
         },
         modifiers: {
           timeDecayEnabled: true,
@@ -188,7 +226,13 @@ export class EngagementScoringService {
           communityNotes: 1.0,
           reportsWeight: -2.0, // Heavy penalty for reported content
           commentEngagement: 3.0, // Very high weight for quality discussions
-          enhancedShares: 4.5 // Very high weight for quality content sharing
+          enhancedShares: 4.5, // Very high weight for quality content sharing
+          qualityLove: 2.0,
+          qualityLike: 1.0,
+          qualityMeh: -0.5,
+          qualityDislike: -1.0,
+          feelingStrong: 1.0,
+          feelingMild: 0.5
         },
         modifiers: {
           timeDecayEnabled: true,
@@ -213,7 +257,13 @@ export class EngagementScoringService {
           communityNotes: 2.5,
           reportsWeight: -0.5,
           commentEngagement: 1.5,
-          enhancedShares: 2.5
+          enhancedShares: 2.5,
+          qualityLove: 2.0,
+          qualityLike: 1.0,
+          qualityMeh: -0.5,
+          qualityDislike: -1.0,
+          feelingStrong: 1.0,
+          feelingMild: 0.5
         },
         modifiers: {
           timeDecayEnabled: true,
@@ -248,12 +298,36 @@ export class EngagementScoringService {
     const weights = this.config.weights;
     const modifiers = this.config.modifiers;
 
+    const hasDetailedQuality =
+      metrics.loveCount !== undefined ||
+      metrics.likeCount !== undefined ||
+      metrics.mehCount !== undefined ||
+      metrics.dislikeCount !== undefined;
+    const hasDetailedFeeling =
+      metrics.veryPositiveCount !== undefined ||
+      metrics.positiveCount !== undefined ||
+      metrics.neutralFeelingCount !== undefined ||
+      metrics.negativeCount !== undefined ||
+      metrics.veryNegativeCount !== undefined;
+
+    const qualityComponent = hasDetailedQuality
+      ? (metrics.loveCount || 0) * weights.qualityLove +
+        (metrics.likeCount || 0) * weights.qualityLike +
+        (metrics.mehCount || 0) * weights.qualityMeh +
+        (metrics.dislikeCount || 0) * weights.qualityDislike
+      : (metrics.likesCount * weights.likes) +
+        (metrics.dislikesCount * weights.dislikes);
+
+    const feelingComponent = hasDetailedFeeling
+      ? ((metrics.veryPositiveCount || 0) + (metrics.veryNegativeCount || 0)) * weights.feelingStrong +
+        ((metrics.positiveCount || 0) + (metrics.negativeCount || 0)) * weights.feelingMild
+      : (metrics.agreesCount * weights.agrees) +
+        (metrics.disagreesCount * weights.disagrees);
+
     // Base engagement calculation
     let baseScore =
-      (metrics.likesCount * weights.likes) +
-      (metrics.dislikesCount * weights.dislikes) +
-      (metrics.agreesCount * weights.agrees) +
-      (metrics.disagreesCount * weights.disagrees) +
+      qualityComponent +
+      feelingComponent +
       (metrics.commentsCount * weights.comments) +
       (metrics.sharesCount * weights.shares) +
       (metrics.viewsCount * weights.views) +
@@ -283,6 +357,8 @@ export class EngagementScoringService {
     // Create breakdown for debugging/transparency
     const breakdown: any = {
       baseComponents: {
+        quality: qualityComponent,
+        feeling: feelingComponent,
         likes: metrics.likesCount * weights.likes,
         dislikes: metrics.dislikesCount * weights.dislikes,
         agrees: metrics.agreesCount * weights.agrees,
@@ -399,8 +475,18 @@ export class EngagementScoringService {
    * Determine if a post is controversial
    */
   private static isControversial(metrics: EngagementMetrics, threshold: number): boolean {
-    const totalAgreement = metrics.likesCount + metrics.agreesCount;
-    const totalDisagreement = metrics.dislikesCount + metrics.disagreesCount;
+    const hasDetailedFeeling =
+      metrics.veryPositiveCount !== undefined ||
+      metrics.positiveCount !== undefined ||
+      metrics.negativeCount !== undefined ||
+      metrics.veryNegativeCount !== undefined;
+
+    const totalAgreement = hasDetailedFeeling
+      ? (metrics.veryPositiveCount || 0) + (metrics.positiveCount || 0)
+      : metrics.likesCount + metrics.agreesCount;
+    const totalDisagreement = hasDetailedFeeling
+      ? (metrics.negativeCount || 0) + (metrics.veryNegativeCount || 0)
+      : metrics.dislikesCount + metrics.disagreesCount;
 
     if (totalAgreement === 0 && totalDisagreement === 0) return false;
 

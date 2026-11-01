@@ -27,8 +27,8 @@ export interface EnrichedRiseAIResponse {
     dislikesCount: number;
     agreesCount: number;
     disagreesCount: number;
-    userSentiment?: 'LIKE' | 'DISLIKE' | null;
-    userStance?: 'AGREE' | 'DISAGREE' | null;
+    userQuality?: 'LOVE' | 'LIKE' | 'MEH' | 'DISLIKE' | null;
+    userFeeling?: 'VERY_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'VERY_NEGATIVE' | null;
     author: {
       id: string;
       username: string;
@@ -205,7 +205,7 @@ export class RiseAIEnrichmentService {
       const commentsById = new Map(responseComments.map(c => [c.id, c]));
 
       // Fetch user reactions if currentUserId provided
-      let userReactions = new Map<string, { sentiment: string | null; stance: string | null }>();
+      let userReactions = new Map<string, { quality: string | null; feeling: string | null }>();
       if (currentUserId && responseCommentIds.length > 0) {
         const reactions = await prisma.reaction.findMany({
           where: {
@@ -214,16 +214,16 @@ export class RiseAIEnrichmentService {
           },
           select: {
             commentId: true,
-            sentiment: true,
-            stance: true,
+            quality: true,
+            feeling: true,
           },
         });
 
         for (const reaction of reactions) {
           if (!reaction.commentId) continue;
           userReactions.set(reaction.commentId, {
-            sentiment: reaction.sentiment || null,
-            stance: reaction.stance || null,
+            quality: reaction.quality || null,
+            feeling: reaction.feeling || null,
           });
         }
       }
@@ -250,8 +250,8 @@ export class RiseAIEnrichmentService {
                 dislikesCount: comment.dislikesCount,
                 agreesCount: comment.agreesCount,
                 disagreesCount: comment.disagreesCount,
-                userSentiment: userReaction?.sentiment as 'LIKE' | 'DISLIKE' | null,
-                userStance: userReaction?.stance as 'AGREE' | 'DISAGREE' | null,
+                userQuality: userReaction?.quality as 'LOVE' | 'LIKE' | 'MEH' | 'DISLIKE' | null,
+                userFeeling: userReaction?.feeling as 'VERY_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'VERY_NEGATIVE' | null,
                 author: {
                   id: comment.user.id,
                   username: comment.user.username,
@@ -338,7 +338,7 @@ export class RiseAIEnrichmentService {
       const commentsById = new Map(responseComments.map(c => [c.id, c]));
 
       // Fetch user reactions
-      let userReactions = new Map<string, { sentiment: string | null; stance: string | null }>();
+      let userReactions = new Map<string, { quality: string | null; feeling: string | null }>();
       if (currentUserId && responseCommentIds.length > 0) {
         const reactions = await prisma.reaction.findMany({
           where: {
@@ -347,16 +347,16 @@ export class RiseAIEnrichmentService {
           },
           select: {
             commentId: true,
-            sentiment: true,
-            stance: true,
+            quality: true,
+            feeling: true,
           },
         });
 
         for (const reaction of reactions) {
           if (!reaction.commentId) continue;
           userReactions.set(reaction.commentId, {
-            sentiment: reaction.sentiment || null,
-            stance: reaction.stance || null,
+            quality: reaction.quality || null,
+            feeling: reaction.feeling || null,
           });
         }
       }
@@ -383,8 +383,8 @@ export class RiseAIEnrichmentService {
                 dislikesCount: comment.dislikesCount,
                 agreesCount: comment.agreesCount,
                 disagreesCount: comment.disagreesCount,
-                userSentiment: userReaction?.sentiment as 'LIKE' | 'DISLIKE' | null,
-                userStance: userReaction?.stance as 'AGREE' | 'DISAGREE' | null,
+                userQuality: userReaction?.quality as 'LOVE' | 'LIKE' | 'MEH' | 'DISLIKE' | null,
+                userFeeling: userReaction?.feeling as 'VERY_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'VERY_NEGATIVE' | null,
                 author: {
                   id: comment.user.id,
                   username: comment.user.username,
@@ -468,8 +468,8 @@ export class RiseAIEnrichmentService {
       });
 
       if (comment && !comment.isDeleted) {
-        let userSentiment: 'LIKE' | 'DISLIKE' | null = null;
-        let userStance: 'AGREE' | 'DISAGREE' | null = null;
+        let userQuality: 'LOVE' | 'LIKE' | 'MEH' | 'DISLIKE' | null = null;
+        let userFeeling: 'VERY_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'VERY_NEGATIVE' | null = null;
 
         if (currentUserId) {
           const reaction = await prisma.reaction.findFirst({
@@ -478,14 +478,14 @@ export class RiseAIEnrichmentService {
               commentId: comment.id,
             },
             select: {
-              sentiment: true,
-              stance: true,
+              quality: true,
+              feeling: true,
             },
           });
 
           if (reaction) {
-            userSentiment = reaction.sentiment as 'LIKE' | 'DISLIKE' | null;
-            userStance = reaction.stance as 'AGREE' | 'DISAGREE' | null;
+            userQuality = reaction.quality as 'LOVE' | 'LIKE' | 'MEH' | 'DISLIKE' | null;
+            userFeeling = reaction.feeling as 'VERY_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'VERY_NEGATIVE' | null;
           }
         }
 
@@ -497,8 +497,8 @@ export class RiseAIEnrichmentService {
           dislikesCount: comment.dislikesCount,
           agreesCount: comment.agreesCount,
           disagreesCount: comment.disagreesCount,
-          userSentiment,
-          userStance,
+          userQuality,
+          userFeeling,
           author: {
             id: comment.user.id,
             username: comment.user.username,

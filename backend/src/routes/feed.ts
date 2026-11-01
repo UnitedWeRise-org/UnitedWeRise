@@ -15,6 +15,38 @@ import { safeJSONParse, PAGINATION_LIMITS, safePaginationParams } from '../utils
 const MAX_FETCH = 1000;
 
 const router = express.Router();
+
+/**
+ * Attach the viewer's current quality/feeling reaction to feed posts.
+ * Also normalizes likesCount to the Post aggregate (LOVE + LIKE).
+ *
+ * @param posts - Posts to decorate
+ * @param userId - Viewer user id
+ * @returns Decorated posts
+ */
+async function attachReactionState(posts: any[], userId: string) {
+  const postIds = posts.map((post) => post.id).filter(Boolean);
+  if (postIds.length === 0) return posts;
+
+  const reactions = await prisma.reaction.findMany({
+    where: { userId, postId: { in: postIds } },
+    select: { postId: true, quality: true, feeling: true }
+  });
+
+  const byPost = new Map(reactions.map((reaction) => [reaction.postId, reaction]));
+
+  return posts.map((post) => {
+    const reaction = byPost.get(post.id);
+    const quality = reaction?.quality || null;
+    return {
+      ...post,
+      userQuality: quality,
+      userFeeling: reaction?.feeling || null,
+      isLiked: quality === 'LOVE' || quality === 'LIKE' || !!post.isLiked,
+      likesCount: post.likesCount ?? post._count?.likes ?? 0
+    };
+  });
+}
 // Using singleton prisma from lib/prisma.ts
 
 /**
@@ -206,13 +238,15 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       _count: { threadPosts: post._count.threadPosts || 0 }
     }));
 
+    const postsWithReactions = await attachReactionState(postsWithLikeStatus, userId);
+
     // Enrich posts with RiseAI responses (batch for efficiency)
     const riseAIResponses = await RiseAIEnrichmentService.enrichPostsWithResponses(
       postIds,
       userId
     );
 
-    const postsWithRiseAI = postsWithLikeStatus.map(post => ({
+    const postsWithRiseAI = postsWithReactions.map(post => ({
       ...post,
       riseAIResponse: riseAIResponses.get(post.id) || undefined
     }));
@@ -502,13 +536,15 @@ router.get('/following', requireAuth, async (req: AuthRequest, res) => {
       _relationshipMultiplier: undefined
     }));
 
+    const postsWithReactions = await attachReactionState(postsWithLikeStatus, userId);
+
     res.json({
-      posts: postsWithLikeStatus,
+      posts: postsWithReactions,
       pagination: {
         limit: limitNum,
         offset: offsetNum,
-        count: postsWithLikeStatus.length,
-        hasMore: postsWithLikeStatus.length === limitNum
+        count: postsWithReactions.length,
+        hasMore: postsWithReactions.length === limitNum
       }
     });
   } catch (error) {
@@ -685,6 +721,15 @@ router.get('/trending', async (req, res) => {
         dislikesCount: post.dislikesCount || 0,
         agreesCount: post.agreesCount || 0,
         disagreesCount: post.disagreesCount || 0,
+        loveCount: post.loveCount || 0,
+        likeCount: post.likeCount || 0,
+        mehCount: post.mehCount || 0,
+        dislikeCount: post.dislikeCount || 0,
+        veryPositiveCount: post.veryPositiveCount || 0,
+        positiveCount: post.positiveCount || 0,
+        neutralFeelingCount: post.neutralFeelingCount || 0,
+        negativeCount: post.negativeCount || 0,
+        veryNegativeCount: post.veryNegativeCount || 0,
         commentsCount: post.commentsCount || 0,
         sharesCount: post.sharesCount || 0,
         viewsCount: 0, // Views not implemented yet
@@ -925,10 +970,19 @@ router.get('/public', async (req, res) => {
       content: post.content,
       author: post.author,
       photos: post.photos,
-      likesCount: post._count?.likes || 0,
+      likesCount: post.likesCount ?? post._count?.likes ?? 0,
       commentsCount: post._count?.comments || 0,
       sharesCount: post._count?.shares || 0,
       threadPostsCount: post._count?.threadPosts || 0,
+      loveCount: post.loveCount || 0,
+      likeCount: post.likeCount || 0,
+      mehCount: post.mehCount || 0,
+      dislikeCount: post.dislikeCount || 0,
+      veryPositiveCount: post.veryPositiveCount || 0,
+      positiveCount: post.positiveCount || 0,
+      neutralFeelingCount: post.neutralFeelingCount || 0,
+      negativeCount: post.negativeCount || 0,
+      veryNegativeCount: post.veryNegativeCount || 0,
       _count: { threadPosts: post._count?.threadPosts || 0 },
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
@@ -1026,28 +1080,49 @@ router.get('/slot-roll', requireAuth, async (req: AuthRequest, res) => {
     });
     const likedPostIds = new Set(userLikes.map(like => like.postId));
 
+    const userReactions = await prisma.reaction.findMany({
+      where: { userId, postId: { in: postIds } },
+      select: { postId: true, quality: true, feeling: true }
+    });
+    const reactionByPost = new Map(userReactions.map((reaction) => [reaction.postId, reaction]));
+
     // Enrich posts with RiseAI responses (batch for efficiency)
     const riseAIResponses = await RiseAIEnrichmentService.enrichPostsWithResponses(
       postIds,
       userId
     );
 
-    const posts = audienceFilteredPosts.map(({ post, pool }) => ({
-      id: post.id,
-      content: post.content,
-      author: post.author,
-      photos: post.photos,
-      likesCount: post._count?.likes || 0,
-      commentsCount: post._count?.comments || 0,
-      sharesCount: post._count?.shares || 0,
-      threadPostsCount: post._count?.threadPosts || 0,
-      _count: { threadPosts: post._count?.threadPosts || 0 },
-      isLiked: likedPostIds.has(post.id),
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      riseAIResponse: riseAIResponses.get(post.id) || undefined,
-      _pool: pool
-    }));
+    const posts = audienceFilteredPosts.map(({ post, pool }) => {
+      const reaction = reactionByPost.get(post.id);
+      const quality = reaction?.quality || null;
+      return {
+        id: post.id,
+        content: post.content,
+        author: post.author,
+        photos: post.photos,
+        likesCount: post.likesCount ?? post._count?.likes ?? 0,
+        commentsCount: post._count?.comments || 0,
+        sharesCount: post._count?.shares || 0,
+        threadPostsCount: post._count?.threadPosts || 0,
+        loveCount: post.loveCount || 0,
+        likeCount: post.likeCount || 0,
+        mehCount: post.mehCount || 0,
+        dislikeCount: post.dislikeCount || 0,
+        veryPositiveCount: post.veryPositiveCount || 0,
+        positiveCount: post.positiveCount || 0,
+        neutralFeelingCount: post.neutralFeelingCount || 0,
+        negativeCount: post.negativeCount || 0,
+        veryNegativeCount: post.veryNegativeCount || 0,
+        userQuality: quality,
+        userFeeling: reaction?.feeling || null,
+        _count: { threadPosts: post._count?.threadPosts || 0 },
+        isLiked: quality === 'LOVE' || quality === 'LIKE' || likedPostIds.has(post.id),
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        riseAIResponse: riseAIResponses.get(post.id) || undefined,
+        _pool: pool
+      };
+    });
 
     res.json({
       success: true,

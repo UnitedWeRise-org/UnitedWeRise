@@ -8,6 +8,33 @@
 
 ---
 
+## [2026-10-31] - Reaction Model Rework (Quality + Feeling)
+
+### Added
+- **Two independent reaction axes** on posts and comments:
+  - **Quality:** Love (+2), Like (+1), Meh (-0.5), Dislike (-1).
+  - **Feeling:** Beaming, Smile, Neutral, Sad, Angry (5-level event/issue sentiment).
+- Compact expandable selectors replace the 2×2 Like/Dislike/Agree/Disagree matrix.
+- Detailed counters on `Post`/`Comment` plus legacy aggregates (`likesCount`, `dislikesCount`, `agreesCount`, `disagreesCount`) for downstream compatibility.
+- Quality drives content ranking; feeling contributes participation intensity/controversy and will drive topic sentiment breakdowns.
+- Notifications only for Love/Like; Meh/Dislike and feeling changes stay silent.
+
+### Changed
+- `POST /api/posts/:postId/reaction` and the comment reaction endpoint accept `{ quality, feeling }` (both optional; explicit `null` clears). Legacy `{reactionType, reactionValue}` is still accepted for older clients.
+- `POST /api/posts/:postId/like` is now a compatibility shortcut that sets/clears quality LIKE through the same service.
+- `EngagementScoringService` supports detailed quality/feeling metrics and weights.
+- Feed/post responses include `userQuality`, `userFeeling`, and the detailed counts.
+
+### Data
+- Migration `20261031050000_rework_reactions_quality_feeling`: maps old sentiment→quality (LIKE/DISLIKE) and stance→feeling (AGREE→POSITIVE, DISAGREE→NEGATIVE), adds detailed counters, backfills from legacy aggregates, drops old enums/columns.
+
+### Files
+- Backend: `prisma/schema.prisma`, migration, `src/services/reactionService.ts`, `src/services/engagementScoringService.ts`, `src/services/probabilityFeedService.ts`, `src/routes/posts.ts`, `src/routes/feed.ts`, `src/services/riseAIEnrichmentService.ts`
+- Frontend: `src/components/reaction-selectors.js`, `src/components/PostComponent.js`, `src/modules/features/content/UnifiedPostRenderer.js`, `src/styles/post-component.css`
+- Devlog: `docs/devlogs/2026-10-31-reaction-rework.md`
+
+---
+
 ## [2026-10-30] - Login Persistence & TOTP Session Fix
 
 ### Fixed

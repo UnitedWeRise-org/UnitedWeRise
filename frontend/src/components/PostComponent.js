@@ -5,6 +5,7 @@
  */
 
 import { apiCall } from '../js/api-compatibility-shim.js';
+import { renderReactionSelectors, updateReactionSelector } from './reaction-selectors.js';
 
 class PostComponent {
     /**
@@ -213,128 +214,54 @@ class PostComponent {
      * @param {string} reactionType - 'sentiment' or 'stance'
      * @param {string} reactionValue - 'LIKE'/'DISLIKE' for sentiment, 'AGREE'/'DISAGREE' for stance
      */
-    async toggleReaction(postId, reactionType, reactionValue) {
-        console.log('🔄 toggleReaction called:', { postId, reactionType, reactionValue });
+    async toggleReaction(postId, axis, value) {
+        if (!['quality', 'feeling'].includes(axis)) return;
 
-        // Check authentication using current user
         const currentUser = window.currentUser;
         if (!currentUser) {
             alert('Please log in to react to posts');
             return;
         }
 
-        // Prevent concurrent requests for same post+type (race condition protection)
-        const requestKey = `${postId}-${reactionType}`;
-        if (this._pendingReactions.has(requestKey)) {
-            console.log('⏳ Reaction already in progress, ignoring click');
-            return;
-        }
+        const requestKey = `${postId}-${axis}`;
+        if (this._pendingReactions.has(requestKey)) return;
         this._pendingReactions.add(requestKey);
 
-        // Find the post-actions container specifically (not any element with data-post-id)
         const postActions = document.querySelector(`.post-actions[data-post-id="${postId}"]`);
-        if (!postActions) {
-            console.warn('⚠️ toggleReaction: post-actions not found for postId:', postId);
-            // Fallback: try finding any container with the postId
-            const fallbackContainer = document.querySelector(`[data-post-id="${postId}"]`);
-            console.log('Fallback container:', fallbackContainer?.className);
+        const button = postActions?.querySelector(
+            `.reaction-selector[data-reaction-axis="${axis}"] .reaction-option[data-reaction-value="${value}"]`
+        );
+        if (!postActions || !button) {
             this._pendingReactions.delete(requestKey);
             return;
         }
 
-        // Find the specific reaction button
-        const reactionBtn = postActions.querySelector(`[data-reaction-type="${reactionType}"][data-reaction-value="${reactionValue}"]`);
-        if (!reactionBtn) {
-            console.warn('⚠️ toggleReaction: reactionBtn not found:', { reactionType, reactionValue });
-            console.log('Available buttons:', postActions.querySelectorAll('[data-reaction-type]').length);
-            this._pendingReactions.delete(requestKey);
-            return;
-        }
-        console.log('✅ Found reaction button, proceeding with toggle');
-
-        const isActive = reactionBtn.classList.contains('active');
-        const countElement = reactionBtn.querySelector('.reaction-count');
-        const currentCount = parseInt(countElement.textContent) || 0;
-
-        // Find other buttons in the same group to deactivate them
-        const groupButtons = postActions.querySelectorAll(`[data-reaction-type="${reactionType}"]`);
-
-        // Store original states for rollback
-        const originalStates = Array.from(groupButtons).map(btn => ({
-            button: btn,
-            wasActive: btn.classList.contains('active'),
-            originalCount: parseInt(btn.querySelector('.reaction-count').textContent) || 0
-        }));
-
-        // Optimistic UI update
-        if (isActive) {
-            // Deactivate current reaction
-            reactionBtn.classList.remove('active');
-            countElement.textContent = Math.max(0, currentCount - 1);
-        } else {
-            // Deactivate other buttons in the same group
-            groupButtons.forEach(btn => {
-                if (btn !== reactionBtn && btn.classList.contains('active')) {
-                    btn.classList.remove('active');
-                    const btnCount = btn.querySelector('.reaction-count');
-                    const btnCurrentCount = parseInt(btnCount.textContent) || 0;
-                    btnCount.textContent = Math.max(0, btnCurrentCount - 1);
-                }
-            });
-
-            // Activate current reaction
-            reactionBtn.classList.add('active');
-            countElement.textContent = currentCount + 1;
-        }
+        const isActive = button.classList.contains('active');
 
         try {
             const response = await apiCall(`/posts/${postId}/reaction`, {
                 method: 'POST',
-                body: JSON.stringify({
-                    reactionType,
-                    reactionValue: isActive ? null : reactionValue // null to remove reaction
-                })
+                body: JSON.stringify({ [axis]: isActive ? null : value })
             });
 
-            if (!response.ok) {
-                console.error('Failed to toggle reaction:', {
-                    status: response.status,
-                    error: response.data?.error || response.data?.message || 'Unknown error',
-                    reactionType,
-                    reactionValue,
-                    endpoint: `/posts/${postId}/reaction`
-                });
+            if (!response.ok || !response.data) {
+                throw new Error(response.data?.error || 'Failed to update reaction');
+            }
 
-                // Revert all UI changes on error
-                originalStates.forEach(state => {
-                    if (state.wasActive) {
-                        state.button.classList.add('active');
-                    } else {
-                        state.button.classList.remove('active');
-                    }
-                    state.button.querySelector('.reaction-count').textContent = state.originalCount;
-                });
-            } else {
-                // Invalidate post cache so focused view shows updated reactions
-                if (window.apiClient) {
-                    window.apiClient.invalidateCache(`/posts/${postId}$`);
-                    window.apiClient.invalidateCache(`/posts/${postId}/comments`);
-                }
+            updateReactionSelector(postActions, 'quality', response.data);
+            updateReactionSelector(postActions, 'feeling', response.data);
+            postActions.querySelectorAll('details.reaction-selector[open]').forEach((details) => {
+                details.open = false;
+            });
+
+            if (window.apiClient) {
+                window.apiClient.invalidateCache(`/posts/${postId}$`);
+                window.apiClient.invalidateCache(`/posts/${postId}/comments`);
             }
         } catch (error) {
             console.error('Error toggling reaction:', error);
-
-            // Revert all UI changes on error
-            originalStates.forEach(state => {
-                if (state.wasActive) {
-                    state.button.classList.add('active');
-                } else {
-                    state.button.classList.remove('active');
-                }
-                state.button.querySelector('.reaction-count').textContent = state.originalCount;
-            });
+            if (window.showToast) window.showToast('Failed to update reaction', 4000);
         } finally {
-            // Always clear pending state to allow future reactions
             this._pendingReactions.delete(requestKey);
         }
     }
@@ -342,97 +269,50 @@ class PostComponent {
     /**
      * Toggle reaction on a comment
      */
-    async toggleCommentReaction(commentId, reactionType, reactionValue) {
-        // Check authentication using current user
+    async toggleCommentReaction(commentId, axis, value) {
+        if (!['quality', 'feeling'].includes(axis)) return;
+
         const currentUser = window.currentUser;
         if (!currentUser) {
             alert('Please log in to react to comments');
             return;
         }
 
+        const requestKey = `comment-${commentId}-${axis}`;
+        if (this._pendingReactions.has(requestKey)) return;
+        this._pendingReactions.add(requestKey);
+
         const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
-        if (!commentElement) return;
-
-        // Find the specific reaction button using both reaction type and value
-        const reactionBtn = commentElement.querySelector(`.comment-reaction-btn.${reactionType}-${reactionValue.toLowerCase()}`);
-        if (!reactionBtn) return;
-
-        const isActive = reactionBtn.classList.contains('active');
-        const countElement = reactionBtn.querySelector('.reaction-count');
-        const currentCount = parseInt(countElement.textContent) || 0;
-
-        // Find other buttons in the same group to deactivate them
-        const groupSelector = reactionType === 'sentiment' ? '.comment-sentiment-group .comment-reaction-btn' : '.comment-stance-group .comment-reaction-btn';
-        const groupButtons = commentElement.querySelectorAll(groupSelector);
-
-        // Store original states for rollback
-        const originalStates = Array.from(groupButtons).map(btn => ({
-            button: btn,
-            wasActive: btn.classList.contains('active'),
-            originalCount: parseInt(btn.querySelector('.reaction-count').textContent) || 0
-        }));
-
-        // Optimistic UI update
-        if (isActive) {
-            // Deactivate current reaction
-            reactionBtn.classList.remove('active');
-            countElement.textContent = Math.max(0, currentCount - 1);
-        } else {
-            // Deactivate other buttons in the same group
-            groupButtons.forEach(btn => {
-                if (btn !== reactionBtn && btn.classList.contains('active')) {
-                    btn.classList.remove('active');
-                    const btnCount = btn.querySelector('.reaction-count');
-                    const btnCurrentCount = parseInt(btnCount.textContent) || 0;
-                    btnCount.textContent = Math.max(0, btnCurrentCount - 1);
-                }
-            });
-
-            // Activate current reaction
-            reactionBtn.classList.add('active');
-            countElement.textContent = currentCount + 1;
+        const button = commentElement?.querySelector(
+            `.reaction-selector[data-reaction-axis="${axis}"] .reaction-option[data-reaction-value="${value}"]`
+        );
+        if (!commentElement || !button) {
+            this._pendingReactions.delete(requestKey);
+            return;
         }
+
+        const isActive = button.classList.contains('active');
 
         try {
             const response = await apiCall(`/posts/comments/${commentId}/reaction`, {
                 method: 'POST',
-                body: JSON.stringify({
-                    reactionType,
-                    reactionValue: isActive ? null : reactionValue // null to remove reaction
-                })
+                body: JSON.stringify({ [axis]: isActive ? null : value })
             });
 
-            if (!response.ok) {
-                console.error('Failed to toggle comment reaction:', {
-                    status: response.status,
-                    error: response.data?.error || response.data?.message || 'Unknown error',
-                    reactionType,
-                    reactionValue,
-                    endpoint: `/posts/comments/${commentId}/reaction`
-                });
-
-                // Revert all UI changes on error
-                originalStates.forEach(state => {
-                    if (state.wasActive) {
-                        state.button.classList.add('active');
-                    } else {
-                        state.button.classList.remove('active');
-                    }
-                    state.button.querySelector('.reaction-count').textContent = state.originalCount;
-                });
+            if (!response.ok || !response.data) {
+                throw new Error(response.data?.error || 'Failed to update comment reaction');
             }
+
+            updateReactionSelector(commentElement, 'quality', response.data);
+            updateReactionSelector(commentElement, 'feeling', response.data);
+            commentElement.querySelectorAll('details.reaction-selector[open]').forEach((details) => {
+                details.open = false;
+            });
         } catch (error) {
             console.error('Error toggling comment reaction:', error);
-
-            // Revert all UI changes on error
-            originalStates.forEach(state => {
-                if (state.wasActive) {
-                    state.button.classList.add('active');
-                } else {
-                    state.button.classList.remove('active');
-                }
-                state.button.querySelector('.reaction-count').textContent = state.originalCount;
-            });
+            if (window.showToast) window.showToast('Failed to update reaction', 4000);
+        } finally {
+            this._pendingReactions.delete(requestKey);
         }
     }
 
@@ -2170,80 +2050,26 @@ class PostComponent {
      * Render enhanced reaction system with grouped sentiment/stance buttons
      */
     renderEnhancedReactions(post) {
-        return `
-            <div class="reaction-groups">
-                <div class="sentiment-group">
-                    <button class="reaction-btn sentiment-like ${post.userSentiment === 'LIKE' ? 'active' : ''}"
-                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="sentiment" data-param2="LIKE"
-                            data-reaction-type="sentiment"
-                            data-reaction-value="LIKE">
-                        <span class="emoji">😊</span>
-                        <span class="reaction-count">${post.likesCount || 0}</span>
-                    </button>
-                    <button class="reaction-btn sentiment-dislike ${post.userSentiment === 'DISLIKE' ? 'active' : ''}"
-                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="sentiment" data-param2="DISLIKE"
-                            data-reaction-type="sentiment"
-                            data-reaction-value="DISLIKE">
-                        <span class="emoji">😞</span>
-                        <span class="reaction-count">${post.dislikesCount || 0}</span>
-                    </button>
-                </div>
-                <div class="stance-group">
-                    <button class="reaction-btn stance-agree ${post.userStance === 'AGREE' ? 'active' : ''}"
-                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="stance" data-param2="AGREE"
-                            data-reaction-type="stance"
-                            data-reaction-value="AGREE">
-                        <span class="emoji">👍</span>
-                        <span class="reaction-count">${post.agreesCount || 0}</span>
-                    </button>
-                    <button class="reaction-btn stance-disagree ${post.userStance === 'DISAGREE' ? 'active' : ''}"
-                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="stance" data-param2="DISAGREE"
-                            data-reaction-type="stance"
-                            data-reaction-value="DISAGREE">
-                        <span class="emoji">👎</span>
-                        <span class="reaction-count">${post.disagreesCount || 0}</span>
-                    </button>
-                </div>
-            </div>
-        `;
+        return renderReactionSelectors({
+            targetType: 'post',
+            targetId: post.id,
+            selectedQuality: post.userQuality || null,
+            selectedFeeling: post.userFeeling || null,
+            counts: post
+        });
     }
 
     /**
      * Render compact reaction buttons for comments
      */
     renderCommentReactions(comment) {
-        return `
-            <div class="comment-reaction-groups">
-                <div class="comment-sentiment-group">
-                    <button class="comment-reaction-btn sentiment-like ${comment.userSentiment === 'LIKE' ? 'active' : ''}"
-                            data-action="toggleCommentReaction" data-comment-id="${comment.id}" data-param1="sentiment" data-param2="LIKE"
-                            title="Like this comment">
-                        <span class="emoji">😊</span>
-                        <span class="reaction-count">${comment.likesCount || 0}</span>
-                    </button>
-                    <button class="comment-reaction-btn sentiment-dislike ${comment.userSentiment === 'DISLIKE' ? 'active' : ''}"
-                            data-action="toggleCommentReaction" data-comment-id="${comment.id}" data-param1="sentiment" data-param2="DISLIKE"
-                            title="Dislike this comment">
-                        <span class="emoji">😞</span>
-                        <span class="reaction-count">${comment.dislikesCount || 0}</span>
-                    </button>
-                </div>
-                <div class="comment-stance-group">
-                    <button class="comment-reaction-btn stance-agree ${comment.userStance === 'AGREE' ? 'active' : ''}"
-                            data-action="toggleCommentReaction" data-comment-id="${comment.id}" data-param1="stance" data-param2="AGREE"
-                            title="Agree with this comment">
-                        <span class="emoji">👍</span>
-                        <span class="reaction-count">${comment.agreesCount || 0}</span>
-                    </button>
-                    <button class="comment-reaction-btn stance-disagree ${comment.userStance === 'DISAGREE' ? 'active' : ''}"
-                            data-action="toggleCommentReaction" data-comment-id="${comment.id}" data-param1="stance" data-param2="DISAGREE"
-                            title="Disagree with this comment">
-                        <span class="emoji">👎</span>
-                        <span class="reaction-count">${comment.disagreesCount || 0}</span>
-                    </button>
-                </div>
-            </div>
-        `;
+        return renderReactionSelectors({
+            targetType: 'comment',
+            targetId: comment.id,
+            selectedQuality: comment.userQuality || null,
+            selectedFeeling: comment.userFeeling || null,
+            counts: comment
+        });
     }
 
     /**
@@ -2564,6 +2390,25 @@ class PostComponent {
                     const postId = e.target.id.replace('comment-input-', '');
                     this.addComment(postId);
                 }
+            }
+        });
+
+        // Keep reaction dropdowns mutually exclusive / close on outside click
+        document.addEventListener('click', (e) => {
+            const summary = e.target.closest('details.reaction-selector summary');
+            if (summary) {
+                const details = summary.closest('details.reaction-selector');
+                setTimeout(() => {
+                    document.querySelectorAll('details.reaction-selector[open]').forEach((other) => {
+                        if (other !== details) other.open = false;
+                    });
+                }, 0);
+                return;
+            }
+            if (!e.target.closest('details.reaction-selector')) {
+                document.querySelectorAll('details.reaction-selector[open]').forEach((other) => {
+                    other.open = false;
+                });
             }
         });
 
@@ -3828,12 +3673,6 @@ class PostComponent {
             .replace(/\n/g, '<br>')
             .replace(/https?:\/\/[^\s]+/g, '<a href="$&" target="_blank" rel="noopener noreferrer">$&</a>');
 
-        // Determine active reaction states
-        const likeActive = response.userSentiment === 'LIKE' ? 'active' : '';
-        const dislikeActive = response.userSentiment === 'DISLIKE' ? 'active' : '';
-        const agreeActive = response.userStance === 'AGREE' ? 'active' : '';
-        const disagreeActive = response.userStance === 'DISAGREE' ? 'active' : '';
-
         return `
             <div class="riseai-inline-response riseai-comment-response"
                  data-comment-id="${response.id}"
@@ -3858,42 +3697,13 @@ class PostComponent {
                     ${processedContent}
                 </div>
                 <div class="riseai-response-actions">
-                    <button class="riseai-reaction-btn ${likeActive}"
-                            data-action="toggleRiseAIReaction"
-                            data-comment-id="${response.id}"
-                            data-reaction-type="SENTIMENT"
-                            data-reaction-value="LIKE"
-                            title="Like">
-                        <span class="reaction-icon">👍</span>
-                        <span class="reaction-count">${response.likesCount || 0}</span>
-                    </button>
-                    <button class="riseai-reaction-btn ${dislikeActive}"
-                            data-action="toggleRiseAIReaction"
-                            data-comment-id="${response.id}"
-                            data-reaction-type="SENTIMENT"
-                            data-reaction-value="DISLIKE"
-                            title="Dislike">
-                        <span class="reaction-icon">👎</span>
-                        <span class="reaction-count">${response.dislikesCount || 0}</span>
-                    </button>
-                    <button class="riseai-reaction-btn ${agreeActive}"
-                            data-action="toggleRiseAIReaction"
-                            data-comment-id="${response.id}"
-                            data-reaction-type="STANCE"
-                            data-reaction-value="AGREE"
-                            title="Agree">
-                        <span class="reaction-icon">✅</span>
-                        <span class="reaction-count">${response.agreesCount || 0}</span>
-                    </button>
-                    <button class="riseai-reaction-btn ${disagreeActive}"
-                            data-action="toggleRiseAIReaction"
-                            data-comment-id="${response.id}"
-                            data-reaction-type="STANCE"
-                            data-reaction-value="DISAGREE"
-                            title="Disagree">
-                        <span class="reaction-icon">❌</span>
-                        <span class="reaction-count">${response.disagreesCount || 0}</span>
-                    </button>
+                    ${renderReactionSelectors({
+                        targetType: 'comment',
+                        targetId: response.id,
+                        selectedQuality: response.userQuality || null,
+                        selectedFeeling: response.userFeeling || null,
+                        counts: response
+                    })}
                     <button class="riseai-reply-btn"
                             data-action="replyToRiseAI"
                             data-comment-id="${response.id}"

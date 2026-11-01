@@ -16,6 +16,8 @@
  * @module UnifiedPostRenderer
  */
 
+import { renderReactionSelectors } from '../../../components/reaction-selectors.js';
+
 /** Inline SVG placeholder for videos without thumbnails - prevents 404 errors */
 const VIDEO_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 16' fill='%231a1a1a'%3E%3Crect width='9' height='16'/%3E%3Cpath d='M3.5 5.5l3 2.5-3 2.5z' fill='white'/%3E%3C/svg%3E";
 
@@ -297,12 +299,6 @@ class UnifiedPostRenderer {
             .replace(/\n/g, '<br>')
             .replace(/https?:\/\/[^\s]+/g, '<a href="$&" target="_blank" rel="noopener noreferrer">$&</a>');
 
-        // Determine active reaction states
-        const likeActive = response.userSentiment === 'LIKE' ? 'active' : '';
-        const dislikeActive = response.userSentiment === 'DISLIKE' ? 'active' : '';
-        const agreeActive = response.userStance === 'AGREE' ? 'active' : '';
-        const disagreeActive = response.userStance === 'DISAGREE' ? 'active' : '';
-
         return `
             <div class="riseai-inline-response"
                  data-comment-id="${response.id}"
@@ -326,42 +322,13 @@ class UnifiedPostRenderer {
                     ${processedContent}
                 </div>
                 <div class="riseai-response-actions">
-                    <button class="riseai-reaction-btn ${likeActive}"
-                            data-action="toggleRiseAIReaction"
-                            data-comment-id="${response.id}"
-                            data-reaction-type="SENTIMENT"
-                            data-reaction-value="LIKE"
-                            title="Like">
-                        <span class="reaction-icon">👍</span>
-                        <span class="reaction-count">${response.likesCount || 0}</span>
-                    </button>
-                    <button class="riseai-reaction-btn ${dislikeActive}"
-                            data-action="toggleRiseAIReaction"
-                            data-comment-id="${response.id}"
-                            data-reaction-type="SENTIMENT"
-                            data-reaction-value="DISLIKE"
-                            title="Dislike">
-                        <span class="reaction-icon">👎</span>
-                        <span class="reaction-count">${response.dislikesCount || 0}</span>
-                    </button>
-                    <button class="riseai-reaction-btn ${agreeActive}"
-                            data-action="toggleRiseAIReaction"
-                            data-comment-id="${response.id}"
-                            data-reaction-type="STANCE"
-                            data-reaction-value="AGREE"
-                            title="Agree">
-                        <span class="reaction-icon">✅</span>
-                        <span class="reaction-count">${response.agreesCount || 0}</span>
-                    </button>
-                    <button class="riseai-reaction-btn ${disagreeActive}"
-                            data-action="toggleRiseAIReaction"
-                            data-comment-id="${response.id}"
-                            data-reaction-type="STANCE"
-                            data-reaction-value="DISAGREE"
-                            title="Disagree">
-                        <span class="reaction-icon">❌</span>
-                        <span class="reaction-count">${response.disagreesCount || 0}</span>
-                    </button>
+                    ${renderReactionSelectors({
+                        targetType: 'comment',
+                        targetId: response.id,
+                        selectedQuality: response.userQuality || null,
+                        selectedFeeling: response.userFeeling || null,
+                        counts: response
+                    })}
                     <button class="riseai-reply-btn"
                             data-action="replyToRiseAI"
                             data-comment-id="${response.id}"
@@ -650,42 +617,13 @@ class UnifiedPostRenderer {
      * @private
      */
     renderEnhancedReactions(post) {
-        return `
-            <div class="reaction-groups">
-                <div class="sentiment-group">
-                    <button class="reaction-btn sentiment-like ${post.userSentiment === 'LIKE' ? 'active' : ''}"
-                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="sentiment" data-param2="LIKE"
-                            data-reaction-type="sentiment"
-                            data-reaction-value="LIKE">
-                        <span class="emoji">😊</span>
-                        <span class="reaction-count">${post.likesCount || 0}</span>
-                    </button>
-                    <button class="reaction-btn sentiment-dislike ${post.userSentiment === 'DISLIKE' ? 'active' : ''}"
-                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="sentiment" data-param2="DISLIKE"
-                            data-reaction-type="sentiment"
-                            data-reaction-value="DISLIKE">
-                        <span class="emoji">😞</span>
-                        <span class="reaction-count">${post.dislikesCount || 0}</span>
-                    </button>
-                </div>
-                <div class="stance-group">
-                    <button class="reaction-btn stance-agree ${post.userStance === 'AGREE' ? 'active' : ''}"
-                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="stance" data-param2="AGREE"
-                            data-reaction-type="stance"
-                            data-reaction-value="AGREE">
-                        <span class="emoji">👍</span>
-                        <span class="reaction-count">${post.agreesCount || 0}</span>
-                    </button>
-                    <button class="reaction-btn stance-disagree ${post.userStance === 'DISAGREE' ? 'active' : ''}"
-                            data-action="toggleReaction" data-post-id="${post.id}" data-param1="stance" data-param2="DISAGREE"
-                            data-reaction-type="stance"
-                            data-reaction-value="DISAGREE">
-                        <span class="emoji">👎</span>
-                        <span class="reaction-count">${post.disagreesCount || 0}</span>
-                    </button>
-                </div>
-            </div>
-        `;
+        return renderReactionSelectors({
+            targetType: 'post',
+            targetId: post.id,
+            selectedQuality: post.userQuality || null,
+            selectedFeeling: post.userFeeling || null,
+            counts: post
+        });
     }
 
     /**

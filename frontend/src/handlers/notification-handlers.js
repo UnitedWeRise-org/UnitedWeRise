@@ -289,7 +289,7 @@ function getNotificationTitle(notification) {
         case 'FRIEND_ACCEPTED':
             return `${senderName} accepted your friend request`;
         case 'LIKE':
-            return `${senderName} liked your post`;
+            return notification.message || `${senderName} liked your post`;
         case 'COMMENT':
             return `${senderName} commented on your post`;
         case 'FOLLOW':

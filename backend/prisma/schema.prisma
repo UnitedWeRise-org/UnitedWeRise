@@ -586,6 +586,17 @@ model Post {
   agreesCount        Int          @default(0)
   /// Cached count of "disagree" stance reactions (denormalized)
   disagreesCount     Int          @default(0)
+  /// Quality breakdown (Love/Like/Meh/Dislike)
+  loveCount          Int          @default(0)
+  likeCount          Int          @default(0)
+  mehCount           Int          @default(0)
+  dislikeCount       Int          @default(0)
+  /// Feeling breakdown (Very positive/Positive/Neutral/Negative/Very negative)
+  veryPositiveCount  Int          @default(0)
+  positiveCount      Int          @default(0)
+  neutralFeelingCount Int         @default(0)
+  negativeCount      Int          @default(0)
+  veryNegativeCount  Int          @default(0)
   /// Cached count of comments (denormalized)
   commentsCount      Int          @default(0)
   /// Cached count of shares (denormalized)
@@ -744,8 +755,10 @@ model Reaction {
   userId    String
   postId    String?
   commentId String?
-  sentiment ReactionSentiment?
-  stance    ReactionStance?
+  /// Content-quality vote: Love / Like / Meh / Dislike
+  quality   ReactionQuality?
+  /// How the event/issue feels: Beaming / Smile / Neutral / Sad / Angry
+  feeling   ReactionFeeling?
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
   comment   Comment?           @relation(fields: [commentId], references: [id], onDelete: Cascade)
@@ -818,6 +831,17 @@ model Comment {
   agreesCount     Int       @default(0)
   /// Cached count of "disagree" stance reactions (denormalized)
   disagreesCount  Int       @default(0)
+  /// Quality breakdown (Love/Like/Meh/Dislike)
+  loveCount       Int       @default(0)
+  likeCount       Int       @default(0)
+  mehCount        Int       @default(0)
+  dislikeCount    Int       @default(0)
+  /// Feeling breakdown
+  veryPositiveCount Int     @default(0)
+  positiveCount      Int     @default(0)
+  neutralFeelingCount Int    @default(0)
+  negativeCount      Int     @default(0)
+  veryNegativeCount  Int     @default(0)
 
   // Relationships
   /// Parent comment for threaded replies (self-referential)
@@ -2590,14 +2614,19 @@ enum ActivityType {
   FOLLOW_REMOVED
 }
 
-enum ReactionSentiment {
+enum ReactionQuality {
+  LOVE
   LIKE
+  MEH
   DISLIKE
 }
 
-enum ReactionStance {
-  AGREE
-  DISAGREE
+enum ReactionFeeling {
+  VERY_POSITIVE
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  VERY_NEGATIVE
 }
 
 enum ShareType {

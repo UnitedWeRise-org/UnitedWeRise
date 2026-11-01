@@ -764,3 +764,127 @@
         font-size: 1.25rem;
     }
 }
+/* ========================================
+   TWO-AXIS REACTION SELECTORS
+   Quality: Love / Like / Meh / Dislike
+   Feeling: Beaming / Smile / Neutral / Sad / Angry
+======================================== */
+
+.reaction-groups {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.reaction-selector {
+    position: relative;
+}
+
+.reaction-selector > summary {
+    list-style: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid #dee2e6;
+    border-radius: 18px;
+    background: #f8f9fa;
+    font-size: 0.85rem;
+    color: #555;
+    user-select: none;
+}
+
+.reaction-selector > summary::-webkit-details-marker {
+    display: none;
+}
+
+.reaction-selector[open] > summary {
+    border-color: #4b5c09;
+    background: #f0f7ff;
+}
+
+.reaction-summary-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.reaction-summary-label {
+    font-weight: 500;
+}
+
+.reaction-summary-count {
+    font-weight: 600;
+    min-width: 1rem;
+    text-align: center;
+    color: #333;
+}
+
+.reaction-selector-options {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 60;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 165px;
+}
+
+.reaction-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.4rem 0.55rem;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+    text-align: left;
+}
+
+.reaction-option:hover {
+    background: #f0f7ff;
+}
+
+.reaction-option.active {
+    background: #4b5c09;
+    color: #fff;
+}
+
+.reaction-option-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.reaction-option-label {
+    flex: 1;
+}
+
+.reaction-option-count {
+    margin-left: auto;
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .reaction-selector > summary {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .reaction-selector-options {
+        left: auto;
+        right: 0;
+        min-width: 150px;
+    }
+}
