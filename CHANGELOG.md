@@ -16,6 +16,7 @@
 - **Logout failed with an expired access token** — `POST /auth/logout` now uses `optionalAuth`, so it can always clear cookies and revoke the refresh token.
 - **“Keep me logged in (90 days)” was lost on 2FA logins** — `rememberMe` is now passed through the TOTP verification flow (`UnifiedAuth.login` and callers).
 - **Concurrent refresh could set an unpersisted token** — `rotateRefreshToken` now stores the new token during the grace window instead of returning an existing record while the endpoint set a different, unstored token.
+- **Admin dashboard initial load** — its `/auth/me` check now refreshes on 401 and retries before showing the login screen, using the same shared `.unitedwerise.org` session cookies.
 
 ### Security / Persistence
 - TOTP verification remains in the refreshed access token (`totpEnabled`), so a validated 2FA session persists until the refresh token expires.

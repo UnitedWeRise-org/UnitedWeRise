@@ -146,8 +146,10 @@ class AdminAuth {
             return false;
         }
 
-        // Skip if not authenticated
-        if (!this.isAuthenticated()) {
+        // Force-refresh (used during session recovery / initial load) may run
+        // before window.currentUser has been restored; the refresh endpoint is
+        // the authority on whether the session is valid.
+        if (!this.isAuthenticated() && !forceRefresh) {
             console.log('⏸️ Token refresh skipped (not authenticated)');
             return false;
         }
@@ -435,13 +437,29 @@ class AdminAuth {
         // SECURITY: Always verify with server first - never trust client-side state
         // Client-side localStorage can be manipulated by attackers
         try {
-            const response = await fetch(`${this.API_BASE}/auth/me`, {
+            let response = await fetch(`${this.API_BASE}/auth/me`, {
                 method: 'GET',
                 credentials: 'include', // Include httpOnly cookies
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
+
+            // Access cookies live 30 minutes; the refresh token lives 30/90
+            // days. On a 401, refresh and retry once before showing login.
+            if (response.status === 401) {
+                console.log('🔄 Admin auth check got 401 - attempting token refresh...');
+                const refreshed = await this.refreshToken(true);
+                if (refreshed) {
+                    response = await fetch(`${this.API_BASE}/auth/me`, {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+            }
 
             if (response.ok) {
                 const userData = await response.json();

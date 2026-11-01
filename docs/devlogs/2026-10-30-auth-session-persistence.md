@@ -32,6 +32,9 @@ until the refresh token expires.
   `apiCall` consumers.
 - `UnifiedAuth.login` accepts and forwards `rememberMe`; `unified-manager` and
   `modal.js` pass it through the TOTP flow.
+- The admin dashboard (`AdminAuth.checkAuthStatus`) now attempts a forced
+  refresh on an initial `/auth/me` 401 before showing the login screen. It uses
+  the same `.unitedwerise.org` cookies and backend endpoints as the main site.
 
 ### Backend
 - `POST /auth/logout` now uses `optionalAuth` so it can clear cookies/revoke the
@@ -61,6 +64,7 @@ until the refresh token expires.
 - `frontend/src/modules/core/auth/modal.js`
 - `backend/src/routes/auth.ts`
 - `backend/src/services/sessionManager.ts`
+- `frontend/src/modules/admin/auth/AdminAuth.js`
 
 ---
 
