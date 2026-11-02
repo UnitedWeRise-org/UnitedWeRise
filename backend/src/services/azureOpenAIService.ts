@@ -24,6 +24,9 @@ interface TopicSummary {
   prevailingPosition: string;
   leadingCritique: string;
   confidence: number;
+  summary?: string;
+  category?: string;
+  keyWords?: string[];
 }
 
 export class AzureOpenAIService {
@@ -228,7 +231,10 @@ export class AzureOpenAIService {
           title: parsed.title || 'Political Discussion',
           prevailingPosition: parsed.prevailingPosition || 'Multiple viewpoints present',
           leadingCritique: parsed.leadingCritique || 'Various concerns raised',
-          confidence: parsed.confidence || 0.8
+          confidence: parsed.confidence || 0.8,
+          summary: parsed.summary,
+          category: parsed.category,
+          keyWords: Array.isArray(parsed.keyWords) ? parsed.keyWords : undefined
         };
       } catch (parseError) {
         // Fallback text parsing if JSON fails
@@ -242,7 +248,9 @@ export class AzureOpenAIService {
         title: `Discussion (${posts.length} posts)`,
         prevailingPosition: 'Unable to analyze prevailing position',
         leadingCritique: 'Unable to identify main criticisms',
-        confidence: 0.1
+        confidence: 0.1,
+        summary: `A discussion involving ${posts.length} posts.`,
+        category: 'General'
       };
     }
   }
@@ -325,8 +333,11 @@ ${postSummaries}
 Respond in JSON format with these fields:
 {
   "title": "4-6 word topic title",
-  "prevailingPosition": "Most common viewpoint in 1-2 sentences", 
+  "summary": "2-3 sentence neutral overview of the discussion",
+  "prevailingPosition": "Most common viewpoint in 1-2 sentences",
   "leadingCritique": "Main opposing argument in 1-2 sentences",
+  "category": "short dynamic category label (e.g. Politics, Sports, Local, Economy, Health, Education, Culture, Technology, or another concise label)",
+  "keyWords": ["word1", "word2", "word3"],
   "confidence": 0.8
 }
 

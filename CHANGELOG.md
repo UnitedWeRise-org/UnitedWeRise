@@ -8,6 +8,31 @@
 
 ---
 
+## [2026-10-31] - Trending Snapshot Backend (Phase 2)
+
+### Added
+- **Central Trending snapshot service** (`TrendingService`): clusters recent posts from existing embeddings, computes quality/feeling sentiment, dynamic categories, topic scores, top posts, quotes, and a daily overview.
+- **Activity-gated cache** via `ApiCacheService`: snapshots refresh at most every 10 minutes when new post/reaction/comment activity exists; unchanged data is served from cache. AI summaries are cached per cluster signature for 12h; the daily overview is cached for 12h.
+- **New API**:
+  - `GET /api/trending/now` — top 3 topics/posts, dynamic categories, scope/window filters
+  - `GET /api/trending/digest` — all topics/posts + daily overview
+  - `GET /api/trending/topics/:topicId/posts?sort=active|top|relevant`
+  - `GET /api/trending/categories`
+- **Legacy `/api/trending/topics`** now returns real snapshot data in the old support/oppose shape; the mock data is gone.
+
+### Changed
+- `AzureOpenAIService.generateTopicSummary` now also returns a neutral summary, dynamic category, and keywords.
+
+### Scope
+- National/State/Local are resolved from query params or the signed-in user; no new schema.
+- Following/Discover continue to use their existing personalized services; Phase 3 will wire the new Trending surfaces.
+
+### Files
+- Backend: `src/services/trendingService.ts`, `src/routes/trendingTopics.ts`, `src/services/azureOpenAIService.ts`
+- Devlog: `docs/devlogs/2026-10-31-trending-snapshot-backend.md`
+
+---
+
 ## [2026-10-31] - Reaction Model Rework (Quality + Feeling)
 
 ### Added
