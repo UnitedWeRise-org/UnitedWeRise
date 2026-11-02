@@ -19,6 +19,9 @@
   - topic drill-down with Most Active / Top Rated / Most Relevant sorting
 - Real post cards in the panel/digest open the post in the feed.
 
+### Fixed
+- Opening Trending Digest no longer mutates `#mapContainer` inline styles or adds a temporary map toggle button, so the collapsed map keeps its shape and expands normally after returning.
+
 ### Changed
 - Replaced the old mock/demo Trending views and `/topic-navigation` fetch with the new snapshot endpoints.
 - The compact panel is side-placed on wide screens and central/full-width on mobile; the Digest is full-width on narrow screens.

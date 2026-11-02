@@ -29,6 +29,13 @@ geography/window controls, and topic drill-down.
 - Fixed unqualified `adminDebugLog`/`adminDebugError` references by importing
   them (module scope does not see `window.*`).
 
+### Map behavior fix
+- Opening the Digest no longer calls `adjustMapForTrendingView()`. That method
+  overwrote `#mapContainer` inline styles (`position:fixed;width:300px;...`) and
+  added a temporary `−` button; `restoreMainContent` could not reliably undo it,
+  which left the collapsed map misshapen and unable to expand.
+- The digest now leaves the map DOM/styles untouched.
+
 ### CSS
 - Added digest feeling bars, quote cards, overview cards, topic detail, and
   responsive rules; compact panel controls/cards.

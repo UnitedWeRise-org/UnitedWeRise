@@ -192,14 +192,14 @@ class TrendingSystemIntegration {
         // Find the existing Trending thumb button and enhance it
         const sidebar = document.querySelector('#sidebar .thumbs');
         if (sidebar) {
-            const trendingThumb = Array.from(sidebar.children).find(thumb => 
+            const trendingThumb = Array.from(sidebar.children).find(thumb =>
                 thumb.textContent.includes('Trending')
             );
-            
+
             if (trendingThumb) {
                 // Store original onclick handler
                 const originalOnclick = trendingThumb.onclick;
-                
+
                 // Add single click for main view (removed double-click requirement)
                 trendingThumb.addEventListener('click', (e) => {
                     // Allow default panel toggle, but prevent if we want full view
@@ -214,7 +214,7 @@ class TrendingSystemIntegration {
 
                 // Update title to indicate enhanced functionality
                 trendingThumb.title = 'Trending (Right-click for full view options)';
-                
+
                 if (typeof adminDebugLog !== 'undefined') {
                     adminDebugLog('TrendingSystem', 'Enhanced Trending button with multiple view options');
                 }
@@ -303,7 +303,7 @@ class TrendingSystemIntegration {
             z-index: 1001;
             min-width: 180px;
         `;
-        
+
         menu.innerHTML = `
             <div class="menu-item" data-trending-system-action="showCompactTrending">
                 📱 Compact Panel
@@ -318,7 +318,7 @@ class TrendingSystemIntegration {
                 ⚙️ Trending Settings
             </div>
         `;
-        
+
         // Add styles for menu items
         const style = document.createElement('style');
         style.textContent = `
@@ -342,9 +342,9 @@ class TrendingSystemIntegration {
             }
         `;
         document.head.appendChild(style);
-        
+
         document.body.appendChild(menu);
-        
+
         // Close menu when clicking elsewhere
         setTimeout(() => {
             document.addEventListener('click', function closeMenu() {
@@ -404,7 +404,7 @@ class TrendingSystemIntegration {
 
     toggleTrendingMainView() {
         adminDebugLog('🔥 Opening Trending in main content area...');
-        
+
         // Hide other detail panels
         document.querySelectorAll('.detail-panel').forEach(panel => {
             panel.classList.add('hidden');
@@ -422,10 +422,10 @@ class TrendingSystemIntegration {
         }
 
         // Get main content area
-        const mainContent = document.querySelector('#mainContent') || 
+        const mainContent = document.querySelector('#mainContent') ||
                            document.querySelector('.main') ||
                            document.querySelector('main');
-        
+
         if (!mainContent) {
             adminDebugError('Main content area not found');
             return;
@@ -547,9 +547,6 @@ class TrendingSystemIntegration {
 
         // Update panel positioning based on current sidebar state
         this.updatePanelForSidebarState();
-
-        // Adjust map if needed (make it smaller/overlay)
-        this.adjustMapForTrendingView();
 
         // Load trending content
         this.loadTrendingContent();
@@ -1006,7 +1003,7 @@ class TrendingSystemIntegration {
                                 <label><input type="radio" name="timeRange" value="30d"> Last Month</label>
                             </div>
                         </div>
-                        
+
                         <div class="filter-section">
                             <h4>🏷️ Content Types</h4>
                             <div class="filter-group">
@@ -1016,7 +1013,7 @@ class TrendingSystemIntegration {
                                 <label><input type="checkbox" checked> General Discussion</label>
                             </div>
                         </div>
-                        
+
                         <div class="filter-section">
                             <h4>🎯 Engagement Level</h4>
                             <div class="filter-group">
@@ -1025,7 +1022,7 @@ class TrendingSystemIntegration {
                                 <label><input type="radio" name="engagement" value="recent"> Recently Active</label>
                             </div>
                         </div>
-                        
+
                         <div class="filter-actions">
                             <button class="filter-btn primary" data-trending-system-action="closeModal">Apply Filters</button>
                             <button class="filter-btn secondary" data-trending-system-action="closeModal">Cancel</button>
@@ -1058,7 +1055,7 @@ class TrendingSystemIntegration {
                                 Auto-refresh trending content
                             </label>
                         </div>
-                        
+
                         <div class="setting-group">
                             <h4>🔔 Notifications</h4>
                             <label class="toggle-switch">
@@ -1067,7 +1064,7 @@ class TrendingSystemIntegration {
                                 Notify about hot topics
                             </label>
                         </div>
-                        
+
                         <div class="setting-group">
                             <h4>🎨 Display Preferences</h4>
                             <div class="radio-group">
@@ -1076,7 +1073,7 @@ class TrendingSystemIntegration {
                                 <label><input type="radio" name="density" value="spacious"> Spacious View</label>
                             </div>
                         </div>
-                        
+
                         <div class="settings-actions">
                             <button class="settings-btn primary" data-trending-system-action="closeModal">Save Settings</button>
                             <button class="settings-btn secondary" data-trending-system-action="closeModal">Cancel</button>
@@ -1668,94 +1665,18 @@ class TrendingSystemIntegration {
         document.head.appendChild(style);
     }
 
-    adjustMapForTrendingView() {
-        const mapContainer = document.querySelector('#mapContainer');
-        if (mapContainer) {
-            // Make map smaller and positioned as overlay
-            mapContainer.style.cssText += `
-                position: fixed !important;
-                width: 300px !important;
-                height: 200px !important;
-                top: 70px !important;
-                right: 20px !important;
-                z-index: 1000 !important;
-                border: 2px solid #ff6b35 !important;
-                border-radius: 8px !important;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-                transition: all 0.3s ease !important;
-            `;
-
-            // Add a minimize/restore button to the map
-            if (!mapContainer.querySelector('.map-toggle-btn')) {
-                const toggleBtn = document.createElement('button');
-                toggleBtn.className = 'map-toggle-btn';
-                toggleBtn.innerHTML = '−';
-                toggleBtn.style.cssText = `
-                    position: absolute;
-                    top: 5px;
-                    right: 5px;
-                    background: rgba(255, 107, 53, 0.9);
-                    color: white;
-                    border: none;
-                    width: 25px;
-                    height: 25px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-weight: bold;
-                    z-index: 1001;
-                `;
-                
-                toggleBtn.onclick = () => this.toggleMapSize();
-                mapContainer.appendChild(toggleBtn);
-            }
-        }
-    }
-
-    toggleMapSize() {
-        const mapContainer = document.querySelector('#mapContainer');
-        const toggleBtn = document.querySelector('.map-toggle-btn');
-        
-        if (mapContainer && toggleBtn) {
-            const isMinimized = mapContainer.style.height === '40px';
-            
-            if (isMinimized) {
-                // Restore
-                mapContainer.style.height = '200px';
-                mapContainer.style.width = '300px';
-                toggleBtn.innerHTML = '−';
-            } else {
-                // Minimize
-                mapContainer.style.height = '40px';
-                mapContainer.style.width = '150px';
-                toggleBtn.innerHTML = '+';
-            }
-        }
-    }
-
     restoreMainContent() {
-        const mainContent = document.querySelector('#mainContent') || 
+        const mainContent = document.querySelector('#mainContent') ||
                            document.querySelector('.main');
-        
+
         if (mainContent) {
             mainContent.classList.remove('trending-main-active');
-            
+
             if (mainContent.dataset.originalContent) {
                 mainContent.innerHTML = mainContent.dataset.originalContent;
                 delete mainContent.dataset.originalContent;
             }
-            
-            // Restore map to original state
-            const mapContainer = document.querySelector('#mapContainer');
-            if (mapContainer) {
-                mapContainer.style.cssText = mapContainer.style.cssText.replace(/position: fixed.*?transition: all 0\.3s ease !important;/s, '');
-                
-                // Remove toggle button
-                const toggleBtn = mapContainer.querySelector('.map-toggle-btn');
-                if (toggleBtn) {
-                    toggleBtn.remove();
-                }
-            }
-            
+
             adminDebugLog('✅ Restored main content');
         }
     }
@@ -1790,12 +1711,12 @@ class TrendingSystemIntegration {
                     }
                 });
             });
-            
+
             observer.observe(sidebar, {
                 attributes: true,
                 attributeFilter: ['class']
             });
-            
+
             // Also check current state
             this.updatePanelForSidebarState();
         }
@@ -1804,7 +1725,7 @@ class TrendingSystemIntegration {
     updatePanelForSidebarState() {
         const sidebar = document.querySelector('#sidebar');
         const trendingPanel = document.querySelector('.trending-main-view');
-        
+
         if (sidebar && trendingPanel) {
             const isExpanded = sidebar.classList.contains('expanded');
             trendingPanel.classList.toggle('sidebar-expanded', isExpanded);
@@ -1818,7 +1739,7 @@ class TrendingSystemIntegration {
 
     addSemanticTopicsStyles() {
         if (document.querySelector('#semantic-topics-styles')) return;
-        
+
         const style = document.createElement('style');
         style.id = 'semantic-topics-styles';
         style.textContent = `
@@ -1827,7 +1748,7 @@ class TrendingSystemIntegration {
                 flex-direction: column;
                 gap: 1.5rem;
             }
-            
+
             .topic-card {
                 background: white;
                 border: 1px solid #e9ecef;
@@ -1835,24 +1756,24 @@ class TrendingSystemIntegration {
                 padding: 1.5rem;
                 transition: all 0.2s;
             }
-            
+
             .topic-card.featured-topic {
                 border-left: 4px solid #ff6b35;
                 background: linear-gradient(135deg, #fff5f3, #ffffff);
             }
-            
+
             .topic-card:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 4px 16px rgba(0,0,0,0.1);
             }
-            
+
             .topic-header {
                 display: flex;
                 align-items: center;
                 gap: 1rem;
                 margin-bottom: 1rem;
             }
-            
+
             .topic-icon {
                 width: 40px;
                 height: 40px;
@@ -1864,37 +1785,37 @@ class TrendingSystemIntegration {
                 justify-content: center;
                 font-size: 1.2rem;
             }
-            
+
             .topic-info {
                 flex: 1;
             }
-            
+
             .topic-title {
                 margin: 0 0 0.25rem 0;
                 color: #333;
                 font-size: 1.2rem;
                 font-weight: 600;
             }
-            
+
             .topic-meta {
                 color: #666;
                 font-size: 0.9rem;
             }
-            
+
             .topic-summary {
                 margin-bottom: 1.5rem;
             }
-            
+
             .prevailing-position, .leading-critique {
                 margin-bottom: 1rem;
             }
-            
+
             .topic-summary h4 {
                 margin: 0 0 0.5rem 0;
                 font-size: 0.95rem;
                 color: #666;
             }
-            
+
             .topic-summary p {
                 margin: 0;
                 line-height: 1.5;
@@ -1904,20 +1825,20 @@ class TrendingSystemIntegration {
                 border-radius: 6px;
                 border-left: 3px solid #dee2e6;
             }
-            
+
             .prevailing-position p {
                 border-left-color: #28a745;
             }
-            
+
             .leading-critique p {
                 border-left-color: #dc3545;
             }
-            
+
             .topic-engagement {
                 display: flex;
                 gap: 1rem;
             }
-            
+
             .topic-btn {
                 padding: 0.75rem 1.5rem;
                 border: none;
@@ -1927,35 +1848,35 @@ class TrendingSystemIntegration {
                 transition: all 0.2s;
                 font-size: 0.9rem;
             }
-            
+
             .topic-btn.primary {
                 background: #ff6b35;
                 color: white;
             }
-            
+
             .topic-btn.primary:hover {
                 background: #e55a2b;
                 transform: translateY(-1px);
             }
-            
+
             .topic-btn.secondary {
                 background: transparent;
                 color: #666;
                 border: 1px solid #e9ecef;
             }
-            
+
             .topic-btn.secondary:hover {
                 border-color: #ff6b35;
                 color: #ff6b35;
             }
         `;
-        
+
         document.head.appendChild(style);
     }
 
     addTopicModeStyles() {
         if (document.querySelector('#topic-mode-styles')) return;
-        
+
         const style = document.createElement('style');
         style.id = 'topic-mode-styles';
         style.textContent = `
@@ -1964,7 +1885,7 @@ class TrendingSystemIntegration {
                 max-width: 800px;
                 margin: 0 auto;
             }
-            
+
             .topic-mode-header {
                 background: white;
                 border: 1px solid #e9ecef;
@@ -1972,14 +1893,14 @@ class TrendingSystemIntegration {
                 padding: 1.5rem;
                 margin-bottom: 1.5rem;
             }
-            
+
             .topic-breadcrumb {
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
                 margin-bottom: 1rem;
             }
-            
+
             .breadcrumb-btn {
                 background: #f8f9fa;
                 border: 1px solid #e9ecef;
@@ -1990,33 +1911,33 @@ class TrendingSystemIntegration {
                 text-decoration: none;
                 transition: all 0.2s;
             }
-            
+
             .breadcrumb-btn:hover {
                 background: #e9ecef;
                 color: #ff6b35;
             }
-            
+
             .breadcrumb-divider {
                 color: #ccc;
             }
-            
+
             .current-topic {
                 font-weight: 600;
                 color: #333;
             }
-            
+
             .topic-summary-compact p {
                 margin: 0.5rem 0;
                 color: #555;
                 font-size: 0.9rem;
             }
-            
+
             .topic-posts-feed {
                 display: flex;
                 flex-direction: column;
                 gap: 1rem;
             }
-            
+
             .topic-post {
                 background: white;
                 border: 1px solid #e9ecef;
@@ -2024,11 +1945,11 @@ class TrendingSystemIntegration {
                 padding: 1rem;
                 transition: all 0.2s;
             }
-            
+
             .topic-post:hover {
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             }
-            
+
             .no-posts {
                 text-align: center;
                 color: #666;
@@ -2038,7 +1959,7 @@ class TrendingSystemIntegration {
                 border-radius: 8px;
             }
         `;
-        
+
         document.head.appendChild(style);
     }
 
@@ -2060,9 +1981,9 @@ class TrendingSystemIntegration {
             animation: slideIn 0.3s ease-out;
             max-width: 300px;
         `;
-        
+
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.remove();
         }, 5000);
