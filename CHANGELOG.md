@@ -12,7 +12,7 @@
 
 ### Added
 - **Two independent reaction axes** on posts and comments:
-  - **Quality:** Love (+2), Like (+1), Meh (-0.5), Dislike (-1).
+  - **Quality:** Love (+2), Like (+1), Meh (-0.25), Dislike (-1).
   - **Feeling:** Beaming, Smile, Neutral, Sad, Angry (5-level event/issue sentiment).
 - Compact expandable selectors replace the 2×2 Like/Dislike/Agree/Disagree matrix. Collapsed summaries and expanded options are icon-only (labels via hover/tooltip); options expand horizontally. Quality shows combined Love+Like as one like count; feeling shows the top three faces overlapped plus the total.
 - Detailed counters on `Post`/`Comment` plus legacy aggregates (`likesCount`, `dislikesCount`, `agreesCount`, `disagreesCount`) for downstream compatibility.

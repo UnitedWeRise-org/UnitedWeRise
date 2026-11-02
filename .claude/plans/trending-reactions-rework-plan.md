@@ -21,7 +21,7 @@
 
 ### Reactions (renovate existing Reaction/Post/Comment structures)
 - Two independent, optional selectors on **posts and comments**:
-  - **Quality:** Love (+2), Like (+1), Meh (-0.5), Dislike (-1).
+  - **Quality:** Love (+2), Like (+1), Meh (-0.25), Dislike (-1).
   - **Feeling:** Beaming (+), Smile (+), Neutral (0), Sad (-), Angry (-) — used for how the event/issue feels, not content quality.
 - Both axes contribute to ranking, but:
   - Quality is the direct content-quality vote.

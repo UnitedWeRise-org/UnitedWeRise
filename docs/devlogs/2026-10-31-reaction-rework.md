@@ -37,7 +37,7 @@ contribute intensity/controversy, not penalize sad/angry news as “bad content.
   `{reactionType, reactionValue}` is mapped for compatibility.
 - `/posts/:postId/like` now delegates to the same service.
 - `EngagementScoringService` supports detailed metrics:
-  - Quality weights: Love +2, Like +1, Meh -0.5, Dislike -1
+  - Quality weights: Love +2, Like +1, Meh -0.25, Dislike -1
   - Feeling: strong/mild intensity contributes engagement; controversy uses
     positive/negative feeling balance (no happy=good/sad=bad penalty)
 - Feed/post/comment responses include `userQuality`, `userFeeling`, and detailed

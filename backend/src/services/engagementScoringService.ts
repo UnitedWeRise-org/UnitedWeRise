@@ -99,7 +99,7 @@ export class EngagementScoringService {
       // Quality is a content vote. Negative quality lowers the score.
       qualityLove: 2.0,
       qualityLike: 1.0,
-      qualityMeh: -0.5,
+      qualityMeh: -0.25,
       qualityDislike: -1.0,
       // Feeling intensity is engagement/controversy, not happy=good/sad=bad.
       feelingStrong: 1.0,
@@ -167,7 +167,7 @@ export class EngagementScoringService {
           enhancedShares: 2.0,
           qualityLove: 2.0,
           qualityLike: 1.0,
-          qualityMeh: -0.5,
+          qualityMeh: -0.25,
           qualityDislike: -1.0,
           feelingStrong: 1.0,
           feelingMild: 0.5
@@ -198,7 +198,7 @@ export class EngagementScoringService {
           enhancedShares: 1.5, // Moderate weight for controversial content sharing
           qualityLove: 2.0,
           qualityLike: 1.0,
-          qualityMeh: -0.5,
+          qualityMeh: -0.25,
           qualityDislike: -1.0,
           feelingStrong: 1.0,
           feelingMild: 0.5
@@ -229,7 +229,7 @@ export class EngagementScoringService {
           enhancedShares: 4.5, // Very high weight for quality content sharing
           qualityLove: 2.0,
           qualityLike: 1.0,
-          qualityMeh: -0.5,
+          qualityMeh: -0.25,
           qualityDislike: -1.0,
           feelingStrong: 1.0,
           feelingMild: 0.5
@@ -260,7 +260,7 @@ export class EngagementScoringService {
           enhancedShares: 2.5,
           qualityLove: 2.0,
           qualityLike: 1.0,
-          qualityMeh: -0.5,
+          qualityMeh: -0.25,
           qualityDislike: -1.0,
           feelingStrong: 1.0,
           feelingMild: 0.5
