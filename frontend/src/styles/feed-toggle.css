@@ -498,3 +498,26 @@
 }
 
 /* Dark mode support removed - using consistent cream/off-white theme */
+
+/* Dismiss control for feed onboarding banners */
+.feed-banner-dismiss {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #4b5c09;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feed-banner-dismiss:hover {
+    background: rgba(75, 92, 9, 0.12);
+}

@@ -751,6 +751,8 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
         isSuperAdmin: true,
         password: true, // Need to check if set (won't return actual password)
         uiPreferences: true, // UI preferences (dismissed modals, etc.)
+        followingCount: true,
+        _count: { select: { posts: true } },
         country: true, // ISO 3166-1 alpha-2 country code
         oauthProviders: {
           select: {
@@ -789,6 +791,9 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
       })),
       // UI preferences (dismissed modals, theme choices, etc.)
       uiPreferences: fullUser.uiPreferences || {},
+      // Graph/content counts used by onboarding banners
+      followingCount: fullUser.followingCount || 0,
+      postsCount: fullUser._count?.posts || 0,
       // Country code for conditional civic feature display
       country: fullUser.country || 'US'
     };

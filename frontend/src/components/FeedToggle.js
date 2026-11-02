@@ -51,24 +51,27 @@ export class FeedToggle {
      */
     async determineDefaultFeed() {
         try {
-            // Check saved preference first
+            // Check saved preference first, but still evaluate the banner.
             const saved = localStorage.getItem('preferredFeed');
             if (saved && (saved === 'discover' || saved === 'following')) {
                 this.currentFeed = saved;
-                return;
+            } else {
+                // Default to Discover (per user requirement)
+                this.currentFeed = 'discover';
             }
 
-            // Default to Discover (per user requirement)
-            this.currentFeed = 'discover';
-
-            // Check if user is new (no follows) to show helpful banner
+            // Show the welcome prompt only while the Following graph is still
+            // empty, the user has made fewer than 3 posts, and they have not
+            // dismissed it. The prompt belongs on Following, not Discover.
             if (typeof apiCall === 'function') {
-                const followResponse = await apiCall('/auth/me', { method: 'GET' });
-                const followingCount = followResponse?.data?.data?.followingCount || 0;
+                const meResponse = await apiCall('/auth/me', { method: 'GET' });
+                const me = meResponse?.data?.data || meResponse?.data || null;
+                const followingCount = me?.followingCount || 0;
+                const postsCount = me?.postsCount || 0;
+                const userId = me?.id || window.currentUser?.id || 'guest';
+                const dismissed = localStorage.getItem(`followingWelcomeDismissed:${userId}`) === 'true';
 
-                if (followingCount === 0) {
-                    this.showNewUserBanner = true;
-                }
+                this.showNewUserBanner = followingCount === 0 && postsCount < 3 && !dismissed;
             }
         } catch (error) {
             console.error('Error determining default feed:', error);
@@ -136,12 +139,9 @@ export class FeedToggle {
         // Insert at the top of the feed container
         container.insertAdjacentHTML('afterbegin', toggleHtml);
 
-        // Render banners if needed
-        if (this.showNewUserBanner) {
-            this.renderNewUserBanner(container);
-        } else if (this.showEmptyFollowingState) {
-            this.renderEmptyFollowingBanner(container);
-        }
+        // Render the banner only for the active feed. Following owns the
+        // new-user prompt; Discover should not carry a permanent banner.
+        this.updateFeedBanner(this.currentFeed);
 
         // Attach event listeners
         this.attachEventListeners();
@@ -167,7 +167,8 @@ export class FeedToggle {
      */
     renderNewUserBanner(container) {
         const bannerHtml = `
-            <div class="feed-banner new-user-banner" style="background: #e8f5e9; border: 1px solid #4caf50; border-radius: 8px; padding: 16px; margin: 16px 0; text-align: center;">
+            <div class="feed-banner new-user-banner" style="position: relative; background: #e8f5e9; border: 1px solid #4caf50; border-radius: 8px; padding: 16px; margin: 16px 0; text-align: center;">
+                <button type="button" class="feed-banner-dismiss" data-feed-action="dismiss-following-welcome" aria-label="Dismiss welcome message" title="Dismiss">×</button>
                 <div style="font-size: 24px; margin-bottom: 8px;">👋</div>
                 <div style="font-weight: 600; color: #2e7d32; margin-bottom: 4px;">Welcome to UnitedWeRise!</div>
                 <div style="color: #555; font-size: 14px;">
@@ -200,6 +201,33 @@ export class FeedToggle {
         }
     }
 
+    /**
+     * Insert/remove feed banners for the active feed.
+     * @param {string} feedType - Active feed
+     */
+    updateFeedBanner(feedType) {
+        const container = document.getElementById('myFeedPosts');
+        if (!container) return;
+
+        container.querySelectorAll('.feed-banner').forEach((banner) => banner.remove());
+
+        if (feedType === 'following' && this.showNewUserBanner) {
+            this.renderNewUserBanner(container);
+        } else if (feedType === 'following' && this.showEmptyFollowingState) {
+            this.renderEmptyFollowingBanner(container);
+        }
+    }
+
+    /**
+     * Dismiss the Following welcome banner for this user/browser.
+     */
+    dismissFollowingWelcome() {
+        const userId = window.currentUser?.id || 'guest';
+        localStorage.setItem(`followingWelcomeDismissed:${userId}`, 'true');
+        this.showNewUserBanner = false;
+        this.updateFeedBanner(this.currentFeed);
+    }
+
     attachEventListeners() {
         // Event delegation for dynamically rendered elements
         document.addEventListener('click', (e) => {
@@ -214,6 +242,9 @@ export class FeedToggle {
                     if (feedType) {
                         this.loadFeed(feedType);
                     }
+                    break;
+                case 'dismiss-following-welcome':
+                    this.dismissFollowingWelcome();
                     break;
             }
         });
@@ -827,6 +858,7 @@ export class FeedToggle {
 
             // Render posts
             this.renderPosts(posts, feedType);
+            this.updateFeedBanner(feedType);
 
             // Fade in new posts
             setTimeout(() => {

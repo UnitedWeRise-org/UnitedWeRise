@@ -8,6 +8,24 @@
 
 ---
 
+## [2026-11-01] - Following Welcome Banner Lifecycle
+
+### Fixed
+- The “Welcome to UnitedWeRise” follow prompt was effectively permanent because `FeedToggle` read `followingCount` from a field `/auth/me` did not return, so it always saw `0`. It also rendered on Discover, not just Following.
+- `/auth/me` now returns `followingCount` and `postsCount`.
+- The banner now:
+  - appears only on the Following feed
+  - auto-hides once the user has connections or has made 3+ posts
+  - has a dismiss (×) control persisted per user/browser
+- Discover no longer carries the permanent banner; Following still has its normal empty state.
+
+### Files
+- `backend/src/routes/auth.ts`
+- `frontend/src/components/FeedToggle.js`
+- `frontend/src/styles/feed-toggle.css`
+
+---
+
 ## [2026-11-01] - Content Filter Phone False Positives
 
 ### Fixed
