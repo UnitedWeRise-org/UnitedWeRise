@@ -50,9 +50,10 @@ contribute intensity/controversy, not penalize sad/angry news as “bad content.
 - Dropdowns open downward, are mutually exclusive, and close on outside click.
 - Reaction updates reconnect the UI from the API response (`quality`, `feeling`,
   `counts`) so counts stay correct across toggles.
-- Collapsed display is icon + count only (word via hover title): quality shows
-  the combined Love+Like count, feeling shows the top three faces overlapping
-  plus the total. Quality options do not show Meh/Dislike counts.
+- Collapsed display and expanded options are icon-only (labels via hover/
+  tooltip); options expand horizontally. Quality shows the combined Love+Like
+  count; feeling shows the top three faces overlapping plus the total. Quality
+  options do not show Meh/Dislike counts.
 
 ## Verification
 - Backend `npm run build` / `prisma validate` pass.

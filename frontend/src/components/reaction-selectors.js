@@ -97,9 +97,7 @@ function renderOptions(axis, action, idAttribute, targetId, options, selected, c
     return options.map((option) => {
         const active = selected === option.value ? 'active' : '';
         const count = countOf(counts, option);
-        const countHtml = axis === 'feeling'
-            ? `<span class="reaction-option-count">${count}</span>`
-            : '';
+        const title = axis === 'feeling' ? `${option.label} (${count})` : option.label;
         return `
             <button type="button"
                     class="reaction-option ${active}"
@@ -109,10 +107,10 @@ function renderOptions(axis, action, idAttribute, targetId, options, selected, c
                     data-param2="${option.value}"
                     data-reaction-axis="${axis}"
                     data-reaction-value="${option.value}"
+                    title="${title}"
+                    aria-label="${title}"
                     aria-pressed="${selected === option.value ? 'true' : 'false'}">
                 <span class="reaction-option-icon">${option.icon}</span>
-                <span class="reaction-option-label">${option.label}</span>
-                ${countHtml}
             </button>
         `;
     }).join('');
@@ -187,7 +185,6 @@ export function updateReactionSelector(container, axis, response) {
 
     const counts = response?.counts || {};
     const selected = axis === 'quality' ? response?.quality : response?.feeling;
-    const options = axis === 'quality' ? QUALITY_OPTIONS : FEELING_OPTIONS;
     const summary = summaryContent(axis, selected, counts);
 
     selector.querySelectorAll('.reaction-option').forEach((button) => {
@@ -196,11 +193,7 @@ export function updateReactionSelector(container, axis, response) {
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
 
-        if (axis === 'feeling') {
-            const option = optionFor(options, value);
-            const countElement = button.querySelector('.reaction-option-count');
-            if (option && countElement) countElement.textContent = countOf(counts, option);
-        }
+
     });
 
     const summaryElement = selector.querySelector('.reaction-selector-summary');
