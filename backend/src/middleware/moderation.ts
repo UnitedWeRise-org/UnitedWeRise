@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { moderationService } from '../services/moderationService';
 import { AuthRequest } from './auth';
+import { detectSensitiveContent } from '../utils/sensitiveContent';
 import { logger } from '../services/logger';
 
 // Middleware to check user suspension status
@@ -161,20 +162,20 @@ export const contentFilter = async (req: Request, res: Response, next: NextFunct
     return next();
   }
   
-  // Basic content filtering
-  const forbiddenPatterns = [
-    /\b(?:password|login|account)\s*[:=]\s*\S+/gi, // Potential credential sharing
-    /\b(?:phone|call|text)\s*(?:me|us)?\s*(?:at|on)?\s*[0-9\-\(\)\+\s]+/gi, // Phone number sharing
-    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/gi, // Email addresses
-  ];
-  
-  for (const pattern of forbiddenPatterns) {
-    if (pattern.test(content)) {
-      return res.status(400).json({
-        error: 'Content contains potentially sensitive information',
-        hint: 'Please avoid sharing personal contact information publicly'
-      });
-    }
+  const sensitiveReason = detectSensitiveContent(content);
+  if (sensitiveReason) {
+    logger.warn({
+      userId: (req as AuthRequest).user?.id,
+      path: req.path,
+      reason: sensitiveReason
+    }, 'Content filter blocked submission');
+
+    return res.status(400).json({
+      error: 'Content contains potentially sensitive information',
+      hint: 'Please avoid sharing personal contact information publicly',
+      code: 'SENSITIVE_CONTENT',
+      reason: sensitiveReason
+    });
   }
   
   // Check for extremely long content that might be spam

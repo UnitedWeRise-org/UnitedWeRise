@@ -8,6 +8,24 @@
 
 ---
 
+## [2026-11-01] - Content Filter Phone False Positives
+
+### Fixed
+- The pre-submission content filter treated **any digits after “phone/call/text”** as a phone number, so normal posts like `call 2028` or `text 3` were rejected with “potentially sensitive information.”
+- Replaced format-by-format regexes with normalized detection:
+  - candidate number strings are stripped to digits and must be 10–15 digits
+  - accepted when near a phone keyword, starting with `+`/`00`/`01`, or using phone-like separators
+  - IPv4 addresses and short numbers/dates are ignored
+  - Fediverse-style `@user@instance.social` handles are not treated as emails
+- Blocked content responses now include `code: "SENSITIVE_CONTENT"` and `reason: "phone" | "email" | "credentials"` (no content is logged) for faster diagnosis.
+
+### Files
+- `backend/src/utils/sensitiveContent.ts`
+- `backend/src/middleware/moderation.ts`
+- Devlog: `docs/devlogs/2026-11-01-content-filter-phone-detection.md`
+
+---
+
 ## [2026-10-31] - Trending Snapshot Backend (Phase 2)
 
 ### Added
