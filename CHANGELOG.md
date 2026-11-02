@@ -8,6 +8,30 @@
 
 ---
 
+## [2026-11-01] - Trending Now + Digest UI (Phase 3)
+
+### Added
+- **Trending Now panel** now uses `/api/trending/now`: top 3 topics or top 3 posts, dynamic categories (Overall + top 3 + More), National/State/Local and 24h/3d/7d controls, refresh, and All Topics / All Posts actions.
+- **Trending Digest** keeps the existing full-width layout and adds:
+  - dynamic category sidebar + geography/window selectors
+  - Topics / Posts / Overview views
+  - daily AI overview, per-topic neutral summaries, prevailing position, leading critique, feeling bars, and quote snippets
+  - topic drill-down with Most Active / Top Rated / Most Relevant sorting
+- Real post cards in the panel/digest open the post in the feed.
+
+### Changed
+- Replaced the old mock/demo Trending views and `/topic-navigation` fetch with the new snapshot endpoints.
+- The compact panel is side-placed on wide screens and central/full-width on mobile; the Digest is full-width on narrow screens.
+- Legacy Trending globals remain as compatibility wrappers.
+
+### Files
+- `frontend/src/handlers/trending-handlers.js`
+- `frontend/src/integrations/trending-system-integration.js`
+- `frontend/src/styles/trending-system.css`
+- Devlog: `docs/devlogs/2026-11-01-trending-ui.md`
+
+---
+
 ## [2026-11-01] - Following Welcome Banner Lifecycle
 
 ### Fixed

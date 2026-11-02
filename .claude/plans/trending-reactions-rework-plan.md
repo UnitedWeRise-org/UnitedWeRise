@@ -1,6 +1,6 @@
 # Trending & Reaction Rework — Plan
 
-**Status:** Phase 1 verified; Phase 2 backend implemented; Phase 3 UI pending
+**Status:** Phase 1 verified; Phase 2 backend deployed; Phase 3 UI implemented — staging verification pending
 **Date:** 2026-10-31
 **Risk:** High (schema + ranking + AI + multiple UI surfaces)
 **Branch:** `development` (staging) → `main` (production only on explicit command)

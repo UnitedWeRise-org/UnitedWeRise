@@ -1,3 +1,8 @@
+import { apiCall } from '../js/api-compatibility-shim.js';
+import { escapeHTML } from '../utils/security.js';
+import { getTimeAgo } from '../utils/date-helpers.js';
+import { adminDebugLog, adminDebugError } from '../../js/adminDebugger.js';
+
 /**
  * @module integrations/trending-system-integration
  * @description Trending System Integration for United We Rise Frontend
@@ -7,6 +12,13 @@
 
 class TrendingSystemIntegration {
     constructor() {
+        this.currentScope = localStorage.getItem('trendingScope') || 'national';
+        this.currentWindow = 24;
+        this.currentCategory = 'overall';
+        this.currentView = 'topics';
+        this.currentSort = 'active';
+        this.digestData = null;
+        this.currentTopic = null;
         this.init();
     }
 
@@ -29,6 +41,7 @@ class TrendingSystemIntegration {
 
         // Setup event delegation for all trending actions
         this.setupEventDelegation();
+        document.addEventListener('change', (e) => this.handleControlChange(e));
 
         // Enhance trending navigation
         this.addTrendingNavigation();
@@ -98,18 +111,26 @@ class TrendingSystemIntegration {
                     this.loadMoreTrending();
                     break;
                 case 'exitTopicMode':
+                case 'backToDigest':
                     this.exitTopicMode();
                     break;
+                case 'openDigestPost': {
+                    const postId = target.dataset.postId;
+                    if (postId && typeof window.showPostInFeed === 'function') {
+                        window.showPostInFeed(postId);
+                    }
+                    break;
+                }
                 case 'likePost':
                     const postIdLike = target.dataset.postId;
-                    if (typeof likeTrendingPost === 'function' && postIdLike) {
-                        likeTrendingPost(postIdLike);
+                    if (typeof window.likeTrendingPost === 'function' && postIdLike) {
+                        window.likeTrendingPost(postIdLike);
                     }
                     break;
                 case 'showCommentBox':
                     const postIdComment = target.dataset.postId;
-                    if (typeof showTrendingCommentBox === 'function' && postIdComment) {
-                        showTrendingCommentBox(postIdComment);
+                    if (typeof window.showTrendingCommentBox === 'function' && postIdComment) {
+                        window.showTrendingCommentBox(postIdComment);
                     }
                     break;
                 case 'closeModal':
@@ -121,6 +142,37 @@ class TrendingSystemIntegration {
                     break;
             }
         });
+    }
+
+    /**
+     * Handle digest scope/window/category/sort controls.
+     */
+    handleControlChange(event) {
+        const control = event.target.closest('[data-trending-control]');
+        if (!control) return;
+        const kind = control.dataset.trendingControl;
+        const value = control.value;
+
+        if (kind === 'scope') {
+            this.currentScope = value;
+            localStorage.setItem('trendingScope', value);
+            this.currentCategory = 'overall';
+            this.loadTrendingContent();
+        } else if (kind === 'window') {
+            this.currentWindow = Number(value) || 24;
+            this.loadTrendingContent();
+        } else if (kind === 'category') {
+            this.currentCategory = value || 'overall';
+            this.renderCategories(this.digestData?.categories || []);
+            this.renderCurrentView();
+        } else if (kind === 'sort') {
+            this.currentSort = value || 'active';
+            if (this.currentTopic) {
+                this.showTopicDetail(this.currentTopic.id, this.currentSort);
+            } else {
+                this.renderCurrentView();
+            }
+        }
     }
 
     loadTrendingSystemStyles() {
@@ -318,6 +370,38 @@ class TrendingSystemIntegration {
         this.showMessage('Showing side panel trending view');
     }
 
+    /**
+     * Open the Digest from the compact panel (or update it if already open).
+     * @param {string} view
+     * @param {string} category
+     * @param {string} scope
+     * @param {number} windowHours
+     */
+    openDigest(view = 'topics', category = 'overall', scope = this.currentScope, windowHours = this.currentWindow) {
+        const nextScope = scope || this.currentScope;
+        const nextWindow = Number(windowHours) || this.currentWindow;
+        const needsReload = nextScope !== this.currentScope || nextWindow !== this.currentWindow;
+
+        this.currentView = ['topics', 'posts', 'overview'].includes(view) ? view : 'topics';
+        this.currentCategory = category || 'overall';
+        this.currentScope = nextScope;
+        this.currentWindow = nextWindow;
+        this.currentTopic = null;
+
+        const mainContent = document.querySelector('#mainContent') || document.querySelector('.main');
+        if (mainContent?.classList.contains('trending-main-active') && this.digestData) {
+            if (needsReload) {
+                this.loadTrendingContent();
+            } else {
+                this.renderCategories(this.digestData.categories || []);
+                this.renderCurrentView();
+            }
+            return;
+        }
+
+        this.toggleTrendingMainView();
+    }
+
     toggleTrendingMainView() {
         adminDebugLog('🔥 Opening Trending in main content area...');
         
@@ -370,14 +454,11 @@ class TrendingSystemIntegration {
             <div class="trending-main-view">
                 <div class="trending-header">
                     <div class="header-content">
-                        <h1>🔥 Trending Now</h1>
-                        <p class="subtitle">Real-time conversations and hot topics in your community</p>
+                        <h1>📊 Trending Digest</h1>
+                        <p class="subtitle">AI summaries of the public discussions and debates shaping your area</p>
                         <div class="header-actions">
                             <button class="header-btn primary" data-trending-system-action="refreshTrending">
                                 🔄 Refresh
-                            </button>
-                            <button class="header-btn secondary" data-trending-system-action="showTrendingFilters">
-                                🎯 Filters
                             </button>
                             <button class="header-btn secondary" data-trending-system-action="restoreMainContent">
                                 ← Back to Map
@@ -388,74 +469,71 @@ class TrendingSystemIntegration {
 
                 <div class="trending-content">
                     <div class="content-layout">
-                        <!-- Trending Categories Sidebar -->
                         <div class="trending-sidebar">
                             <h3>🏷️ Categories</h3>
-                            <div class="category-filters">
-                                <button class="category-btn active" data-category="all" data-trending-system-action="filterByCategory">
-                                    🌐 All Topics
-                                </button>
-                                <button class="category-btn" data-category="politics" data-trending-system-action="filterByCategory">
-                                    🏛️ Politics
-                                </button>
-                                <button class="category-btn" data-category="local" data-trending-system-action="filterByCategory">
-                                    🏙️ Local News
-                                </button>
-                                <button class="category-btn" data-category="elections" data-trending-system-action="filterByCategory">
-                                    🗳️ Elections
-                                </button>
-                                <button class="category-btn" data-category="community" data-trending-system-action="filterByCategory">
-                                    👥 Community
-                                </button>
+                            <div class="category-filters" id="trendingDigestCategories">
+                                <div class="trending-digest-muted">Loading categories…</div>
                             </div>
-                            
-                            <h3>📊 Trending Stats</h3>
-                            <div class="trending-stats">
+
+                            <h3>🌎 Geography</h3>
+                            <select class="trending-digest-select" data-trending-control="scope">
+                                <option value="national" ${this.currentScope === 'national' ? 'selected' : ''}>National</option>
+                                <option value="state" ${this.currentScope === 'state' ? 'selected' : ''}>My State</option>
+                                <option value="local" ${this.currentScope === 'local' ? 'selected' : ''}>My Local Area</option>
+                            </select>
+
+                            <h3>📅 Window</h3>
+                            <select class="trending-digest-select" data-trending-control="window">
+                                <option value="24" ${this.currentWindow === 24 ? 'selected' : ''}>Last 24 hours</option>
+                                <option value="72" ${this.currentWindow === 72 ? 'selected' : ''}>Last 3 days</option>
+                                <option value="168" ${this.currentWindow === 168 ? 'selected' : ''}>Last 7 days</option>
+                            </select>
+
+                            <h3>📊 Digest Stats</h3>
+                            <div class="trending-stats" id="trendingDigestStats">
                                 <div class="stat-item">
                                     <span class="stat-value" id="totalPosts">--</span>
                                     <span class="stat-label">Active Posts</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-value" id="activeUsers">--</span>
-                                    <span class="stat-label">Active Users</span>
+                                    <span class="stat-label">Participants</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-value" id="newToday">--</span>
-                                    <span class="stat-label">New Today</span>
+                                    <span class="stat-label">Topics</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Main Trending Feed -->
                         <div class="trending-main-feed">
                             <div class="feed-header">
                                 <div class="feed-controls">
                                     <div class="view-toggle">
-                                        <button class="toggle-btn active" data-view="feed" data-trending-system-action="switchView">
-                                            📝 Feed
-                                        </button>
-                                        <button class="toggle-btn" data-view="topics" data-trending-system-action="switchView">
+                                        <button class="toggle-btn ${this.currentView === 'topics' ? 'active' : ''}" data-view="topics" data-trending-system-action="switchView">
                                             🏷️ Topics
                                         </button>
-                                        <button class="toggle-btn" data-view="analytics" data-trending-system-action="switchView">
-                                            📈 Analytics
+                                        <button class="toggle-btn ${this.currentView === 'posts' ? 'active' : ''}" data-view="posts" data-trending-system-action="switchView">
+                                            📝 Posts
+                                        </button>
+                                        <button class="toggle-btn ${this.currentView === 'overview' ? 'active' : ''}" data-view="overview" data-trending-system-action="switchView">
+                                            📊 Overview
                                         </button>
                                     </div>
                                     <div class="sort-controls">
-                                        <select id="sortOrder" onchange="trendingSystemIntegration.changeSortOrder(this.value)">
-                                            <option value="trending">🔥 Most Trending</option>
-                                            <option value="recent">🕐 Most Recent</option>
-                                            <option value="popular">❤️ Most Popular</option>
-                                            <option value="discussed">💬 Most Discussed</option>
+                                        <select id="sortOrder" data-trending-control="sort">
+                                            <option value="active" ${this.currentSort === 'top' || this.currentSort === 'relevant' ? '' : 'selected'}>🔥 Most Active</option>
+                                            <option value="top" ${this.currentSort === 'top' ? 'selected' : ''}>⭐ Top Rated</option>
+                                            <option value="relevant" ${this.currentSort === 'relevant' ? 'selected' : ''}>🎯 Most Relevant</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="feed-content" id="trendingFeedContent">
                                 <div class="loading-placeholder">
                                     <div class="loading-spinner"></div>
-                                    <p>Loading trending content...</p>
+                                    <p>Building the Trending Digest…</p>
                                 </div>
                             </div>
                         </div>
@@ -477,442 +555,430 @@ class TrendingSystemIntegration {
         this.loadTrendingContent();
     }
 
+    /**
+     * Load the full Trending Digest snapshot for the selected scope/window.
+     */
     async loadTrendingContent() {
         const contentContainer = document.querySelector('#trendingFeedContent');
         if (!contentContainer) return;
 
-        try {
-            // Use new semantic topic discovery system
-            const response = await fetch('/api/topic-navigation/trending');
-            const data = await response.json();
-            
-            if (data.success && data.topics.length > 0) {
-                this.renderSemanticTopics(data.topics);
-            } else {
-                // Fallback to existing trending posts system
-                if (typeof window.loadTrendingPosts === 'function') {
-                    await window.loadTrendingPosts();
-                    setTimeout(() => {
-                        this.enhanceTrendingDisplay();
-                    }, 500);
-                } else {
-                    this.loadDemoTrendingContent();
-                }
-            }
-        } catch (error) {
-            adminDebugError('Failed to load trending content:', error);
-            // Fallback to demo data on error
-            this.loadDemoTrendingContent();
-        }
-    }
-
-    enhanceTrendingDisplay() {
-        const contentContainer = document.querySelector('#trendingFeedContent');
-        if (!contentContainer) return;
-
-        // Get data from existing trending system if available
-        if (window.allTrendingPosts && window.allTrendingPosts.length > 0) {
-            this.renderTrendingPosts(window.allTrendingPosts);
-        } else {
-            this.loadDemoTrendingContent();
-        }
-    }
-
-    renderSemanticTopics(topics) {
-        const contentContainer = document.querySelector('#trendingFeedContent');
-        if (!contentContainer) return;
-
-        let html = '<div class="semantic-topics-container">';
-        
-        topics.forEach((topic, index) => {
-            const isFeature = index === 0;
-            html += `
-                <div class="topic-card ${isFeature ? 'featured-topic' : ''}" data-topic-id="${topic.id}">
-                    <div class="topic-header">
-                        <div class="topic-icon">🏷️</div>
-                        <div class="topic-info">
-                            <h3 class="topic-title">${topic.title}</h3>
-                            <span class="topic-meta">${topic.postCount} posts • ${this.getTimeAgo(topic.discoveredAt)}</span>
-                        </div>
-                        ${isFeature ? '<div class="trending-badge">🔥 Trending</div>' : ''}
-                    </div>
-                    
-                    <div class="topic-summary">
-                        <div class="prevailing-position">
-                            <h4>📍 Prevailing Position</h4>
-                            <p>${topic.prevailingPosition}</p>
-                        </div>
-                        <div class="leading-critique">
-                            <h4>⚡ Leading Critique</h4>
-                            <p>${topic.leadingCritique}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="topic-engagement">
-                        <button class="topic-btn primary" data-trending-system-action="enterTopicMode" data-topic-id="${topic.id}">
-                            💬 Join Discussion (${topic.postCount} posts)
-                        </button>
-                        <button class="topic-btn secondary" data-trending-system-action="showTopicPreview" data-topic-id="${topic.id}">
-                            👀 Preview
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        html += `
-            <div class="load-more-container">
-                <button class="load-more-btn" data-trending-system-action="discoverMoreTopics">
-                    🔍 Discover More Topics
-                </button>
-            </div>
-        </div>`;
-        
-        contentContainer.innerHTML = html;
-        this.addSemanticTopicsStyles();
-    }
-
-    loadDemoTrendingContent() {
-        const contentContainer = document.querySelector('#trendingFeedContent');
-        if (!contentContainer) return;
-
-        const demoContent = `
-            <div class="trending-posts-container">
-                <div class="trending-post featured">
-                    <div class="post-header">
-                        <div class="user-avatar">🏛️</div>
-                        <div class="user-info">
-                            <span class="username">@CityCouncilNews</span>
-                            <span class="timestamp">2 hours ago</span>
-                        </div>
-                        <div class="trending-badge">🔥 Trending</div>
-                    </div>
-                    <div class="post-content">
-                        <h4>New Infrastructure Bill Discussion</h4>
-                        <p>The city council will be voting on the new infrastructure improvements next week. Community input is welcome at tonight's town hall.</p>
-                        <div class="post-tags">
-                            <span class="tag">#Infrastructure</span>
-                            <span class="tag">#CityCouncil</span>
-                            <span class="tag">#TownHall</span>
-                        </div>
-                    </div>
-                    <div class="post-engagement">
-                        <button class="engagement-btn">❤️ 156</button>
-                        <button class="engagement-btn">💬 42</button>
-                        <button class="engagement-btn">🔄 23</button>
-                        <button class="engagement-btn">📤 Share</button>
-                    </div>
-                </div>
-
-                <div class="trending-post">
-                    <div class="post-header">
-                        <div class="user-avatar">👥</div>
-                        <div class="user-info">
-                            <span class="username">@CommunityWatch</span>
-                            <span class="timestamp">4 hours ago</span>
-                        </div>
-                        <div class="popularity-score">📊 95%</div>
-                    </div>
-                    <div class="post-content">
-                        <p>Don't forget! Early voting starts tomorrow for the school board elections. Here's what you need to know about the candidates and polling locations.</p>
-                        <div class="post-tags">
-                            <span class="tag">#Elections</span>
-                            <span class="tag">#SchoolBoard</span>
-                            <span class="tag">#EarlyVoting</span>
-                        </div>
-                    </div>
-                    <div class="post-engagement">
-                        <button class="engagement-btn">❤️ 89</button>
-                        <button class="engagement-btn">💬 28</button>
-                        <button class="engagement-btn">🔄 15</button>
-                        <button class="engagement-btn">📤 Share</button>
-                    </div>
-                </div>
-
-                <div class="trending-post">
-                    <div class="post-header">
-                        <div class="user-avatar">🌱</div>
-                        <div class="user-info">
-                            <span class="username">@GreenInitiative</span>
-                            <span class="timestamp">6 hours ago</span>
-                        </div>
-                    </div>
-                    <div class="post-content">
-                        <p>Great turnout at today's community cleanup! We removed over 200 pounds of litter from the riverside park. Thank you to all volunteers! 🌳</p>
-                        <div class="post-tags">
-                            <span class="tag">#Community</span>
-                            <span class="tag">#Environment</span>
-                            <span class="tag">#Volunteer</span>
-                        </div>
-                    </div>
-                    <div class="post-engagement">
-                        <button class="engagement-btn">❤️ 124</button>
-                        <button class="engagement-btn">💬 18</button>
-                        <button class="engagement-btn">🔄 31</button>
-                        <button class="engagement-btn">📤 Share</button>
-                    </div>
-                </div>
-
-                <div class="load-more-container">
-                    <button class="load-more-btn" data-trending-system-action="loadMoreTrending">
-                        Load More Trending Posts
-                    </button>
-                </div>
+        contentContainer.innerHTML = `
+            <div class="loading-placeholder">
+                <div class="loading-spinner"></div>
+                <p>Building the Trending Digest…</p>
             </div>
         `;
 
-        contentContainer.innerHTML = demoContent;
-        this.updateTrendingStats();
-    }
-
-    renderTrendingPosts(posts) {
-        const contentContainer = document.querySelector('#trendingFeedContent');
-        if (!contentContainer) return;
-
-        // Use the standardized PostComponent for consistent rendering
-        if (window.postComponent) {
-            // Create wrapper for trending-specific styling
-            let html = '<div class="trending-posts-container">';
-            
-            posts.forEach((post, index) => {
-                const isFeature = index === 0;
-                // Add trending-specific properties
-                post.isTrending = isFeature;
-                
-                // Render using PostComponent with trending-specific options
-                html += `
-                    <div class="trending-post-wrapper ${isFeature ? 'featured' : ''}">
-                        ${window.postComponent.renderPost(post, {
-                            showActions: true,
-                            showComments: true,
-                            showAuthor: true,
-                            showTimestamp: true,
-                            compactView: false
-                        })}
-                        ${isFeature ? '<div class="trending-badge">🔥 Trending</div>' : ''}
-                    </div>
-                `;
+        try {
+            // Always fetch the full catalog; category filtering is client-side
+            // so switching tabs does not require another snapshot request.
+            const params = new URLSearchParams({
+                scope: this.currentScope,
+                window: String(this.currentWindow)
             });
-            
-            html += `
-                <div class="load-more-container">
-                    <button class="load-more-btn" data-trending-system-action="loadMoreTrending">
-                        Load More Trending Posts
-                    </button>
-                </div>
-            </div>`;
-            
-            contentContainer.innerHTML = html;
-        } else {
-            // Fallback to basic rendering if PostComponent not available
-            this.renderTrendingPostsFallback(posts);
-        }
-        
-        this.updateTrendingStats(posts.length);
-    }
+            const response = await apiCall(`/trending/digest?${params.toString()}`, {
+                method: 'GET',
+                bypassCache: true
+            });
+            const data = response?.data;
+            if (!response?.ok || !data?.success) {
+                throw new Error(data?.error || 'Failed to load Trending Digest');
+            }
 
-    renderTrendingPostsFallback(posts) {
-        const contentContainer = document.querySelector('#trendingFeedContent');
-        if (!contentContainer) return;
-
-        let html = '<div class="trending-posts-container">';
-        
-        posts.forEach((post, index) => {
-            const isFeature = index === 0;
-            const timeAgo = this.getTimeAgo(post.createdAt);
-            
-            html += `
-                <div class="trending-post ${isFeature ? 'featured' : ''}">
-                    <div class="post-header">
-                        <div class="user-avatar">${post.author.username.charAt(0).toUpperCase()}</div>
-                        <div class="user-info">
-                            <span class="username">@${post.author.username}</span>
-                            <span class="timestamp">${timeAgo}</span>
-                        </div>
-                        ${isFeature ? '<div class="trending-badge">🔥 Trending</div>' : ''}
-                    </div>
-                    <div class="post-content">
-                        <p>${post.content}</p>
-                        ${post.isPolitical ? '<div class="political-indicator">🏛️ Political Content</div>' : ''}
-                    </div>
-                    <div class="post-engagement">
-                        <button class="engagement-btn" data-trending-system-action="likePost" data-post-id="${post.id}">❤️ ${post.likesCount}</button>
-                        <button class="engagement-btn" data-trending-system-action="showCommentBox" data-post-id="${post.id}">💬 ${post.commentsCount}</button>
-                        <button class="engagement-btn">🔄 ${Math.floor(Math.random() * 20)}</button>
-                        <button class="engagement-btn">📤 Share</button>
-                    </div>
+            this.digestData = data;
+            this.currentTopic = null;
+            this.renderCategories(data.categories || []);
+            this.updateTrendingStats(data);
+            this.renderCurrentView();
+        } catch (error) {
+            adminDebugError('Failed to load trending digest:', error);
+            contentContainer.innerHTML = `
+                <div class="trending-error">
+                    <div class="error-icon">🔥</div>
+                    <h3>Could not load the Trending Digest</h3>
+                    <p>${escapeHTML(error.message || 'Please try again.')}</p>
+                    <button class="error-btn" data-trending-system-action="refreshTrending">Retry</button>
                 </div>
             `;
+        }
+    }
+
+    getFilteredTopics() {
+        const topics = this.digestData?.topics || [];
+        const category = String(this.currentCategory || 'overall').toLowerCase();
+        if (!category || category === 'overall' || category === 'all') return topics;
+        return topics.filter((topic) => String(topic.category || '').toLowerCase() === category);
+    }
+
+    getFilteredPosts() {
+        const category = String(this.currentCategory || 'overall').toLowerCase();
+        let posts;
+        if (!category || category === 'overall' || category === 'all') {
+            posts = this.digestData?.posts || [];
+        } else {
+            const seen = new Set();
+            posts = this.getFilteredTopics()
+                .flatMap((topic) => topic.posts || [])
+                .filter((post) => {
+                    if (seen.has(post.id)) return false;
+                    seen.add(post.id);
+                    return true;
+                });
+        }
+        return this.sortPosts(posts, this.currentSort);
+    }
+
+    sortPosts(posts, sort = 'active') {
+        const key = sort === 'top' ? 'topScore' : sort === 'relevant' ? 'relevanceScore' : 'activeScore';
+        return [...posts].sort((a, b) => (Number(b[key]) || 0) - (Number(a[key]) || 0));
+    }
+
+    renderCurrentView() {
+        const container = document.querySelector('#trendingFeedContent');
+        if (!container || !this.digestData) return;
+
+        document.querySelectorAll('.trending-main-view .toggle-btn').forEach((button) => {
+            button.classList.toggle('active', button.dataset.view === this.currentView);
         });
-        
-        html += `
-            <div class="load-more-container">
-                <button class="load-more-btn" data-trending-system-action="loadMoreTrending">
-                    Load More Trending Posts
-                </button>
-            </div>
-        </div>`;
-        
-        contentContainer.innerHTML = html;
+
+        if (this.currentView === 'overview') {
+            this.renderDigestOverview(container);
+        } else if (this.currentView === 'posts') {
+            this.renderDigestPosts(container);
+        } else {
+            this.renderDigestTopics(container);
+        }
     }
 
-    getTimeAgo(dateString) {
-        const now = new Date();
-        const then = new Date(dateString);
-        const diffMs = now - then;
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffHours / 24);
+    renderCategories(categories) {
+        const container = document.querySelector('#trendingDigestCategories');
+        if (!container) return;
 
-        if (diffDays > 0) return `${diffDays}d ago`;
-        if (diffHours > 0) return `${diffHours}h ago`;
-        return 'Just now';
+        const items = [
+            { name: 'Overall', value: 'overall', icon: '🌐' },
+            ...categories.map((category) => ({
+                name: category.name,
+                value: category.name,
+                icon: '🏷️'
+            }))
+        ];
+
+        container.innerHTML = items.map((category) => `
+            <button class="category-btn ${String(this.currentCategory).toLowerCase() === String(category.value).toLowerCase() ? 'active' : ''}"
+                    data-category="${escapeHTML(category.value)}"
+                    data-trending-system-action="filterByCategory">
+                ${category.icon} ${escapeHTML(category.name)}
+            </button>
+        `).join('');
     }
 
-    updateTrendingStats(postsCount = null) {
+    updateTrendingStats(data = this.digestData) {
+        const topics = data?.topics || [];
+        const totalPosts = topics.reduce((sum, topic) => sum + (topic.postCount || 0), 0);
+        const participants = topics.reduce((sum, topic) => sum + (topic.participantCount || 0), 0);
+        const totalTopics = topics.length;
+
         const totalPostsEl = document.querySelector('#totalPosts');
         const activeUsersEl = document.querySelector('#activeUsers');
         const newTodayEl = document.querySelector('#newToday');
-        
-        if (totalPostsEl) totalPostsEl.textContent = postsCount || Math.floor(Math.random() * 500 + 200);
-        if (activeUsersEl) activeUsersEl.textContent = Math.floor(Math.random() * 150 + 50);
-        if (newTodayEl) newTodayEl.textContent = Math.floor(Math.random() * 50 + 20);
+
+        if (totalPostsEl) totalPostsEl.textContent = totalPosts;
+        if (activeUsersEl) activeUsersEl.textContent = participants;
+        if (newTodayEl) newTodayEl.textContent = totalTopics;
     }
 
-    // Interface methods
-    filterByCategory(category) {
-        adminDebugLog(`Filtering by category: ${category}`);
-        
-        // Update active button
-        document.querySelectorAll('.category-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-category="${category}"]`).classList.add('active');
-        
-        // Filter content (simplified for demo)
-        this.showMessage(`Filtered by ${category}`);
-    }
-
-    switchView(view) {
-        adminDebugLog(`Switching to view: ${view}`);
-        
-        // Update active button
-        document.querySelectorAll('.toggle-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-view="${view}"]`).classList.add('active');
-        
-        // Switch content based on view
-        const contentContainer = document.querySelector('#trendingFeedContent');
-        
-        switch (view) {
-            case 'topics':
-                this.showTopicsView(contentContainer);
-                break;
-            case 'analytics':
-                this.showAnalyticsView(contentContainer);
-                break;
-            case 'feed':
-            default:
-                this.loadTrendingContent();
-                break;
+    feelingBar(feeling) {
+        if (!feeling || !feeling.total) {
+            return `<div class="trending-feeling-bar empty"><span>No sentiment reactions yet</span></div>`;
         }
+        const support = Math.max(0, feeling.supportPct || 0);
+        const neutral = Math.max(0, feeling.neutralPct || 0);
+        const oppose = Math.max(0, feeling.opposePct || 0);
+        return `
+            <div class="trending-feeling-bar" title="Support ${support}% · Neutral ${neutral}% · Oppose ${oppose}%">
+                <span class="feeling-support" style="width:${support}%"></span>
+                <span class="feeling-neutral" style="width:${neutral}%"></span>
+                <span class="feeling-oppose" style="width:${oppose}%"></span>
+            </div>
+            <div class="trending-feeling-labels">
+                <span>🙂 ${support}% support</span>
+                <span>😐 ${neutral}% neutral</span>
+                <span>😠 ${oppose}% oppose</span>
+            </div>
+        `;
     }
 
-    showTopicsView(container) {
-        container.innerHTML = `
-            <div class="topics-view">
-                <h3>🏷️ Trending Topics</h3>
-                <div class="topics-grid">
-                    <div class="topic-card">
-                        <div class="topic-header">
-                            <span class="topic-name">#CityCouncil</span>
-                            <span class="topic-count">89 posts</span>
-                        </div>
-                        <div class="topic-trend">📈 +15% today</div>
+    topicCard(topic, featured = false) {
+        const quotes = (topic.quotes || []).slice(0, 2);
+        return `
+            <div class="topic-card ${featured ? 'featured-topic' : ''}" data-topic-id="${escapeHTML(topic.id)}">
+                <div class="topic-header">
+                    <div class="topic-icon">🏷️</div>
+                    <div class="topic-info">
+                        <h3 class="topic-title">${escapeHTML(topic.title)}</h3>
+                        <span class="topic-meta">${topic.postCount} posts • ${topic.participantCount} participants • ${escapeHTML(topic.category)}</span>
                     </div>
-                    <div class="topic-card">
-                        <div class="topic-header">
-                            <span class="topic-name">#Elections</span>
-                            <span class="topic-count">67 posts</span>
-                        </div>
-                        <div class="topic-trend">📈 +22% today</div>
+                    ${featured ? '<div class="trending-badge">🔥 Leading topic</div>' : ''}
+                </div>
+
+                <div class="topic-summary">
+                    <p class="topic-neutral-summary">${escapeHTML(topic.summary || '')}</p>
+                    <div class="prevailing-position">
+                        <h4>📍 Prevailing position</h4>
+                        <p>${escapeHTML(topic.prevailingPosition || '')}</p>
                     </div>
-                    <div class="topic-card">
-                        <div class="topic-header">
-                            <span class="topic-name">#Community</span>
-                            <span class="topic-count">45 posts</span>
-                        </div>
-                        <div class="topic-trend">📊 stable</div>
+                    <div class="leading-critique">
+                        <h4>⚡ Leading critique</h4>
+                        <p>${escapeHTML(topic.leadingCritique || '')}</p>
                     </div>
+                </div>
+
+                ${this.feelingBar(topic.feeling)}
+
+                ${quotes.length ? `
+                    <div class="topic-quotes">
+                        ${quotes.map((quote) => `
+                            <button type="button" class="topic-quote" data-trending-system-action="openDigestPost" data-post-id="${escapeHTML(quote.postId)}">
+                                “${escapeHTML(quote.content)}”
+                                <span>— ${escapeHTML(quote.author)}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <div class="topic-engagement">
+                    <button class="topic-btn primary" data-trending-system-action="enterTopicMode" data-topic-id="${escapeHTML(topic.id)}">
+                        💬 View posts (${topic.postCount})
+                    </button>
                 </div>
             </div>
         `;
     }
 
-    showAnalyticsView(container) {
-        container.innerHTML = `
-            <div class="analytics-view">
-                <h3>📈 Trending Analytics</h3>
-                <div class="analytics-cards">
-                    <div class="analytics-card">
-                        <h4>📊 Engagement Metrics</h4>
-                        <div class="metrics">
-                            <div class="metric">
-                                <span class="metric-value">2.4k</span>
-                                <span class="metric-label">Total Interactions</span>
-                            </div>
-                            <div class="metric">
-                                <span class="metric-value">1.8k</span>
-                                <span class="metric-label">Likes Today</span>
-                            </div>
-                            <div class="metric">
-                                <span class="metric-value">456</span>
-                                <span class="metric-label">Comments Today</span>
-                            </div>
-                        </div>
+    postCard(post) {
+        const authorName = [post.author?.firstName, post.author?.lastName].filter(Boolean).join(' ') || post.author?.username || 'Someone';
+        const initial = authorName.charAt(0).toUpperCase();
+        return `
+            <div class="trending-post" data-post-id="${escapeHTML(post.id)}" data-trending-system-action="openDigestPost">
+                <div class="post-header">
+                    <div class="user-avatar">${post.author?.avatar
+                        ? `<img src="${escapeHTML(post.author.avatar)}" alt="">`
+                        : escapeHTML(initial)}</div>
+                    <div class="user-info">
+                        <span class="username">${escapeHTML(authorName)}</span>
+                        <span class="timestamp">${escapeHTML(getTimeAgo(new Date(post.createdAt)))}</span>
                     </div>
-                    <div class="analytics-card">
-                        <h4>🕐 Activity Timeline</h4>
-                        <div class="timeline-chart">
-                            <p>Peak activity: 2:00 PM - 4:00 PM</p>
-                            <p>Most active day: Tuesday</p>
-                            <p>Engagement rate: 12.3%</p>
-                        </div>
-                    </div>
+                </div>
+                <div class="post-content"><p>${escapeHTML(post.content || '')}</p></div>
+                <div class="post-engagement">
+                    <span class="engagement-btn">🔥 ${Math.round(post.activeScore || 0)} activity</span>
+                    ${post.topScore !== undefined ? `<span class="engagement-btn">⭐ ${Math.round(post.topScore * 10) / 10} quality</span>` : ''}
+                    ${post.relevanceScore !== undefined ? `<span class="engagement-btn">🎯 ${post.relevanceScore} relevance</span>` : ''}
                 </div>
             </div>
         `;
     }
 
-    changeSortOrder(order) {
-        adminDebugLog(`Changing sort order to: ${order}`);
-        this.showMessage(`Sorted by ${order}`);
-        // Reload content with new sort order
-        setTimeout(() => this.loadTrendingContent(), 300);
+    renderDigestTopics(container) {
+        const topics = this.getFilteredTopics();
+        if (topics.length === 0) {
+            container.innerHTML = `
+                <div class="trending-empty">
+                    <h3>No trending topics yet</h3>
+                    <p>Topics appear once at least 3 similar posts are active in the selected window and area.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `<div class="semantic-topics-container">
+            ${topics.map((topic, index) => this.topicCard(topic, index === 0)).join('')}
+        </div>`;
     }
 
-    refreshTrending() {
-        adminDebugLog('Refreshing trending content...');
-        const loadingEl = document.querySelector('#trendingFeedContent');
-        if (loadingEl) {
-            loadingEl.innerHTML = `
-                <div class="loading-placeholder">
-                    <div class="loading-spinner"></div>
-                    <p>Refreshing trending content...</p>
+    renderDigestPosts(container) {
+        const posts = this.getFilteredPosts();
+        if (posts.length === 0) {
+            container.innerHTML = `
+                <div class="trending-empty">
+                    <h3>No posts in this view</h3>
+                    <p>Try a wider window or a different category.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `<div class="trending-posts-container">
+            ${posts.map((post) => this.postCard(post)).join('')}
+        </div>`;
+    }
+
+    renderDigestOverview(container) {
+        const data = this.digestData;
+        const topics = this.getFilteredTopics();
+        container.innerHTML = `
+            <div class="trending-overview">
+                <section class="digest-overview-card">
+                    <h2>📊 Today's overview</h2>
+                    <p>${escapeHTML(data.dailyOverview || 'No digest overview available yet.')}</p>
+                </section>
+
+                <section class="digest-overview-card">
+                    <h2>🏷️ Categories</h2>
+                    <div class="digest-category-list">
+                        ${(data.categories || []).map((category) => `
+                            <button class="digest-category-row" data-trending-system-action="filterByCategory" data-category="${escapeHTML(category.name)}">
+                                <span>${escapeHTML(category.name)}</span>
+                                <span>${category.topicCount} topics</span>
+                            </button>
+                        `).join('') || '<p>No categories yet.</p>'}
+                    </div>
+                </section>
+
+                <section class="digest-overview-card">
+                    <h2>🔥 Leading topics</h2>
+                    ${topics.slice(0, 3).map((topic) => `
+                        <div class="digest-leading-topic">
+                            <strong>${escapeHTML(topic.title)}</strong>
+                            <div>${this.feelingBar(topic.feeling)}</div>
+                        </div>
+                    `).join('') || '<p>No topics yet.</p>'}
+                </section>
+            </div>
+        `;
+    }
+
+    async showTopicDetail(topicId, sort = this.currentSort) {
+        const container = document.querySelector('#trendingFeedContent');
+        if (!container) return;
+
+        this.currentSort = sort || 'active';
+        this.currentTopic = (this.digestData?.topics || []).find((topic) => topic.id === topicId) || { id: topicId };
+        container.innerHTML = `
+            <div class="loading-placeholder">
+                <div class="loading-spinner"></div>
+                <p>Loading topic posts…</p>
+            </div>
+        `;
+
+        try {
+            const params = new URLSearchParams({
+                scope: this.currentScope,
+                window: String(this.currentWindow),
+                sort: this.currentSort
+            });
+            const response = await apiCall(`/trending/topics/${encodeURIComponent(topicId)}/posts?${params.toString()}`, {
+                method: 'GET',
+                bypassCache: true
+            });
+            const topic = response?.data?.topic;
+            if (!response?.ok || !topic) throw new Error('Topic not found');
+            this.currentTopic = topic;
+            this.renderTopicDetail(container, topic);
+        } catch (error) {
+            container.innerHTML = `
+                <div class="trending-error">
+                    <h3>Could not load this topic</h3>
+                    <p>${escapeHTML(error.message || 'Please try again.')}</p>
+                    <button class="error-btn" data-trending-system-action="backToDigest">Back to Digest</button>
                 </div>
             `;
         }
-        
-        setTimeout(() => {
-            this.loadTrendingContent();
-            this.showMessage('Trending content refreshed!');
-        }, 1000);
+    }
+
+    renderTopicDetail(container, topic) {
+        const posts = this.sortPosts(topic.posts || [], this.currentSort);
+        container.innerHTML = `
+            <div class="trending-topic-detail">
+                <button class="header-btn secondary digest-back-btn" data-trending-system-action="backToDigest">← Back to Digest</button>
+                <div class="topic-card featured-topic">
+                    <div class="topic-header">
+                        <div class="topic-icon">🏷️</div>
+                        <div class="topic-info">
+                            <h3 class="topic-title">${escapeHTML(topic.title)}</h3>
+                            <span class="topic-meta">${topic.postCount} posts • ${topic.participantCount} participants • ${escapeHTML(topic.category)}</span>
+                        </div>
+                        <div class="trending-badge">🔥 Trending</div>
+                    </div>
+                    <div class="topic-summary">
+                        <p class="topic-neutral-summary">${escapeHTML(topic.summary || '')}</p>
+                        <div class="prevailing-position">
+                            <h4>📍 Prevailing position</h4>
+                            <p>${escapeHTML(topic.prevailingPosition || '')}</p>
+                        </div>
+                        <div class="leading-critique">
+                            <h4>⚡ Leading critique</h4>
+                            <p>${escapeHTML(topic.leadingCritique || '')}</p>
+                        </div>
+                    </div>
+                    ${this.feelingBar(topic.feeling)}
+                </div>
+
+                <div class="digest-topic-sort">
+                    <label>Sort posts</label>
+                    <select data-trending-control="sort">
+                        <option value="active" ${this.currentSort === 'active' ? 'selected' : ''}>🔥 Most Active</option>
+                        <option value="top" ${this.currentSort === 'top' ? 'selected' : ''}>⭐ Top Rated</option>
+                        <option value="relevant" ${this.currentSort === 'relevant' ? 'selected' : ''}>🎯 Most Relevant</option>
+                    </select>
+                </div>
+
+                <div class="trending-posts-container">
+                    ${posts.map((post) => this.postCard(post)).join('') || '<p>No posts in this topic.</p>'}
+                </div>
+            </div>
+        `;
+    }
+
+    getTimeAgo(dateString) {
+        return getTimeAgo(new Date(dateString));
+    }
+
+    filterByCategory(category) {
+        this.currentCategory = category || 'overall';
+        this.currentTopic = null;
+        this.renderCategories(this.digestData?.categories || []);
+        this.renderCurrentView();
+    }
+
+    switchView(view) {
+        this.currentView = ['topics', 'posts', 'overview'].includes(view) ? view : 'topics';
+        this.currentTopic = null;
+        this.renderCurrentView();
+    }
+
+    changeSortOrder(order) {
+        this.currentSort = ['active', 'top', 'relevant'].includes(order) ? order : 'active';
+        if (this.currentTopic) {
+            this.showTopicDetail(this.currentTopic.id, this.currentSort);
+        } else {
+            this.renderCurrentView();
+        }
+    }
+
+    refreshTrending() {
+        this.digestData = null;
+        this.currentTopic = null;
+        this.loadTrendingContent();
     }
 
     loadMoreTrending() {
-        adminDebugLog('Loading more trending posts...');
-        this.showMessage('Loading more posts...');
-        // Simulate loading more content
+        this.currentView = 'posts';
+        this.currentTopic = null;
+        this.renderCurrentView();
+    }
+
+    showTopicPreview(topicId) {
+        this.showTopicDetail(topicId, this.currentSort);
+    }
+
+    enterTopicMode(topicId) {
+        this.showTopicDetail(topicId, this.currentSort);
+    }
+
+    exitTopicMode() {
+        this.currentTopic = null;
+        this.renderCurrentView();
     }
 
     showTrendingFilters() {
@@ -1743,183 +1809,6 @@ class TrendingSystemIntegration {
             const isExpanded = sidebar.classList.contains('expanded');
             trendingPanel.classList.toggle('sidebar-expanded', isExpanded);
         }
-    }
-
-    async enterTopicMode(topicId) {
-        try {
-            const response = await fetch(`/api/topic-navigation/enter/${topicId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                // Store that we're in topic mode
-                window.currentTopicId = topicId;
-                
-                // Update the main content area with topic-filtered posts
-                this.showTopicPosts(data.posts, data.topic);
-                this.showMessage(`Entered topic: ${data.topic.title}`);
-            } else {
-                this.showMessage('Failed to enter topic mode');
-            }
-        } catch (error) {
-            adminDebugError('Failed to enter topic mode:', error);
-            this.showMessage('Error entering topic mode');
-        }
-    }
-
-    async exitTopicMode() {
-        try {
-            const response = await fetch('/api/topic-navigation/exit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                // Clear topic mode
-                delete window.currentTopicId;
-                
-                // Restore algorithm-based feed
-                this.showAlgorithmFeed(data.posts);
-                this.showMessage('Returned to main feed');
-            }
-        } catch (error) {
-            adminDebugError('Failed to exit topic mode:', error);
-            this.showMessage('Error exiting topic mode');
-        }
-    }
-
-    showTopicPosts(posts, topic) {
-        // Replace main content with topic-filtered posts
-        const mainContent = document.querySelector('#mainContent') || 
-                           document.querySelector('.main');
-        
-        if (mainContent) {
-            // Store original content if not already in topic mode
-            if (!mainContent.dataset.originalContent) {
-                mainContent.dataset.originalContent = mainContent.innerHTML;
-            }
-            
-            mainContent.innerHTML = `
-                <div class="topic-mode-container">
-                    <div class="topic-mode-header">
-                        <div class="topic-breadcrumb">
-                            <button class="breadcrumb-btn" data-trending-system-action="exitTopicMode">
-                                ← Back to Main Feed
-                            </button>
-                            <span class="breadcrumb-divider">/</span>
-                            <span class="current-topic">${topic.title}</span>
-                        </div>
-                        <div class="topic-summary-compact">
-                            <p><strong>Prevailing Position:</strong> ${topic.prevailingPosition}</p>
-                            <p><strong>Leading Critique:</strong> ${topic.leadingCritique}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="topic-posts-feed" id="topicPostsFeed">
-                        ${this.renderPostsList(posts)}
-                    </div>
-                </div>
-            `;
-            
-            this.addTopicModeStyles();
-        }
-    }
-
-    showAlgorithmFeed(posts) {
-        const mainContent = document.querySelector('#mainContent') || 
-                           document.querySelector('.main');
-        
-        if (mainContent && mainContent.dataset.originalContent) {
-            // Restore original content
-            mainContent.innerHTML = mainContent.dataset.originalContent;
-            delete mainContent.dataset.originalContent;
-        }
-    }
-
-    renderPostsList(posts) {
-        if (!posts || posts.length === 0) {
-            return '<div class="no-posts">No posts found for this topic.</div>';
-        }
-        
-        return posts.map(post => {
-            const timeAgo = this.getTimeAgo(post.createdAt);
-            return `
-                <div class="topic-post" data-post-id="${post.id}">
-                    <div class="post-header">
-                        <div class="user-avatar">${post.author.username.charAt(0).toUpperCase()}</div>
-                        <div class="user-info">
-                            <span class="username">@${post.author.username}</span>
-                            <span class="timestamp">${timeAgo}</span>
-                        </div>
-                    </div>
-                    <div class="post-content">
-                        <p>${post.content}</p>
-                    </div>
-                    <div class="post-engagement">
-                        <button class="engagement-btn">❤️ ${post.likesCount}</button>
-                        <button class="engagement-btn">💬 ${post.commentsCount}</button>
-                        <button class="engagement-btn">🔄 Share</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    async showTopicPreview(topicId) {
-        try {
-            const response = await fetch(`/api/topic-navigation/${topicId}/posts?limit=3`);
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showTopicPreviewModal(data.posts, data.topic);
-            }
-        } catch (error) {
-            adminDebugError('Failed to load topic preview:', error);
-        }
-    }
-
-    showTopicPreviewModal(posts, topic) {
-        const modal = document.createElement('div');
-        modal.className = 'topic-preview-modal modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-container">
-                <div class="modal-header">
-                    <h3>👀 Topic Preview: ${topic.title}</h3>
-                    <button class="modal-close" data-trending-system-action="closeModal">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="topic-summary-preview">
-                        <div class="summary-item">
-                            <strong>📍 Prevailing Position:</strong>
-                            <p>${topic.prevailingPosition}</p>
-                        </div>
-                        <div class="summary-item">
-                            <strong>⚡ Leading Critique:</strong>
-                            <p>${topic.leadingCritique}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="preview-posts">
-                        <h4>Recent Posts (${posts.length} of ${topic.postCount})</h4>
-                        ${this.renderPostsList(posts)}
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button class="modal-btn primary" data-trending-system-action="enterTopicModeAndClose" data-topic-id="${topic.id}">
-                            💬 Join Discussion
-                        </button>
-                        <button class="modal-btn secondary" data-trending-system-action="closeModal">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
     }
 
     async discoverMoreTopics() {
